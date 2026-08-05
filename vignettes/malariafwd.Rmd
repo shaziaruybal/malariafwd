@@ -1,0 +1,87 @@
+---
+title: "Getting started with malariafwd"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with malariafwd}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+`malariafwd` is an R interface to a SLiM + tskit forward simulator of *Plasmodium
+vivax*. You run the model from R and analyse its outputs — including **ground-truth
+identity-by-descent** from the recorded tree sequence.
+
+The code chunks below are not evaluated when the vignette is built (they need SLiM and
+Python `tskit`); run them locally after checking your setup.
+
+## Setup
+
+The model runs the external `slim` binary (SLiM ≥ 5.0) as a subprocess, and uses Python
+`tskit` (via `reticulate`) for IBD. Check both:
+
+```{r}
+library(malariafwd)
+slim_available()   # TRUE if `slim` is on PATH (or set env var MALARIAFWD_SLIM)
+slim_version()
+```
+
+## One simulation
+
+`vivax_params()` gives a validated parameter set (all defaults mirror the model); override
+what you need. `run_sim()` launches SLiM and returns a `vivax_run` pointing at the outputs.
+
+```{r}
+p   <- vivax_params(N_HOSTS = 300, N_MOSQ = 600, BITING_RATE = 0.09)
+run <- run_sim(p, seed = 1, outdir = "runs/demo")
+
+ev <- load_events(run)      # tidy event log (data.table)
+st <- load_state(run)       # per-tick state
+run_metrics(run)            # prevalence, COI, relapse fraction, ...
+```
+
+## Ground-truth IBD
+
+`calc_ibd()` computes genome-wide IBD from the tree sequence; `ibd_index()` builds a fast
+pairwise lookup. Relapses are clonal to their origin (IBD = 1):
+
+```{r}
+cs  <- classify_cases(ev)                          # each case by TRUE origin
+idx <- ibd_index(calc_ibd(run, ids = cs$pedigree_id))
+relapse_origin_ibd(ev, idx)                        # IBD of each relapse vs its origin (~1)
+newinfection_diversity(run)                        # relatedness of the transmitting population
+```
+
+Use `max_time =` to restrict IBD to recent shared ancestry (a transmission-specific,
+"recent" definition):
+
+```{r}
+calc_ibd(run, ids = cs$pedigree_id, max_time = 180)
+```
+
+## Parallel sweeps
+
+`run_grid()` runs every (parameter set × seed) in parallel via the `future` backend. Set
+`workers` for a quick local multisession; for a cluster, set `future::plan()` yourself and
+leave `workers = NULL`.
+
+```{r}
+sets <- list(
+  low  = vivax_params(BITING_RATE = 0.06),
+  high = vivax_params(BITING_RATE = 0.12)
+)
+res <- run_grid(sets, seeds = 1:10, outdir_base = "runs/sweep", workers = 8)
+res   # one row per run: set, seed, outdir, ok
+```
+
+## Plots
+
+```{r}
+plot_host_state_prevalence(host_state_prevalence(st))
+plot_relapse_km(compute_time_to_relapse(ev))
+```
+
+See `?run_sim`, `?calc_ibd`, and the `DECISIONS.md` design log for more.

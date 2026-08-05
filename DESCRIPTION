@@ -1,0 +1,33 @@
+Package: malariafwd
+Title: Forward Simulation of Plasmodium vivax Transmission and Genetics
+Version: 0.2.0
+Authors@R:
+    person("Shazia", "Ruybal-Pesantez", email = "shaziaruybal@gmail.com",
+           role = c("aut", "cre"))
+Description: An R interface to a SLiM (Eidos) + tskit individual-based forward
+    simulator of Plasmodium vivax malaria. Models blood-stage infection, the
+    hypnozoite reservoir and relapses, meiotic recombination in the mosquito, and
+    importation/interventions on a neutral 14-chromosome PvP01 genome, recording a
+    tskit tree sequence for ground-truth identity-by-descent. The package runs the
+    model from R (single runs and parallel multi-seed / multi-parameter sweeps) and
+    provides tidy loaders, epidemiological + genetic metrics, ground-truth IBD via
+    tskit, and plotting helpers.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+SystemRequirements: SLiM (>= 5.0) on PATH; Python 3 with tskit + pandas (for IBD)
+Imports:
+    data.table,
+    processx,
+    future,
+    furrr
+Suggests:
+    reticulate,
+    ggplot2,
+    patchwork,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
