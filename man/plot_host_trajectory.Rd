@@ -2,9 +2,17 @@
 % Please edit documentation in R/plots.R
 \name{plot_host_trajectory}
 \alias{plot_host_trajectory}
-\title{Within-host trajectory: active COI + hypnozoite reservoir, with event markers}
+\title{Within-host trajectory for one host}
 \usage{
-plot_host_trajectory(state, events, host_id)
+plot_host_trajectory(
+  state,
+  events,
+  host_id,
+  layout = c("lineages", "summary"),
+  palette = c("#3B9AB2", "#EBCC2A", "#F21A00", "#00A08A", "#F98400", "#5BBCD6",
+    "#046C9A", "#D69C4E", "#FD6467", "#5B1A18", "#E6A0C4", "#7294D4", "#02401B",
+    "#972D15", "#9986A5")
+)
 }
 \arguments{
 \item{state}{a state data.table.}
@@ -12,10 +20,17 @@ plot_host_trajectory(state, events, host_id)
 \item{events}{an events data.table.}
 
 \item{host_id}{host to plot.}
+
+\item{layout}{\code{"lineages"} (stacked per-lineage areas) or \code{"summary"} (COI + reservoir lines).}
+
+\item{palette}{colours cycled across lineages.}
 }
 \value{
 a ggplot object.
 }
 \description{
-Within-host trajectory: active COI + hypnozoite reservoir, with event markers
+\code{layout = "lineages"} (the default) stacks the individual blood-stage lineages, each in its
+own colour, so you can see which genotypes are present at any moment, when a lineage clears
+and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
+\code{layout = "summary"} plots active COI and the reservoir as two lines instead.
 }

@@ -4,10 +4,10 @@
 \alias{plot_relapse_km}
 \title{Kaplan-Meier plot of time to first relapse}
 \usage{
-plot_relapse_km(ttr, title = "Time to first relapse (host-level Kaplan-Meier)")
+plot_relapse_km(ttr, title = NULL)
 }
 \arguments{
-\item{ttr}{output of \code{\link[=compute_time_to_relapse]{compute_time_to_relapse()}}.}
+\item{ttr}{output of \code{\link[=time_to_relapse]{time_to_relapse()}}.}
 
 \item{title}{plot title.}
 }

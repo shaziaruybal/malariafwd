@@ -13,6 +13,6 @@ load_run(outdir)
 a \code{vivax_run} object.
 }
 \description{
-Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_file]{trees_file()}}
-and \code{\link[=run_params]{run_params()}} to access its contents.
+Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_path]{trees_path()}}
+and \code{\link[=load_params]{load_params()}} to access its contents.
 }

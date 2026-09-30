@@ -62,10 +62,16 @@ dormancy_durations <- function(events) {
 
 #' Classify each new blood-stage episode ("case") by TRUE origin
 #'
-#' relapse = hypnozoite activation; imported = arrived via importation; local reinfection
-#' = local mosquito-borne new infection.
+#' `origin` gives the acquisition mechanism: relapse = hypnozoite activation;
+#' imported = a new infection that arrived via importation; local reinfection = a new
+#' local mosquito-borne infection. `imported` is a separate genotype-origin flag that is
+#' `TRUE` whenever the parasite genotype is import-derived -- including **imported
+#' relapses** (a relapse of an imported genotype), a key vivax truth category that `origin`
+#' alone ("relapse") does not expose. So the four truth classes are: imported new infection
+#' (`origin == "imported"`), local reinfection, imported relapse (`origin == "relapse"` &
+#' `imported`), and local relapse (`origin == "relapse"` & `!imported`).
 #' @param events an events data.table.
-#' @return a data.table with a `origin` column (and case identifiers).
+#' @return a data.table with `origin` and `imported` columns (plus case identifiers).
 #' @export
 classify_cases <- function(events) {
   ev <- as.data.table(events)
@@ -75,7 +81,9 @@ classify_cases <- function(events) {
     event_type == "hypnozoite_activation", "relapse",
     event_type == "vh_inoculation_import" | is_imported == 1, "imported",
     default = "local reinfection")]
-  cases[, .(tick, human_id, lineage_id = as.character(lineage_id), oocyst_id, pedigree_id, origin, detected)]
+  cases[, imported := is_imported == 1 | event_type == "vh_inoculation_import"]
+  cases[, .(tick, human_id, lineage_id = as.character(lineage_id), oocyst_id, pedigree_id,
+            origin, imported, detected)]
 }
 
 #' Binned incidence by origin
@@ -91,6 +99,33 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
   cs[, .N, by = .(win, origin)]
 }
 
+#' Force of blood-stage infection, by origin (per host-year)
+#'
+#' New blood-stage clone acquisitions per host per year, split by origin.
+#' `imported` + `local reinfection` give the mosquito-borne **force of infection (FOI)**;
+#' adding `relapse` gives the **molecular force of blood-stage infection (molFOB)** -- a
+#' compound measure that is elevated in *P. vivax* because relapses contribute new
+#' blood-stage clones (Mueller et al. 2013).
+#' When the run contains imported cases, relapses are split into `relapse (imported)` and
+#' `relapse (local)` -- a relapse of an imported genotype is a distinct truth category. Set
+#' `split_imported = FALSE` to keep a single `relapse` class, or `TRUE` to force the split.
+#' @param run a run directory or `vivax_run`.
+#' @param bin window width in days.
+#' @param split_imported `"auto"` (split only if the run has imports), `TRUE`, or `FALSE`.
+#' @return a data.table of `win`, `origin`, `n`, and `rate` (new clones per host-year).
+#' @references Mueller I, et al. (2013) A high force of *Plasmodium vivax* blood-stage
+#'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
+#' @export
+force_of_infection <- function(run, bin = 30, split_imported = "auto") {
+  nh <- as.numeric(load_params(run)$N_HOSTS)
+  cs <- classify_cases(load_events(run))
+  if (isTRUE(split_imported) || (identical(split_imported, "auto") && any(cs$imported)))
+    cs[origin == "relapse", origin := fifelse(imported, "relapse (imported)", "relapse (local)")]
+  cs[, win := (tick %/% bin) * bin]
+  fo <- cs[, .(n = .N), by = .(win, origin)]
+  fo[, rate := n / nh / (bin / 365)][order(win, origin)]
+}
+
 #' Mean pairwise IBD among cases active in each time window (relatedness trajectory)
 #' @param events an events data.table.
 #' @param idx an [ibd_index()] object.
@@ -99,7 +134,7 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @param min_pairs drop windows with fewer pairs.
 #' @return a data.table of `win`, `mean_ibd`, `n_pairs`.
 #' @export
-relatedness_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5) {
+ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5) {
   cs <- classify_cases(events)[pedigree_id %in% idx$nm$pedigree_id]
   cs[, win := (tick %/% bin) * bin]
   out <- cs[, {
@@ -118,7 +153,7 @@ relatedness_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 
 #' @param window travel look-back window (days).
 #' @return a data.table with a `surveillance` label to compare against `origin`.
 #' @export
-who_classify <- function(events, window = 60) {
+classify_who <- function(events, window = 60) {
   cases <- classify_cases(events)
   imports <- as.data.table(events)[event_type == "vh_inoculation_import" & is_dormant == 0,
                                    .(human_id, imp_tick = tick)]
@@ -161,7 +196,7 @@ rc_by_origin <- function(events) {
 #' @param events an events data.table.
 #' @return a data.table with a `chain_size` column.
 #' @export
-chain_sizes <- function(events) {
+transmission_chains <- function(events) {
   links <- transmission_links(events)
   if (nrow(links) == 0) return(data.table(chain_size = integer(0)))
   nodes <- unique(c(links$source, links$target)); id <- setNames(seq_along(nodes), as.character(nodes))
@@ -177,7 +212,7 @@ chain_sizes <- function(events) {
 #' @param events an events data.table.
 #' @return a data.table of `human_id`, `time`, `event`.
 #' @export
-compute_time_to_relapse <- function(events) {
+time_to_relapse <- function(events) {
   ev <- as.data.table(events)
   inf <- ev[event_type %in% c("vh_inoculation","vh_inoculation_import","vh_inoculation_seed") &
               is_dormant == 0, .(t0 = min(tick)), by = human_id]
@@ -219,7 +254,7 @@ host_state_prevalence <- function(state) {
 #' @param events an events data.table.
 #' @return a single host id.
 #' @export
-pick_interesting_host <- function(events) {
+pick_host <- function(events) {
   as.data.table(events)[event_type == "hypnozoite_activation", .N, by = human_id][order(-N)][1]$human_id
 }
 
@@ -228,7 +263,7 @@ pick_interesting_host <- function(events) {
 #' @param burn_frac steady-state fraction (drop the first `burn_frac` of the run).
 #' @return a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
 #' @export
-run_metrics <- function(run, burn_frac = 0.5) {
+summarise_run <- function(run, burn_frac = 0.5) {
   st <- load_state(run); ev <- load_events(run)
   endt <- max(st$tick); burn <- round(endt * burn_frac)
   h <- as.data.table(st)[entity_type == "human" & tick >= burn]
@@ -241,6 +276,7 @@ run_metrics <- function(run, burn_frac = 0.5) {
     mean_res = round(mean(h$hyp_reservoir_size), 1),
     relapse_frac = round(relapse_fraction(ev)$relapse_fraction, 3),
     relapses_py = relapses_per_person_year(ev)$relapses_per_py,
+    n_bloodstage_treated = as.data.table(ev)[event_type == "case_bloodstage_clear", .N],
     imported_frac = round(if (nrow(vi)) mean(vi$is_imported == 1) else 0, 3))
 }
 
@@ -249,7 +285,7 @@ run_metrics <- function(run, burn_frac = 0.5) {
 #' @param idx an [ibd_index()] object.
 #' @return a data.table with an `ibd` column (should be ~1, clonal).
 #' @export
-relapse_origin_ibd <- function(events, idx) {
+ibd_relapse_origin <- function(events, idx) {
   ev <- as.data.table(events); nm <- idx$nm
   rel <- ev[event_type == "hypnozoite_activation",
             .(lineage_id = as.character(lineage_id), human_id, rp = pedigree_id, rt = tick)]
@@ -271,14 +307,14 @@ relapse_origin_ibd <- function(events, idx) {
 #' @param clonal IBD threshold for a "clonal" pair.
 #' @return a one-row data.table of `n`, `mean_ibd`, `clonal_frac`, `n_lineages`.
 #' @export
-newinfection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5) {
+new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5) {
   ev <- load_events(run)
   endt <- max(ev$tick); burn <- round(endt * burn_frac)
   peds <- ev[event_type == "vh_inoculation" & is_dormant == 0 & tick >= burn, unique(pedigree_id)]
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   if (length(peds) > cap) peds <- sample(peds, cap)
-  idx <- ibd_index(calc_ibd(run, ids = peds))
+  idx <- ibd_index(ibd_pairs(run, ids = peds))
   vp <- idx$nm$pedigree_id
   cb <- combn(length(vp), 2); di <- idx$getibd(vp[cb[1,]], vp[cb[2,]])
   data.table(n = length(vp), mean_ibd = mean(di), clonal_frac = 100 * mean(di >= clonal),

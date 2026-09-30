@@ -24,7 +24,7 @@
 #' run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1, outdir = "runs/demo")
 #' }
 #' @export
-run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = default_model(),
+run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_model(),
                     verbose = NULL, timeout = Inf, echo = FALSE) {
   if (!slim_available())
     stop("SLiM not found. Install SLiM (>= 5.0) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
@@ -69,7 +69,7 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = default_
 #' @param ... passed to [run_sim()].
 #' @return a data.frame with one row per run (`set`, `seed`, `outdir`, `ok`).
 #' @export
-run_grid <- function(param_sets, seeds = 1L, outdir_base, model = default_model(),
+run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, ...) {
   if (inherits(param_sets, "vivax_params")) param_sets <- list(param_sets)
   if (is.null(names(param_sets)) || any(!nzchar(names(param_sets))))

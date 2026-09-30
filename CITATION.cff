@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "malariafwd: Forward Simulation of Plasmodium vivax Transmission and Genetics"
+abstract: >-
+  An R interface to a SLiM (Eidos) + tskit individual-based forward simulator of
+  Plasmodium vivax malaria. Models blood-stage infection, the hypnozoite reservoir
+  and relapses, meiotic recombination in the mosquito, and importation/interventions
+  on a neutral 14-chromosome PvP01 genome, recording a tree sequence for ground-truth
+  identity-by-descent.
+type: software
+version: 0.1.0
+date-released: "2026-09-30"
+license: MIT
+repository-code: "https://github.com/shaziaruybal/malariafwd"
+authors:
+  - family-names: "Ruybal-Pesántez"
+    given-names: "Shazia"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"   # TODO: add your ORCID
+keywords:
+  - "Plasmodium vivax"
+  - malaria
+  - forward simulation
+  - population genetics
+  - identity-by-descent
+  - hypnozoite
+  - relapse
+  - SLiM
+  - tskit

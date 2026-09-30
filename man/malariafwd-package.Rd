@@ -11,8 +11,17 @@ Plasmodium vivax. Run the model from R (\code{\link[=run_sim]{run_sim()}}, \code
 outputs (loaders, epidemiological + genetic metrics, ground-truth IBD via tskit).
 }
 \details{
-The model itself is bundled at \code{inst/slim/malariafwd_vivax.slim} (see \code{\link[=default_model]{default_model()}});
+The model itself is bundled at \code{inst/slim/malariafwd_vivax.slim} (see \code{\link[=slim_model]{slim_model()}});
 design decisions are recorded in \code{DECISIONS.md}.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/shaziaruybal/malariafwd}
+  \item \url{https://shaziaruybal.github.io/malariafwd/}
+  \item Report bugs at \url{https://github.com/shaziaruybal/malariafwd/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Shazia Ruybal-Pesantez \email{shaziaruybal@gmail.com}

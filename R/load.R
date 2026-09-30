@@ -14,8 +14,8 @@ read_params_tsv <- function(path) {
 
 #' Load a completed run as a `vivax_run` object
 #'
-#' Wraps a run's output directory; use [load_events()], [load_state()], [trees_file()]
-#' and [run_params()] to access its contents.
+#' Wraps a run's output directory; use [load_events()], [load_state()], [trees_path()]
+#' and [load_params()] to access its contents.
 #' @param outdir a run output directory (or an existing `vivax_run`).
 #' @return a `vivax_run` object.
 #' @export
@@ -56,13 +56,13 @@ load_state <- function(run) {
 #' @param run a `vivax_run` or a run directory path.
 #' @return the path to `plasmo.trees`.
 #' @export
-trees_file <- function(run) file.path(.run_dir(run), "plasmo.trees")
+trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
 #' Resolved parameters of a run (from `params.tsv`)
 #' @param run a `vivax_run` or a run directory path.
 #' @return a named list of resolved parameter values.
 #' @export
-run_params <- function(run) {
+load_params <- function(run) {
   if (inherits(run, "vivax_run")) run$params
   else read_params_tsv(file.path(.run_dir(run), "params.tsv"))
 }
@@ -71,7 +71,7 @@ run_params <- function(run) {
 #' @param run a `vivax_run` or a run directory path.
 #' @return `"v2 (meiosis)"` or `"v1 (pre-meiosis)"`.
 #' @export
-model_generation <- function(run) {
+model_version <- function(run) {
   h <- names(data.table::fread(file.path(.run_dir(run), "events.tsv"), sep = "\t", nrows = 0))
   if ("oocyst_id" %in% h) "v2 (meiosis)" else "v1 (pre-meiosis)"
 }

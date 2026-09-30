@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot_host_state_prevalence}
 \alias{plot_host_state_prevalence}
-\title{Host-state prevalence over time (stacked area; the reservoir-only class is invisible)}
+\title{Host-state prevalence over time (stacked area)}
 \usage{
 plot_host_state_prevalence(hsp)
 }
@@ -13,5 +13,5 @@ plot_host_state_prevalence(hsp)
 a ggplot object.
 }
 \description{
-Host-state prevalence over time (stacked area; the reservoir-only class is invisible)
+Host-state prevalence over time (stacked area)
 }

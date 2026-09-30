@@ -1,5 +1,5 @@
 test_that("vivax_params defaults stay in sync with the SLiM model", {
-  model <- default_model()
+  model <- slim_model()
   skip_if(!nzchar(model) || !file.exists(model), "model template not found")
   src <- readLines(model, warn = FALSE)
   model_names <- unique(sub('.*defineDefault\\("([A-Z_]+)".*', "\\1",

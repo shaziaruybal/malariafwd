@@ -32,4 +32,4 @@ slim_version <- function() {
 #' output directory for provenance.
 #' @return file path to `inst/slim/malariafwd_vivax.slim`.
 #' @export
-default_model <- function() system.file("slim", "malariafwd_vivax.slim", package = "malariafwd")
+slim_model <- function() system.file("slim", "malariafwd_vivax.slim", package = "malariafwd")

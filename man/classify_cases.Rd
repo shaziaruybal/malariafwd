@@ -10,9 +10,15 @@ classify_cases(events)
 \item{events}{an events data.table.}
 }
 \value{
-a data.table with a \code{origin} column (and case identifiers).
+a data.table with \code{origin} and \code{imported} columns (plus case identifiers).
 }
 \description{
-relapse = hypnozoite activation; imported = arrived via importation; local reinfection
-= local mosquito-borne new infection.
+\code{origin} gives the acquisition mechanism: relapse = hypnozoite activation;
+imported = a new infection that arrived via importation; local reinfection = a new
+local mosquito-borne infection. \code{imported} is a separate genotype-origin flag that is
+\code{TRUE} whenever the parasite genotype is import-derived -- including \strong{imported
+relapses} (a relapse of an imported genotype), a key vivax truth category that \code{origin}
+alone ("relapse") does not expose. So the four truth classes are: imported new infection
+(\code{origin == "imported"}), local reinfection, imported relapse (\code{origin == "relapse"} &
+\code{imported}), and local relapse (\code{origin == "relapse"} & \code{!imported}).
 }

@@ -8,7 +8,7 @@ run_sim(
   params = vivax_params(),
   seed = 1L,
   outdir,
-  model = default_model(),
+  model = slim_model(),
   verbose = NULL,
   timeout = Inf,
   echo = FALSE

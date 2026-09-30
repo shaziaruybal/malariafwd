@@ -17,12 +17,20 @@ utils::globalVariables(c(
   "t0", "tr", "time", "event", "act_tick", "est_tick", "nrel", "py",
   # moi / within-host trajectory
   "peak_moi", "n_relapse", "kind",
-  # who_classify
+  # classify_who
   "imp_tick", "recent", "recent_travel", "surveillance",
-  # relapse_origin_ibd
+  # ibd_relapse_origin
   "rp", "rt", "pp", "pt",
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
   # transmission_links
-  "A1", "A2", "C"
+  "A1", "A2", "C",
+  # plot_diagnostics / force_of_infection
+  "w", "y", "rate", "n",
+  # classify_cases imported-origin flag
+  "imported",
+  # segments / ladder
+  "gstart", "gend", "segid", "cs", "ce", "gs", "ge", "chrom", "x0", "x1", "lab", "cls", "ped",
+  # data.table columns that shadow stats::start / stats::end
+  "start", "end", "pair", "len_mb", "ypos", "lineage", "r", "V1"
 ))

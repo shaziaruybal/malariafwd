@@ -8,7 +8,7 @@ run_grid(
   param_sets,
   seeds = 1L,
   outdir_base,
-  model = default_model(),
+  model = slim_model(),
   workers = NULL,
   verbose = NULL,
   ...

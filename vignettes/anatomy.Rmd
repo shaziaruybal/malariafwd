@@ -1,0 +1,138 @@
+---
+title: "Anatomy of a run: reading the outputs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Anatomy of a run: reading the outputs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+A single `malariafwd` run writes a handful of files into its output directory. This
+vignette tours them — what each output means and how to explore it. As with the
+*Getting started* vignette, the chunks are not evaluated at build time (they need SLiM and
+Python `tskit`); run them locally after checking your setup with `slim_available()`.
+
+## Run one simulation
+
+```{r}
+library(malariafwd)
+p   <- vivax_params(N_HOSTS = 200, N_MOSQ = 400, BITING_RATE = 0.1, SIM_DAYS = 1095)
+run <- run_sim(p, seed = 1, outdir = "runs/anatomy")
+```
+
+`run` points at the output directory, which now holds:
+
+- `events.tsv` — every discrete event (infections, clearances, relapses, mosquito uptake …)
+- `state.tsv` — per-tick state of every host and mosquito
+- `plasmo.trees` — the tskit tree sequence (the genealogy behind IBD)
+- `params.tsv`, `cmdline.txt`, `model.slim`, `run.log` — provenance of the run
+
+## The event log
+
+Every row of `events.tsv` carries an `event_type`. `event_types()` is the dictionary:
+
+```{r}
+event_types()
+
+ev <- load_events(run)                 # a data.table
+ev[, .N, by = event_type][order(-N)]   # how many of each event type
+```
+
+Classify each blood-stage episode ("case") by its true origin — relapse, imported, or
+local reinfection:
+
+```{r}
+cs <- classify_cases(ev)
+cs[, .N, by = origin]
+```
+
+## Epidemiology over time
+
+```{r}
+summarise_run(run)                       # prevalence, COI, relapse fraction, reservoir, ...
+incidence_by_origin(ev, bin = 30)      # monthly case counts by origin
+```
+
+## A single host's trajectory
+
+`state.tsv` records every host each tick. Pick a host with an interesting history and plot
+its active blood-stage lineages and hypnozoite reservoir through time:
+
+```{r}
+st <- load_state(run)
+h  <- pick_host(ev)        # a host with both relapses and reinfections
+plot_host_trajectory(st, ev, host_id = h)
+```
+
+Population-level state composition (susceptible / infected) over time:
+
+```{r}
+plot_host_state_prevalence(host_state_prevalence(st))
+```
+
+## The reservoir and relapses
+
+The hypnozoite reservoir is the model's distinctive, otherwise-unobservable compartment:
+
+```{r}
+reservoir_trajectory(st)                     # reservoir size over time
+relapse_fraction(ev)                         # fraction of recurrences that are relapses
+plot_relapse_km(time_to_relapse(ev)) # time to first relapse (Kaplan-Meier)
+coi_distribution(st)                         # complexity-of-infection distribution
+```
+
+## Ground-truth relatedness
+
+Because the full genealogy is recorded, identity-by-descent is exact rather than inferred:
+
+```{r}
+idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
+ibd_relapse_origin(ev, idx)            # relapses are clonal to their origin (IBD ~ 1)
+```
+
+## Seeing the relatedness, not just the number
+
+`ibd_pairs()` gives one number per pair. `ibd_segments()` gives the stretches behind it, and
+`plot_ibd_pair()` draws them as a karyotype -- a clonal pair (or a relapse against its origin)
+is shared end to end, same-oocyst siblings show a recombination mosaic, unrelated genomes
+share nothing:
+
+```{r}
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1]
+plot_ibd_pair(run, rel$pedigree_id, rel$parent1_pedigree_id, labels = "relapse vs origin")
+
+# and the model-validation view: IBD by known relationship against the textbook rungs
+plot_relatedness_ladder(ibd_truth_pairs(run))
+```
+
+## The ARG itself
+
+The model is neutral (mutation rate 0), so every *site* statistic is zero; tskit's **branch**
+mode measures the genealogy directly. One caveat matters: the recorded genealogy is a
+**forest** -- each founder lineage and each import is an independent root, so most pairs never
+coalesce. Branch *divergence* therefore does not behave as a relatedness measure here; use
+`arg_tmrca()`, which reports the time to the common ancestor together with `coalesced`, the
+fraction of the genome over which one exists.
+
+```{r}
+arg_summary(run)                                   # trees, edges, roots per tree, depth
+arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # coalesced = 1, recent TMRCA
+```
+
+## Calibrating the uptake draws
+
+`LAMBDA_OOCYSTS` / `LAMBDA_SPOROZOITES` are **pre-truncation** rates, so they are not the mean
+counts a feeding study reports -- conditioning away the zeros pulls the realised mean up:
+
+```{r}
+uptake_moments(2)                      # Poisson lambda = 2 -> realised mean 2.31
+uptake_moments(2, k = 1)               # overdispersed    -> realised mean 3.00
+uptake_calibrate(mean = 2.5, var = 6)  # a target -> the lambda / K to set
+```
+
+See the *Getting started* vignette for parameter sweeps with `run_grid()`, and
+`?event_types` for the full event-type dictionary.

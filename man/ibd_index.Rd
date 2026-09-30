@@ -2,17 +2,17 @@
 % Please edit documentation in R/ibd.R
 \name{ibd_index}
 \alias{ibd_index}
-\title{Build a fast pairwise-IBD lookup from \code{\link[=calc_ibd]{calc_ibd()}}}
+\title{Build a fast pairwise-IBD lookup from \code{\link[=ibd_pairs]{ibd_pairs()}}}
 \usage{
 ibd_index(ibd_obj)
 }
 \arguments{
-\item{ibd_obj}{the list returned by \code{\link[=calc_ibd]{calc_ibd()}}.}
+\item{ibd_obj}{the list returned by \code{\link[=ibd_pairs]{ibd_pairs()}}.}
 }
 \value{
 a list with \code{nm} (the pedigree/node map) and \code{getibd(pa, pb)}, a vectorised
 function returning genome-wide IBD (0 for pairs sharing nothing).
 }
 \description{
-Build a fast pairwise-IBD lookup from \code{\link[=calc_ibd]{calc_ibd()}}
+Build a fast pairwise-IBD lookup from \code{\link[=ibd_pairs]{ibd_pairs()}}
 }

@@ -5,3 +5,12 @@
 ^\.gitignore$
 ^cran-comments\.md$
 ^LICENSE\.md$
+^DECISIONS\.md$
+^CITATION\.cff$
+^\.zenodo\.json$
+^scratch$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^quickstart\.R$
+^quickstart-output$

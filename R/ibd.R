@@ -2,9 +2,9 @@
 ## The tskit dependency is a Suggests: these functions error helpfully if it is missing.
 
 .trees_of <- function(run) {
-  if (inherits(run, "vivax_run")) return(trees_file(run))
+  if (inherits(run, "vivax_run")) return(trees_path(run))
   if (is.character(run) && length(run) == 1) {
-    if (dir.exists(run)) return(trees_file(run))
+    if (dir.exists(run)) return(trees_path(run))
     return(run)  # assume a .trees path
   }
   stop("`run` must be a vivax_run, a run directory, or a .trees path.", call. = FALSE)
@@ -37,7 +37,7 @@
 #' @return a list with `ibd` (data.table: `node_a`, `node_b`, `ibd_fraction`) and
 #'   `node_map` (data.table: `node_id`, `pedigree_id`). Pass to [ibd_index()] for lookups.
 #' @export
-calc_ibd <- function(run, ids = NULL, min_span = 1000, max_time = NULL) {
+ibd_pairs <- function(run, ids = NULL, min_span = 1000, max_time = NULL) {
   .require_reticulate()
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
@@ -90,9 +90,9 @@ pd.DataFrame(list(n2p.items()), columns=['node_id','pedigree_id']).to_csv(r'''",
        node_map = data.table::fread(nmap, showProgress = FALSE))
 }
 
-#' Build a fast pairwise-IBD lookup from [calc_ibd()]
+#' Build a fast pairwise-IBD lookup from [ibd_pairs()]
 #'
-#' @param ibd_obj the list returned by [calc_ibd()].
+#' @param ibd_obj the list returned by [ibd_pairs()].
 #' @return a list with `nm` (the pedigree/node map) and `getibd(pa, pb)`, a vectorised
 #'   function returning genome-wide IBD (0 for pairs sharing nothing).
 #' @export
@@ -109,7 +109,13 @@ ibd_index <- function(ibd_obj) {
   getibd <- function(pa, pb) {
     na <- nmap[as.character(pa)]; nb <- nmap[as.character(pb)]
     v <- ib[.(na, nb), ibd, on = .(a, b)]
-    data.table::fifelse(is.na(v), 0, v)
+    v <- data.table::fifelse(is.na(v), 0, v)   # 0-default = below the min_span detection floor
+    ## tskit's ibd_segments(within=) only returns DISTINCT pairs, so a self-pair would fall
+    ## through to the 0-default. A genome is identical to itself by definition, so return 1
+    ## (otherwise a pairwise matrix built with the diagonal would be silently wrong).
+    ## unname(): the node lookup carries pedigree-id names, which would otherwise ride along
+    ## on the returned IBD values and trip up identity comparisons downstream.
+    unname(data.table::fifelse(!is.na(na) & !is.na(nb) & na == nb, 1, v))
   }
   list(nm = nm, getibd = getibd)
 }
