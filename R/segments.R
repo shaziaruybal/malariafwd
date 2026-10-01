@@ -102,6 +102,12 @@ for i, (x, y) in enumerate(zip(_lst(_a), _lst(_b))):
 _seg = pd.DataFrame(rows, columns=["pair","a","b","gstart","gend"])
 ')
   seg <- data.table::as.data.table(reticulate::py$`_seg`)
+  ## A pair sharing NOTHING yields an empty frame, and pandas types empty columns as object,
+  ## which reticulate hands back as character. Every downstream join is on integer `pair`, so
+  ## the types are pinned here -- otherwise an unrelated pair (a legitimate and common case)
+  ## fails to merge in plot_ibd_pair() rather than drawing an empty karyotype.
+  seg[, `:=`(pair = as.integer(pair), a = as.integer(a), b = as.integer(b),
+             gstart = as.numeric(gstart), gend = as.numeric(gend))]
   if (!nrow(seg)) return(seg[, `:=`(chrom = integer(), start = numeric(),
                                     end = numeric(), length = numeric())][])
   cm <- chrom_map(run)

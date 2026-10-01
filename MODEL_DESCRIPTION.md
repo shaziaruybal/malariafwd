@@ -9,6 +9,33 @@ default is quoted it is the shipped value.
 
 ![Model structure](man/figures/model-structure.svg)
 
+**A representative run** — 200 hosts, 400 mosquitoes, 3 years, `BITING_RATE` 0.08, 40 founder
+hosts carrying 10 lineages, ν = 3. Emergent: prevalence **0.246**, COI **1.14**, **13.3%**
+polyclonal, reservoir **0.9** hypnozoites/host, relapse fraction **0.657**, **2.23** relapses per
+person-year — all inside published vivax bands.
+
+![Representative run](man/figures/README-representative-run.png)
+
+**A** one host's lineage trajectory: coloured bands are blood-stage lineages, the dashed line is
+that host's hypnozoite reservoir, and the marks below show new infections (triangles) against
+relapses (circles). **B** population host-state composition over time — note the teal
+*reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
+of relapses a host goes on to experience. **D** Kaplan–Meier time to first relapse. **E** the
+realised IBD ladder by relationship class.
+
+![IBD karyotype](man/figures/README-ibd-karyotype.png)
+
+Ground-truth IBD read from the ARG, painted along the 14 PvP01 chromosomes. A relapse is clonal to
+its originating hypnozoite (IBD 1.00); same-oocyst siblings share a **mosaic** with visible
+crossover breakpoints (0.76); the reciprocal recombinant of that same meiosis shares **nothing**
+(0.00), because reciprocal products are complementary by construction; distinct founders likewise
+share nothing.
+
+> At this transmission level outcrossing is rare — **168 recombinant against 3,277 clonal uptake
+> events (4.9%)** — so mosaics like the second panel are genuinely uncommon and most pairs sit at
+> 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
+> relapse hard to distinguish genetically in low-transmission settings.
+
 ---
 
 ## 1. What the model is for
@@ -603,11 +630,91 @@ plain assignment to a global inside a callback or function creates a **local**.
 
 ### Validation suite
 
-`inst/validation/` ships five scripts: `audit_events_and_ibd.R` (62 checks),
-`check_parameters.R` (41 checks), `audit_arg_recombination.R`, `audit_arg_junctions.R`,
-`explain_ibd.R`. Verified properties include: clonal IBD = 1.000 exactly; relapse-to-origin 100%
-clonal; same-oocyst sibling IBD centring on ~1/3 on one chromosome and tightening toward 0.5 under
-14-chromosome assortment; reciprocal recombinants IBD 0 to each other.
+`inst/validation/` ships five scripts. Last full run (v0.1.0, this document):
+**103 assertion checks, 103 passed, 0 failed**, plus two numeric audits of the recombination
+machinery.
+
+| script | checks | result |
+|---|---|---|
+| `audit_events_and_ibd.R` | 62 (36 event-log + 26 ARG/IBD, over two uptake configurations) | all pass |
+| `check_parameters.R` | 41 | all pass |
+| `audit_arg_recombination.R` | numeric audit | see §13.1 |
+| `audit_arg_junctions.R` | numeric audit | see §13.1 |
+| `explain_ibd.R` | worked explainer | — |
+
+#### Event-log integrity
+
+| property | expectation | observed |
+|---|---|---|
+| every emitted `event_type` documented in `event_types()` | 0 undocumented | 0 |
+| `event_id` unique | no duplicates | 4,119 / 4,119 and 17,115 / 17,115 ids |
+| creation events mint unique `pedigree_id`s | no reuse | 769 and 1,351 created, all distinct |
+| each `inoculation_id` is one bite | 1 tick, 1 host | 203 and 321 bites |
+| **no batch draws more hypnozoites than it held** | **0 over-draws** | **170 and 328 batches, 0 over-drawing** |
+| every activation references an established batch | 100% | 385 and 604 activations |
+| unresolved hypnozoites == final reservoir in `state.tsv` | exact match | 461 vs 461; 762 vs 762 |
+| each uptake has its own `oocyst_id` | unique | 1,276 and 5,683 oocysts |
+| oocysts per blood meal | ≥ 1; 1 at λ = 0 | mean 1.00 (max 1) and mean 3.04 (max 20) |
+| recombinant uptakes record two distinct parents | always | 6.9% and 22.9% recombinant |
+
+The over-draw check is the regression test for WS-G1 — it was **64%** before the fix.
+
+#### ARG and IBD
+
+| property | expectation | observed |
+|---|---|---|
+| tree sequence loads | — | 1,513 trees / 4,620 nodes and 23,129 trees / 21,870 nodes, 24.21 Mb |
+| logged cases retained in the tree sequence | 100% | 100.0% of 588 and of 1,012 cases |
+| ARG recombines | > 1 local tree | 155 and 769 trees |
+| **genealogy is a forest** | founders never coalesce | 8 and 89 roots/tree, **0% coalesced** |
+| **relapse-to-origin IBD** | **exactly 1** | **median 1.000 over 385 and 473 relapses** |
+| distinct founder lineages unrelated | IBD ≈ 0 | median 0.000, max 0.000 over 28 pairs |
+| clonal founder copies | IBD = 1 | 1.000 |
+
+#### Parameter-response behaviour
+
+Monotonicity and switch checks — that each parameter moves the model in the direction it should.
+
+| property | observed |
+|---|---|
+| higher biting → higher prevalence | 0.94 vs 0.01 |
+| higher biting → higher COI | 2.60 vs 1.00 |
+| more founder lineages → more circulating lineages | 21 vs 4 |
+| `NU_HYPNOZOITE_BATCH = 0` → no relapses at all | relapse fraction 0.000, reservoir 0.00 |
+| faster activation → higher relapse fraction | 0.77 vs 0.52 |
+| faster activation → **smaller** standing reservoir | 0.80 vs 2.10 |
+| shorter `MAX_HYPNOZOITE_AGE` → smaller reservoir | 1.30 vs 1.90 |
+| batch boost enlarges the reservoir | 3.30 vs 1.90 |
+| radical cure → smaller reservoir | 0.50 vs 1.90 |
+| vector control → lower prevalence | 0.04 vs 0.34 |
+| temperate latency delays first relapse | median **142 d** vs **46 d** tropical |
+| multi-oocyst uptake → more outcrossing | 7.6% vs 6.6% |
+| all three importation modes produce imports | 184 / 1,535 / 64 |
+| `MAX_MOI` caps COI | COI 1.91 at `MAX_MOI = 2` |
+| detection layer thins the observed list only | baseline 315/315 detected |
+| `GENOME_MODE = "core"` shortens the genome | 21.8 vs 24.2 Mb |
+| `CHROMOSOMES` subset | 3 chromosomes simulated |
+| `run_grid()` completes and returns one row per (set × seed) | 4 runs, 4 rows, 4 dirs |
+
+### 13.1 Recombination machinery audit
+
+| property | expectation | observed |
+|---|---|---|
+| all 13 chromosome junctions used | yes | **yes** |
+| junction share of crossovers | 26.6% (6.5 junction vs 17.9 within per meiosis) | consistent |
+| within-chromosome breakpoint density uniform across chromosomes | CV ≈ 0 | **CV = 0.013** (3,149–3,309 per Mb) |
+| within-chromosome breakpoint position uniform | KS p > 0.05 | **D = 0.004, p = 0.289** |
+| junction behaves as `r = 0.5` (independent assortment) | φ ≈ 0 | **φ = −0.002** at 50.7% co-inheritance |
+| within-chromosome control (r = 0.148 over 200 kb) | φ high | **φ = 0.770** at 88.8% |
+| IBD segment length between same-oocyst sibs | mean ≈ 1/r = 1.35 Mb | mean 0.89 Mb, median 0.62 Mb |
+
+The junction-vs-control contrast (φ = −0.002 against 0.770) is the direct evidence that
+independent assortment is working — a junction transmits chromosomes independently while a
+within-chromosome control at 200 kb stays tightly linked.
+
+> The segment-length shortfall (0.89 vs 1.35 Mb expected) is an **expected censoring artefact**,
+> not a defect: segments are truncated at chromosome ends, which shortens the realised mean. Worth
+> re-checking if it ever drifts further.
 
 ### What is calibrated and what is not
 
