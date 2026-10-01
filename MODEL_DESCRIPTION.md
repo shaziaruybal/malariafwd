@@ -47,6 +47,46 @@ Population sizes are **fixed**: `N_HOSTS` humans, `N_MOSQ` mosquitoes. A mosquit
 replaced by a susceptible one, so vector density is constant and there is no larval or
 density-dependent vector ecology.
 
+### 2.1 Tick pseudocode
+
+```
+for each tick t:
+
+  reproduction():
+    # --- relapse ---
+    for each host h, for each dormant batch b in h:
+        if age(b) > MAX_HYPNOZOITE_AGE:        retire b (batch_count <- 0)
+        n_act ~ Binomial(batch_count(b), alpha_eff)      # activation
+        n_die ~ Binomial(batch_count(b) - n_act, mu)     # competing death
+        batch_count(b) <- batch_count(b) - n_act - n_die
+        if n_act > 0:  seed ONE blood-stage episode, addCloned(b)   # IBD = 1 to origin
+        if batch_count(b) == 0:  retire b
+
+    # --- biting ---
+    for each mosquito m:
+        if runif(1) >= biting_rate_eff(t):  continue
+        h <- a uniformly chosen host
+        if m infectious and runif(1) < P_TRANS_VH:
+            if NOT (h infected and active_lineages(h) >= MAX_MOI):
+                broods <- sampleTransmissibleMosqBroods(m)   # n ~ ZT(LAMBDA_SPOROZOITES)
+                inoculateMosquitoToHuman(broods, h)          # ONE Geom(nu) batch, split over k
+        if h infectious and runif(1) < P_TRANS_HV:
+            if active_lineages(m) < MAX_BROODS_PER_MOSQ:
+                seedBroodFromHuman(m, h)                     # n ~ ZT(LAMBDA_OOCYSTS) meioses
+
+    # --- importation ---
+    n_imp <- N_IMPORTS_PER_TICK + Poisson(IMPORT_RATE_PER_TICK * IMPORT_RATE_BOOST)
+    inoculate n_imp unrelated founder genotypes into random hosts
+
+  early():
+    kill every dormant batch with batch_count == 0        # WS-G cleanup, same tick
+    for each active blood-stage lineage:
+        if age > MAX_BROOD_AGE or runif(1) < P_BLOOD_CLEAR:  clear it
+    apply MDA / case-based treatment if scheduled
+    kill mosquitoes w.p. MU_MOSQ; replace each as susceptible
+    write state.tsv
+```
+
 ---
 
 ## 3. Human hosts
@@ -68,9 +108,15 @@ transmission-blocking immunity, and no age structure. This is a deliberate scope
 would confound the genetic signals the model exists to measure, and vivax immunity parameters are
 poorly identified. It is the single largest simplification in the model (§11, §14).
 
-**Blood-stage duration** is exponential with mean `MEAN_BLOOD_STAGE_DURATION` = 60 days, with a
-hard ceiling `MAX_BROOD_AGE` = 180 days. Clearance is per-lineage, so a polyclonal host loses
-lineages independently.
+**Blood-stage duration** is geometric (discrete-time exponential): each active lineage clears
+independently each day with probability
+
+```
+P_BLOOD_CLEAR = 1 - exp(-1 / MEAN_BLOOD_STAGE_DURATION)     # = 0.01653 at 60 days
+```
+
+with a hard ceiling `MAX_BROOD_AGE` = 180 days. Clearance is **per-lineage**, so a polyclonal host
+loses lineages independently and MOI decays rather than collapsing at once.
 
 **Superinfection** is allowed and gated by `MAX_MOI` = 20. The gate is checked once, in the
 infected-mosquito-bites-infected-human branch: a host already carrying `MAX_MOI` active lineages
@@ -96,6 +142,34 @@ Standard S_v → E_v → I_v, with:
   fitness cost of burden (mortality and transmissibility do not decline with parasite load).
 
 Mosquito death removes all of its broods, so a mosquito is a hard transmission bottleneck.
+
+### 4.1 Mapping to Ross–Macdonald quantities
+
+```
+m  = N_MOSQ / N_HOSTS                      # vector-to-host ratio
+a  = BITING_RATE                           # per-mosquito daily biting probability
+ma = BITING_RATE * N_MOSQ / N_HOSTS        # bites per human per day
+s  = fraction of mosquitoes with >= 1 transmissible (post-EIP) brood
+EIR = ma * s * 365                         # infectious bites per person-year
+MU_MOSQ = 1 / MOSQ_LIFESPAN                # daily mosquito mortality
+```
+
+`EIR` is **emergent**, not a parameter; `malariafwd` computes it from `state.tsv`
+(`n_transmissible > 0` gives the sporozoite rate `s`).
+
+**Seasonality** modulates the biting probability:
+
+```
+biting_rate_eff(t) = BITING_RATE * (1 + SEASONAL_AMP * cos(2*pi*(t - SEASONAL_PHASE)/365))
+```
+
+clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (`cos`, not `sin` — an
+earlier `sin` put the peak ~91 d late). `SEASONAL_AMP` ≈ 0.85 gives strong annual peaks swinging
+biting between roughly 0.15× and 1.85× the mean.
+
+> **Scale warning.** Because `ma` depends on `N_MOSQ / N_HOSTS`, prevalence and COI are
+> **scale-dependent**. A biting rate calibrated at 150 hosts does **not** transfer to 400 hosts.
+> Always calibrate at the scale you intend to publish.
 
 ---
 
@@ -127,6 +201,57 @@ or unrelated — which is the whole point of the identifiability work.
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
 > blood-stage genotypes**; at the default (one genotype per bite) both are the same single
 > genotype. Heterologous relapse can therefore only arise across separate bites. See §13.
+
+### 5.1 Formal specification
+
+**Batch size.** `N ~ Geometric(ν)` on the non-negative integers:
+
+```
+P(N = n) = 1/(1 + nu) * (nu / (1 + nu))^n ,    n = 0, 1, 2, ...      E[N] = nu
+```
+
+So a non-trivial fraction of bites deposit **no** hypnozoites at all: `P(N = 0) = 1/(1 + ν)` —
+**16.7% at ν = 5**, 25.0% at ν = 3, 11.1% at ν = 8.
+
+**Activation and death are competing risks** applied daily, per hypnozoite, with activation drawn
+first and death drawn from the survivors:
+
+```
+n_act ~ Binomial(batch_count, alpha)
+n_die ~ Binomial(batch_count - n_act, mu)
+```
+
+For the continuous-time analogue, each hypnozoite's fate is governed by the first of two
+exponential clocks, giving
+
+```
+P(activate rather than die) = alpha / (alpha + mu)
+E[time to either event]     = 1 / (alpha + mu)
+```
+
+At the shipped `ALPHA_ACTIVATE` = 1/170 and `MU_HYPNOZOITE` = 1/442:
+
+| quantity | value |
+|---|---|
+| α + μ | 0.008145 /day |
+| P(activate rather than die) | **0.722** |
+| mean time to activation-or-death | **122.8 days** |
+| expected relapsing hypnozoites per bite at ν = 5 | **3.61** |
+| …at ν = 3 | 2.17 |
+| …at ν = 8 | 5.78 |
+
+**Note the episode/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating on
+the same tick collapse into **one** blood-stage episode (they are clonal, so they are genetically
+one thing). The expected number of relapse *episodes* is therefore lower than 3.61, and depends on
+batch size — a larger batch yields more simultaneous activations and so proportionally fewer
+episodes per hypnozoite. This is why relapse *rate* is not linear in ν.
+
+**Temperate latency.** With `K_LATENCY = k > 0`, a hypnozoite must traverse `k` Erlang stages at
+rate `DELTA_LATENCY` before it becomes eligible to activate, producing the long-latency phenotype.
+`K_LATENCY = 0` (tropical) makes activation immediately eligible.
+
+**Resurgence boosts.** From `RESURGENCE_TRIGGER_TICK`, `alpha_eff = ALPHA_ACTIVATE ×
+ALPHA_ACTIVATE_BOOST` (clamped so `alpha_eff <= 1 - mu`) and `nu_eff = ν × NU_HYPNOZOITE_BATCH_BOOST`.
 
 ---
 
@@ -174,6 +299,76 @@ plus high carriage (≈3 and ≈0.9).
 
 `N_OOCYSTS_PER_BITE` is **retired**; it capped lineages rather than oocysts and now stops the run
 if set to anything but 1.
+
+### 6.1 The zero-truncated count distributions
+
+Both `LAMBDA_*` parameters feed `drawZTCount(lambda, k)`:
+
+```
+lambda <= 0           -> returns exactly 1          (the shipped default)
+k <= 0                -> X ~ ZT-Poisson(lambda)
+k >  0                -> X ~ ZT-NegBinomial, i.e. Poisson(Gamma(lambda, k)) rejected until > 0
+```
+
+ZT-Poisson pmf and realised mean:
+
+```
+P(X = x | X > 0) = lambda^x * exp(-lambda) / (x! * (1 - exp(-lambda))) ,   x = 1, 2, ...
+E[X | X > 0]     = lambda / (1 - exp(-lambda))
+```
+
+| λ | realised mean |
+|---|---|
+| 1 | 1.582 |
+| 2 | 2.313 |
+| 3 | 3.157 |
+| 4 | 4.075 |
+| 5 | 5.034 |
+
+The negative-binomial case has `var = λ + λ²/K`, so Poisson is the `K → ∞` limit and the NB option
+is a strict superset. Use `uptake_moments(lambda, k)` to see what a setting produces and
+`uptake_calibrate(mean, var)` to invert a literature target.
+
+> **Zero-truncation, not zero-inflation.** `P_TRANS_HV` / `P_TRANS_VH` already decide whether the
+> event happens at all, so the zeros in a membrane-feeding dataset are already represented;
+> inflating here would double-count them. Between-donor gametocytaemia variation is likewise
+> already emergent. `K_OOCYSTS` therefore captures only **residual within-feed overdispersion**.
+
+### 6.2 Tetrad genetics and the expected IBD ladder
+
+Every oocyst produces four meiotic products. For an **outcrossed** oocyst these are
+`{R12, R21, P1c, P2c}` — two reciprocal recombinants sharing the same breakpoints, plus clones of
+each parent. Reciprocity is the key structural fact: **R12 and R21 inherit complementary segments,
+so they share nothing.**
+
+Expected IBD, used throughout as a validation ladder:
+
+| pair | expected IBD | note |
+|---|---|---|
+| a lineage with itself / a clone | **1.000** | verified exact |
+| relapse vs its originating hypnozoite | **1.000** | `addCloned`; verified |
+| reciprocal recombinant pair (R12, R21) | **0** | complementary by construction |
+| recombinant vs parental clone, same oocyst | ~1/2 | |
+| **mean over same-oocyst pairs** | **~1/3** | measured 0.371 mean / 0.332 median on one chromosome |
+| full siblings (same two parents, different oocysts) | 1/2 | |
+| half siblings (one parent shared) | 1/4 | |
+| unrelated founders | 0 | independent roots |
+
+Under one chromosome the same-oocyst distribution is **bimodal** (near 0 or near 1); with all 14
+chromosomes and independent assortment it **tightens toward the centre** (0.4–0.8), which is the
+signature used to verify that assortment is working.
+
+### 6.3 Recombination
+
+```
+within-chromosome crossover rate:  7.4e-7 per bp   (13.5 kb/cM; euchromatic core rate)
+at each of the 13 chromosome junctions:  r = 0.5   (independent assortment)
+```
+
+The 14 chromosomes are concatenated into **one linkage group** with `r = 0.5` inserted at the
+junctions. This is genetically equivalent to explicit multi-chromosome simulation for all IBD
+metrics, and keeps a single `.trees` file — explicit SLiM multi-chromosome writes a *directory* of
+per-chromosome tree sequences, which would require rewriting the entire IBD pipeline.
 
 ---
 
@@ -488,17 +683,178 @@ plus `ACTUAL_SEED`** — full provenance), `plasmo.trees` (tskit tree sequence).
 | `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst |
 | `inoculation_id` | one bite (**broken before v0.1.0** — see WS-G2) |
 
-**Reproducibility:** `SEED` is recorded as `ACTUAL_SEED` in `params.tsv`. Requires SLiM ≥ 5.0 on
-`PATH` and Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to
-already-cleared infections — without it, relapse-to-prior comparisons silently lose ancestors.
+### 16.1 `events.tsv` data dictionary
 
-**Cost:** the dominant expense is **pairwise IBD**, not the simulation. Tree-sequence loading is
+One row per event. Columns:
+
+| column | meaning |
+|---|---|
+| `tick` | simulation day |
+| `event_id` | `"<tick>_<counter>"`, unique |
+| `event_type` | see the vocabulary below |
+| `inoculation_id` | one bite (**broken before v0.1.0**, WS-G2) |
+| `mosq_id`, `human_id` | entity ids; −1 where not applicable |
+| `lineage_id` | genetic identity of the parasite involved |
+| `parent1_lineage_id`, `parent2_lineage_id` | gamete lineages for a meiosis |
+| `is_recombinant` | 1 if the product came from an outcrossed oocyst |
+| `p_outcross` | Simpson diversity of the source gametocyte pool — **diagnostic only** |
+| `recipient` | `"human"` or `"mosquito"` |
+| `is_dormant` | 1 = this row is a hypnozoite batch, 0 = blood stage, −1 = N/A |
+| `is_imported` | 1 if the lineage traces to an import; **carried through to relapses** |
+| `pedigree_id` | the SLiM individual (tskit-native; join key to the tree sequence) |
+| `parent1_pedigree_id`, `parent2_pedigree_id` | ancestry |
+| `n_hypnozoites` | count this row represents (1 for non-batch events; the batch/thinning count otherwise) |
+| `oocyst_id` | the meiosis this product came from |
+| `detected` | 1 if the observation layer reported the episode; −1 = N/A |
+
+**Event vocabulary** (15 types; `event_types()` returns this as a data frame with an
+`ends_episode` flag):
+
+| stage | event types |
+|---|---|
+| blood | `vh_inoculation`, `vh_inoculation_import`, `vh_inoculation_seed`, `hypnozoite_activation`, `human_clearance`*, `case_bloodstage_clear`*, `mda_bloodstage_clear`* |
+| liver | `hypnozoite_clearance`, `radcure_hypnozoite_clear`, `mda_hypnozoite_clear`, `mda_hypnozoite_survived` |
+| vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `hv_uptake_seed`, `mosq_death` |
+
+\* ends an episode (`ends_episode = TRUE`). A `*_no_take` suffix is logged when an inoculation
+produces neither a primary nor a batch.
+
+### 16.2 `state.tsv` data dictionary
+
+One row per entity per tick:
+
+| column | meaning |
+|---|---|
+| `tick`, `entity_type` (`human`/`mosquito`), `entity_id` | |
+| `tag` | infection state |
+| `moi_active` | distinct active blood-stage lineages (**this is COI**) |
+| `moi_dormant` | distinct dormant genotypes in the reservoir |
+| `hyp_reservoir_size` | **total hypnozoite count** (sum of batch counts) — the quantity White's ν governs |
+| `brood_ids` | the lineages present, pipe-separated |
+| `n_transmissible` | post-EIP products (mosquitoes); drives the sporozoite rate |
+| `mosq_age_days` | |
+
+Note `moi_dormant` (genotypes) and `hyp_reservoir_size` (individuals) are different quantities and
+are routinely confused.
+
+### 16.3 Derived metrics
+
+| metric | definition |
+|---|---|
+| prevalence | fraction of hosts with `moi_active > 0` |
+| COI / MOI | `moi_active` among infected hosts |
+| reservoir | mean `hyp_reservoir_size` per host |
+| relapse fraction | `hypnozoite_activation` ÷ all new blood-stage episodes |
+| relapses per person-year | activations ÷ (hosts × years) |
+| molFOB | **all** new blood-stage infections per person-year, relapses included (Mueller/Koepfli) |
+| FOI | mosquito-borne infections only — *not* the same as molFOB |
+| EIR | `ma × s × 365` (§4.1) |
+
+### 16.4 Reproducibility
+
+`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter and the
+derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`. Requires SLiM ≥ 5.0 on `PATH` and
+Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared
+infections — without it, relapse-to-prior comparisons silently lose ancestors.
+
+### 16.5 Worked example
+
+```r
+library(malariafwd)
+
+p <- vivax_params(
+  N_HOSTS = 150, N_MOSQ = 300, SIM_DAYS = 1095,
+  BITING_RATE = 0.08,
+  N_FOUNDER_HOSTS = 40, N_FOUNDER_LINEAGES = 10,
+  NU_HYPNOZOITE_BATCH = 3
+)
+run <- run_sim(p, seed = 1, outdir = "runs/example")
+
+ev <- load_events(run)
+st <- load_state(run)
+summarise_run(run)                       # prevalence, COI, reservoir, relapse fraction
+
+cs  <- classify_cases(ev)                # episode-level truth labels
+idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))   # ground-truth IBD matrix
+
+plot_host_trajectory(run, host = pick_interesting_host(run))
+plot_ibd_pair(run, id1 = cs$pedigree_id[1], id2 = cs$pedigree_id[2])
+plot_relatedness_ladder(run)
+```
+
+Expect tens of seconds for the simulation and considerably longer for `ibd_pairs()` as the number
+of sampled genomes grows (§16.6).
+
+### 16.6 Computational cost
+
+The dominant expense is **pairwise IBD**, not the simulation. Tree-sequence loading is
 second. Simulation itself is cheap (a 150-host, 3-year run is tens of seconds). Budget accordingly
 when scaling the number of sampled genomes, and prefer cross-matrices over n² where possible.
 
 ---
 
-## 17. Citation and licence
+## 17. Scope: what the model can and cannot answer
+
+| can | cannot |
+|---|---|
+| Can genetic data distinguish relapse from reinfection, and where does that fail? | Forecast case counts or fit an incidence time series |
+| How much sequencing effort buys how much classification accuracy? | Cost-effectiveness of interventions |
+| How do reservoir diversity and relatedness behave under decline and resurgence? | Age-prevalence patterns (no immunity, no age structure) |
+| What do within-host relatedness metrics (iIBD, COI, %unique) actually measure in vivax? | Drug-resistance evolution (neutral genome, no selection) |
+| How do survey design and ascertainment distort genetic inference? | Spatial targeting (homogeneous mixing) |
+| What is the ground-truth IBD architecture behind an observed recurrence? | Anything requiring within-host parasite densities |
+
+---
+
+## 18. Implementation notes and traps
+
+Recorded because each cost real debugging time.
+
+**Eidos scoping.** A plain assignment to a global *inside a callback or function creates a local*.
+Use `defineGlobal()`. Four of the five WS-G defects were instances of this; the batch-retirement
+queue silently never reached `early()`.
+
+**Vacant tskit nodes.** SLiM haploid individuals get **two** nodes — the real haplosome
+(`is_vacant = [0]`) and an isolated null placeholder (`is_vacant = [1]`, IBD 0 with everything).
+~50% of `ts.samples()` are vacant and **must be filtered**. Any new tskit code must do this.
+
+**The genealogy is a forest.** Founders have independent roots; ~93% of pairs never coalesce.
+`tskit` branch-mode `divergence()` is therefore **not** a relatedness measure here, and derived
+TMRCA formulas give nonsense (a worked error: `dv/2/frac` gave 17,419 ticks against a maximum root
+time of 1,094). Use `ibd_pairs()` / `arg_tmrca()`.
+
+**R integer typing.** R passes `0.0` through the SLiM CLI as `-d X=0`, which Eidos types as
+integer and then rejects where a float is required. The engine uses the `asFloat()` idiom
+throughout; new parameters must too.
+
+**Empty-vector iteration.** Eidos errors on iterating an empty vector; guard with `if (size(x) > 0)`.
+
+**Chromosome-aware joins.** When splitting IBD segments by chromosome, cross-join per segment — a
+whole-group comparison against the 14-row chromosome table silently recycles for pairs with more
+than one segment.
+
+---
+
+## 19. Glossary
+
+| term | meaning |
+|---|---|
+| **lineage** | a genetic identity / clonal group. Propagates through clonal, parental and selfed descent; recombinants mint a new one. **COI counts distinct lineages.** |
+| **brood** | one blood meal's co-hatching group of oocysts (≥ 1 oocyst) |
+| **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
+| **tetrad** | the four products of one meiosis: 2 reciprocal recombinants + 2 parental clones |
+| **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
+| **episode** | one blood-stage infection event (primary or relapse) |
+| **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence |
+| **homologous / heterologous relapse** | relapse genetically identical to / different from the acute infection |
+| **molFOB** | compound force of blood-stage infection, relapses **included** |
+| **FOI** | mosquito-borne force of infection only |
+| **iIBD** | mean IBD among co-present strains within one host |
+| **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred |
+
+---
+
+## 20. Citation and licence
 
 See `DESCRIPTION`, `DECISIONS.md` (ADR log, D1–D16) and `NEWS.md`.
 
