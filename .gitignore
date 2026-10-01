@@ -8,3 +8,6 @@ inst/doc
 /doc/
 /Meta/
 quickstart-output/
+
+# dev scratch: notes, scoping docs, exploratory scripts - never shipped, never tracked
+ignore/
