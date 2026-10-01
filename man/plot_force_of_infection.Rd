@@ -17,7 +17,7 @@ a ggplot object.
 \description{
 Plots the compound force of blood-stage infection (\strong{molFOB} -- every new blood-stage
 episode, relapses included) against the mosquito-borne force of infection (\strong{FOI} -- new
-inoculations only). The shaded gap between them is the relapse contribution, which in
+inoculations only). The distance between the lines is the relapse contribution, which in
 \emph{P. vivax} is typically the larger share and is invisible to any method that equates new
 episodes with new transmission.
 }

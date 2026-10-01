@@ -92,7 +92,7 @@ Time advances in **daily ticks**. Each tick runs in this order:
 Ordering matters for one subtlety: a batch exhausted or age-capped during `reproduction()` is
 **retired** by setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in
 the **same** tick, so there is no activation lag. (This replaced a queue that an Eidos scoping slip
-had made function-local — the fix is WS-G, §13.)
+had made function-local; see §18.)
 
 Population sizes are **fixed**: `N_HOSTS` humans, `N_MOSQ` mosquitoes. A mosquito that dies is
 replaced by a susceptible one, so vector density is constant and there is no larval or
@@ -130,7 +130,7 @@ for each tick t:
     inoculate n_imp unrelated founder genotypes into random hosts
 
   early():
-    kill every dormant batch with batch_count == 0        # WS-G cleanup, same tick
+    kill every dormant batch with batch_count == 0        # cleanup, same tick
     for each active blood-stage lineage:
         if age > MAX_BROOD_AGE or runif(1) < P_BLOOD_CLEAR:  clear it
     apply MDA / case-based treatment if scheduled
@@ -232,7 +232,7 @@ Follows the **White et al. 2014** batch model.
   `P_PRIMARY` = 1.0 (White's base model treats this as certain given successful inoculation), and
   **independently** establishes a batch of hypnozoites.
 - **Batch size** is geometric with mean `NU_HYPNOZOITE_BATCH` (ν) = 5.
-  **Since WS-F the batch is drawn once per *bite*** and split uniformly across the co-inoculated
+  **The batch is drawn once per *bite*** and split uniformly across the co-inoculated
   genotypes, matching White's per-bite parameterisation (§12). Both, either, or neither of primary
   and batch can occur for a given genotype.
 - **Activation:** each hypnozoite activates at `ALPHA_ACTIVATE` = 1/170 per day (Mehra; White 2014
@@ -251,7 +251,8 @@ or unrelated — which is the whole point of the identifiability work.
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
 > blood-stage genotypes**; at the default (one genotype per bite) both are the same single
-> genotype. Heterologous relapse can therefore only arise across separate bites. See §13.
+> genotype. Heterologous relapse can therefore only arise across separate bites. This is a known
+> limitation; see assumption 5 in §11 and the first entry in §15.
 
 ### 5.1 Formal specification
 
@@ -308,7 +309,7 @@ ALPHA_ACTIVATE_BOOST` (clamped so `alpha_eff <= 1 - mu`) and `nu_eff = ν × NU_
 
 ## 6. The mosquito stage: uptake, meiosis, sporozoites
 
-This is where the genetics are generated, and where v0.1.0 (WS-F) changed most.
+This is where the genetics are generated.
 
 **Uptake.** A successful blood meal forms `n ~ zero-truncated Poisson(LAMBDA_OOCYSTS)` oocysts
 (negative binomial if `K_OOCYSTS > 0`, var = λ + λ²/K). Each oocyst is an independent meiosis with
@@ -346,7 +347,9 @@ plus high carriage (≈3 and ≈0.9).
 > **`LAMBDA_SPOROZOITES` defaults to 0, which `drawZTCount` maps to exactly 1.** So at the shipped
 > default **every bite delivers exactly one genotype, regardless of what the mosquito carries** —
 > co-transmission is structurally impossible. Measured: mosquitoes carry a mean of 4.5 distinct
-> lineages while 1.00 is inoculated. This is the subject of a pending change (§13).
+> lineages while 1.00 is inoculated. Raising `LAMBDA_SPOROZOITES` enables co-transmission; it is
+> off by default for backward compatibility, and changing that default is the first planned
+> extension (§15).
 
 `N_OOCYSTS_PER_BITE` is **retired**; it capped lineages rather than oocysts and now stops the run
 if set to anything but 1.
@@ -638,19 +641,21 @@ batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢp
 
 ## 13. Verification, fixed defects, and calibration status
 
-### Defects found and fixed in v0.1.0 (WS-G)
+### Correctness audit
 
-All five were reproduced empirically before fixing. Four were instances of the same Eidos trap: a
-plain assignment to a global inside a callback or function creates a **local**.
+Five defects were found during development, reproduced empirically, and fixed before release.
+Four were instances of the same Eidos trap: a plain assignment to a global inside a callback or
+function creates a **local**. They are recorded here because each has a standing regression test,
+and because the first one changes how earlier results should be read.
 
-| id | defect | measured impact |
-|---|---|---|
-| WS-G1 | hypnozoite batches never retired — exhausted and age-capped batches kept activating | **64% of batches over-drew**; relapses/host-yr fell ~3× after the fix (4.7 → 1.55 at ν = 3) |
-| WS-G2 | duplicate event ids (`INOCULATION_ID` never incremented) | all inoculations shared id 1 — grouping by `inoculation_id` is invalid in pre-v0.1.0 output |
-| WS-G3–5 | deferred radical-cure flag, MDA empty-host guard, tick-event id | corrected |
+| defect | measured impact |
+|---|---|
+| hypnozoite batches never retired — exhausted and age-capped batches kept activating | **64% of batches over-drew**; relapses/host-yr fell ~3× after the fix (4.7 → 1.55 at ν = 3) |
+| duplicate event ids (`INOCULATION_ID` never incremented) | all inoculations shared id 1 |
+| deferred radical-cure flag, MDA empty-host guard, tick-event id | corrected |
 
-**Consequence for older output:** group bites by `(tick, mosq_id, human_id)`, not
-`inoculation_id`, in anything produced before v0.1.0.
+**Consequence for output produced by pre-release versions of the engine:** group bites by
+`(tick, mosq_id, human_id)` rather than `inoculation_id`.
 
 ### Validation suite
 
@@ -681,7 +686,8 @@ machinery.
 | oocysts per blood meal | ≥ 1; 1 at λ = 0 | mean 1.00 (max 1) and mean 3.04 (max 20) |
 | recombinant uptakes record two distinct parents | always | 6.9% and 22.9% recombinant |
 
-The over-draw check is the regression test for WS-G1 — it was **64%** before the fix.
+The over-draw check is the standing regression test for the batch-retirement defect — it was
+**64%** before the fix.
 
 #### ARG and IBD
 
@@ -744,7 +750,7 @@ within-chromosome control at 200 kb stays tightly linked.
 
 | quantity | status |
 |---|---|
-| `NU_HYPNOZOITE_BATCH` | re-fitted on the corrected model; 3 sits inside all published bands (relapses/py, molFOB, median MOI, relapse fraction). Shipped default is **5** and is a placeholder |
+| `NU_HYPNOZOITE_BATCH` | re-fitted against the published bands; 3 sits inside all of them (relapses/py, molFOB, median MOI, relapse fraction). Shipped default is **5** and is a placeholder |
 | `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI depend on `N_HOSTS`/`N_MOSQ`), so calibrate at the scale you will publish |
 | hypnozoite rates | literature values (White, Mehra), not fitted |
 | genome, recombination | reference values, not fitted |
@@ -752,13 +758,6 @@ within-chromosome control at 200 kb stays tightly linked.
 > **Identification warning.** COI is jointly determined by biting rate *and* the uptake/inoculation
 > parameters. Fitting both to COI leaves them confounded. Set the parasite-side parameters from
 > biology, then calibrate `BITING_RATE` to prevalence/EIR.
-
-### Pending model change
-
-`LAMBDA_SPOROZOITES = 0` makes co-transmission structurally impossible (§6), which suppresses
-heterologous relapse — the characteristic genetic signature of vivax recurrence. Scoped in
-[`LIVER_STAGE_RESTRUCTURE.md`](LIVER_STAGE_RESTRUCTURE.md), to land before any full-scale
-recalibration.
 
 ---
 
@@ -785,7 +784,7 @@ Ordered by how much the answer is likely to move.
 
 | extension | motivation |
 |---|---|
-| Co-transmission by default + independent hypnozoite genotyping | §13; makes heterologous relapse emergent |
+| **Co-transmission on by default**, and genotyping each hypnozoite independently of the inoculated primaries | at present a bite delivers one genotype and the reservoir is a subset of the blood-stage infection, so heterologous relapse can only arise across separate bites. Both changes make it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Andolina 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
@@ -812,7 +811,7 @@ plus `ACTUAL_SEED`** — full provenance), `plasmo.trees` (tskit tree sequence).
 | `lineage_id` | genetic identity / clonal group; propagates through clonal, parental and selfed descent; recombinants mint a fresh one. **COI counts distinct `lineage_id`** |
 | `oocyst_id` | one meiosis / tetrad, ≤ 4 lineages |
 | `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst |
-| `inoculation_id` | one bite (**broken before v0.1.0** — see WS-G2) |
+| `inoculation_id` | one bite (unreliable in pre-release output; see §13) |
 
 ### 16.1 `events.tsv` data dictionary
 
@@ -823,7 +822,7 @@ One row per event. Columns:
 | `tick` | simulation day |
 | `event_id` | `"<tick>_<counter>"`, unique |
 | `event_type` | see the vocabulary below |
-| `inoculation_id` | one bite (**broken before v0.1.0**, WS-G2) |
+| `inoculation_id` | one bite |
 | `mosq_id`, `human_id` | entity ids; −1 where not applicable |
 | `lineage_id` | genetic identity of the parasite involved |
 | `parent1_lineage_id`, `parent2_lineage_id` | gamete lineages for a meiosis |
@@ -942,7 +941,7 @@ when scaling the number of sampled genomes, and prefer cross-matrices over n² w
 Recorded because each cost real debugging time.
 
 **Eidos scoping.** A plain assignment to a global *inside a callback or function creates a local*.
-Use `defineGlobal()`. Four of the five WS-G defects were instances of this; the batch-retirement
+Use `defineGlobal()`. Four of the five defects in §13 were instances of this; the batch-retirement
 queue silently never reached `early()`.
 
 **Vacant tskit nodes.** SLiM haploid individuals get **two** nodes — the real haplosome

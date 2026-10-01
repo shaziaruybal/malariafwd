@@ -21,9 +21,9 @@ the hypnozoite reservoir (dashed, right axis), and the onset of each new infecti
 ![Stacked per-lineage blood-stage infections for one host over two years, with the hypnozoite reservoir overlaid and new-infection and relapse onsets marked.](man/figures/README-host-trajectory.png)
 
 **Genetics.** The genealogy is recorded, so identity-by-descent is exact rather than inferred
-from markers. Shared segments for three pairs of known relationship:
+from markers. Shared segments for four pairs of known relationship:
 
-![IBD karyotype across the 14 PvP01 chromosomes for three pairs: relapse versus its origin, same-oocyst siblings, and distinct founders.](man/figures/README-ibd-karyotype.png)
+![IBD karyotype across the 14 PvP01 chromosomes for four pairs: relapse versus its origin, same-oocyst siblings, reciprocal recombinants, and distinct founders.](man/figures/README-ibd-karyotype.png)
 
 ## Requirements
 

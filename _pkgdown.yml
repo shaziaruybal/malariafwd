@@ -16,7 +16,8 @@ reference:
 
 - title: Diagnostics
   desc: Is this run healthy, and what is driving it?
-  contents: [plot_diagnostics, summarise_run, force_of_infection]
+  contents: [plot_diagnostics, summarise_run, force_of_infection,
+             plot_force_of_infection, theme_malariafwd]
 
 - title: Epidemiology
   desc: Cases by origin, transmission chains, and the surveillance view.

@@ -13,8 +13,9 @@ change our mind we add a new entry that marks the old one `Superseded by DNN` �
 so the trail of what we tried survives. Each entry: Context → Decision → Rationale → Alternatives
 rejected → Consequences. Cross-reference model code and the review finding IDs (F1–F15).
 
-Model file: `src/malariafwd_vivax_v2_meiosis.slim` (SLiM 5.2). This log starts at the
-"first full-genome prototype" milestone (2026-08).
+Model file: `inst/slim/malariafwd_vivax.slim` (SLiM 5.2). This log starts at the first
+full-genome prototype milestone (2026-08); entries written before the package was extracted
+refer to paths from the prototype that preceded it.
 
 ---
 

@@ -12,10 +12,10 @@ version series starts here.)
 * **Hypnozoite reservoir & relapses:** White (2014) / Mehra batch model — each inoculation
   deposits a batch of hypnozoites, each with a daily activation (relapse) and death hazard;
   optional temperate latency (`K_LATENCY`, `DELTA_LATENCY`).
-* **Genetics:** whole 14-chromosome PvP01 genome (24.2 Mb), neutral, with forward mutation
-  and meiotic recombination in the mosquito oocyst; a tskit tree sequence is recorded so
+* **Genetics:** whole 14-chromosome PvP01 genome (24.2 Mb), neutral (mutation rate 0), with
+  meiotic recombination in the mosquito oocyst; a tskit tree sequence is recorded so
   identity-by-descent is **ground truth**, not marker-inferred.
-* **Mosquito uptake & inoculation (WS-F):** one blood meal forms `LAMBDA_OOCYSTS` oocysts
+* **Mosquito uptake & inoculation:** one blood meal forms `LAMBDA_OOCYSTS` oocysts
   (zero-truncated; `K_OOCYSTS > 0` makes it negative-binomial, var = λ + λ²/K, since vivax
   membrane-feeding oocyst counts are overdispersed), each drawing its two gametes
   independently and uniformly from the gametocyte pool — so P(outcross) = 1 − Σpᵢ² *and*
@@ -76,7 +76,7 @@ version series starts here.)
   `force_of_infection()` returning FOI (mosquito-borne) and molFOB (compound, incl. relapses;
   Mueller et al. 2013) by origin.
 
-## Correctness fixes (WS-G)
+## Correctness fixes
 
 Four of these stem from one Eidos scoping rule: a plain assignment to a global inside a
 callback or function creates a *local*, so the write was never visible.
