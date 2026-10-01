@@ -4,10 +4,15 @@
 \alias{plot_relatedness_ladder}
 \title{Plot the relatedness ladder}
 \usage{
-plot_relatedness_ladder(pairs)
+plot_relatedness_ladder(pairs, style = c("points", "bars"))
 }
 \arguments{
 \item{pairs}{output of \code{\link[=ibd_truth_pairs]{ibd_truth_pairs()}}.}
+
+\item{style}{\code{"points"} plots every pair against the theoretical rungs; \code{"bars"} shows the
+composition of each class across relatedness bands, which reads better when classes are
+point masses (relapses are always clonal, distinct founders always unrelated). Both label
+the number of pairs per class, so a class resting on two observations is visible.}
 }
 \value{
 a ggplot object.
@@ -19,5 +24,5 @@ clonal relationships should sit at 1, distinct founders at 0, and same-oocyst si
 should split between ~1/2 and 0 (reciprocal recombinants share nothing).
 }
 \examples{
-\dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
+\dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}
 }

@@ -10,7 +10,7 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
   p <- vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 300,
                     N_FOUNDER_LINEAGES = 8)
   run <- run_sim(p, seed = 1, outdir = out)
-  ev <- as.data.table(load_events(run))
+  ev <- data.table::as.data.table(load_events(run))
 
   ## (WS-G bug 1) a batch's activations + deaths must never exceed the size it was
   ## established with. The old PENDING_HYP_DEATHS queue was scoped local, so retired
@@ -24,9 +24,9 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
   expect_equal(sum(chk$drew > chk$held), 0)
 
   ## (WS-G bugs 2 & 3) event ids unique; inoculation ids do not restart each tick
-  expect_equal(uniqueN(ev$event_id), nrow(ev))
+  expect_equal(data.table::uniqueN(ev$event_id), nrow(ev))
   inoc <- ev[inoculation_id > 0, inoculation_id]
-  expect_gt(max(inoc), 0.5 * uniqueN(inoc))
+  expect_gt(max(inoc), 0.5 * data.table::uniqueN(inoc))
 })
 
 test_that("classify_cases labels imported relapses", {
@@ -70,7 +70,7 @@ test_that("ARG summaries behave on the forest genealogy", {
   unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12,
                               SIM_DAYS = 300, N_FOUNDER_LINEAGES = 8), seed = 1, outdir = out)
-  ev <- as.data.table(load_events(run))
+  ev <- data.table::as.data.table(load_events(run))
   s <- arg_summary(run)
   expect_gt(s$num_trees, 1)          # recombination happened
   expect_gte(s$roots_min, 1)

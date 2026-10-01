@@ -22,19 +22,38 @@ plot_relapse_km <- function(ttr, title = NULL) {
   ggplot2::ggplot(tab, ggplot2::aes(time, surv)) +
     ggplot2::geom_step(linewidth = .8, colour = "firebrick") +
     ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(title = title, x = "days since first infection", y = "fraction not yet relapsed")
+    ggplot2::labs(title = title, x = "days since first infection", y = "fraction not yet relapsed") +
+    theme_malariafwd()
 }
 
-#' Peak COI vs relapse count (boxplots)
+#' Peak COI vs relapse count
+#'
+#' Boxes are drawn only for COI levels with at least `min_n` hosts; sparser levels show their
+#' raw points alone. Every level is labelled with its host count.
+#'
 #' @param mvr output of [moi_vs_relapse()].
+#' @param min_n minimum hosts in a COI level before a box is drawn over it.
 #' @return a ggplot object.
 #' @export
-plot_moi_vs_relapse <- function(mvr) {
+plot_moi_vs_relapse <- function(mvr, min_n = 5) {
   .need_ggplot()
-  ggplot2::ggplot(mvr[peak_moi <= 12], ggplot2::aes(factor(peak_moi), n_relapse)) +
-    ggplot2::geom_boxplot(outlier.size = .5, fill = "grey85") +
+  d <- as.data.table(mvr)[peak_moi <= 12]
+  n_by <- d[, .(n = .N), by = peak_moi]
+  ## A box drawn over two hosts is not a distribution. Sparse COI levels (the tail is always
+  ## thin) are shown as the raw points only, and every level carries its n, so the reader can
+  ## see what the box is built on.
+  d <- merge(d, n_by, by = "peak_moi")
+  d[, grp := factor(peak_moi)]
+  ggplot2::ggplot(d, ggplot2::aes(grp, n_relapse)) +
+    ggplot2::geom_boxplot(data = d[n >= min_n], outlier.shape = NA, fill = "grey88",
+                          colour = "grey35", width = .6, linewidth = .4) +
+    ggplot2::geom_jitter(width = .14, height = .15, alpha = .35, size = .9, colour = "grey20") +
+    ggplot2::geom_text(data = n_by, ggplot2::aes(factor(peak_moi), Inf, label = paste0("n = ", n)),
+                       inherit.aes = FALSE, vjust = 1.4, size = 3, colour = "grey30") +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(.04, .14))) +
     ggplot2::labs(x = "peak COI (distinct lineages ever co-active in host)",
-                  y = "relapses in host")
+                  y = "relapses in host") +
+    theme_malariafwd()
 }
 
 #' Host-state prevalence over time (stacked area)
@@ -47,7 +66,8 @@ plot_host_state_prevalence <- function(hsp) {
   hsp <- copy(hsp)[, cls := factor(cls, levels = lv)]
   ggplot2::ggplot(hsp, ggplot2::aes(tick, frac, fill = cls)) + ggplot2::geom_area() +
     ggplot2::scale_fill_manual(values = c("grey85","goldenrod2","firebrick","turquoise4")) +
-    ggplot2::labs(x = "day", y = "fraction of hosts", fill = NULL)
+    ggplot2::labs(x = "day", y = "fraction of hosts", fill = NULL) +
+    theme_malariafwd()
 }
 
 #' Within-host trajectory for one host
@@ -132,7 +152,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   gg <- ggplot2::ggplot; ae <- ggplot2::aes
   vbl <- ggplot2::geom_vline(xintercept = burn, linetype = 2, colour = "grey65", linewidth = .3)
   fillsc <- ggplot2::scale_fill_manual(values = ocol, breaks = olv, limits = olv, drop = FALSE, name = NULL)
-  th <- ggplot2::theme_minimal(base_size = 11) +
+  th <- theme_malariafwd() +
     ggplot2::theme(plot.title = ggplot2::element_text(size = 11, face = "bold"),
                    panel.grid.minor = ggplot2::element_blank(), legend.position = "bottom")
   lp <- function(d, col, ttl, xlab, ylab, ymax = NA) {
@@ -207,7 +227,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
       "blood-stage lineages",
       sec.axis = ggplot2::sec_axis(~ . / sf, name = "hypnozoite reservoir")) +
     ggplot2::labs(x = "day") +
-    ggplot2::theme_minimal(base_size = 11) +
+    theme_malariafwd() +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                    legend.position = "bottom",
                    axis.title.y.right = ggplot2::element_text(colour = "grey30"))

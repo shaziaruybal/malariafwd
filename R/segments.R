@@ -158,8 +158,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
   ibd <- merge(key, seg[, .(ibd = sum(length) / L), by = pair], by = "pair", all.x = TRUE)
   ibd[is.na(ibd), ibd := 0]
   segl <- merge(seg, key[, .(pair, lab)], by = "pair")
-  th <- ggplot2::theme_minimal(base_size = 11) +
-    ggplot2::theme(panel.grid = ggplot2::element_blank())
+  th <- theme_malariafwd(grid = FALSE)
 
   if (layout == "chromosome") {
     ## one bar per chromosome (karyotype), pairs as facet columns
@@ -262,17 +261,54 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
 #' should split between ~1/2 and 0 (reciprocal recombinants share nothing).
 #'
 #' @param pairs output of [ibd_truth_pairs()].
+#' @param style `"points"` plots every pair against the theoretical rungs; `"bars"` shows the
+#'   composition of each class across relatedness bands, which reads better when classes are
+#'   point masses (relapses are always clonal, distinct founders always unrelated). Both label
+#'   the number of pairs per class, so a class resting on two observations is visible.
 #' @return a ggplot object.
 #' @examples
-#' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
+#' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}
 #' @export
-plot_relatedness_ladder <- function(pairs) {
+plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
   .need_ggplot()
+  style <- match.arg(style)
+  pairs <- data.table::as.data.table(pairs)
+  n_by <- pairs[, .(n = .N), by = cls]
+
+  if (style == "bars") {
+    ## Most relationship classes are POINT MASSES (relapses are always IBD 1, distinct founders
+    ## always 0), so a box or a crossbar collapses to a line and implies a spread that is not
+    ## there. Binning into relatedness bands and showing composition is honest about that, and
+    ## shows the one genuinely interesting split -- same-oocyst sibs, which divide between high
+    ## sharing and the reciprocal products that share nothing.
+    brk <- c(-Inf, 1e-9, 0.25, 0.40, 0.60, 1 - 1e-9, Inf)
+    lab <- c("0 (unrelated)", "(0, 1/4]", "(1/4, 0.4]", "(0.4, 0.6]", "(0.6, 1)", "1 (clonal)")
+    d <- data.table::copy(pairs)[, band := cut(ibd, brk, labels = lab, right = TRUE)]
+    d <- d[, .(n = .N), by = .(cls, band)][, frac := n / sum(n), by = cls]
+    pal2 <- stats::setNames(
+      c("#f0f0f0", "#d9e7f0", "#9ecae1", "#fdd49e", "#fc8d59", "#b2182b"), lab)
+    return(
+      ggplot2::ggplot(d, ggplot2::aes(cls, frac, fill = band)) +
+        ggplot2::geom_col(width = .68, colour = "grey40", linewidth = .25) +
+        ggplot2::geom_text(data = n_by, ggplot2::aes(cls, 1.04, label = paste0("n = ", n)),
+                           inherit.aes = FALSE, size = 3, colour = "grey30") +
+        ggplot2::scale_fill_manual(values = pal2, name = "IBD band", drop = FALSE) +
+        ggplot2::scale_y_continuous("fraction of pairs",
+                                    labels = function(x) paste0(round(100 * x), "%"),
+                                    limits = c(0, 1.08), breaks = c(0, .25, .5, .75, 1)) +
+        ggplot2::labs(x = NULL) +
+        theme_malariafwd(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 20, hjust = 1))
+    )
+  }
+
   rungs <- data.table::data.table(
     y = c(0, 1/4, 1/3, 1/2, 1),
     lab = c("0 unrelated", "1/4 half-sib", "1/3 tetrad mean", "1/2 full-sib / parent", "1 clonal"))
   pal <- stats::setNames(c("#2166ac", "#4393c3", "#c8971f", "#7fbf7b", "#d6604d", "#999999"), .LADDER)
   ggplot2::ggplot(pairs, ggplot2::aes(cls, ibd, colour = cls)) +
+    ggplot2::geom_text(data = n_by, ggplot2::aes(cls, 1.06, label = paste0("n = ", n)),
+                       inherit.aes = FALSE, size = 3, colour = "grey30") +
     ggplot2::geom_hline(data = rungs, ggplot2::aes(yintercept = y), linetype = 2,
                         colour = "grey70", linewidth = .3) +
     ggplot2::geom_jitter(width = .18, height = 0, alpha = .35, size = 1.1) +
@@ -280,9 +316,8 @@ plot_relatedness_ladder <- function(pairs) {
                           linewidth = .5, colour = "grey15") +
     ggplot2::scale_colour_manual(values = pal, guide = "none") +
     ggplot2::scale_y_continuous("IBD (fraction of genome shared from a recent common ancestor)",
-                                breaks = rungs$y, labels = rungs$lab, limits = c(-0.02, 1.02)) +
+                                breaks = rungs$y, labels = rungs$lab, limits = c(-0.02, 1.10)) +
     ggplot2::labs(x = NULL) +
-    ggplot2::theme_minimal(base_size = 12) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 20, hjust = 1),
-                   panel.grid.minor = ggplot2::element_blank())
+    theme_malariafwd(base_size = 12) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 20, hjust = 1))
 }

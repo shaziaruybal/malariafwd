@@ -31,6 +31,18 @@ crossover breakpoints (0.76); the reciprocal recombinant of that same meiosis sh
 (0.00), because reciprocal products are complementary by construction; distinct founders likewise
 share nothing.
 
+**Demonstrating the observation layer.** The same configuration rerun with
+`P_DETECT_PRIMARY = 0.60` and `P_DETECT_RELAPSE = 0.15` — relapses are often sub-patent, so a
+surveillance system sees them less often than primaries.
+
+![Detection](man/figures/README-detection.png)
+
+**A** true blood-stage episodes against detected ones. **B** the composition of each. The effect
+is not a uniform thinning but a **reweighting**: the true burden is **65.7% relapse / 34.3%
+reinfection**, while the detected line list reads **29.7% relapse / 70.3% reinfection**. Detection
+*inverts* the apparent mix, which is why any method that infers transmission from the observed
+origin split — Rc from case counts included — inherits a bias it cannot see.
+
 > At this transmission level outcrossing is rare — **168 recombinant against 3,277 clonal uptake
 > events (4.9%)** — so mosaics like the second panel are genuinely uncommon and most pairs sit at
 > 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
