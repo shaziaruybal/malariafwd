@@ -232,3 +232,52 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
                    legend.position = "bottom",
                    axis.title.y.right = ggplot2::element_text(colour = "grey30"))
 }
+
+#' Force of blood-stage infection: molFOB vs FOI
+#'
+#' Plots the compound force of blood-stage infection (**molFOB** -- every new blood-stage
+#' episode, relapses included) against the mosquito-borne force of infection (**FOI** -- new
+#' inoculations only). The shaded gap between them is the relapse contribution, which in
+#' *P. vivax* is typically the larger share and is invisible to any method that equates new
+#' episodes with new transmission.
+#'
+#' Naming follows Mueller/Koepfli: molFOB counts blood-stage infections however they arise,
+#' FOI counts mosquito-borne infections only.
+#'
+#' @param foi output of [force_of_infection()].
+#' @param smooth span for a loess trend through each series; `NA` draws the raw series.
+#' @return a ggplot object.
+#' @examples
+#' \dontrun{plot_force_of_infection(force_of_infection(run))}
+#' @export
+plot_force_of_infection <- function(foi, smooth = 0.4) {
+  .need_ggplot()
+  d <- as.data.table(foi)
+  mosq <- setdiff(unique(d$origin), "relapse")       # everything not a relapse is mosquito-borne
+  w <- rbind(
+    d[, .(rate = sum(rate), series = "molFOB (all blood-stage episodes)"), by = win],
+    d[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])
+  ## carry zeros so the ribbon does not break where a window has no episodes of one kind
+  w <- merge(data.table::CJ(win = unique(d$win), series = unique(w$series)), w,
+             by = c("win", "series"), all.x = TRUE)[is.na(rate), rate := 0]
+  rib <- data.table::dcast(w, win ~ series, value.var = "rate")
+  data.table::setnames(rib, c("win", "foi", "molfob"))
+
+  lv <- c("molFOB (all blood-stage episodes)", "FOI (mosquito-borne only)")
+  w[, series := factor(series, lv)]
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_ribbon(data = rib, ggplot2::aes(win, ymin = foi, ymax = molfob),
+                         fill = "#c8971f", alpha = .25) +
+    ggplot2::geom_line(data = w, ggplot2::aes(win, rate, colour = series),
+                       linewidth = .5, alpha = .45)
+  if (!is.na(smooth))
+    p <- p + ggplot2::geom_smooth(data = w, ggplot2::aes(win, rate, colour = series),
+                                  method = "loess", span = smooth, se = FALSE,
+                                  linewidth = 1, formula = y ~ x)
+  p +
+    ggplot2::scale_colour_manual(values = stats::setNames(c("#b2182b", "#2166ac"), lv), name = NULL) +
+    ggplot2::labs(x = "day", y = "episodes per person-year",
+                  subtitle = "shaded gap = the relapse contribution") +
+    theme_malariafwd() +
+    ggplot2::theme(legend.position = "top")
+}

@@ -20,8 +20,19 @@ person-year — all inside published vivax bands.
 that host's hypnozoite reservoir, and the marks below show new infections (triangles) against
 relapses (circles). **B** population host-state composition over time — note the teal
 *reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
-of relapses a host goes on to experience. **D** Kaplan–Meier time to first relapse. **E** the
-realised IBD ladder by relationship class.
+of relapses a host goes on to experience (boxes drawn only where there are enough hosts; every
+level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage infection
+against the mosquito-borne force alone; the shaded gap is the relapse contribution. **E** the
+realised IBD ladder, as the composition of each relationship class across relatedness bands.
+
+Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes per person-year,
+so 66% of blood-stage episodes are relapses**, and the gap widens through the run as the reservoir
+accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
+area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
+relationship classes are point masses, and the one informative split — same-oocyst siblings
+dividing 50/50 between high sharing and the reciprocal products that share nothing — is only
+legible this way. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
+`plot_relapse_km()` the time-to-first-relapse curve.)
 
 ![IBD karyotype](man/figures/README-ibd-karyotype.png)
 
