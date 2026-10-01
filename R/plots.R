@@ -237,7 +237,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #'
 #' Plots the compound force of blood-stage infection (**molFOB** -- every new blood-stage
 #' episode, relapses included) against the mosquito-borne force of infection (**FOI** -- new
-#' inoculations only). The shaded gap between them is the relapse contribution, which in
+#' inoculations only). The distance between the lines is the relapse contribution, which in
 #' *P. vivax* is typically the larger share and is invisible to any method that equates new
 #' episodes with new transmission.
 #'
@@ -257,17 +257,13 @@ plot_force_of_infection <- function(foi, smooth = 0.4) {
   w <- rbind(
     d[, .(rate = sum(rate), series = "molFOB (all blood-stage episodes)"), by = win],
     d[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])
-  ## carry zeros so the ribbon does not break where a window has no episodes of one kind
+  ## carry zeros so a series does not break where a window has no episodes of one kind
   w <- merge(data.table::CJ(win = unique(d$win), series = unique(w$series)), w,
              by = c("win", "series"), all.x = TRUE)[is.na(rate), rate := 0]
-  rib <- data.table::dcast(w, win ~ series, value.var = "rate")
-  data.table::setnames(rib, c("win", "foi", "molfob"))
 
   lv <- c("molFOB (all blood-stage episodes)", "FOI (mosquito-borne only)")
   w[, series := factor(series, lv)]
   p <- ggplot2::ggplot() +
-    ggplot2::geom_ribbon(data = rib, ggplot2::aes(win, ymin = foi, ymax = molfob),
-                         fill = "#c8971f", alpha = .25) +
     ggplot2::geom_line(data = w, ggplot2::aes(win, rate, colour = series),
                        linewidth = .5, alpha = .45)
   if (!is.na(smooth))
@@ -277,7 +273,7 @@ plot_force_of_infection <- function(foi, smooth = 0.4) {
   p +
     ggplot2::scale_colour_manual(values = stats::setNames(c("#b2182b", "#2166ac"), lv), name = NULL) +
     ggplot2::labs(x = "day", y = "episodes per person-year",
-                  subtitle = "shaded gap = the relapse contribution") +
+                  subtitle = "the distance between the lines is the relapse contribution") +
     theme_malariafwd() +
     ggplot2::theme(legend.position = "top")
 }

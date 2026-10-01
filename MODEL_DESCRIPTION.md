@@ -22,7 +22,8 @@ relapses (circles). **B** population host-state composition over time — note t
 *reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
 of relapses a host goes on to experience (boxes drawn only where there are enough hosts; every
 level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage infection
-against the mosquito-borne force alone; the shaded gap is the relapse contribution. **E** the
+against the mosquito-borne force alone; the distance between the lines is the relapse
+contribution. **E** the
 realised IBD ladder, as the composition of each relationship class across relatedness bands.
 
 Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes per person-year,
