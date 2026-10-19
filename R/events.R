@@ -27,6 +27,7 @@ event_types <- function() {
   data.frame(
     event_type = c(
       "vh_inoculation", "vh_inoculation_import", "vh_inoculation_seed",
+      "vh_inoculation_no_take", "vh_inoculation_import_no_take",
       "hypnozoite_activation",
       "human_clearance", "case_bloodstage_clear", "mda_bloodstage_clear",
       "hypnozoite_clearance", "radcure_hypnozoite_clear",
@@ -35,6 +36,7 @@ event_types <- function() {
       "mosq_death"),
     stage = c(
       "blood", "blood", "blood",
+      "blood", "blood",
       "blood",
       "blood", "blood", "blood",
       "liver", "liver",
@@ -45,6 +47,7 @@ event_types <- function() {
     ## reconstructing episode durations, or treated / MDA'd cases are silently missed
     ends_episode = c(
       FALSE, FALSE, FALSE,
+      FALSE, FALSE,
       FALSE,
       TRUE, TRUE, TRUE,
       FALSE, FALSE,
@@ -55,6 +58,8 @@ event_types <- function() {
       "new local mosquito-borne blood-stage infection",
       "imported blood-stage infection",
       "founder blood-stage infection (burn-in seeding)",
+      "a bite established neither a blood-stage infection nor hypnozoites (P_PRIMARY failed and the batch drew 0)",
+      "an importation established neither compartment (P_PRIMARY failed and the batch drew 0)",
       "hypnozoite activates -> a blood-stage relapse (clonal to its origin)",
       "blood-stage infection clears naturally",
       "blood-stage infection cleared by case-based treatment (BLOODCURE_COVERAGE)",

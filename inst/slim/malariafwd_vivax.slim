@@ -1411,6 +1411,13 @@ early() {
 		{
 			catn("🛑 EXTINCT on tick " + sim.cycle + ": no blood-stage parasites, no hypnozoites, " +
 				"and no importation remaining. Ending the run - every further tick is empty.");
+			// The outputs have to be written HERE. The final `SIM_DAYS late()` event is
+			// registered for a tick we will never reach, so finishing without this produced a
+			// run with state.tsv and events.tsv but NO plasmo.trees, exiting 0 - every
+			// downstream IBD and ARG analysis would then fail on a file that is simply absent.
+			writeStateSnapshot();
+			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
+			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
 			sim.simulationFinished();
 		}
 	}
