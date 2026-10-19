@@ -2,7 +2,7 @@
 ##   (1) every configuration completes and satisfies the structural invariants, and
 ##   (2) each parameter moves the model in the direction it is supposed to.
 ## Small, fast runs -- this is a behavioural smoke test, not a calibration.
-##   Rscript analysis/model_checks/check_parameters.R
+##   Rscript -e 'source(system.file("validation", "check_parameters.R", package = "malariafwd"))'
 suppressMessages({
   library(malariafwd)
   library(data.table)

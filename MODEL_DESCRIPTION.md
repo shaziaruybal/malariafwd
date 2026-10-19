@@ -86,8 +86,9 @@ Time advances in **daily ticks**. Each tick runs in this order:
 
 | phase | what happens |
 |---|---|
-| `reproduction()` | hypnozoite activation (relapses) decided and seeded; biting; human→mosquito uptake and meiosis; mosquito→human inoculation; importation |
-| `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; `state.tsv` logging |
+| `reproduction()` | hypnozoite activation (relapses) decided and seeded; biting; human→mosquito uptake and meiosis; mosquito→human inoculation; cloning the second compartment of an import that arrived on the previous tick |
+| `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
+| `late()` | `state.tsv` logging; the tree sequence at the end of the run |
 
 Ordering matters for one subtlety: a batch exhausted or age-capped during `reproduction()` is
 **retired** by setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in
@@ -125,9 +126,9 @@ for each tick t:
             if active_lineages(m) < MAX_BROODS_PER_MOSQ:
                 seedBroodFromHuman(m, h)                     # n ~ ZT(LAMBDA_OOCYSTS) meioses
 
-    # --- importation ---
-    n_imp <- N_IMPORTS_PER_TICK + Poisson(IMPORT_RATE_PER_TICK * IMPORT_RATE_BOOST)
-    inoculate n_imp unrelated founder genotypes into random hosts
+    # --- second compartment of an import that arrived on the PREVIOUS tick ---
+    for each queued import primary still alive:
+        clone its hypnozoite batch from it               # IBD 1; see importation below
 
   early():
     kill every dormant batch with batch_count == 0        # cleanup, same tick
@@ -135,8 +136,22 @@ for each tick t:
         if age > MAX_BROOD_AGE or runif(1) < P_BLOOD_CLEAR:  clear it
     apply MDA / case-based treatment if scheduled
     kill mosquitoes w.p. MU_MOSQ; replace each as susceptible
-    write state.tsv
+
+    # --- importation ---
+    n_imp <- N_IMPORTS_PER_TICK + Poisson(IMPORT_RATE_PER_TICK * IMPORT_RATE_BOOST)
+    mint n_imp unrelated founder genotypes and move them into random hosts
+    queue a hypnozoite batch for each, to be cloned next tick
+
+  late():
+    write state.tsv                                       # and the tree sequence at the end
 ```
+
+Importation is seeded in `early()`, not `reproduction()`: SLiM calls `reproduction()` once per
+*existing* individual, so an empty parasite population would never run it and the import could
+never land. A genome can only be minted outside `reproduction()` via `addSubpop()`, so an import
+is created in a disposable subpopulation and moved into its host with `takeMigrants()`. Its
+hypnozoite batch must be a *clone* of that genome to be IBD 1 to it, and SLiM refuses to clone a
+genome minted on the same tick, which is why the second compartment waits one tick.
 
 ---
 
@@ -837,7 +852,7 @@ One row per event. Columns:
 | `oocyst_id` | the meiosis this product came from |
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
 
-**Event vocabulary** (15 types; `event_types()` returns this as a data frame with an
+**Event vocabulary** (17 types; `event_types()` returns this as a data frame with an
 `ends_episode` flag):
 
 | stage | event types |
@@ -894,9 +909,8 @@ has caught someone out:
 - **Values are unique()d**, so the number of ids is a count of distinct *lineages*, not of
   genomes. A selfed oocyst's four identical products appear as one id. This is consistent with
   `moi_active`, which is also a lineage count.
-- **It used to be called `brood_ids`.** `lineage_id` was renamed from `brood_id` in WS-C, but
-  this column and several Eidos locals were missed; both are now renamed to match their
-  contents. Runs recorded before the rename carry the old column name.
+- **Runs recorded before v0.1.0 call this column `brood_ids`.** The contents are the same;
+  only the name changed, to match what it holds.
 
 **The model tracks three different groupings; only two are exported.**
 

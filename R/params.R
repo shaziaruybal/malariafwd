@@ -13,7 +13,7 @@
   EIP_DAYS = 10L, MAX_MOI = 20L, MAX_BROODS_PER_MOSQ = 20L,
   # parasite / infection
   MEAN_BLOOD_STAGE_DURATION = 60, MAX_BROOD_AGE = 180L, N_OOCYSTS_PER_BITE = 1L,
-  # mosquito uptake / inoculation sampling (WS-F). lambda = 0 (default) -> exactly 1
+  # mosquito uptake / inoculation sampling . lambda = 0 (default) -> exactly 1
   # oocyst per uptake and 1 genotype per bite. K_OOCYSTS > 0 makes the oocyst count
   # negative-binomial (var = lambda + lambda^2/K); 0 = Poisson.
   LAMBDA_OOCYSTS = 0.0, LAMBDA_SPOROZOITES = 0.0, K_OOCYSTS = 0.0,
@@ -23,7 +23,7 @@
   K_LATENCY = 0L, DELTA_LATENCY = 1/100, MAX_HYPNOZOITE_AGE = 1500L,
   # genome (see DECISIONS D2/D3/D13): pure coordinate switch; both modes rate 7.4e-7
   GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
-  # interventions (case-based radical cure = liver, blood-stage treatment = schizonticidal)
+  # vector control: biting rate and importation rate only, never case management
   INTERVENTION_START = 99999L, INTERVENTION_END = 99999L, INTERVENTION_EFFICACY = 0.0,
   ## case management has its own window (D19); INTERVENTION_* is vector control only
   TREATMENT_START = 0L, TREATMENT_END = 99999L,

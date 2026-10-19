@@ -1,6 +1,6 @@
 ## audit_events_and_ibd.R -- full integrity audit of the malariafwd event log, the state
 ## snapshots, and the downstream ARG / IBD values. Run after any model change.
-##   Rscript analysis/model_checks/audit_events_and_ibd.R
+##   Rscript -e 'source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))'
 suppressMessages({
   library(malariafwd)
   library(data.table); library(reticulate)
@@ -100,7 +100,7 @@ audit_run <- function(tag, params, seed = 1) {
      length(onset) - length(clear) >= alive,     # >= : several lineages can share a host-count
      sprintf("onsets %d, cleared %d, active %d", length(onset), length(clear), alive))
 
-  ## ---- WS-F: oocyst / tetrad structure ----
+  ## ---- oocyst / tetrad structure ----
   up <- ev[event_type %in% c("hv_uptake_clonal", "hv_uptake_recombinant")]
   if (nrow(up)) {
     ok("each uptake event has its own oocyst_id", uniqueN(up$oocyst_id) == nrow(up),
@@ -194,7 +194,7 @@ audit_run <- function(tag, params, seed = 1) {
   invisible(NULL)
 }
 
-## two configurations: the shipped default, and the WS-F multi-oocyst/NB path
+## two configurations: the shipped default, and the multi-oocyst/NB path
 audit_run("default", vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.12,
                                   SIM_DAYS = 400, N_FOUNDER_LINEAGES = 8))
 audit_run("wsf_nb_imports",

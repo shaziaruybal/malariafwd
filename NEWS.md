@@ -7,7 +7,7 @@ version series starts here.)
 
 ## Model
 
-* **Epidemiology:** SEIS individual-based human–mosquito transmission (Ross–Macdonald),
+* **Epidemiology:** individual-based human–mosquito transmission (Ross–Macdonald), with a hypnozoite reservoir as a second infected compartment; there is no intrinsic incubation, so hosts are not SEI,
   simulated day by day; blood-stage infection with exponential clearance; superinfection.
 * **Hypnozoite reservoir & relapses:** White (2014) / Mehra batch model — each inoculation
   deposits a batch of hypnozoites, each with a daily activation (relapse) and death hazard;
