@@ -27,8 +27,12 @@
   INTERVENTION_START = 99999L, INTERVENTION_END = 99999L, INTERVENTION_EFFICACY = 0.0,
   ## case management has its own window (D19); INTERVENTION_* is vector control only
   TREATMENT_START = 0L, TREATMENT_END = 99999L,
-  MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.05, RADCURE_COVERAGE = 0.0,
-  BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
+  # case management: radical cure is NESTED inside blood-stage treatment, so
+  # RADCURE_COVERAGE is P(radical cure | treated). P_RAD_SURVIVAL is per PERSON by
+  # default - see RADCURE_MODE.
+  MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.29, RADCURE_MODE = "person",
+  RADCURE_COVERAGE = 0.0, BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
+  TREATMENT_DELAY = 7.0,
   # detection / observation
   P_DETECT_PRIMARY = 1.0, P_DETECT_RELAPSE = 1.0,
   # seasonality
@@ -42,7 +46,7 @@
 )
 
 # Params that are Eidos STRINGS (must be quoted when passed to SLiM -d).
-.malariafwd_string_params <- c("SIM_ID", "GENOME_MODE", "CHROMOSOMES", "OUTDIR")
+.malariafwd_string_params <- c("SIM_ID", "GENOME_MODE", "CHROMOSOMES", "RADCURE_MODE", "OUTDIR")
 
 #' Build a validated parameter set for the vivax model
 #'
@@ -85,6 +89,16 @@ validate_params <- function(p) {
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
   if (p$N_OOCYSTS_PER_BITE != 1)
     stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES instead.", call. = FALSE)
+  if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))
+    stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '", p$RADCURE_MODE, "'",
+         call. = FALSE)
+  if (p$TREATMENT_DELAY < 0) stop("TREATMENT_DELAY must be >= 0", call. = FALSE)
+  ## Radical cure is nested inside blood-stage treatment, so a coverage without one is
+  ## silently inert - the same failure shape as the window bug in D19.
+  if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0)
+    warning("RADCURE_COVERAGE > 0 has no effect while BLOODCURE_COVERAGE is 0: radical cure\n",
+            "  is given only to treated cases (it is never given without a schizonticide).",
+            call. = FALSE)
 
   ## ---- configurations that cannot produce a single parasite -------------------------------
   ## These used to run to completion with exit status 0 and an EMPTY event log, so a

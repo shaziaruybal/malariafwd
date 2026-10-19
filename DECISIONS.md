@@ -19,6 +19,61 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D20 — Treatment is decided where a case arises and applied later, to the host · 2026-10-20 · Accepted
+**Context.** Six audit findings shared one cause: treatment was a flag set on a single new
+lineage inside `reproduction()`. Measured on the pre-change model: case-based radical cure
+never reached the hypnozoite batch seeded by the bite that caused the case (46 of 87 import
+batches and 28 of 64 local batches still relapsed under `RADCURE_COVERAGE = 1`,
+`P_RAD_SURVIVAL = 0`), because SLiM does not make a juvenile visible until the callback ends;
+**0 of 180** detected relapses ever received a schizonticide, because the flag was only set in
+the inoculation path; a course cleared one clone rather than the patient; detection was drawn
+per genotype, so one bite could be "detected and treated" for one of its genotypes and not the
+other; radical cure could be given without a schizonticide; and clearance events hard-coded
+`is_imported = 0`.
+
+**Decision.** Split treatment into DECIDE and APPLY. `decideTreatment(h)` runs where a case
+arises (a bite, an import, a relapse), draws detection ONCE PER EPISODE, draws blood-stage
+treatment and — nested inside it — radical cure, and schedules the course `TREATMENT_DELAY`
+days out (geometric, mean 7, White 2014). `applyTreatment(h, give_liver, src)` runs in `early()`
+and hits every blood-stage clone in the host plus, if given, the whole reservoir.
+`RADCURE_COVERAGE` becomes P(radical cure | treated). `P_RAD_SURVIVAL` becomes per PERSON,
+default 0.29 (~71% cure, White 2018 / malariasimulation); `RADCURE_MODE = "hypnozoite"` keeps
+the per-hypnozoite thinning as an experimental mode. MDA routes through the same
+`applyTreatment()`.
+
+**Rationale.** `early()` is the first point at which juveniles created in `reproduction()` are
+visible, so applying there is what lets a course reach its own batch. Treating the host rather
+than a lineage is what every reference model does and what drugs do. Nesting matches clinical
+practice — primaquine is not given without a schizonticide. Keeping per-hypnozoite behind a flag
+preserves the only mechanism by which radical cure can PARTIALLY clear a reservoir, which is
+what reshapes post-treatment relapse diversity and is a capability a genetics model should not
+lose.
+
+**Alternatives rejected.** *Keep the per-lineage flag and patch the radical-cure timing* —
+leaves the one-clone and untreated-relapse bugs. *Delete per-hypnozoite thinning outright* (the
+original plan) — discards the partial-clearance capability; keeping it behind a tested flag
+costs ~20 lines. *Carry `P_RAD_SURVIVAL = 0.05` across to the new semantics* — the same number
+means 77% efficacy per hypnozoite but 95% per person, silently strengthening radical cure and
+moving AWAY from the reference models.
+
+**Consequences.** BREAKING: `RADCURE_COVERAGE` is now conditional on treatment, and
+`P_RAD_SURVIVAL`'s meaning and default both change. Treated cases gain an infectious period
+they did not have, so case management now suppresses transmission harder — measured: a
+permanently-open treatment window can produce FEWER courses than a late one, because it
+prevents the cases it would have treated. The case-management window gates the DECISION, not
+delivery: a case detected just before `TREATMENT_END` still completes its course afterwards.
+MDA no longer emits `mda_hypnozoite_survived`; seven new event types are added.
+
+**How to verify.** With `BLOODCURE_COVERAGE = RADCURE_COVERAGE = 1`, `P_RAD_SURVIVAL = 0`,
+`TREATMENT_DELAY = 0`: **zero** `hypnozoite_activation` events. 29/29 detected relapses cleared
+by `case_bloodstage_clear`. Under superinfection, 79% of courses clear more than one clone
+(mean 3.84, max 21) and 0 of 2,388 treated hosts retain an active clone. `TREATMENT_DELAY` 0
+and 7 give mean lags of 0.0 and 7.0 days. `RADCURE_COVERAGE = 1` with `BLOODCURE_COVERAGE = 0`
+gives no radical cure and an R-side warning. Treatment-free behaviour is unchanged against the
+Step 0 baseline across 5 seeds (prevalence +0.004, reservoir −0.14, relapse fraction −0.002).
+
+---
+
 ## D19 — Case management gets its own window, separate from vector control · 2026-10-19 · Accepted
 **Context.** Every case-based treatment was gated on `INTERVENTION_START`/`INTERVENTION_END`
 (five sites), which is the SAME window that scales biting and the importation rate by

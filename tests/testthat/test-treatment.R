@@ -22,7 +22,8 @@ test_that("treatment is driven by coverage alone, not by the vector-control wind
   blood <- run_counts(shared(BLOODCURE_COVERAGE = 1), "blood")
   expect_gt(blood$bloodcure, 0)
 
-  rad <- run_counts(shared(RADCURE_COVERAGE = 1), "rad")
+  ## radical cure is NESTED inside blood-stage treatment, so it needs both coverages
+  rad <- run_counts(shared(BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1), "rad")
   expect_gt(rad$radcure, 0)
 })
 
@@ -36,13 +37,23 @@ test_that("the vector-control window does not switch treatment on", {
   expect_equal(vc$radcure, 0)
 })
 
-test_that("the case-management window bounds when treatment happens", {
+test_that("the case-management window bounds WHEN treatment happens", {
   skip_if_no_slim()
-  full <- run_counts(shared(BLOODCURE_COVERAGE = 1), "win-full")
-  late <- run_counts(shared(BLOODCURE_COVERAGE = 1,
-                            TREATMENT_START = 90L, TREATMENT_END = 120L), "win-late")
-  expect_gt(full$bloodcure, late$bloodcure)
-  expect_gt(late$bloodcure, 0)
+  ## Deliberately an assertion about TIMING, not about counts. Since treatment became
+  ## host-level it suppresses transmission hard enough that an always-open window can
+  ## produce FEWER courses than a late one - it prevents the cases it would have treated.
+  out <- file.path(tempdir(), "mfw-tx-window")
+  unlink(out, recursive = TRUE)
+  r <- run_sim(shared(BLOODCURE_COVERAGE = 1, TREATMENT_START = 90L, TREATMENT_END = 120L),
+               seed = 2, outdir = out)
+  ev <- data.table::as.data.table(load_events(r))
+  given <- ev[event_type == "bloodcure_given", tick]
+  expect_gt(length(given), 0)
+  ## Nothing before the window opens: no case can be DECIDED earlier.
+  expect_true(all(given >= 90))
+  ## Courses decided just before it shuts are delivered TREATMENT_DELAY days later, so a
+  ## short tail past TREATMENT_END is correct - the window gates prescription, not delivery.
+  expect_true(all(given < 120 + 5 * 7))
 })
 
 test_that("a coverage against a closed treatment window is refused", {
@@ -50,8 +61,11 @@ test_that("a coverage against a closed treatment window is refused", {
   ## be an error rather than a quietly empty result.
   expect_error(vivax_params(BLOODCURE_COVERAGE = 1, TREATMENT_START = 50L, TREATMENT_END = 50L),
                "case-management window is closed")
-  expect_error(vivax_params(RADCURE_COVERAGE = 1, SIM_DAYS = 100L, TREATMENT_START = 500L),
-               "case-management window is closed")
+  ## suppressWarnings: this also trips the nested-radical-cure warning, which is correct
+  ## but not what this expectation is about
+  suppressWarnings(
+    expect_error(vivax_params(RADCURE_COVERAGE = 1, SIM_DAYS = 100L, TREATMENT_START = 500L),
+                 "case-management window is closed"))
   ## the defaults are "always on", so a coverage on its own is fine
   expect_no_error(vivax_params(BLOODCURE_COVERAGE = 1))
 })

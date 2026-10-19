@@ -62,10 +62,9 @@ CFG <- list(
   no_relapse   = list(NU_HYPNOZOITE_BATCH = 0),
   temperate    = list(K_LATENCY = 2L, DELTA_LATENCY = 0.02),
   imports      = list(IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.15),
-  radcure      = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
-                      INTERVENTION_EFFICACY = 0, RADCURE_COVERAGE = 0.9),
-  bloodcure    = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
-                      INTERVENTION_EFFICACY = 0, BLOODCURE_COVERAGE = 0.9),
+  radcure      = list(TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
+                      RADCURE_COVERAGE = 0.9),
+  bloodcure    = list(TREATMENT_START = 100L, BLOODCURE_COVERAGE = 0.9),
   intervention = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
                       INTERVENTION_EFFICACY = 0.9),
   mda          = list(MDA_TICK = 200L),
@@ -160,14 +159,25 @@ run_sim(p_same, seed = 2, outdir = file.path(OUT, "seed_b"))    # different seed
 ok("same seed -> byte-identical event log", md5("seed_a1") == md5("seed_a2"))
 ok("different seed -> different realisation", md5("seed_a1") != md5("seed_b"))
 
+## A directional comparison on a noisy quantity needs more than one realisation: at these
+## settings the standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single-seed
+## "<" decides nothing whenever the true effect is comparable to that spread.
+mean_reservoir <- function(tag, ...) {
+  mean(vapply(1:3, function(sd) {
+    d <- file.path(OUT, paste0("res_", tag, "_", sd)); unlink(d, recursive = TRUE)
+    p <- do.call(vivax_params, utils::modifyList(BASE, list(...)))
+    summarise_run(run_sim(p, seed = sd, outdir = d))$mean_res
+  }, numeric(1)))
+}
+
 cat("\n================ relapse biology + treatment efficacy ================\n")
 R2 <- rbindlist(lapply(names(cfg2 <- list(
   alpha_fast   = list(ALPHA_ACTIVATE = 1/40),        # tropical-fast activation
   alpha_slow   = list(ALPHA_ACTIVATE = 1/400),       # slow activation
   mu_high      = list(MU_HYPNOZOITE = 1/60),         # hypnozoites die fast
   hypage_short = list(MAX_HYPNOZOITE_AGE = 120L),    # hard age cap bites
-  radcure_weak = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
-                      INTERVENTION_EFFICACY = 0, RADCURE_COVERAGE = 0.9, P_RAD_SURVIVAL = 0.8),
+  radcure_weak = list(TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
+                      RADCURE_COVERAGE = 0.9, P_RAD_SURVIVAL = 0.8),
   bloodcure_weak = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
                       INTERVENTION_EFFICACY = 0, BLOODCURE_COVERAGE = 0.9, P_BLOODCURE_SURVIVAL = 0.8),
   boost_relapse = list(RESURGENCE_TRIGGER_TICK = 200L, ALPHA_ACTIVATE_BOOST = 5),
@@ -197,9 +207,10 @@ ok("faster activation -> higher relapse fraction",
 ok("faster activation -> smaller standing reservoir",
    h("alpha_fast","reservoir") < h("alpha_slow","reservoir"),
    sprintf("%.2f vs %.2f", h("alpha_fast","reservoir"), h("alpha_slow","reservoir")))
+mu_res <- mean_reservoir("muhigh", MU_HYPNOZOITE = 1/60)
+bl_res <- mean_reservoir("base")
 ok("high hypnozoite death -> smaller reservoir than baseline",
-   h("mu_high","reservoir") < g("baseline","reservoir"),
-   sprintf("%.2f vs %.2f", h("mu_high","reservoir"), g("baseline","reservoir")))
+   mu_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", mu_res, bl_res))
 ok("short MAX_HYPNOZOITE_AGE -> smaller reservoir",
    h("hypage_short","reservoir") < g("baseline","reservoir"),
    sprintf("%.2f vs %.2f", h("hypage_short","reservoir"), g("baseline","reservoir")))
