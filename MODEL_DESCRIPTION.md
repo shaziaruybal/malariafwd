@@ -849,6 +849,23 @@ One row per event. Columns:
 \* ends an episode (`ends_episode = TRUE`). A `*_no_take` suffix is logged when an inoculation
 produces neither a primary nor a batch.
 
+**`lineage_id` does not identify a genome.** Two properties of the column catch people out,
+and both are deliberate:
+
+1. **A selfed product reuses its parent's `lineage_id`.** `hv_uptake_clonal` emits a product
+   that is genetically the same lineage, so no new id is minted. Counting `hv_uptake_clonal`
+   as a lineage-creating event therefore puts the same id in the graph twice.
+2. **A recombinant product has no `lineage_id` at all.** A tetrad yields four products with
+   four ids, but a log row holds one, so `hv_uptake_recombinant` writes `NA`. The row records
+   *that* a meiosis happened and *between which* parent lineages, not what came out of it.
+
+Consequently **recombinant ancestry is not reconstructable from `events.tsv`**: lineages are
+created only by `vh_inoculation_seed`, `vh_inoculation_import`, and recombination, and the
+third of those does not report its output. Use `pedigree_id`, which is tskit-native and
+unique per genome, and take ancestry from the tree sequence — walking each sample's local-tree
+root across the genome gives its exact founder mosaic. Analyses keyed on `lineage_id` will
+silently drop every recombinant.
+
 ### 16.2 `state.tsv` data dictionary
 
 One row per entity per tick:
@@ -860,12 +877,41 @@ One row per entity per tick:
 | `moi_active` | distinct active blood-stage lineages (**this is COI**) |
 | `moi_dormant` | distinct dormant genotypes in the reservoir |
 | `hyp_reservoir_size` | **total hypnozoite count** (sum of batch counts) — the quantity White's ν governs |
-| `brood_ids` | the lineages present, pipe-separated |
+| `lineage_ids` | the lineage ids present, `|`-separated and de-duplicated — see below |
 | `n_transmissible` | post-EIP products (mosquitoes); drives the sporozoite rate |
 | `mosq_age_days` | |
 
 Note `moi_dormant` (genotypes) and `hyp_reservoir_size` (individuals) are different quantities and
 are routinely confused.
+
+**`lineage_ids` is `|`-separated and de-duplicated.** The column is written as
+`paste(unique(individuals.getValue("lineage_id")), sep="|")`, so three things follow and each
+has caught someone out:
+
+- **The separator is a pipe, not a comma.** A mosquito carrying `156|157|36|101` splits on `,`
+  into one token, which then parses as a single lineage of the wrong identity rather than four.
+  Split on `|`.
+- **Values are unique()d**, so the number of ids is a count of distinct *lineages*, not of
+  genomes. A selfed oocyst's four identical products appear as one id. This is consistent with
+  `moi_active`, which is also a lineage count.
+- **It used to be called `brood_ids`.** `lineage_id` was renamed from `brood_id` in WS-C, but
+  this column and several Eidos locals were missed; both are now renamed to match their
+  contents. Runs recorded before the rename carry the old column name.
+
+**The model tracks three different groupings; only two are exported.**
+
+| id | groups | where it appears |
+|---|---|---|
+| `lineage_id` | genomes that are genetically identical (a clonal group) | `events.tsv`; `state.tsv` as `lineage_ids` |
+| `oocyst_id` | the products of one meiosis — a tetrad's four siblings | `events.tsv` |
+| `brood_id` | the oocysts co-hatching from one blood meal | **internal only**, never written to any output |
+
+**Tetrad product lineages are recorded, despite the `NA` in the event row.** §16.1 notes that
+`hv_uptake_recombinant` logs `lineage_id = NA` because one row cannot name four products. Those
+four ids are nonetheless assigned by `seedTetrad()` and show up in `state.tsv` as soon as the
+mosquito carries them: a brood of `156|157|36|101` is two fresh recombinant lineages (156, 157)
+alongside the two parental ones (36, 101). So the per-product identities are observable — they
+are simply in `state.tsv` rather than at the moment of creation in `events.tsv`.
 
 ### 16.3 Derived metrics
 

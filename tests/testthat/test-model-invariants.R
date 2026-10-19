@@ -89,3 +89,42 @@ test_that("ARG summaries behave on the forest genealogy", {
     expect_true(all(tf$coalesced < 0.5, na.rm = TRUE))    # distinct founders are independent roots
   }
 })
+
+test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
+  skip_if_no_slim()
+  ## KNOWN FAILURE for import/founder inoculations: the batch is built with addEmpty(NULL)
+  ## and is a genetically unrelated founder (IBD 0), while an ordinary bite gives IBD 1.
+  ## See malariafwd-analyses/IMPORT_INOCULATION_BUG.md. SLiM forbids cloning a same-tick
+  ## juvenile, so the fix needs the founder batch deferred by a tick. Drop this skip then.
+  skip("import/founder batches are not yet cloned from their primary - see IMPORT_INOCULATION_BUG.md")
+  out <- file.path(tempdir(), "mfw-import-clone")
+  unlink(out, recursive = TRUE)
+  ## imports on, so both the founder path and the ordinary path are exercised
+  p <- vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.10, SIM_DAYS = 500,
+                    N_FOUNDER_LINEAGES = 8, NU_HYPNOZOITE_BATCH = 5,
+                    IMPORT_START = 1L, IMPORT_END = 500L, IMPORT_RATE_PER_TICK = 0.08)
+  run <- run_sim(p, seed = 3, outdir = out)
+  ev <- data.table::as.data.table(load_events(run))
+
+  ## One inoculation delivers one sporozoite population, so the blood-stage infection and the
+  ## hypnozoite batch established alongside it must be clones. The import path used to build
+  ## the batch with addEmpty(NULL), giving two unrelated founders (IBD 0) under one lineage_id
+  ## while a normal bite gave IBD 1 -- undetectable from the event log alone, which is why
+  ## this check goes through the tree sequence.
+  pairs <- ev[grepl("^vh_inoculation", event_type) & pedigree_id >= 0,
+              .(pedigree_id, is_dormant, event_type), by = .(tick, human_id)]
+  pairs <- pairs[, if (uniqueN(is_dormant) == 2L)
+                     .(primary = pedigree_id[is_dormant == 0][1],
+                       batch   = pedigree_id[is_dormant == 1][1],
+                       kind    = event_type[1]), by = .(tick, human_id)]
+  skip_if(nrow(pairs) == 0, "no inoculation produced both a primary and a batch")
+
+  take <- pairs[seq_len(min(.N, 25))]
+  idx  <- ibd_index(ibd_pairs(run, ids = unique(c(take$primary, take$batch))))
+  take[, ibd := idx$getibd(primary, batch)]
+  expect_equal(take$ibd, rep(1, nrow(take)), tolerance = 1e-8)
+
+  ## and the import path specifically, since that is where the defect was
+  imp <- take[grepl("import", kind)]
+  if (nrow(imp)) expect_true(all(imp$ibd == 1))
+})
