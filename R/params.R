@@ -25,6 +25,8 @@
   GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
   # interventions (case-based radical cure = liver, blood-stage treatment = schizonticidal)
   INTERVENTION_START = 99999L, INTERVENTION_END = 99999L, INTERVENTION_EFFICACY = 0.0,
+  ## case management has its own window (D19); INTERVENTION_* is vector control only
+  TREATMENT_START = 0L, TREATMENT_END = 99999L,
   MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.05, RADCURE_COVERAGE = 0.0,
   BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
   # detection / observation
@@ -102,6 +104,17 @@ validate_params <- function(p) {
          "  Set N_FOUNDER_HOSTS >= 1, or open an import path (IMPORT_TICK + N_IMPORTS, or\n",
          "  IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK or IMPORT_RATE_PER_TICK).",
          call. = FALSE)
+
+  ## A coverage set against a closed case-management window gives silently zero treatments.
+  ## This is the shape of the bug D19 fixed, so it is worth refusing rather than repeating in
+  ## a new parameter.
+  if ((p$RADCURE_COVERAGE > 0 || p$BLOODCURE_COVERAGE > 0) &&
+      (p$TREATMENT_END <= p$TREATMENT_START || p$TREATMENT_START > p$SIM_DAYS))
+    stop("a treatment coverage is set but the case-management window is closed:\n",
+         "  TREATMENT_START = ", p$TREATMENT_START, ", TREATMENT_END = ", p$TREATMENT_END,
+         ", SIM_DAYS = ", p$SIM_DAYS, "\n",
+         "  No case would ever be treated. Leave TREATMENT_START/END at their defaults for\n",
+         "  treatment throughout the run, or set a window that falls inside it.", call. = FALSE)
   invisible(TRUE)
 }
 

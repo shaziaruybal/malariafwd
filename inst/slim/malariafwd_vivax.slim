@@ -89,10 +89,20 @@ initialize() {
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
 	defineDefault("MAX_HYPNOZOITE_AGE",      1500); // WS-B: safety ceiling only, ~3.4x White's 442-d mean lifespan, so death is governed by MU_HYPNOZOITE (exponential) and the long late-relapse tail is preserved. Was 300, which truncated the mean, force-cleared ~9% of hypnozoites, and removed late relapses
 	
-	// interventions (off by default)
+	// VECTOR-CONTROL interventions (off by default). These affect TRANSMISSION ONLY -
+	// biting rate and the importation rate. They must never switch case management on or
+	// off; that is TREATMENT_START/END below. See D19.
 	defineDefault("INTERVENTION_START",      99999); // these interventions affect transmission (eg biting rates)
 	defineDefault("INTERVENTION_END",        99999);
 	defineDefault("INTERVENTION_EFFICACY",   0.0);
+
+	// CASE MANAGEMENT window (D19). Previously all case-based treatment was gated on
+	// INTERVENTION_START/END, the same window that scales biting and imports, so setting a
+	// coverage without opening that window gave zero treatments and no warning, and turning
+	// treatment on forced a change in biting. Defaults are "always on", so a coverage alone
+	// is now sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
+	defineDefault("TREATMENT_START",         0);
+	defineDefault("TREATMENT_END",           99999);
 
 	// seasonality: effective biting = BITING_RATE * (1 + SEASONAL_AMP*cos(2pi(t-SEASONAL_PHASE)/365)).
 	// SEASONAL_AMP 0 = no seasonality (default, backward compatible); ~0.85 = strong annual peaks
@@ -471,7 +481,7 @@ reproduction()
 						);
 
 					// a detected relapse can also trigger case-based radical cure (control window)
-					if (rel_detected == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+					if (rel_detected == 1 & caseManagementOn()
 						& runif(1) < RADCURE_COVERAGE)
 						radcure_host = T;  // WS-G: was applyRadicalCure(h) HERE, which thinned this batch before its own
 						                   // activation bookkeeping, then got overwritten by setValue("batch_count", n_surviving)
@@ -823,7 +833,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RAD_SURVIVAL","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RAD_SURVIVAL","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	for (_nm in _pn)
@@ -1620,6 +1630,15 @@ function (integer$) drawHypnozoiteBatchSize(fi$ mean_batch)
 	return rgeom(1, p)[0];
 }
 
+// D19: is case management running right now? Expressed once so the five treatment sites
+// cannot drift apart, and so the distinction from the vector-control window is explicit:
+// this gate decides who gets drugs, INTERVENTION_* decides biting and importation, and
+// neither may stand in for the other.
+function (logical$) caseManagementOn(void)
+{
+	return (sim.cycle >= TREATMENT_START) & (sim.cycle < TREATMENT_END);
+}
+
 // WS-F: mean hypnozoite batch size per infectious bite, including the R1 resurgence boost.
 function (float$) effectiveNuBatch(void)
 {
@@ -1821,7 +1840,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 			// rework replaces it with TREATMENT_START/END and Step 3 moves the whole
 			// decision out of the creation path.
 			detected_case = asInteger(runif(1) < P_DETECT_PRIMARY);
-			if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+			if (detected_case == 1 & caseManagementOn()
 				& runif(1) < BLOODCURE_COVERAGE)
 				g.setValue("treated", T);
 		}
@@ -1849,7 +1868,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 
 		// case-based radical cure for a detected imported case. Unlike the reproduction()
 		// path this runs where juveniles ARE visible, so it reaches this tick's batches.
-		if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+		if (detected_case == 1 & caseManagementOn()
 			& runif(1) < RADCURE_COVERAGE)
 			applyRadicalCure(h);
 	}
@@ -1931,7 +1950,7 @@ function (integer) establishInfectionOutcome(
 		detected_case = asInteger(runif(1) < P_DETECT_PRIMARY);
 		// case-based radical cure operates as part of the control programme (the
 		// intervention window): a detected case is radically cured w.p. RADCURE_COVERAGE
-		if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+		if (detected_case == 1 & caseManagementOn()
 			& runif(1) < RADCURE_COVERAGE)
 			do_radcure = T;
 
@@ -1939,7 +1958,7 @@ function (integer) establishInfectionOutcome(
 		// w.p. BLOODCURE_COVERAGE during the intervention window. Killing is illegal inside
 		// reproduction(), so we flag the active infection; the blood-stage clearance loop
 		// (a late() event) clears flagged infections and logs case_bloodstage_clear.
-		if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+		if (detected_case == 1 & caseManagementOn()
 			& runif(1) < BLOODCURE_COVERAGE)
 			new_active.setValue("treated", T);
 

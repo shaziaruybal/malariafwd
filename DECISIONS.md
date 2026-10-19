@@ -19,6 +19,47 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D19 — Case management gets its own window, separate from vector control · 2026-10-19 · Accepted
+**Context.** Every case-based treatment was gated on `INTERVENTION_START`/`INTERVENTION_END`
+(five sites), which is the SAME window that scales biting and the importation rate by
+`INTERVENTION_EFFICACY`. Two consequences, both silent: setting `RADCURE_COVERAGE` or
+`BLOODCURE_COVERAGE` without also opening that window produced zero treatments and no warning
+(this is how the issue was found), and switching treatment on forced a change in biting. The
+two are unrelated programmes — case management is drugs given to diagnosed patients; vector
+control is bednets and spraying — and nothing should make one imply the other.
+
+**Decision.** Add `TREATMENT_START` / `TREATMENT_END`, defaulting to the whole run, and gate all
+case-based treatment on them via a single `caseManagementOn()` helper. `INTERVENTION_*` keeps
+biting and importation and no longer touches treatment. `validate_params()` refuses a coverage
+set against a closed treatment window.
+
+**Rationale.** Coverage becomes the switch, which is what a reader expects: set
+`BLOODCURE_COVERAGE` and cases are treated. Expressing the gate once means the five sites
+cannot drift apart. Defaulting to "always on" changes behaviour only for runs that set a
+coverage, which is a deliberate, declared break rather than a silent one.
+
+**Alternatives rejected.** *Leave the window shared and warn in `validate_params()` when a
+coverage is set without one* — keeps an entanglement that has no modelling justification and
+still forces a biting change on anyone who wants treatment. *Reuse `INTERVENTION_*` but add a
+separate efficacy for treatment* — does not fix the forced coupling of the two windows' timing.
+
+**Consequences.** BREAKING for any run that set a coverage AND opened the intervention window:
+treatment now applies for the whole run unless `TREATMENT_*` is set.
+`analysis/11_china_scenarios.R` is the only such analysis and needs `TREATMENT_START = P1`,
+`TREATMENT_END = END` added to keep its current meaning; otherwise radical cure would act over
+the pre-control baseline too and drain the reservoir before the programme starts. Expect a
+stronger radical-cure effect once the window is scoped cleanly, and watch the relapse-driven
+resurgence arm, which the script's own comment notes becomes degenerate if radical cure is too
+effective. NOT addressed here: `INTERVENTION_EFFICACY` also suppresses importation, so border
+measures and bednets remain the same knob — a modelling question, not a bug, and out of scope.
+
+**How to verify.** A coverage alone produces treatments; opening the intervention window alone
+produces none while changing prevalence; a bounded `TREATMENT_*` window produces fewer
+treatments than an unbounded one; a coverage against a closed window errors. All four in
+`tests/testthat/test-treatment.R`.
+
+---
+
 ## D17 — Imports seeded in `early()` via a scratch subpopulation; second compartment cloned one tick later · 2026-10-19 · Accepted
 **Context.** Two defects, one root cause. (a) Importation could never fire into an EMPTY parasite
 population: imports are scheduled in `early()` but seeded inside `reproduction()`, and SLiM calls
