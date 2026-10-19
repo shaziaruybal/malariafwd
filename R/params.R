@@ -122,17 +122,41 @@ has_import_path <- function(p) {
 
 #' Convert a parameter set into SLiM `-d` command-line arguments
 #'
-#' Numbers pass through as-is, logicals become `T`/`F`, and strings are wrapped in
-#' Eidos single quotes. Returned as a flat character vector `c("-d","NAME=val", ...)`
-#' suitable for a shell-free process launch (no quote-stripping).
+#' Logicals become `T`/`F`, strings are wrapped in Eidos single quotes, and numbers are
+#' written so that Eidos infers the type the model expects. Returned as a flat character
+#' vector `c("-d","NAME=val", ...)` suitable for a shell-free process launch.
+#'
+#' @section Why float-typed parameters always carry a decimal point:
+#' Eidos types `-d P=0` as an **integer** and does not promote it, so a probability set to
+#' exactly 0 or 1 crashed the model mid-run in at least two different ways:
+#' `rbinom()` rejecting an integer `prob` (reached by `P_RAD_SURVIVAL` with radical cure or
+#' MDA on), and `min()` refusing mixed types (reached by `ALPHA_ACTIVATE = 0` or
+#' `MU_HYPNOZOITE = 0`). Both are latent: the same parameter set completes if the code path
+#' never fires, so a sweep fails in only some cells. "Perfect radical cure" and
+#' "no relapses" are the two most natural settings in that space, and `validate_params()`
+#' explicitly admits `[0, 1]`.
+#'
+#' The decision is keyed on the **default's** type, not the supplied value's, so
+#' `N_HOSTS = 100` stays integral while `vivax_params(P_RAD_SURVIVAL = 0L)` — an integer
+#' supplied by the user for a float parameter — is still emitted as `0.0`.
+#'
 #' @param params a `vivax_params` object (or named list).
 #' @return character vector of `-d NAME=value` tokens.
 #' @export
 as_slim_args <- function(params) {
+  ## 15 significant digits, not format()'s default 7: the old setting silently rounded
+  ## ALPHA_ACTIVATE = 1/170 to 0.005882353, and params.tsv then recorded the rounded value.
+  num <- function(x) format(x, scientific = FALSE, trim = TRUE, digits = 15)
+  as_float <- function(x) {
+    v <- num(x)
+    if (grepl("^-?[0-9]+$", v)) paste0(v, ".0") else v
+  }
   fmt <- function(name, val) {
+    default <- .malariafwd_defaults[[name]]   # NULL for SEED/OUTDIR, added by run_sim()
     if (is.logical(val)) v <- if (isTRUE(val)) "T" else "F"
     else if (is.character(val) || name %in% .malariafwd_string_params) v <- sprintf("'%s'", val)
-    else v <- format(val, scientific = FALSE, trim = TRUE)
+    else if (!is.null(default) && is.double(default)) v <- as_float(val)
+    else v <- num(val)
     c("-d", paste0(name, "=", v))
   }
   unlist(Map(fmt, names(params), params), use.names = FALSE)

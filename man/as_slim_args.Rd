@@ -13,7 +13,23 @@ as_slim_args(params)
 character vector of \verb{-d NAME=value} tokens.
 }
 \description{
-Numbers pass through as-is, logicals become \code{T}/\code{F}, and strings are wrapped in
-Eidos single quotes. Returned as a flat character vector \code{c("-d","NAME=val", ...)}
-suitable for a shell-free process launch (no quote-stripping).
+Logicals become \code{T}/\code{F}, strings are wrapped in Eidos single quotes, and numbers are
+written so that Eidos infers the type the model expects. Returned as a flat character
+vector \code{c("-d","NAME=val", ...)} suitable for a shell-free process launch.
 }
+\section{Why float-typed parameters always carry a decimal point}{
+
+Eidos types \verb{-d P=0} as an \strong{integer} and does not promote it, so a probability set to
+exactly 0 or 1 crashed the model mid-run in at least two different ways:
+\code{rbinom()} rejecting an integer \code{prob} (reached by \code{P_RAD_SURVIVAL} with radical cure or
+MDA on), and \code{min()} refusing mixed types (reached by \code{ALPHA_ACTIVATE = 0} or
+\code{MU_HYPNOZOITE = 0}). Both are latent: the same parameter set completes if the code path
+never fires, so a sweep fails in only some cells. "Perfect radical cure" and
+"no relapses" are the two most natural settings in that space, and \code{validate_params()}
+explicitly admits \verb{[0, 1]}.
+
+The decision is keyed on the \strong{default's} type, not the supplied value's, so
+\code{N_HOSTS = 100} stays integral while \code{vivax_params(P_RAD_SURVIVAL = 0L)} — an integer
+supplied by the user for a float parameter — is still emitted as \code{0.0}.
+}
+

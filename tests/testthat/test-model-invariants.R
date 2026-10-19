@@ -1,7 +1,5 @@
-## Model invariants that guard against regressions of the WS-G bugs. These need SLiM,
-## so they skip when it is unavailable (e.g. on CRAN / CI without the engine).
-
-skip_if_no_slim <- function() skip_if_not(slim_available(), "SLiM not on PATH")
+## Model invariants that guard against regressions. These need SLiM, so they skip when it is
+## unavailable (e.g. on CRAN / CI without the engine) via skip_if_no_slim() in helper-slim.R.
 
 test_that("hypnozoite batches never draw more than they hold, and ids are unique", {
   skip_if_no_slim()
