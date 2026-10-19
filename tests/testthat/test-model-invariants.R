@@ -92,11 +92,10 @@ test_that("ARG summaries behave on the forest genealogy", {
 
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
   skip_if_no_slim()
-  ## KNOWN FAILURE for import/founder inoculations: the batch is built with addEmpty(NULL)
-  ## and is a genetically unrelated founder (IBD 0), while an ordinary bite gives IBD 1.
-  ## See malariafwd-analyses/IMPORT_INOCULATION_BUG.md. SLiM forbids cloning a same-tick
-  ## juvenile, so the fix needs the founder batch deferred by a tick. Drop this skip then.
-  skip("import/founder batches are not yet cloned from their primary - see IMPORT_INOCULATION_BUG.md")
+  ## Regression for D17. The import path used to build the batch with addEmpty(NULL), giving
+  ## two genetically unrelated founders (measured IBD 0) under one lineage_id, while an
+  ## ordinary bite gave IBD 1. Imports are now seeded in early() and the second compartment is
+  ## cloned one tick later, so both paths must give IBD 1.
   out <- file.path(tempdir(), "mfw-import-clone")
   unlink(out, recursive = TRUE)
   ## imports on, so both the founder path and the ordinary path are exercised
@@ -111,12 +110,15 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   ## the batch with addEmpty(NULL), giving two unrelated founders (IBD 0) under one lineage_id
   ## while a normal bite gave IBD 1 -- undetectable from the event log alone, which is why
   ## this check goes through the tree sequence.
-  pairs <- ev[grepl("^vh_inoculation", event_type) & pedigree_id >= 0,
-              .(pedigree_id, is_dormant, event_type), by = .(tick, human_id)]
+  ## grouped on inoculation_id, NOT (tick, human_id): under D17 an import's two compartments
+  ## land on CONSECUTIVE ticks, because the batch cannot be cloned until the primary is
+  ## visible. inoculation_id is the thing that identifies one bite in both paths.
+  pairs <- ev[grepl("^vh_inoculation", event_type) & pedigree_id >= 0 & inoculation_id > 0,
+              .(pedigree_id, is_dormant, event_type), by = inoculation_id]
   pairs <- pairs[, if (uniqueN(is_dormant) == 2L)
                      .(primary = pedigree_id[is_dormant == 0][1],
                        batch   = pedigree_id[is_dormant == 1][1],
-                       kind    = event_type[1]), by = .(tick, human_id)]
+                       kind    = event_type[1]), by = inoculation_id]
   skip_if(nrow(pairs) == 0, "no inoculation produced both a primary and a batch")
 
   take <- pairs[seq_len(min(.N, 25))]

@@ -19,6 +19,95 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D17 — Imports seeded in `early()` via a scratch subpopulation; second compartment cloned one tick later · 2026-10-19 · Accepted
+**Context.** Two defects, one root cause. (a) Importation could never fire into an EMPTY parasite
+population: imports are scheduled in `early()` but seeded inside `reproduction()`, and SLiM calls
+`reproduction()` once per existing individual, so with zero parasites the queue accumulated
+forever — exit 0, no events. Measured: founders present + `IMPORT_TICK=5` → 10 imports; no
+founders + the same setting → 0 events. This made the documented naive-population mode
+(`IMPORT_TICK = 1`) dead since it was written, and meant **no run reaching elimination could ever
+be re-seeded** — i.e. the decline/resurgence scenarios. (b) An imported inoculation built its
+blood-stage infection and its hypnozoite batch with two separate `addEmpty(NULL)` calls, giving
+two unrelated ARG roots under one `lineage_id` (`IMPORT_INOCULATION_BUG.md`). Measured on
+`mosaic_demo_s1`: IBD(primary, own batch) = 1.000 for local bites (100% of 40) but **0.000 for
+imports (100% of 40)**; a relapse of an imported infection reads IBD 0.000 to the infection that
+caused it, i.e. it looks like a brand-new unrelated infection.
+
+**Decision.** Seed imports in `early()` by minting the genome in a disposable scratch
+subpopulation (`sim.addSubpop`), moving it into the host with `takeMigrants()`, and removing the
+scratch in the same callback. Roll the compartment outcomes FIRST; the migrated genome takes
+whichever compartment exists (blood-stage if `P_PRIMARY` succeeds, else the hypnozoite batch). If
+both are needed, queue the second and clone it from the first in `reproduction()` the following
+tick, when the genome is no longer a "new juvenile".
+
+**Rationale.** `addEmpty()`/`addCloned()`/`addRecombinant()` are `reproduction()`-only — verified:
+`addEmpty() may only be called from a reproduction() callback`. `addSubpop()` is the only way to
+mint a genome outside it; `takeMigrants()` is legal anywhere and preserves `pedigreeID`, `tag` and
+all `setValue()` state (verified). A freshly minted genome cannot be cloned the same tick
+(`parent must be visible in a subpopulation`), and two `addSubpop` genomes are independent roots,
+so cloning next tick is the only route to IBD 1. This is the idiom the model already uses for
+founder lineages (`sim.addSubpop(s, 1)`).
+
+**Alternatives rejected.** *Seed in `early()` with `addEmpty`* — impossible, hard SLiM error.
+*A permanent sentinel individual* so `reproduction()` always fires — it is alive at the end of the
+run and so becomes a tree-sequence sample with a `pedigree_id`, silently contaminating every
+all-samples analysis, and needs guards through the hot `reproduction()` path. *A phantom
+"inoculum" genome cloned into both compartments*, restoring exact sibling symmetry with a local
+bite — costs a one-day delay on every imported blood-stage infection plus a transient ghost
+individual, to buy a topology that arrives for free under D18.
+
+**Consequences.** Event-log IDs are UNCHANGED: `parent1_pedigree_id` stays `-1` for both import
+rows (neither has a source genome inside the simulation), and `inoculation_id` / `lineage_id`
+already carry "same inoculation, same lineage". The ARG gains a parent→child edge from primary to
+batch; this divergence from the event log is deliberate, so nothing reconstructing transmission
+from `parent1_pedigree_id` infers an intra-host blood→liver transmission that never happened.
+Sampled ancestors are not a new class — 10.7% of sample nodes in `mosaic_demo_s1` already have
+children, and 1.7% of edges already span ≤ 1 tick. Subpopulation ids cannot be reused
+(`subpopulation p99 has been used already`), so a monotonic counter burns one id per import-tick
+(~730 over a 40-year run against a base of ~1,400). Imported genomes carry the scratch population
+id in the tskit population table — nothing in either repo reads tskit population ids (grepped),
+but it is a latent trap for any future analysis mapping node → population → host. The two
+`vh_inoculation_import` rows for one inoculation now land on CONSECUTIVE ticks sharing one
+`inoculation_id`. Figures on import-bearing runs need regenerating: figure 32/32b's "imported
+founder (arrived day 1010)" is pedigree 48469, which has `is_dormant = 1` — one of the phantom
+batch roots this decision removes.
+
+**How to verify.** (1) A no-founder, import-only run produces `vh_inoculation_import` events and a
+non-empty event log. (2) A run driven to extinction, then given an import window, re-seeds.
+(3) `IBD(primary, its own batch) == 1` for imported inoculations, matching local ones — this
+un-skips the regression test in `tests/testthat/test-model-invariants.R`. (4) A queued second
+compartment whose primary dies before the next tick is purged and the queue does not grow.
+
+---
+
+## D18 — Imports are independent founders for v0.1.0; a source deme is deferred to v0.2.0 · 2026-10-19 · Accepted (interim)
+**Context.** Every import enters as an ARG root with no ancestry — exactly the limit of an
+infinitely large, infinitely diverse source population, in which two imports can never be related
+to each other. The population-genetics convention for immigration is a source ("ghost") deme with
+migration, under which imported genomes carry real ancestry and coalesce with one another in the
+source.
+
+**Decision.** Keep independent founders for the pre-release; implement a source deme in v0.2.0.
+
+**Rationale.** A source deme is structural: it adds source diversity as a calibration axis and
+changes what an import *is*. It is not required to fix D17's defects, and the pre-release scope is
+already treatment + recrudescence.
+
+**Alternatives rejected.** *Implement the source deme now* — scope, and it would land
+simultaneously with the treatment rework, making D17's regression ambiguous.
+
+**Consequences.** Imports are maximally distinguishable by construction, so any result reporting
+how identifiable imported cases are is conditional on that assumption: the E-id import arm's
+AUC 0.80, with import founders near-disjoint (overlap 0.03), would fall under a realistic source.
+This must be stated in the README limitations and in the software note, not left implicit. Under a
+source deme the inoculum becomes a real genome, so D17's primary→batch edge is superseded by the
+sibling topology of an ordinary bite, as a by-product rather than new work.
+
+**How to verify.** README limitations names it; the software note states the assumption alongside
+any import-identifiability result.
+
+---
+
 ## D16 — Verbosity is a PARAM (VERBOSE), one model file, not two · 2026-08-05 · Accepted
 **Context.** The model emits ~30k lines/run of per-event narration. Considered a separate "quiet"
 model file vs a runtime switch.

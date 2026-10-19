@@ -175,6 +175,33 @@ initialize() {
 	if (LAMBDA_OOCYSTS < 0 | LAMBDA_SPOROZOITES < 0)
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be >= 0");
 
+	// ---- configurations that cannot produce a single parasite ----------------------------
+	// Mirrored in validate_params() on the R side; repeated here because the model can be run
+	// directly with -d, bypassing R entirely. These configurations used to complete with exit
+	// status 0 and an EMPTY event log, which is indistinguishable from a cell that simply saw
+	// no transmission - the worst kind of failure in a 100-run sweep.
+	// NOTE: unreachable in practice. SLiM evaluates tick-range expressions (the model has a
+	// `1:(SIM_DAYS - 1) late()` event) BEFORE initialize() runs, so SIM_DAYS < 2 already dies
+	// with "the tick expression contains an element that is out of range (0)". Kept because it
+	// is the intent, states the real constraint, and would become live if that range changed.
+	// validate_params() on the R side is what actually produces a readable message.
+	if (SIM_DAYS < 2)
+		stop("SIM_DAYS must be >= 2 (founder seeding completes on tick 2), got " + SIM_DAYS);
+	if (N_FOUNDER_HOSTS > 0 & N_FOUNDER_LINEAGES < 1)
+		stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: " + N_FOUNDER_HOSTS +
+			" founder host(s) cannot share 0 distinct genomes.");
+	// A naive population is legitimate (D17: importation can seed an empty population), but
+	// only if an import path is actually open.
+	import_pulse  = (IMPORT_TICK <= SIM_DAYS) & (N_IMPORTS > 0);
+	import_window = (IMPORT_START <= SIM_DAYS) & (IMPORT_END > IMPORT_START) &
+		((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0));
+	defineConstant("HAS_IMPORT_PATH", import_pulse | import_window);
+	if (N_FOUNDER_HOSTS < 1 & !HAS_IMPORT_PATH)
+		stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is " +
+			"configured. Set N_FOUNDER_HOSTS >= 1, or open an import path (IMPORT_TICK + " +
+			"N_IMPORTS, or IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK or " +
+			"IMPORT_RATE_PER_TICK).");
+
 	setSeed(SEED);
 	
 	initializeSLiMModelType("nonWF");
@@ -269,6 +296,20 @@ initialize() {
 	// = genetic identity (a SLiM pedigreeID, propagated through clonal events).
 	defineGlobal("NEXT_OOCYST_ID", 0);
 	defineGlobal("NEXT_BROOD_ID", 0);
+	// D17: import seeding. NEXT_SCRATCH_SUBPOP is a monotonic id for the disposable
+	// subpopulation each import-tick mints its genomes in - SLiM refuses to reuse a
+	// subpopulation id, so this only ever counts up. It starts above any host or mosquito
+	// subpop id so the two ranges can never collide.
+	defineGlobal("NEXT_SCRATCH_SUBPOP", 1000000);
+	// the second compartment of an import, awaiting its clone on the next tick
+	defineGlobal("PENDING_BATCH_PED",  integer(0));
+	defineGlobal("PENDING_BATCH_N",    integer(0));
+	defineGlobal("PENDING_BATCH_INOC", integer(0));
+	// liveness: has a parasite existed at any point? See the guard at the end of early().
+	// LIVENESS_TICK is late enough for founder seeding (tick 1-2) and a first-tick import
+	// pulse to have happened, early enough to fail a mis-specified sweep cell quickly.
+	defineGlobal("EVER_LIVE", F);
+	defineConstant("LIVENESS_TICK", 10);
 }
 
 reproduction()
@@ -474,49 +515,70 @@ reproduction()
 	}
 	
 	// ----------------------------
-	// IMPORTATION EVENT(S)
+	// D17: SECOND COMPARTMENT OF AN IMPORT (deferred by one tick)
 	// ----------------------------
-	// Imports prefer susceptible humans, then fall back to infected humans if needed.
-	// Each import is logged as "vh_inoculation_import" with inoculation_id.
-	// TODO: In future, we will create a subpopulation of import pool parasite individuals and we will use takeMigrants() from that subpopulation, this will also support modeling of importation rates.
+	// Imports themselves are seeded by seedImports() in early() - see the comment on that
+	// function for why. What is left here is the half that CANNOT be done there: cloning
+	// the hypnozoite batch from the blood-stage genome, so that one inoculation is one
+	// genome in two compartments (IBD 1) rather than two unrelated roots. addCloned()
+	// is reproduction()-only AND refuses a genome minted in the same tick, so the clone
+	// waits until the tick after the import landed, which is now.
 	// ----------------------------
-	
-	// we will pull from the import pool here in future
-	// import_pool = XXXX;
-	n_imports_seeded = 0;
-	
+	if (size(PENDING_BATCH_PED) > 0)
+	{
+		// Purge entries whose primary died before we got here (host clearance, treatment).
+		// Without this the queue grows without bound.
+		alive_peds = sim.subpopulations.individuals.pedigreeID;
+		keep = (match(PENDING_BATCH_PED, alive_peds) >= 0);
+		if (!all(keep))
+		{
+			vcat("✈️ Dropping " + sum(!keep) + " queued import batch(es): primary already gone");
+			defineGlobal("PENDING_BATCH_PED",  PENDING_BATCH_PED[keep]);
+			defineGlobal("PENDING_BATCH_N",    PENDING_BATCH_N[keep]);
+			defineGlobal("PENDING_BATCH_INOC", PENDING_BATCH_INOC[keep]);
+		}
+	}
 	for (h in humans)
 	{
-		n_pending = h.getValue("pending_imports");
-		if (isNULL(n_pending))
+		if (size(PENDING_BATCH_PED) == 0)
+			break;
+		if (h.individualCount == 0)
 			next;
-		
-		for (k in seqLen(n_pending))
+		for (prim in h.individuals)
 		{
-			//	if (size(import_pool) == 0) next;
-			//	import = sample(import_pool, 1);
-			
-			defineGlobal("INOCULATION_ID", INOCULATION_ID + 1); // WS-G: plain assignment was scoped LOCAL, so ids restarted every tick
-			
-			established = establishInfectionOutcome(
-				h, NULL, INOCULATION_ID, -1,
-				"vh_inoculation_import", 1
-				);
-			
-			n_imports_seeded = n_imports_seeded + 1;
-			
-			vcat("✈️ Imported case in 👤 human " + h.id +
-				" on tick " + sim.cycle +
-				" (broods established: " + paste(established, sep="|") + ")");
+			idx = match(prim.pedigreeID, PENDING_BATCH_PED);
+			if (idx < 0)
+				next;
+			n_hyp = PENDING_BATCH_N[idx];
+			new_batch = h.addCloned(prim);          // IBD 1 to the primary, by construction
+			new_batch.setValue("brood_birth_tick", prim.getValue("brood_birth_tick"));
+			new_batch.setValue("lineage_id", prim.getValue("lineage_id"));
+			new_batch.setValue("oocyst_id", -1);
+			new_batch.setValue("brood_id", -1);
+			new_batch.setValue("brood_founder", F); // the PRIMARY is the founder, not this copy
+			new_batch.setValue("inoculation_tick", prim.getValue("inoculation_tick"));
+			new_batch.setValue("inoculation_id", PENDING_BATCH_INOC[idx]);
+			new_batch.setValue("activation_tick", NULL);
+			new_batch.setValue("brood_ready_tick", NULL);
+			new_batch.setValue("is_imported", T);
+			new_batch.setValue("is_dormant", T);
+			new_batch.setValue("bloodstage_start_tick", NULL);
+			new_batch.setValue("gametocyte_ready_tick", NULL);
+			new_batch.setValue("latency_stage", K_LATENCY);
+			new_batch.setValue("batch_count", n_hyp);
+			new_batch.color = "turquoise4";
+			logEvent("vh_inoculation_import", PENDING_BATCH_INOC[idx], -1, h.id,
+				asString(prim.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
+				1, 1, new_batch.pedigreeID,
+				-1,                                 // see seedImports(): logged parent stays -1
+				-1, n_hyp, -1);
+			sel = (seqAlong(PENDING_BATCH_PED) != idx);
+			defineGlobal("PENDING_BATCH_PED",  PENDING_BATCH_PED[sel]);
+			defineGlobal("PENDING_BATCH_N",    PENDING_BATCH_N[sel]);
+			defineGlobal("PENDING_BATCH_INOC", PENDING_BATCH_INOC[sel]);
 		}
-		
-		// clear after import was seeded
-		h.setValue("pending_imports", 0);
 	}
-	
-	if (n_imports_seeded > 0)
-		vcat("✈️ Number of imports seeded on tick " + sim.cycle + ": " + n_imports_seeded);
-	
+
 	for (m in mosq)
 	{
 		// Apply intervention biting rate reduction if within intervention
@@ -849,10 +911,10 @@ reproduction()
 	
 	mosq.setValue("mosq_birth_tick", sim.cycle);
 	
-	// add a tag for whether an import should be seeded 
-	for (h in humans)
-		h.setValue("pending_imports", 0);
-	
+	// D17: the per-host pending_imports counter is gone. It existed only because seeding
+	// had to happen in reproduction(); seedImports() now seeds in early(), where it is
+	// scheduled, so there is nothing to carry between callbacks.
+
 	vcat("---- Initial seeding : -----");
 	vcat("Infected 👤: " + sum(humans.tag == INFECTED) + ", susceptible 👤: " + sum(humans.tag == SUSCEPTIBLE));
 	vcat("Infected 🦟: " + sum(mosq.tag == INFECTED) + ", susceptible 🦟: " + sum(mosq.tag == SUSCEPTIBLE));
@@ -1301,18 +1363,47 @@ early() {
 		if (n_from_inf  > 0)
 			import_hosts = c(import_hosts, sample(infected_humans, n_from_inf));
 		
+		// D17: seed HERE, not in reproduction(). reproduction() is called once per existing
+		// individual, so an empty parasite population never drained the old queue.
 		if (size(import_hosts) > 0)
-		{
-			for (h in import_hosts)
-			{
-				n_old = h.getValue("pending_imports");
-				h.setValue("pending_imports", n_old + 1);
-			}
-			vcat("✈️ Scheduled imports on tick " + sim.cycle + ": " + size(import_hosts));
-		}
-	
+			seedImports(import_hosts);
+
 	}
 
+	// ---- LIVENESS ------------------------------------------------------------------------
+	// Placed last in early(), after seeding and importation, so it sees the tick's final state.
+	// Two different situations, deliberately treated differently:
+	//
+	//   NEVER STARTED  - no parasite has existed at any point by LIVENESS_TICK. The run can
+	//                    only produce an empty event log, which in a sweep is indistinguishable
+	//                    from a cell that simply saw no transmission. This is a configuration
+	//                    error and stops the run. (validate_params() and the initialize() fence
+	//                    should already have caught it; this is the backstop.)
+	//   DIED OUT       - parasites existed and are now all gone, with no importation still to
+	//                    come. Fade-out and elimination are legitimate RESULTS, not errors, so
+	//                    this is not fatal: the run ends cleanly here because every remaining
+	//                    tick is provably empty, and says so in the log.
+	n_alive = sum(sim.subpopulations.individualCount);
+	if (n_alive > 0)
+		defineGlobal("EVER_LIVE", T);
+	else
+	{
+		// Both branches require that no importation is still to come. Without that, a run with
+		// a LATE import window (say IMPORT_START = 500) would be killed during the empty ticks
+		// before the window opens - which is a legitimate configuration, not a failure.
+		import_still_possible = ((IMPORT_TICK >= sim.cycle) & (N_IMPORTS > 0)) |
+			((IMPORT_END > sim.cycle) & ((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0)));
+		if (!EVER_LIVE & sim.cycle >= LIVENESS_TICK & !import_still_possible)
+			stop("no parasite has existed by tick " + sim.cycle + ": this configuration cannot " +
+				"bootstrap, and would have produced an empty event log with exit status 0. " +
+				"Check N_FOUNDER_HOSTS / N_FOUNDER_LINEAGES and the importation settings.");
+		if (EVER_LIVE & !import_still_possible)
+		{
+			catn("🛑 EXTINCT on tick " + sim.cycle + ": no blood-stage parasites, no hypnozoites, " +
+				"and no importation remaining. Ending the run - every further tick is empty.");
+			sim.simulationFinished();
+		}
+	}
 }
 
 1:(SIM_DAYS - 1) late()
@@ -1612,9 +1703,161 @@ function (void) applyRadicalCure(o<Subpopulation>$ h)
 // an array of the brood_id(s) actually established (0, 1, or 2
 // entries) for caller-side logging/debug printing.
 // MUST be called only from within the reproduction() callback, since
-// it calls addEmpty()/addCloned() (both call sites - the import event
-// and inoculateMosquitoToHuman() - already live there).
+// it calls addCloned(). After D17 its ONLY caller is inoculateMosquitoToHuman(),
+// so `source` is always non-NULL; imports are seeded by seedImports() in early().
 // -----------------------------------------------------------
+
+// -----------------------------------------------------------
+// D17: IMPORT SEEDING, and the one-tick deferral of the second compartment.
+//
+// Imports used to be seeded inside reproduction(), which SLiM calls once per EXISTING
+// individual - so with zero parasites alive it never ran, the queue accumulated forever,
+// and the run ended with exit 0 and no events. That made the naive-population mode
+// (IMPORT_TICK == 1) dead since it was written, and meant no run reaching elimination
+// could ever be re-seeded.
+//
+// addEmpty()/addCloned() are reproduction()-only, so the genome is minted HERE with
+// sim.addSubpop() - the same idiom the founder lineages use at tick 1 - and moved into
+// the host with takeMigrants(), which is legal anywhere and preserves pedigreeID, tag
+// and every setValue(). The scratch subpopulation is removed in this same callback: it
+// is a birthplace, not a residence. Subpopulation ids cannot be reused, so
+// NEXT_SCRATCH_SUBPOP burns one id per import-tick.
+//
+// One inoculation delivers ONE sporozoite population, so the blood-stage infection and
+// the hypnozoite batch must be the SAME genome (IMPORT_INOCULATION_BUG.md: they were two
+// unrelated roots, measured IBD 0). A genome minted this tick cannot be cloned until it
+// is visible ("parent must be visible in a subpopulation"), so when an import takes in
+// both compartments the second is queued and cloned next tick by the drain in
+// reproduction(). The migrated genome takes whichever compartment exists, so a P_PRIMARY
+// failure (hypnozoites but no blood stage) needs no special case - there is simply
+// nothing to clone.
+// -----------------------------------------------------------
+function (void) seedImports(o<Subpopulation> import_hosts)
+{
+	n = size(import_hosts);
+	if (n == 0)
+		return;
+
+	// Roll the outcomes BEFORE minting anything: an inoculation that takes in neither
+	// compartment must not leave a genome with nowhere to go.
+	has_primary = (runif(n) < P_PRIMARY);
+	batch_size  = integer(0);
+	inoc_ids    = integer(0);
+	for (i in seqLen(n))
+	{
+		batch_size = c(batch_size, drawHypnozoiteBatchSize(effectiveNuBatch()));
+		defineGlobal("INOCULATION_ID", INOCULATION_ID + 1);
+		inoc_ids = c(inoc_ids, INOCULATION_ID);
+	}
+	makes = (has_primary | (batch_size > 0));
+
+	for (i in seqLen(n))
+	{
+		if (makes[i])
+			next;
+		logEvent("vh_inoculation_import_no_take", inoc_ids[i], -1, import_hosts[i].id,
+			"NA", "NA", "NA", 0, 0.0, "human", -1, 1);
+	}
+
+	n_make = sum(makes);
+	if (n_make == 0)
+		return;
+
+	scratch = sim.addSubpop(NEXT_SCRATCH_SUBPOP, n_make);   // ONE scratch for the whole tick
+	defineGlobal("NEXT_SCRATCH_SUBPOP", NEXT_SCRATCH_SUBPOP + 1);
+	genomes = scratch.individuals;
+
+	k = 0;
+	for (i in seqLen(n))
+	{
+		if (!makes[i])
+			next;
+		g = genomes[k]; k = k + 1;
+		h = import_hosts[i];
+		as_batch = !has_primary[i];        // no blood stage -> the migrant IS the batch
+
+		// NOTE: the field list below must stay in step with establishInfectionOutcome().
+		// This is a genome-creation site; anything added to the others (e.g. a subpatent
+		// flag) has to be added here too.
+		g.setValue("brood_birth_tick", sim.cycle);
+		g.setValue("lineage_id", g.pedigreeID);
+		g.setValue("oocyst_id", -1);       // no meiosis we simulated: it happened in the source
+		g.setValue("brood_id", -1);
+		g.setValue("brood_founder", T);
+		g.setValue("inoculation_tick", sim.cycle);
+		g.setValue("inoculation_id", inoc_ids[i]);
+		g.setValue("activation_tick", NULL);
+		g.setValue("brood_ready_tick", NULL);
+		g.setValue("is_imported", T);
+		if (as_batch)
+		{
+			g.setValue("is_dormant", T);
+			g.setValue("bloodstage_start_tick", NULL);
+			g.setValue("gametocyte_ready_tick", NULL);
+			g.setValue("latency_stage", K_LATENCY);
+			g.setValue("batch_count", batch_size[i]);
+			g.color = "turquoise4";
+		}
+		else
+		{
+			g.setValue("is_dormant", F);
+			g.setValue("bloodstage_start_tick", sim.cycle);
+			g.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
+			g.setValue("latency_stage", 0);
+			g.setValue("batch_count", NULL);
+			g.setValue("treated", F);
+			g.color = "goldenrod2";
+		}
+
+		h.takeMigrants(g);                 // legal outside reproduction(); keeps all state
+
+		detected_case = -1;
+		if (!as_batch)
+		{
+			h.tag = INFECTED;
+			// Detection and case management, replicated from establishInfectionOutcome().
+			// The INTERVENTION_START/END gating is the CURRENT behaviour and is wrong
+			// (treatment is switched by the vector-control window); Step 2 of the treatment
+			// rework replaces it with TREATMENT_START/END and Step 3 moves the whole
+			// decision out of the creation path.
+			detected_case = asInteger(runif(1) < P_DETECT_PRIMARY);
+			if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+				& runif(1) < BLOODCURE_COVERAGE)
+				g.setValue("treated", T);
+		}
+
+		logEvent("vh_inoculation_import", inoc_ids[i], -1, h.id,
+			asString(g.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
+			as_batch ? 1 else 0, 1,
+			g.pedigreeID,
+			-1,                            // D17: logged parent stays -1. The ARG records the
+			-1,                            // primary->batch clone edge, but NOTHING inside the
+			                               // simulation is the parent of an import, and writing
+			                               // the primary here would let anyone reconstructing
+			                               // transmission infer an intra-host blood->liver
+			                               // event that never happened.
+			as_batch ? batch_size[i] else 1,
+			-1, detected_case);
+
+		// queue the SECOND compartment when the inoculation takes in both
+		if (has_primary[i] & batch_size[i] > 0)
+		{
+			defineGlobal("PENDING_BATCH_PED",  c(PENDING_BATCH_PED,  g.pedigreeID));
+			defineGlobal("PENDING_BATCH_N",    c(PENDING_BATCH_N,    batch_size[i]));
+			defineGlobal("PENDING_BATCH_INOC", c(PENDING_BATCH_INOC, inoc_ids[i]));
+		}
+
+		// case-based radical cure for a detected imported case. Unlike the reproduction()
+		// path this runs where juveniles ARE visible, so it reaches this tick's batches.
+		if (detected_case == 1 & sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END
+			& runif(1) < RADCURE_COVERAGE)
+			applyRadicalCure(h);
+	}
+	scratch.removeSubpopulation();
+	vcat("✈️ Imports seeded on tick " + sim.cycle + ": " + n_make + " (" +
+		size(PENDING_BATCH_PED) + " batch(es) queued for next tick)");
+}
+
 function (integer) establishInfectionOutcome(
 	o<Subpopulation>$ h,
 	No<Individual>$ source,

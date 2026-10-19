@@ -41,9 +41,20 @@ audit_run <- function(tag, params, seed = 1) {
   ## inoculation_id groups co-inoculated genotypes of ONE bite, and is unique across the run
   inoc <- ev[inoculation_id > 0]
   if (nrow(inoc)) {
-    per <- inoc[, .(ticks = uniqueN(tick), hosts = uniqueN(human_id)), by = inoculation_id]
-    ok("each inoculation_id is one bite (1 tick, 1 host)",
-       all(per$ticks == 1) && all(per$hosts == 1), sprintf("%d bites", nrow(per)))
+    ## D17: this used to assert "1 tick, 1 host". One host still holds everywhere, but an
+    ## IMPORT's two compartments now land on CONSECUTIVE ticks - the hypnozoite batch cannot
+    ## be cloned from the blood-stage genome until that genome is visible, which is the tick
+    ## after it arrives. Local bites are unaffected: their source already exists, so both
+    ## compartments are still created in one callback.
+    per <- inoc[, .(ticks = uniqueN(tick), span = max(tick) - min(tick),
+                    hosts = uniqueN(human_id),
+                    imported = any(grepl("import", event_type))), by = inoculation_id]
+    ok("each inoculation_id is one bite into one host",
+       all(per$hosts == 1), sprintf("%d bites", nrow(per)))
+    ok("local inoculations occupy a single tick",
+       all(per[imported == FALSE]$ticks == 1), sprintf("%d local", per[imported == FALSE, .N]))
+    ok("imported inoculations span at most the one-tick batch deferral (D17)",
+       all(per[imported == TRUE]$span <= 1), sprintf("%d imported", per[imported == TRUE, .N]))
     ok("inoculation_ids do not restart each tick",
        max(inoc$inoculation_id) >= 0.5 * uniqueN(inoc$inoculation_id))
   }

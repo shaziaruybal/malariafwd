@@ -83,7 +83,41 @@ validate_params <- function(p) {
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
   if (p$N_OOCYSTS_PER_BITE != 1)
     stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES instead.", call. = FALSE)
+
+  ## ---- configurations that cannot produce a single parasite -------------------------------
+  ## These used to run to completion with exit status 0 and an EMPTY event log, so a
+  ## mis-specified cell in a sweep was indistinguishable from one that simply saw no
+  ## transmission. Each is refused before SLiM is launched.
+  if (p$SIM_DAYS < 2)
+    stop("SIM_DAYS must be >= 2 (founder seeding completes on tick 2), got ", p$SIM_DAYS,
+         call. = FALSE)
+  if (p$N_FOUNDER_HOSTS > 0 && p$N_FOUNDER_LINEAGES < 1)
+    stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: ", p$N_FOUNDER_HOSTS,
+         " founder host(s) cannot share 0 distinct genomes.", call. = FALSE)
+  ## A naive population IS legitimate (D17: importation can now seed an empty population),
+  ## but only if an import path is actually open. No founders AND no imports is a run that
+  ## can never contain a parasite.
+  if (p$N_FOUNDER_HOSTS < 1 && !has_import_path(p))
+    stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is configured.\n",
+         "  Set N_FOUNDER_HOSTS >= 1, or open an import path (IMPORT_TICK + N_IMPORTS, or\n",
+         "  IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK or IMPORT_RATE_PER_TICK).",
+         call. = FALSE)
   invisible(TRUE)
+}
+
+#' Is any importation path open in this parameter set?
+#'
+#' Either the one-shot pulse (`IMPORT_TICK` + `N_IMPORTS`) or the windowed rate
+#' (`IMPORT_START`/`IMPORT_END` with `N_IMPORTS_PER_TICK` or `IMPORT_RATE_PER_TICK`);
+#' in both cases the window has to fall inside the run.
+#' @param p a parameter list.
+#' @return `TRUE` if at least one importation can occur.
+#' @keywords internal
+has_import_path <- function(p) {
+  pulse <- p$IMPORT_TICK <= p$SIM_DAYS && p$N_IMPORTS > 0
+  windowed <- p$IMPORT_START <= p$SIM_DAYS && p$IMPORT_END > p$IMPORT_START &&
+    (p$N_IMPORTS_PER_TICK > 0 || p$IMPORT_RATE_PER_TICK > 0)
+  isTRUE(pulse) || isTRUE(windowed)
 }
 
 #' Convert a parameter set into SLiM `-d` command-line arguments
