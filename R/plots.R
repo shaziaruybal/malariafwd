@@ -93,9 +93,16 @@ plot_host_trajectory <- function(state, events, host_id,
   layout <- match.arg(layout)
   st <- as.data.table(state)[entity_type == "human" & as.integer(entity_id) == host_id]
   if (layout == "lineages") return(.host_lineage_plot(st, events, host_id, palette))
+  ## the SAME onset vocabulary as .host_lineage_plot(): omitting the import and founder
+  ## routes left every imported episode unmarked on the rug while the MOI line still counted
+  ## it, so the panel under-marked without looking wrong
   ev <- as.data.table(events)[human_id == host_id &
-        event_type %in% c("vh_inoculation","hypnozoite_activation")]
-  ev <- ev[!(event_type == "vh_inoculation" & is_dormant == 1)]
+        event_type %in% c("vh_inoculation", "vh_inoculation_import",
+                          "vh_inoculation_seed", "hypnozoite_activation")]
+  ## is_dormant == 0 across ALL routes, not just vh_inoculation: a dormant row is a hypnozoite
+  ## being seeded, which is not an episode onset, and keying the exclusion to one event type
+  ## let dormant IMPORT inoculations through as onsets (5 spurious marks on one host).
+  ev <- ev[is_dormant == 0]
   ev[, kind := fifelse(event_type == "hypnozoite_activation", "relapse", "new infection")]
   ggplot2::ggplot() +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, hyp_reservoir_size, colour = "hypnozoite reservoir"), linewidth = .7) +
@@ -141,8 +148,17 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   olv  <- c("imported", "local reinfection", "relapse")
   ocol <- c("imported" = "#2a9d8f", "local reinfection" = "#737373", "relapse" = "#c8971f")
   cs   <- classify_cases(ev); cs[, w := (tick %/% bin) * bin]
-  inc  <- keep(cs[, .(y = .N), by = .(w, origin)]); inc[, origin := factor(origin, olv)]
-  fo   <- keep(cs[, .(y = .N / nh / (bin / 365)), by = .(w, origin)]); fo[, origin := factor(origin, olv)]
+  ## Zero-fill the (window x origin) grid before stacking. geom_area joins consecutive ROWS,
+  ## so a window with no cases of one origin is not drawn as zero - it is interpolated
+  ## straight across, inventing cases in exactly the empty windows you look at to ask whether
+  ## transmission stopped. plot_force_of_infection() below carries zeros for the same reason.
+  fill0 <- function(d) {
+    d <- merge(data.table::CJ(w = unique(d$w), origin = olv), d, by = c("w", "origin"),
+               all.x = TRUE)[is.na(y), y := 0]
+    d[, origin := factor(origin, olv)][order(w, origin)]
+  }
+  inc  <- fill0(keep(cs[, .(y = .N), by = .(w, origin)]))
+  fo   <- fill0(keep(cs[, .(y = .N / nh / (bin / 365)), by = .(w, origin)]))
   lin  <- keep(cs[, .(y = uniqueN(lineage_id)), by = w])
   m    <- summarise_run(run)
   py   <- max((endt - burn) / 365, .001)
@@ -198,7 +214,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   if (!nrow(onset)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
   clears <- event_types()$event_type[event_types()$ends_episode]
   ends <- ev[event_type %in% clears, .(pedigree_id, end = tick)]
-  seg <- merge(onset, ends, by = "pedigree_id", all.x = TRUE)[is.na(end), end := last][end >= start]
+  ## end > start, not >=: a lineage cleared on the tick it was created never had a patent
+  ## blood stage, and seq(start, end) would still draw it as a visible one-day episode
+  seg <- merge(onset, ends, by = "pedigree_id", all.x = TRUE)[is.na(end), end := last][end > start]
 
   lv <- seg[order(start), unique(lineage_id)]
   grid <- seg[, .(tick = seq(start, end)), by = .(pedigree_id, lineage_id)]

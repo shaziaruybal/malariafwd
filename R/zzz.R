@@ -26,7 +26,9 @@ utils::globalVariables(c(
   # transmission_links
   "A1", "A2", "C",
   # plot_diagnostics / force_of_infection
-  "w", "y", "rate", "n",
+  "w", "y", "rate", "n", "days", "series",
+  # plot_moi_vs_relapse / plot_relatedness_ladder
+  "grp", "band",
   # classify_cases imported-origin flag
   "imported",
   # segments / ladder

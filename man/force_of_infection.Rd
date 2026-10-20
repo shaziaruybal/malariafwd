@@ -14,7 +14,9 @@ force_of_infection(run, bin = 30, split_imported = "auto")
 \item{split_imported}{\code{"auto"} (split only if the run has imports), \code{TRUE}, or \code{FALSE}.}
 }
 \value{
-a data.table of \code{win}, \code{origin}, \code{n}, and \code{rate} (new clones per host-year).
+a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers, which
+is less than \code{bin} for a trailing window when the run length is not a multiple of
+\code{bin}) and \code{rate} (new clones per host-year, scaled by \code{days}).
 }
 \description{
 New blood-stage clone acquisitions per host per year, split by origin.

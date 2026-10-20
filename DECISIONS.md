@@ -19,6 +19,54 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted
+**Context.** The downstream sweep found four defects in the summary plots and in
+`force_of_infection()`, all of them "the function is internally correct but silently disagrees
+with the event log". Measured before the change, on the audit run set: `plot_diagnostics()`
+showed a stacked incidence top of 5 where the true count was 2 and a plateau of 3 across windows
+whose true count was 1 (7 of 24 window x origin combinations had no row, and `geom_area` joins
+consecutive ROWS, interpolating straight across the gap); `force_of_infection()` divided an
+11-day trailing window by a full 30-day bin, understating the final point ~3x and ending every
+series in a crash that was pure binning artefact; the `layout = "summary"` onset rug drew 57
+marks against 63 real blood-stage onsets on one host, omitting the imported and seed routes; and
+episode bands kept `end == start`, drawing 5 phantom one-day episodes out of 10 on a host where
+treatment is same-tick.
+**Decision.** (1) Zero-fill the `(window x origin)` grid in `plot_diagnostics()` before stacking.
+(2) Give `force_of_infection()` a `days` column holding the days each window actually covers, and
+divide by `days` rather than `bin`; take the run end from the **state table**, not the last case.
+(3) Filter episode onsets on the full inoculation vocabulary with `is_dormant == 0` applied across
+**all** routes. (4) Require `end > start` for an episode band.
+**Rationale.** Each defect misleads hardest in the regime the panel exists to interrogate. The
+interpolation only bites on sparse, suppressed runs — exactly when the question is "did
+transmission stop?". The trailing-window crash lands on the last point of every series, where a
+reader looks for a trend. Adding `days` rather than dropping the partial window keeps the
+estimate (it is unbiased, just noisier) and makes the short window **visible** to callers instead
+of silently absent; every full window stays bit-identical, because there `days == bin`. The run
+end must come from the state table rather than `max(case tick)`: on the `hypmode` audit run the
+last case is at tick 373 but the run reaches 400, so a case-derived end would discard a window
+whose true value is **zero** — the most informative reading there is.
+**Alternatives rejected.** *Drop the partial trailing window* (which is what `plot_diagnostics()`
+does via its `keep()` helper) — consistent, but it throws away a real estimate and, with a
+case-derived run end, throws away true trailing zeros. *Leave `force_of_infection()` alone and fix
+only the plot* — the metric function is the one analyses call directly. *Keep the rug's dormant
+exclusion keyed to `vh_inoculation`* — this was my first attempt and it reintroduced the same
+vocabulary-drift bug in the other direction: dormant **import** inoculations leaked through as
+onsets, 68 marks against 63 real.
+**Consequences.** `force_of_infection()` gains a column; its existing columns and all full-window
+rates are unchanged, so no analysis output moves except the final point of a series on a run whose
+length is not a multiple of `bin`. The `@return` roxygen is updated. Also clears the long-standing
+"no visible binding" NOTE by declaring `series`, `grp` and `band` in `zzz.R`, so the three
+undefined globals in `plots.R` no longer appear in `R CMD check`.
+**How to verify.** For any run: the `plot_diagnostics()` incidence panel's stacked top must equal
+`classify_cases()` counted per window (0 difference on `treat`, `baseline`, `hypmode`); every
+`force_of_infection()` row must satisfy `rate == n / N_HOSTS / (days/365)` with `days == bin` for
+all but the last window; the summary rug's mark count must equal the host's `is_dormant == 0`
+onsets over all four inoculation routes (63 of 63); and no episode band may have `end <= start`.
+Suites: `audit_events_and_ibd.R` 66/0, `check_parameters.R` 41/0, `test_dir()` 62/0,
+`R CMD check --as-cran --no-manual` 2 NOTEs (new submission + `MODEL_DESCRIPTION.md`).
+
+---
+
 ## D20 — Treatment is decided where a case arises and applied later, to the host · 2026-10-20 · Accepted
 **Context.** Six audit findings shared one cause: treatment was a flag set on a single new
 lineage inside `reproduction()`. Measured on the pre-change model: case-based radical cure

@@ -112,7 +112,9 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @param run a run directory or `vivax_run`.
 #' @param bin window width in days.
 #' @param split_imported `"auto"` (split only if the run has imports), `TRUE`, or `FALSE`.
-#' @return a data.table of `win`, `origin`, `n`, and `rate` (new clones per host-year).
+#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers, which
+#'   is less than `bin` for a trailing window when the run length is not a multiple of
+#'   `bin`) and `rate` (new clones per host-year, scaled by `days`).
 #' @references Mueller I, et al. (2013) A high force of *Plasmodium vivax* blood-stage
 #'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
 #' @export
@@ -122,8 +124,17 @@ force_of_infection <- function(run, bin = 30, split_imported = "auto") {
   if (isTRUE(split_imported) || (identical(split_imported, "auto") && any(cs$imported)))
     cs[origin == "relapse", origin := fifelse(imported, "relapse (imported)", "relapse (local)")]
   cs[, win := (tick %/% bin) * bin]
+  ## Divide each window by the days it actually covers, not by `bin`. Unless the run length is
+  ## a multiple of `bin` the trailing window is short - 10 days of a 30-day bin on a 400-day
+  ## run - and dividing it by a full bin understated the final point 3x, so every series ended
+  ## in a crash that was pure binning artefact, right where a reader looks to judge whether
+  ## transmission stopped. The run end comes from the state table rather than the last case,
+  ## so a run that ends with no transmission still reports its true trailing zero. Full windows
+  ## are unchanged, because there days == bin.
+  endt <- max(as.data.table(load_state(run))$tick)
   fo <- cs[, .(n = .N), by = .(win, origin)]
-  fo[, rate := n / nh / (bin / 365)][order(win, origin)]
+  fo[, days := pmin(bin, endt - win + 1)]
+  fo[, rate := n / nh / (days / 365)][order(win, origin)]
 }
 
 #' Mean pairwise IBD among cases active in each time window (relatedness trajectory)
