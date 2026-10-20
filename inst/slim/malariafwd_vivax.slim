@@ -334,9 +334,11 @@ initialize() {
 	defineGlobal("NEXT_BROOD_ID", 0);
 	// D17: import seeding. NEXT_SCRATCH_SUBPOP is a monotonic id for the disposable
 	// subpopulation each import-tick mints its genomes in - SLiM refuses to reuse a
-	// subpopulation id, so this only ever counts up. It starts above any host or mosquito
-	// subpop id so the two ranges can never collide.
-	defineGlobal("NEXT_SCRATCH_SUBPOP", 1000000);
+	// subpopulation id, so this only ever counts up. It starts just above the host and mosquito
+	// range so the two can never collide, but NOT far above: SLiM materialises a DENSE
+	// population table up to the highest id used, so a base of 1e6 added ~1,000,000 empty rows
+	// and ~8 MB of padding to every tree sequence from a run with imports.
+	defineGlobal("NEXT_SCRATCH_SUBPOP", N_HOSTS + N_MOSQ + 1000);
 	// the second compartment of an import, awaiting its clone on the next tick
 	defineGlobal("PENDING_BATCH_PED",  integer(0));
 	defineGlobal("PENDING_BATCH_N",    integer(0));
@@ -1331,11 +1333,12 @@ early() {
 		{
 			catn("🛑 EXTINCT on tick " + sim.cycle + ": no blood-stage parasites, no hypnozoites, " +
 				"and no importation remaining. Ending the run - every further tick is empty.");
-			// The outputs have to be written HERE. The final `SIM_DAYS late()` event is
-			// registered for a tick we will never reach, so finishing without this produced a
-			// run with state.tsv and events.tsv but NO plasmo.trees, exiting 0 - every
-			// downstream IBD and ARG analysis would then fail on a file that is simply absent.
-			writeStateSnapshot();
+			// The TREE SEQUENCE has to be written here: it is only written by the final
+			// `SIM_DAYS late()` event, which is registered for a tick we will never reach, so
+			// without this the run ends with state.tsv and events.tsv but NO plasmo.trees,
+			// exiting 0. The state snapshot is NOT written here - simulationFinished() lets the
+			// current tick finish, so this tick's late() still runs and writes it. Doing both
+			// duplicated every entity row on the final tick.
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
 			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
 			sim.simulationFinished();
@@ -1434,8 +1437,27 @@ function (void) writeStateSnapshot(void)
 	
 	for (h in humans)
 	{
-		lineage_ids_str = (h.individualCount > 0) ?
-			paste(unique(h.individuals.getValue("lineage_id")), sep="|") else "NA";
+		// Count only lineages that are actually PRESENT: a dormant batch retired to
+		// batch_count == 0 lives until the next tick's cleanup, and listing it here made
+		// state.tsv contradict itself - rows reporting moi_active 0, moi_dormant 0 and
+		// hyp_reservoir_size 0 while still naming a lineage. That happens on exactly the tick
+		// a liver drug clears a reservoir, which is the tick its efficacy is measured on.
+		// getDormantLineageCount() already applies this filter.
+		// Per-individual loop, not a vectorised getValue(): batch_count is NULL on an ACTIVE
+		// individual, so reading it across the whole subpopulation returns a shorter vector
+		// than it was indexed with.
+		shown = c();
+		for (ind in h.individuals)
+		{
+			if (ind.getValue("is_dormant") == T)
+			{
+				bc = ind.getValue("batch_count");
+				if (isNULL(bc) | (bc <= 0))
+					next;
+			}
+			shown = c(shown, ind.getValue("lineage_id"));
+		}
+		lineage_ids_str = (size(shown) > 0) ? paste(unique(shown), sep="|") else "NA";
 		
 		line = paste(c(
 			asString(sim.cycle),

@@ -276,7 +276,11 @@ summarise_run <- function(run, burn_frac = 0.5) {
     mean_res = round(mean(h$hyp_reservoir_size), 1),
     relapse_frac = round(relapse_fraction(ev)$relapse_fraction, 3),
     relapses_py = relapses_per_person_year(ev)$relapses_per_py,
-    n_bloodstage_treated = as.data.table(ev)[event_type == "case_bloodstage_clear", .N],
+    ## courses GIVEN, not clones cleared: one course clears every clone in the host, and a
+    ## clone can survive it (bloodcure_persist), so counting clearances is wrong in both
+    ## directions - and counts zero for MDA, which clears via mda_bloodstage_clear.
+    n_bloodstage_treated = as.data.table(ev)[
+      event_type %in% c("bloodcure_given", "mda_bloodcure_given"), .N],
     imported_frac = round(if (nrow(vi)) mean(vi$is_imported == 1) else 0, 3))
 }
 
@@ -289,7 +293,11 @@ ibd_relapse_origin <- function(events, idx) {
   ev <- as.data.table(events); nm <- idx$nm
   rel <- ev[event_type == "hypnozoite_activation",
             .(lineage_id = as.character(lineage_id), human_id, rp = pedigree_id, rt = tick)]
-  prm <- ev[event_type == "vh_inoculation" & is_dormant == 0,
+  ## every inoculation route, not just local bites: a relapse whose origin was an IMPORT
+  ## was dropped by the merge below without warning, which silently excluded the pairs
+  ## that are now the cleanest clonal check in the model.
+  prm <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_import",
+                              "vh_inoculation_seed") & is_dormant == 0,
             .(lineage_id = as.character(lineage_id), human_id, pp = pedigree_id, pt = tick)]
   prm <- prm[pp %in% nm$pedigree_id][order(pt)][, .SD[1], by = .(lineage_id, human_id)]
   pr <- merge(rel[rp %in% nm$pedigree_id], prm, by = c("lineage_id","human_id"))[pt <= rt]

@@ -253,7 +253,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 plot_force_of_infection <- function(foi, smooth = 0.4) {
   .need_ggplot()
   d <- as.data.table(foi)
-  mosq <- setdiff(unique(d$origin), "relapse")       # everything not a relapse is mosquito-borne
+  ## PREFIX match, not equality: force_of_infection(split_imported = "auto") relabels
+  ## relapses as "relapse (local)" / "relapse (imported)", which an exact setdiff misses -
+  ## FOI then equals molFOB and the gap this plot exists to show renders as zero.
+  mosq <- grep("^relapse", unique(d$origin), value = TRUE, invert = TRUE)
   w <- rbind(
     d[, .(rate = sum(rate), series = "molFOB (all blood-stage episodes)"), by = win],
     d[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])

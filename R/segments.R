@@ -238,7 +238,12 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
            .(ped = pedigree_id, oocyst_id, lineage_id)]
   sib <- oo[, if (.N > 1 && data.table::uniqueN(lineage_id) > 1) {
     i <- which(lineage_id != lineage_id[1])[1]; .(a = ped[1], b = ped[i]) },
-    by = oocyst_id][!is.na(b)]
+    by = oocyst_id]
+  ## A grouped expression that matches NO group returns a 0-row table carrying only the `by`
+  ## column, so filtering on `b` errors rather than returning nothing. This happens whenever a
+  ## run has no outcrossed oocyst that produced two distinct lineages - e.g. any run where
+  ## treatment suppresses transmission hard enough.
+  sib <- if (nrow(sib) && "b" %in% names(sib)) sib[!is.na(b)] else sib[0]
   add(.LADDER[5], utils::head(sib$a, max_per_class), utils::head(sib$b, max_per_class))
   fl <- unique(seeds, by = "lineage_id")$pedigree_id
   if (length(fl) >= 4) { cb <- utils::combn(length(fl), 2)
