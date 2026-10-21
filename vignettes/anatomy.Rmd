@@ -118,9 +118,14 @@ coalesce. Branch *divergence* therefore does not behave as a relatedness measure
 `arg_tmrca()`, which reports the time to the common ancestor together with `coalesced`, the
 fraction of the genome over which one exists.
 
+`tmrca` is a **depth** -- ticks from the older of the two genomes back to their shared
+ancestor -- so a relapse and the hypnozoite it activated from give 0 no matter when in the run
+they occurred. The raw tskit node time (ticks before the *end of the run*) is reported
+separately as `tmrca_node_time`; it moves with sampling date rather than with relatedness.
+
 ```{r}
 arg_summary(run)                                   # trees, edges, roots per tree, depth
-arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # coalesced = 1, recent TMRCA
+arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # coalesced = 1, tmrca = 0
 ```
 
 ## Calibrating the uptake draws

@@ -25,28 +25,40 @@
 #'
 #' Computes genome-wide identity-by-descent (shared-segment length / sequence length)
 #' among a set of individuals, working on the tskit tree sequence recorded by the model.
-#' If `ids` is given the tree is first simplified to just those individuals (memory-safe);
-#' SLiM's vacant null haplosome nodes are always excluded, and `max_time` restricts IBD to
-#' recent shared ancestry (a transmission-specific, "recent" definition; see DECISIONS D10d).
+#' If `ids` is given the tree is first simplified to just those individuals (memory-safe) and
+#' SLiM's vacant null haplosome nodes are always excluded. **All** shared ancestry is counted,
+#' however far back it goes -- there is no time cutoff. To impose one, ask for `segments` and
+#' filter them yourself; see the note below, and D22 in `DECISIONS.md` for why a cutoff is no
+#' longer offered as an argument.
 #'
 #' @param run a `vivax_run`, a run directory, or a `.trees` file path.
 #' @param ids optional integer vector of `pedigree_id`s to restrict to (e.g. sampled cases).
 #' @param min_span minimum shared-segment length (bp) to count (default 1000).
-#' @param max_time if set, count only ancestry coalescing within this many time units
-#'   (days) -- a recent-transmission IBD definition. `NULL` (default) = any coalescence time.
-#' @return a list with `ibd` (data.table: `node_a`, `node_b`, `ibd_fraction`) and
-#'   `node_map` (data.table: `node_id`, `pedigree_id`). Pass to [ibd_index()] for lookups.
+#' @param segments if `TRUE`, also return every shared segment with the time of the common
+#'   ancestor it came from. Costs roughly 3-7x the default run time (the multiple grows with
+#'   the number of samples) and returns one row per segment per pair, so restrict it with
+#'   `ids` and `min_span`.
+#' @return a list with `ibd` (data.table: `node_a`, `node_b`, `ibd_fraction`), `node_map`
+#'   (data.table: `node_id`, `pedigree_id`) and `sequence_length`. With `segments = TRUE`,
+#'   also `segments` (data.table: `node_a`, `node_b`, `left`, `right`, `mrca_node`,
+#'   `mrca_time`). Pass to [ibd_index()] for lookups.
+#' @section Segment times are not depths:
+#' `mrca_time` is a tskit node time, i.e. **ticks before the end of the run**, not a
+#' genealogical depth. A segment's depth relative to its own pair is
+#' `mrca_time - max(t_a, t_b)`, where `t_a`/`t_b` are the two samples' own node times. A
+#' recency filter must be written against that difference: filtering on `mrca_time` alone
+#' scores a pair by when its lineage last branched, not by how related the two genomes are.
 #' @export
-ibd_pairs <- function(run, ids = NULL, min_span = 1000, max_time = NULL) {
+ibd_pairs <- function(run, ids = NULL, min_span = 1000, segments = FALSE) {
   .require_reticulate()
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
   out <- tempfile(fileext = ".csv"); nmap <- tempfile(fileext = ".csv")
+  segf <- tempfile(fileext = ".csv"); lenf <- tempfile(fileext = ".txt")
   want_expr <- if (is.null(ids)) "None" else {
     pf <- tempfile(); writeLines(as.character(unique(ids)), pf)
     paste0("set(int(x) for x in open(r'''", pf, "''').read().split())")
   }
-  mt <- if (is.null(max_time)) "None" else format(max_time, scientific = FALSE, trim = TRUE)
   py <- paste0("
 import tskit, pandas as pd, json, gc
 ts = tskit.load(r'''", tf, "''')
@@ -77,17 +89,32 @@ for n in sts.samples():
         p = pedof(sts.individual(nd.individual))
         if p is not None: n2p[int(n)] = int(p)
 L = sts.sequence_length
-kw = dict(min_span=", as.integer(min_span), ", store_pairs=True, store_segments=True)
-mt = ", mt, "
-if mt is not None: kw['max_time'] = mt
-rows = [{'node_a': int(a), 'node_b': int(b), 'ibd_fraction': float(sum(s.right-s.left for s in segs)/L)}
-        for (a, b), segs in sts.ibd_segments(within=list(sts.samples()), **kw).items()]
+open(r'''", lenf, "''', 'w').write(repr(L))
+want_seg = ", if (isTRUE(segments)) "True" else "False", "
+# store_segments stays OFF unless the caller asked for them: tskit exposes total_span per
+# pair without it, and materialising every segment only to sum and discard it costs ~7x
+# (38.1s vs 5.1s over 14.8M segments on a 5413-sample tree; 3.2x at 800 ids).
+res = sts.ibd_segments(within=list(sts.samples()), min_span=", as.integer(min_span), ",
+                       store_pairs=True, store_segments=want_seg)
+keys = list(res.keys())
+rows = [{'node_a': int(a), 'node_b': int(b), 'ibd_fraction': float(res[(a, b)].total_span) / L}
+        for (a, b) in keys]
 pd.DataFrame(rows, columns=['node_a','node_b','ibd_fraction']).to_csv(r'''", out, "''', index=False)
 pd.DataFrame(list(n2p.items()), columns=['node_id','pedigree_id']).to_csv(r'''", nmap, "''', index=False)
+if want_seg:
+    nt = sts.nodes_time
+    srows = [{'node_a': int(a), 'node_b': int(b), 'left': float(sg.left), 'right': float(sg.right),
+              'mrca_node': int(sg.node), 'mrca_time': float(nt[int(sg.node)])}
+             for (a, b) in keys for sg in res[(a, b)]]
+    pd.DataFrame(srows, columns=['node_a','node_b','left','right','mrca_node','mrca_time']).to_csv(
+        r'''", segf, "''', index=False)
 ")
   reticulate::py_run_string(py)
-  list(ibd = data.table::fread(out, showProgress = FALSE),
-       node_map = data.table::fread(nmap, showProgress = FALSE))
+  res <- list(ibd = data.table::fread(out, showProgress = FALSE),
+              node_map = data.table::fread(nmap, showProgress = FALSE),
+              sequence_length = as.numeric(readLines(lenf, warn = FALSE)))
+  if (isTRUE(segments)) res$segments <- data.table::fread(segf, showProgress = FALSE)
+  res
 }
 
 #' Build a fast pairwise-IBD lookup from [ibd_pairs()]

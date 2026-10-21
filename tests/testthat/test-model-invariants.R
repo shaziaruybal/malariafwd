@@ -86,6 +86,48 @@ test_that("ARG summaries behave on the forest genealogy", {
     tf <- arg_tmrca(run, fnd[1:2], fnd[3:4])
     expect_true(all(tf$coalesced < 0.5, na.rm = TRUE))    # distinct founders are independent roots
   }
+
+  ## D22: tmrca is a DEPTH, so one fixed relationship gives one number wherever it was
+  ## sampled. Before the fix this returned the ancestor's raw node time and the same
+  ## relapse-vs-origin relationship spanned 43-391 ticks on a 400-tick run.
+  spread <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]
+  if (nrow(spread) >= 8) {
+    spread <- spread[order(tick)][unique(round(seq(1, .N, length.out = 8)))]
+    td <- arg_tmrca(run, spread$pedigree_id, spread$parent1_pedigree_id)
+    td <- td[!is.na(td$tmrca), ]
+    expect_true(all(td$tmrca >= 0))                       # an ancestor predates its descendants
+    expect_lt(diff(range(td$tmrca)), 1e-6)                # identical relationship, identical depth
+    expect_true("tmrca_node_time" %in% names(td))         # the raw node time is still available
+  }
+})
+
+test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
+  skip_if_no_slim()
+  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  out <- file.path(tempdir(), "mfw-ibdseg")
+  unlink(out, recursive = TRUE)
+  run <- run_sim(vivax_params(N_HOSTS = 50, N_MOSQ = 100, BITING_RATE = 0.12,
+                              SIM_DAYS = 250, N_FOUNDER_LINEAGES = 8), seed = 3, outdir = out)
+  ev  <- data.table::as.data.table(load_events(run))
+  ids <- unique(data.table::as.data.table(classify_cases(ev))$pedigree_id)
+  skip_if(length(ids) < 10, "too few cases in this run")
+
+  ## D22: no time cutoff is offered, so a clonal relapse reads 1 however old its ancestor is
+  idx <- ibd_index(ibd_pairs(run, ids = ids))
+  ro  <- data.table::as.data.table(ibd_relapse_origin(ev, idx))
+  if (nrow(ro)) expect_true(all(ro$ibd > 0.999))
+
+  sg <- ibd_pairs(run, ids = ids, segments = TRUE)
+  expect_named(sg$segments,
+               c("node_a", "node_b", "left", "right", "mrca_node", "mrca_time"))
+  expect_gt(sg$sequence_length, 0)
+  ## the segments must add back up to the pair table they came from
+  rec <- sg$segments[, .(f = sum(right - left) / sg$sequence_length), by = .(node_a, node_b)]
+  cmp <- merge(data.table::as.data.table(sg$ibd), rec, by = c("node_a", "node_b"))
+  expect_equal(nrow(cmp), nrow(sg$ibd))
+  expect_lt(max(abs(cmp$ibd_fraction - cmp$f)), 1e-9)
+  ## mrca_time is a node time, never more recent than either sample it joins
+  expect_true(all(sg$segments$mrca_time >= 0))
 })
 
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {

@@ -203,8 +203,16 @@ else:
 #'
 #' @param run a run directory or `vivax_run`.
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
-#' @return a data.table with `a`, `b`, `coalesced` (0-1) and `tmrca` (ticks; `NA` if the pair
-#'   never coalesces).
+#' @return a data.table with `a`, `b`, `coalesced` (0-1), `tmrca` and `tmrca_node_time`
+#'   (both ticks; `NA` if the pair never coalesces).
+#' @section Which TMRCA you get:
+#' `tmrca` is a **depth**: ticks from the older of the two sampled genomes back to their
+#' common ancestor, so an identical relationship returns an identical number wherever in the
+#' run it occurred -- a clonal parent-child pair gives 0 whether it happened on tick 10 or
+#' tick 390. `tmrca_node_time` is the raw tskit node time of that ancestor, i.e. ticks before
+#' the **end of the run**; that is what `tree.tmrca()` returns natively and it is dominated by
+#' when the pair was sampled rather than by how related it is. Use `tmrca` for relatedness.
+#' See D22 in `DECISIONS.md`.
 #' @examples
 #' \dontrun{
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]
@@ -222,9 +230,17 @@ rows = []
 for x, y in zip(_aslist(_a), _aslist(_b)):
     a, b = p2.get(int(x)), p2.get(int(y))
     if a is None or b is None:
-        rows.append(dict(a=int(x), b=int(y), coalesced=float("nan"), tmrca=float("nan"))); continue
+        rows.append(dict(a=int(x), b=int(y), coalesced=float("nan"),
+                         tmrca=float("nan"), tmrca_node_time=float("nan"))); continue
     if a == b:
-        rows.append(dict(a=int(x), b=int(y), coalesced=1.0, tmrca=0.0)); continue
+        rows.append(dict(a=int(x), b=int(y), coalesced=1.0,
+                         tmrca=0.0, tmrca_node_time=float(sts.node(a).time))); continue
+    # NOTE: no apostrophes in this block -- it is an R single-quoted string.
+    # t.tmrca() returns the ancestor NODE TIME: ticks before the end of the run. Reported
+    # raw, that makes an identical relationship look different depending on when it was
+    # sampled, so subtract the older samples own node time to get a genealogical depth.
+    # The ancestor is at least as old as both descendants, so this is never negative.
+    base = max(sts.node(a).time, sts.node(b).time)
     tot = 0.0; co = 0.0; acc = 0.0
     for t in sts.trees():
         span = t.interval.right - t.interval.left
@@ -234,7 +250,8 @@ for x, y in zip(_aslist(_a), _aslist(_b)):
         co += span; acc += span * tm
     rows.append(dict(a=int(x), b=int(y),
                      coalesced=(co / tot) if tot else float("nan"),
-                     tmrca=(acc / co) if co > 0 else float("nan")))
+                     tmrca=(acc / co - base) if co > 0 else float("nan"),
+                     tmrca_node_time=(acc / co) if co > 0 else float("nan")))
 _tm = rows
 ')
   data.table::rbindlist(lapply(reticulate::py$`_tm`, data.table::as.data.table))

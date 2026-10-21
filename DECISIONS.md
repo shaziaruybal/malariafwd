@@ -19,6 +19,73 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted
+**Context.** `ibd_pairs(max_time=)` was documented as counting "only ancestry coalescing within
+this many time units (days)" -- a genealogical **depth**. It passed the value straight to tskit's
+`ibd_segments(max_time=)`, which compares against the common ancestor's **absolute node time**,
+and SLiM writes node times backwards from the final tick (`time_units` = "ticks", end tick 400,
+sample node times spread 0-399 with only 0.3% at zero). So `max_time = 180` meant "keep only
+ancestry from the last 181 ticks" -- a window pinned to the end of the run, unrelated to the pair
+being asked about. Measured on 1101 relapse-origin pairs that are clonal by construction (true IBD
+1.000 for all 1101): the rule `segment kept iff mrca_time <= max_time` reproduces the function's
+output for 1101/1101 pairs at six cutoffs, max |diff| 0.00e+00. Results are perfectly bimodal --
+every pair reports exactly 1.000 or exactly 0.000, never between -- so the reported "mean IBD" is
+a keep-rate, which is why it swings 0.00-0.43 across the seven audit runs at the same setting. It
+is also biased, not merely noisy: at `max_time = 180` the surviving pairs have median relapse
+latency 38 days and the erased ones 87 days, because a long-dormant relapse has an old common
+ancestor by definition. That inverts the comparison the measure exists to make -- scoring each
+case by its max IBD to prior cases population-wide, the ordering flips from relapse > local
+reinfection to local reinfection > relapse in all three runs tested, and AUC falls 0.622 -> 0.511,
+0.547 -> 0.436, 0.540 -> 0.416 (two of three below 0.5, i.e. anti-predictive). Separately,
+`arg_tmrca()` returned `tree.tmrca()` raw while promising depth, so 60 relapse-vs-origin pairs
+with an identical clonal relationship spanned 43-391 ticks; its `a == b` branch already returned
+0.0, i.e. the function reported depth for self-pairs and absolute time for everything else.
+**Decision.** Remove `max_time` from `ibd_pairs()`. All shared ancestry is counted, always.
+Replace it with `segments = FALSE`, which when `TRUE` returns every shared segment
+(`node_a`, `node_b`, `left`, `right`, `mrca_node`, `mrca_time`) plus `sequence_length`, so a
+caller who wants a recency definition writes it as an explicit filter on
+`mrca_time - max(t_a, t_b)`. `arg_tmrca()` now returns `tmrca` as a depth from the older sample
+and the raw node time alongside it as `tmrca_node_time`.
+**Rationale.** The argument had no justified use left. Its performance rationale (tskit's own
+docstring recommends a max time for large tree sequences) turned out to be misattributed: the
+cost in this code was `store_segments=True`, which was hard-coded on while the result was only
+ever summed and discarded. tskit exposes `total_span` per pair without it -- 5.1s against 38.1s
+over 14.8M segments on a 5413-sample tree, a 7.5x saving for an identical answer -- and `ids=`
+was always the bigger lever. Its scientific rationale was a depth concept the implementation did
+not provide; the cited authority (`DECISIONS D10d`) does not exist in this file or in any commit
+of it, and the actual record, the prototype's `GENOMIC_SURVEILLANCE_DESIGN_PLAN.md` §10d, says
+"coalescing **within** 180 days" and "coalescence-recency" -- depth intent throughout. Making the
+segments the unit means the time convention is visible in the analysis code that chooses it rather
+than hidden behind an argument whose meaning no caller could see.
+**Alternatives rejected.** *Rename to `max_node_time` and keep it* -- honest, but it preserves a
+footgun with no demonstrated use; anyone who genuinely wants an end-anchored window can filter the
+returned segments. *Add `max_depth` alongside* -- it presumes one depth convention when the data
+do not support a single obvious one: 33.8% of segments join members sampled >= 100 ticks apart and
+0.3% have the older member *as* the common ancestor, where depth-from-older is 0 and
+depth-from-younger is not. *Return segments through a lazy accessor* -- would tie an R object's
+validity to a live Python session, breaking `saveRDS()` and `run_grid()` workers, to avoid a
+row count that only arises from a call (`segments = TRUE` with no `ids`) nobody makes.
+*Fix the documentation only* -- leaves the inversion above in place.
+**Consequences.** Breaking change to two exported functions, taken deliberately before any
+release (no tag, no published version). Every `ibd_pairs()` call that did not pass `max_time` --
+which is every call inside the package, and 100 of the 102 IBD call sites across the three repos --
+returns bit-identical numbers and runs faster. The two that did: `vignettes/malariafwd.Rmd` is
+rewritten to demonstrate `segments` and to state that `mrca_time` is not a depth, and
+`vivax_slim_prototype/e1_ibddef.R` needs its `ibd_time` arm re-specified -- that is the analysis
+this defect was corrupting, and is a separate decision. `segments = TRUE` costs 3-7x the default,
+growing with sample count. Also closes the `extract_segments` bridge on
+`resources/PACKAGE_UTILS_WISHLIST.md`, and removes the dangling `D10d` cross-reference.
+**How to verify.** `ibd_pairs(run, ids)` must equal the pre-change no-cutoff output bit for bit
+(1101 relapse-origin pairs, max |diff| 0.00e+00, all 1.000); `segments = TRUE` must reconstruct
+`ibd_fraction` from `sum(right - left) / sequence_length` for every pair (25,193 pairs / 105,918
+segments, max |diff| 5.6e-17); `arg_tmrca()` on one fixed relationship must return one number
+regardless of sampling date (60 relapse-vs-origin pairs, `tmrca` range 0-0, `tmrca_node_time`
+range 43-391) and `tmrca` must never be negative. Both are now regression tests in
+`test-model-invariants.R`. Suites: `test_dir()` 71/0, `audit_events_and_ibd.R` 66/0,
+`check_parameters.R` 41/0, `R CMD check --as-cran --no-manual` 2 NOTEs.
+
+---
+
 ## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted
 **Context.** The downstream sweep found four defects in the summary plots and in
 `force_of_infection()`, all of them "the function is internally correct but silently disagrees

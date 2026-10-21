@@ -65,12 +65,20 @@ ibd_relapse_origin(ev, idx)                        # IBD of each relapse vs its 
 new_infection_diversity(run)                        # relatedness of the transmitting population
 ```
 
-Use `max_time =` to restrict IBD to recent shared ancestry (a transmission-specific,
-"recent" definition):
+`ibd_pairs()` counts all shared ancestry, however far back it goes. Ask for `segments` to get
+the shared blocks themselves, each tagged with the common ancestor it was inherited from:
 
 ```{r}
-ibd_pairs(run, ids = cs$pedigree_id, max_time = 180)
+sg <- ibd_pairs(run, ids = cs$pedigree_id, segments = TRUE)
+head(sg$segments)                  # node_a, node_b, left, right, mrca_node, mrca_time
 ```
+
+`mrca_time` is a tskit node time -- ticks before the **end of the run**, not a depth. A
+"recent ancestry only" variant has to measure depth from the pair itself
+(`mrca_time - max(t_a, t_b)`, using the two samples' own node times), never from `mrca_time`
+alone: the latter scores a pair by when its lineage last branched rather than by how related
+the two genomes are, which inverts the relapse-vs-reinfection comparison. See D22 in
+`DECISIONS.md`.
 
 ## Parallel sweeps
 

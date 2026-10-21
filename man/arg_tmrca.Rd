@@ -12,8 +12,8 @@ arg_tmrca(run, ids_a, ids_b)
 \item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
 }
 \value{
-a data.table with \code{a}, \code{b}, \code{coalesced} (0-1) and \code{tmrca} (ticks; \code{NA} if the pair
-never coalesces).
+a data.table with \code{a}, \code{b}, \code{coalesced} (0-1), \code{tmrca} and \code{tmrca_node_time}
+(both ticks; \code{NA} if the pair never coalesces).
 }
 \description{
 For each pair, the span-weighted mean TMRCA \strong{over the part of the genome where a common
@@ -26,6 +26,17 @@ meaningful on a forest, because non-coalescing spans are excluded rather than sc
 Clonal pairs give \code{coalesced} = 1 with a very recent TMRCA; unrelated genomes give
 \code{coalesced} = 0 and \code{tmrca} = \code{NA}.
 }
+\section{Which TMRCA you get}{
+
+\code{tmrca} is a \strong{depth}: ticks from the older of the two sampled genomes back to their
+common ancestor, so an identical relationship returns an identical number wherever in the
+run it occurred -- a clonal parent-child pair gives 0 whether it happened on tick 10 or
+tick 390. \code{tmrca_node_time} is the raw tskit node time of that ancestor, i.e. ticks before
+the \strong{end of the run}; that is what \code{tree.tmrca()} returns natively and it is dominated by
+when the pair was sampled rather than by how related it is. Use \code{tmrca} for relatedness.
+See D22 in \code{DECISIONS.md}.
+}
+
 \examples{
 \dontrun{
 rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]

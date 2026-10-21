@@ -4,7 +4,7 @@
 \alias{ibd_pairs}
 \title{Ground-truth IBD from a run's tree sequence}
 \usage{
-ibd_pairs(run, ids = NULL, min_span = 1000, max_time = NULL)
+ibd_pairs(run, ids = NULL, min_span = 1000, segments = FALSE)
 }
 \arguments{
 \item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path.}
@@ -13,17 +13,32 @@ ibd_pairs(run, ids = NULL, min_span = 1000, max_time = NULL)
 
 \item{min_span}{minimum shared-segment length (bp) to count (default 1000).}
 
-\item{max_time}{if set, count only ancestry coalescing within this many time units
-(days) -- a recent-transmission IBD definition. \code{NULL} (default) = any coalescence time.}
+\item{segments}{if \code{TRUE}, also return every shared segment with the time of the common
+ancestor it came from. Costs roughly 3-7x the default run time (the multiple grows with
+the number of samples) and returns one row per segment per pair, so restrict it with
+\code{ids} and \code{min_span}.}
 }
 \value{
-a list with \code{ibd} (data.table: \code{node_a}, \code{node_b}, \code{ibd_fraction}) and
-\code{node_map} (data.table: \code{node_id}, \code{pedigree_id}). Pass to \code{\link[=ibd_index]{ibd_index()}} for lookups.
+a list with \code{ibd} (data.table: \code{node_a}, \code{node_b}, \code{ibd_fraction}), \code{node_map}
+(data.table: \code{node_id}, \code{pedigree_id}) and \code{sequence_length}. With \code{segments = TRUE},
+also \code{segments} (data.table: \code{node_a}, \code{node_b}, \code{left}, \code{right}, \code{mrca_node},
+\code{mrca_time}). Pass to \code{\link[=ibd_index]{ibd_index()}} for lookups.
 }
 \description{
 Computes genome-wide identity-by-descent (shared-segment length / sequence length)
 among a set of individuals, working on the tskit tree sequence recorded by the model.
-If \code{ids} is given the tree is first simplified to just those individuals (memory-safe);
-SLiM's vacant null haplosome nodes are always excluded, and \code{max_time} restricts IBD to
-recent shared ancestry (a transmission-specific, "recent" definition; see DECISIONS D10d).
+If \code{ids} is given the tree is first simplified to just those individuals (memory-safe) and
+SLiM's vacant null haplosome nodes are always excluded. \strong{All} shared ancestry is counted,
+however far back it goes -- there is no time cutoff. To impose one, ask for \code{segments} and
+filter them yourself; see the note below, and D22 in \code{DECISIONS.md} for why a cutoff is no
+longer offered as an argument.
 }
+\section{Segment times are not depths}{
+
+\code{mrca_time} is a tskit node time, i.e. \strong{ticks before the end of the run}, not a
+genealogical depth. A segment's depth relative to its own pair is
+\code{mrca_time - max(t_a, t_b)}, where \code{t_a}/\code{t_b} are the two samples' own node times. A
+recency filter must be written against that difference: filtering on \code{mrca_time} alone
+scores a pair by when its lineage last branched, not by how related the two genomes are.
+}
+
