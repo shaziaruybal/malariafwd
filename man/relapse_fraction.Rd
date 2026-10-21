@@ -2,7 +2,7 @@
 % Please edit documentation in R/metrics.R
 \name{relapse_fraction}
 \alias{relapse_fraction}
-\title{Relapse fraction of recurrences (relapses / (relapses + local reinfections))}
+\title{Relapse fraction: the share of blood-stage episodes that are relapses}
 \usage{
 relapse_fraction(events)
 }
@@ -10,8 +10,19 @@ relapse_fraction(events)
 \item{events}{an events data.table (from \code{\link[=load_events]{load_events()}}).}
 }
 \value{
-a one-row data.table.
+a one-row data.table of \code{n_relapse}, \code{n_nonrelapse} and \code{relapse_fraction}.
 }
 \description{
-Relapse fraction of recurrences (relapses / (relapses + local reinfections))
+Relapses divided by \strong{all} classified blood-stage episodes. That is the quantity the
+published 0.55-0.85 vivax band refers to, and the one \code{epi_summary()} in the analyses repo
+scores against. Derived from \code{\link[=classify_cases]{classify_cases()}} rather than from a literal list of event
+types, so every acquisition route is counted and any origin added later (recrudescence)
+enters the denominator without this function having to change.
+}
+\details{
+The denominator includes each host's first-ever episode, which is not a \emph{recurrence}. For a
+strict recurrences-only fraction, drop the first episode per host:
+\code{cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]}. The two are
+materially different -- on a heavily treated run this function returns 0.351 where the
+strict-recurrence variant returns 0.684 -- so never compare one against the other.
 }

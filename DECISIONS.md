@@ -19,6 +19,75 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D23 — Metrics derive their vocabulary from classify_cases(), and output schemas do not depend on run content · 2026-10-22 · Accepted
+**Context.** A verification pass over the four remaining downstream defects found them to be one
+bug class in two forms. **Vocabulary drift:** `new_infection_diversity()` matched
+`event_type == "vh_inoculation"` only, so imported genomes were excluded from the package's
+headline genetic-surveillance metric -- at a 17% import share that overstates mean IBD and clonal
+fraction by ~44% and understates lineage richness by 40%, rising to 4.3x on mean IBD at a 61%
+share, with all three biases pointing the same way as a genuine transmission decline.
+`relapse_fraction()` likewise excluded imported acquisitions (+6.4% relative), but that turned
+out to be the smallest of three problems with it: three different definitions of "relapse
+fraction" were shipping in one project (this function, `epi_summary()` in the analyses repo, and
+`MODEL_DESCRIPTION.md` §16.3), and the function's denominator and its title disagreed.
+`transmission_links()` filtered `parent1_pedigree_id > 0` where the no-parent sentinel is -1 and
+pedigree 0 is a real genome -- the first seed founder -- costing 8 of 1769 edges across the audit
+runs and, on `treat`, an entire four-case transmission chain (7 components reported against 8).
+**Content-dependent schemas:** `classify_who()` returned 9 columns on import-free runs and 6 on
+the import run, with `imported` -- the truth flag -- present exactly where it is trivially FALSE
+and absent on the one run where it carries signal. `ibd_segments()` was worse: the empty-result
+path returned the same columns in a *different order*, and `rbindlist`'s default
+`use.names = "check"` binds by position with only a message, pouring `gstart` values into `chrom`
+(1021664 against 1). `ibd_pairs()` returned logical columns when a run had no shared ancestry.
+**Decision.** Metrics derive their case vocabulary from `classify_cases()` instead of restating
+event types. `relapse_fraction()` becomes relapses over **all** classified blood-stage episodes,
+matching `epi_summary()`; its second column is renamed `n_reinfection` -> `n_nonrelapse` to stop
+the name asserting something the denominator no longer means. `transmission_links()` tests
+`!= -1`. `classify_who()` groups by whatever `classify_cases()` returns. `ibd_segments()` and
+`ibd_pairs()` return a fixed column order and fixed column classes on every path. Both capped
+subsamples get a `seed` argument.
+**Rationale.** Deriving from `classify_cases()` is what makes this the last time: when Step 4 adds
+a `recrudescence` origin, every one of these metrics picks it up with no further edit, which is
+the point given that Step 4 is in scope for the pre-release. Aligning `relapse_fraction()` to
+`epi_summary()` matters because that is the definition the published 0.55-0.85 band was scored
+against, so the package and the calibration evidence now agree. The schema fixes are about
+pooling: a grid sweep rbinds per-run tables, and a schema that varies with run *content* rather
+than with arguments either errors on one cell or -- in the `ibd_segments` case -- silently
+produces numerically plausible garbage.
+**Alternatives rejected.** *Strict recurrences-only `relapse_fraction()`* -- defensible, and it
+matches the old title, but it would disagree with the analyses repo and with the band the model
+was calibrated against; it is documented in the roxygen as a one-liner instead, with both numbers
+(0.351 against 0.684 on a heavily treated run) so nobody compares them by accident.
+*Deterministic head-of-list subsampling* -- reproducible but biased toward early genomes; a fixed
+local seed keeps the draw unbiased and restores the caller's RNG stream.
+*Also retire `force_of_infection(split_imported = "auto")`* -- it is the same content-dependent
+class, but changing that default is user-visible behaviour rather than a schema fix, and
+`plot_force_of_infection()` already handles both vocabularies after D21. Deferred deliberately.
+*Also drop `is_dormant == 0` from `classify_who()`'s import predicate* -- a dormant import
+establishment is the travel marker for a later imported relapse, and the function disagrees with
+`classify_cases()` on 239 cases because of it. That is a behaviour change, not a schema fix, and
+needs its own decision.
+**Consequences.** `relapse_fraction()` changes value on every run (`imports` 0.745 -> 0.700) and
+renames one column; `summarise_run()$relapse_frac` moves with it. `new_infection_diversity()`
+changes value on any run with imports. `transmission_chains()` gains components on three of seven
+runs. `rc_by_origin()` does **not** move -- it is structurally immune because `classify_cases()`
+excludes seed founders, so a test asserting a changed Rc here would be wrong. Fixing
+`new_infection_diversity()` grew the `imports` pool past `cap = 250`, which exposed the unseeded
+`sample()` and turned a previously deterministic call random (0.0529 / 0.0544 / 0.0526 / 0.0523
+across four identical calls) -- hence the seed argument, added to `ibd_trajectory()` too.
+**How to verify.** `classify_who()` must return one identical schema across all seven audit runs
+and pool with `rbindlist` (10 columns, 4572 rows, 0 NA in `imported`, 518 "Imported" on the import
+run) with row counts equal to `classify_cases()`. `relapse_fraction()` must equal
+`mean(classify_cases(ev)$origin == "relapse")` exactly on every run. `transmission_links()` must
+return >= 445/24/187/430/299/61/323 edges with no -1 source. `ibd_segments()` must return the same
+column order whether a pair shares everything or nothing, and a `rbindlist` of both must keep
+`chrom` within 1-14. `ibd_pairs()$ibd` must be integer/integer/numeric. Repeat calls to
+`new_infection_diversity()` and `ibd_trajectory()` must agree, and must leave `.Random.seed`
+unchanged. Suites: `test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_parameters.R` 41/0,
+`R CMD check --as-cran --no-manual` 2 NOTEs.
+
+---
+
 ## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted
 **Context.** `ibd_pairs(max_time=)` was documented as counting "only ancestry coalescing within
 this many time units (days)" -- a genealogical **depth**. It passed the value straight to tskit's

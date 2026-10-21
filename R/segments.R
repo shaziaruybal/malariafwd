@@ -108,8 +108,15 @@ _seg = pd.DataFrame(rows, columns=["pair","a","b","gstart","gend"])
   ## fails to merge in plot_ibd_pair() rather than drawing an empty karyotype.
   seg[, `:=`(pair = as.integer(pair), a = as.integer(a), b = as.integer(b),
              gstart = as.numeric(gstart), gend = as.numeric(gend))]
-  if (!nrow(seg)) return(seg[, `:=`(chrom = integer(), start = numeric(),
-                                    end = numeric(), length = numeric())][])
+  ## Return the columns in the SAME ORDER as the non-empty path below. Appending them with
+  ## `:=` left gstart/gend ahead of chrom/start/end, so a pair that shares nothing produced a
+  ## different column ORDER from one that shares something -- and rbindlist's default
+  ## use.names = "check" then binds by position, emitting only a message while pouring
+  ## `gstart` values into `chrom` (1021664 instead of 1). Plausible-looking silent corruption
+  ## in any loop over pairs or runs.
+  if (!nrow(seg))
+    return(seg[, .(pair, a, b, chrom = integer(), start = numeric(), end = numeric(),
+                   gstart, gend, length = numeric())][])
   cm <- chrom_map(run)
   ## Split each segment at chromosome boundaries (a segment can span a junction when the same
   ## parent happens to continue across it). Done as a cross join + overlap filter, PER SEGMENT:

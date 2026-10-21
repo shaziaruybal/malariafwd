@@ -4,7 +4,13 @@
 \alias{new_infection_diversity}
 \title{New-infection genetic diversity (relatedness of the transmitting population)}
 \usage{
-new_infection_diversity(run, burn_frac = 0.5, cap = 250, clonal = 0.5)
+new_infection_diversity(
+  run,
+  burn_frac = 0.5,
+  cap = 250,
+  clonal = 0.5,
+  seed = 1
+)
 }
 \arguments{
 \item{run}{a \code{vivax_run} or run directory.}
@@ -14,6 +20,9 @@ new_infection_diversity(run, burn_frac = 0.5, cap = 250, clonal = 0.5)
 \item{cap}{max cases sampled.}
 
 \item{clonal}{IBD threshold for a "clonal" pair.}
+
+\item{seed}{seed for the subsample when the pool exceeds \code{cap}, so repeat calls on the same
+run agree. The caller's RNG stream is left untouched.}
 }
 \value{
 a one-row data.table of \code{n}, \code{mean_ibd}, \code{clonal_frac}, \code{n_lineages}.

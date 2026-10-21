@@ -12,7 +12,9 @@ classify_who(events, window = 60)
 \item{window}{travel look-back window (days).}
 }
 \value{
-a data.table with a \code{surveillance} label to compare against \code{origin}.
+every column \code{\link[=classify_cases]{classify_cases()}} returns, plus \code{recent_travel} and a \code{surveillance}
+label to compare against \code{origin}. The schema does not depend on whether the run has
+imports, so results pool across a grid.
 }
 \description{
 Epidemiology-only (WHO-style) import classification of each case

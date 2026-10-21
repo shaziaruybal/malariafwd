@@ -110,10 +110,24 @@ if want_seg:
         r'''", segf, "''', index=False)
 ")
   reticulate::py_run_string(py)
-  res <- list(ibd = data.table::fread(out, showProgress = FALSE),
-              node_map = data.table::fread(nmap, showProgress = FALSE),
+  ## Pin the column types. fread() on a header-only CSV -- which is what a run with no shared
+  ## ancestry above min_span produces -- types every column as logical, so the table silently
+  ## changes CLASS with run content and any rbind across runs mis-types or errors. Same
+  ## reasoning as the coercion in segments.R.
+  ibd <- data.table::fread(out, showProgress = FALSE)
+  ibd[, `:=`(node_a = as.integer(node_a), node_b = as.integer(node_b),
+             ibd_fraction = as.numeric(ibd_fraction))]
+  nm <- data.table::fread(nmap, showProgress = FALSE)
+  nm[, `:=`(node_id = as.integer(node_id), pedigree_id = as.integer(pedigree_id))]
+  res <- list(ibd = ibd, node_map = nm,
               sequence_length = as.numeric(readLines(lenf, warn = FALSE)))
-  if (isTRUE(segments)) res$segments <- data.table::fread(segf, showProgress = FALSE)
+  if (isTRUE(segments)) {
+    sg <- data.table::fread(segf, showProgress = FALSE)
+    sg[, `:=`(node_a = as.integer(node_a), node_b = as.integer(node_b),
+              left = as.numeric(left), right = as.numeric(right),
+              mrca_node = as.integer(mrca_node), mrca_time = as.numeric(mrca_time))]
+    res$segments <- sg
+  }
   res
 }
 

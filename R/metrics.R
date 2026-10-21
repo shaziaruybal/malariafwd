@@ -12,16 +12,46 @@ coi_distribution <- function(state, burn_in = 0) {
   h[, .N, by = moi_active][order(moi_active)][, pct := 100 * N / sum(N)][]
 }
 
-#' Relapse fraction of recurrences (relapses / (relapses + local reinfections))
+## Deterministic subsampling. Both metrics below cap the number of genomes they compare, and
+## an unseeded sample() made repeat calls on the SAME run disagree -- new_infection_diversity()
+## returned 0.0529 / 0.0544 / 0.0526 / 0.0523 across four identical calls. A metric must not do
+## that. The draw stays random (so it is unbiased in time and lineage) but is reproducible, and
+## the caller's RNG stream is restored so this cannot perturb a surrounding simulation.
+.sample_fixed <- function(x, n, seed) {
+  if (length(x) <= n) return(x)
+  if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) {
+    old <- get(".Random.seed", .GlobalEnv, inherits = FALSE)
+    on.exit(assign(".Random.seed", old, envir = .GlobalEnv), add = TRUE)
+  } else {
+    on.exit(suppressWarnings(rm(".Random.seed", envir = .GlobalEnv)), add = TRUE)
+  }
+  set.seed(seed)
+  sample(x, n)
+}
+
+#' Relapse fraction: the share of blood-stage episodes that are relapses
+#'
+#' Relapses divided by **all** classified blood-stage episodes. That is the quantity the
+#' published 0.55-0.85 vivax band refers to, and the one `epi_summary()` in the analyses repo
+#' scores against. Derived from [classify_cases()] rather than from a literal list of event
+#' types, so every acquisition route is counted and any origin added later (recrudescence)
+#' enters the denominator without this function having to change.
+#'
+#' The denominator includes each host's first-ever episode, which is not a *recurrence*. For a
+#' strict recurrences-only fraction, drop the first episode per host:
+#' `cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]`. The two are
+#' materially different -- on a heavily treated run this function returns 0.351 where the
+#' strict-recurrence variant returns 0.684 -- so never compare one against the other.
+#'
 #' @param events an events data.table (from [load_events()]).
-#' @return a one-row data.table.
+#' @return a one-row data.table of `n_relapse`, `n_nonrelapse` and `relapse_fraction`.
 #' @export
 relapse_fraction <- function(events) {
-  ev <- as.data.table(events)
-  n_relapse  <- ev[event_type == "hypnozoite_activation", .N]
-  n_reinfect <- ev[event_type == "vh_inoculation" & is_dormant == 0, .N]
-  data.table(n_relapse = n_relapse, n_reinfection = n_reinfect,
-             relapse_fraction = n_relapse / (n_relapse + n_reinfect))
+  cs <- classify_cases(events)
+  n_relapse <- cs[origin == "relapse", .N]
+  n_other   <- cs[origin != "relapse", .N]
+  data.table(n_relapse = n_relapse, n_nonrelapse = n_other,
+             relapse_fraction = n_relapse / max(n_relapse + n_other, 1))
 }
 
 #' Relapses per person-year among ever-infected hosts
@@ -143,13 +173,15 @@ force_of_infection <- function(run, bin = 30, split_imported = "auto") {
 #' @param bin window width (days).
 #' @param cap max cases sampled per window.
 #' @param min_pairs drop windows with fewer pairs.
+#' @param seed seed for the per-window subsample when a window exceeds `cap`, so repeat calls
+#'   on the same run agree. The caller's RNG stream is left untouched.
 #' @return a data.table of `win`, `mean_ibd`, `n_pairs`.
 #' @export
-ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5) {
+ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5, seed = 1) {
   cs <- classify_cases(events)[pedigree_id %in% idx$nm$pedigree_id]
   cs[, win := (tick %/% bin) * bin]
   out <- cs[, {
-    peds <- if (.N > cap) sample(pedigree_id, cap) else pedigree_id
+    peds <- .sample_fixed(pedigree_id, cap, seed + .GRP)
     if (length(peds) >= 2) {
       cb <- combn(length(peds), 2)
       ibd <- idx$getibd(peds[cb[1,]], peds[cb[2,]])
@@ -162,16 +194,25 @@ ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5) {
 #' Epidemiology-only (WHO-style) import classification of each case
 #' @param events an events data.table.
 #' @param window travel look-back window (days).
-#' @return a data.table with a `surveillance` label to compare against `origin`.
+#' @return every column [classify_cases()] returns, plus `recent_travel` and a `surveillance`
+#'   label to compare against `origin`. The schema does not depend on whether the run has
+#'   imports, so results pool across a grid.
 #' @export
 classify_who <- function(events, window = 60) {
   cases <- classify_cases(events)
+  ## Group by WHATEVER classify_cases() returns, so the output schema is the same table for
+  ## every run. Naming four columns here meant an import-free run returned all of them plus
+  ## `surveillance` while a run WITH imports returned only the four -- and `imported`, the
+  ## truth flag, was present exactly where it is trivially FALSE and absent on the one run
+  ## where it carries signal. Safe because pedigree_id is already unique per case row.
+  keys <- names(cases)
   imports <- as.data.table(events)[event_type == "vh_inoculation_import" & is_dormant == 0,
                                    .(human_id, imp_tick = tick)]
-  if (nrow(imports) == 0) return(cases[, surveillance := "Indigenous"][])
+  if (nrow(imports) == 0)
+    return(cases[, `:=`(recent_travel = FALSE, surveillance = "Indigenous")][])
   j <- imports[cases, on = "human_id", allow.cartesian = TRUE]
   j[, recent := !is.na(imp_tick) & imp_tick <= tick & imp_tick > tick - window]
-  flag <- j[, .(recent_travel = any(recent, na.rm = TRUE)), by = .(tick, human_id, pedigree_id, origin)]
+  flag <- j[, .(recent_travel = any(recent, na.rm = TRUE)), by = keys]
   flag[, surveillance := fifelse(recent_travel, "Imported", "Indigenous")][]
 }
 
@@ -186,7 +227,12 @@ transmission_links <- function(events) {
   up <- unique(up, by = "oocyst_id")
   inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0, .(oocyst_id, C = pedigree_id)]
   m <- merge(inoc, up, by = "oocyst_id")
-  unique(rbindlist(list(m[A1 > 0, .(source = A1, target = C)], m[A2 > 0, .(source = A2, target = C)])))
+  ## != -1, not > 0: -1 is the no-parent sentinel (malariafwd_vivax.slim ~1397) but pedigree
+  ## 0 is a REAL genome -- the first seed founder -- whose onward edges were being dropped.
+  ## Small but real: 8 of 1769 edges over the audit run set, and it cost `treat` an entire
+  ## four-case transmission chain (7 components reported against 8).
+  unique(rbindlist(list(m[A1 != -1, .(source = A1, target = C)],
+                        m[A2 != -1, .(source = A2, target = C)])))
 }
 
 #' Effective reproduction number by true origin
@@ -324,15 +370,22 @@ ibd_relapse_origin <- function(events, idx) {
 #' @param burn_frac steady-state fraction.
 #' @param cap max cases sampled.
 #' @param clonal IBD threshold for a "clonal" pair.
+#' @param seed seed for the subsample when the pool exceeds `cap`, so repeat calls on the same
+#'   run agree. The caller's RNG stream is left untouched.
 #' @return a one-row data.table of `n`, `mean_ibd`, `clonal_frac`, `n_lineages`.
 #' @export
-new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5) {
+new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
   ev <- load_events(run)
   endt <- max(ev$tick); burn <- round(endt * burn_frac)
-  peds <- ev[event_type == "vh_inoculation" & is_dormant == 0 & tick >= burn, unique(pedigree_id)]
+  ## Every non-relapse acquisition route, derived from classify_cases() rather than from a
+  ## literal event type. Matching "vh_inoculation" alone dropped imported genomes, which
+  ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%
+  ## import share and 4.3x at 61% -- all three biases pointing the same way as a genuine
+  ## transmission decline, i.e. in the direction of the signal this metric is read for.
+  peds <- classify_cases(ev)[origin != "relapse" & tick >= burn, unique(pedigree_id)]
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
-  if (length(peds) > cap) peds <- sample(peds, cap)
+  peds <- .sample_fixed(peds, cap, seed)
   idx <- ibd_index(ibd_pairs(run, ids = peds))
   vp <- idx$nm$pedigree_id
   cb <- combn(length(vp), 2); di <- idx$getibd(vp[cb[1,]], vp[cb[2,]])

@@ -4,7 +4,7 @@
 \alias{ibd_trajectory}
 \title{Mean pairwise IBD among cases active in each time window (relatedness trajectory)}
 \usage{
-ibd_trajectory(events, idx, bin = 90, cap = 40, min_pairs = 5)
+ibd_trajectory(events, idx, bin = 90, cap = 40, min_pairs = 5, seed = 1)
 }
 \arguments{
 \item{events}{an events data.table.}
@@ -16,6 +16,9 @@ ibd_trajectory(events, idx, bin = 90, cap = 40, min_pairs = 5)
 \item{cap}{max cases sampled per window.}
 
 \item{min_pairs}{drop windows with fewer pairs.}
+
+\item{seed}{seed for the per-window subsample when a window exceeds \code{cap}, so repeat calls
+on the same run agree. The caller's RNG stream is left untouched.}
 }
 \value{
 a data.table of \code{win}, \code{mean_ibd}, \code{n_pairs}.
