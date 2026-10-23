@@ -9,7 +9,7 @@ classify_who(events, window = 60)
 \arguments{
 \item{events}{an events data.table.}
 
-\item{window}{travel look-back window (days).}
+\item{window}{travel look-back window (days). See above: this choice dominates the result.}
 }
 \value{
 every column \code{\link[=classify_cases]{classify_cases()}} returns, plus \code{recent_travel} and a \code{surveillance}
@@ -17,5 +17,16 @@ label to compare against \code{origin}. The schema does not depend on whether th
 imports, so results pool across a grid.
 }
 \description{
-Epidemiology-only (WHO-style) import classification of each case
+What a surveillance system would conclude from \strong{travel history alone}, so that it can be
+scored against the genetic truth in \code{origin} / \code{imported}. The two are \emph{expected} to
+disagree -- that disagreement is the quantity of interest, not an error.
+}
+\details{
+\code{window} is the dominant parameter, and the reason is specific to vivax: a hypnozoite can
+activate long after the trip. On the audit run the gap from importation to an imported
+relapse had a median of 43 days but an IQR of 18-95 and a maximum of 325, so a 60-day window
+catches 59\% of imported relapses, 90 days catches 73\%, and 180 days 92\% -- at the cost of
+flagging steadily more locally-acquired cases as imported (520 rising to 935). Any travel
+window is a trade between the two, and no window recovers an imported relapse that activates
+a year later.
 }

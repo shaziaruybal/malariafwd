@@ -4,14 +4,15 @@
 \alias{force_of_infection}
 \title{Force of blood-stage infection, by origin (per host-year)}
 \usage{
-force_of_infection(run, bin = 30, split_imported = "auto")
+force_of_infection(run, bin = 30, split_imported = TRUE)
 }
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
 
 \item{bin}{window width in days.}
 
-\item{split_imported}{\code{"auto"} (split only if the run has imports), \code{TRUE}, or \code{FALSE}.}
+\item{split_imported}{split relapses by the provenance of the genotype. \code{TRUE} (default)
+gives five origin levels, \code{FALSE} gives four.}
 }
 \value{
 a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers, which is
@@ -26,9 +27,11 @@ New blood-stage clone acquisitions per host per year, split by origin.
 adding \code{relapse} gives the \strong{molecular force of blood-stage infection (molFOB)} -- a
 compound measure that is elevated in \emph{P. vivax} because relapses contribute new
 blood-stage clones (Mueller et al. 2013).
-When the run contains imported cases, relapses are split into \code{relapse (imported)} and
-\code{relapse (local)} -- a relapse of an imported genotype is a distinct truth category. Set
-\code{split_imported = FALSE} to keep a single \code{relapse} class, or \code{TRUE} to force the split.
+Relapses are split into \code{relapse (imported)} and \code{relapse (local)} -- a relapse of an
+imported genotype is a distinct truth category. Set \code{split_imported = FALSE} for a single
+\code{relapse} class. Either way \code{origin} comes back as a factor with \strong{all} levels present, so
+the shape of the result depends on the argument and never on what the run happened to
+contain: pooling a grid cannot split one quantity across three columns.
 }
 \details{
 A \strong{recrudescence} is returned as its own origin with \code{is_acquisition = FALSE}. It is a new

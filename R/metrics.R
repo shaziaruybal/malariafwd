@@ -8,6 +8,13 @@
 ## counts and not in a force-of-infection rate.
 .ACQUISITIONS <- c("imported", "local reinfection", "relapse")
 
+## The origin vocabulary once relapses are split by the genotype's provenance. An imported
+## relapse is a distinct truth category, so the split is worth having -- but it must not depend
+## on whether a given run happens to contain imports, or pooling a grid puts the same quantity
+## into `relapse`, `relapse (imported)` and `relapse (local)` as three separate columns.
+.ORIGINS_SPLIT <- c("imported", "local reinfection",
+                    "relapse (imported)", "relapse (local)", "recrudescence")
+
 ## Onset marks on a host timeline. Named so an unlisted `kind` is a visible missing entry
 ## rather than a silent shape = NA that draws nothing.
 .KIND_SHAPE <- c("new infection" = 24, "relapse" = 21, "recrudescence" = 23)
@@ -168,9 +175,11 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' adding `relapse` gives the **molecular force of blood-stage infection (molFOB)** -- a
 #' compound measure that is elevated in *P. vivax* because relapses contribute new
 #' blood-stage clones (Mueller et al. 2013).
-#' When the run contains imported cases, relapses are split into `relapse (imported)` and
-#' `relapse (local)` -- a relapse of an imported genotype is a distinct truth category. Set
-#' `split_imported = FALSE` to keep a single `relapse` class, or `TRUE` to force the split.
+#' Relapses are split into `relapse (imported)` and `relapse (local)` -- a relapse of an
+#' imported genotype is a distinct truth category. Set `split_imported = FALSE` for a single
+#' `relapse` class. Either way `origin` comes back as a factor with **all** levels present, so
+#' the shape of the result depends on the argument and never on what the run happened to
+#' contain: pooling a grid cannot split one quantity across three columns.
 #'
 #' A **recrudescence** is returned as its own origin with `is_acquisition = FALSE`. It is a new
 #' patent episode but not a new clone, so including it would inflate molFOB -- which counts
@@ -179,7 +188,8 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' undetectable at the previous visit; the gap between the two sums here estimates that bias.
 #' @param run a run directory or `vivax_run`.
 #' @param bin window width in days.
-#' @param split_imported `"auto"` (split only if the run has imports), `TRUE`, or `FALSE`.
+#' @param split_imported split relapses by the provenance of the genotype. `TRUE` (default)
+#'   gives five origin levels, `FALSE` gives four.
 #' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers, which is
 #'   less than `bin` for a trailing window when the run length is not a multiple of `bin`),
 #'   `rate` (per host-year, scaled by `days`) and `is_acquisition`. Sum only the
@@ -188,10 +198,15 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @references Mueller I, et al. (2013) A high force of *Plasmodium vivax* blood-stage
 #'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
 #' @export
-force_of_infection <- function(run, bin = 30, split_imported = "auto") {
+force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
   nh <- as.numeric(load_params(run)$N_HOSTS)
   cs <- classify_cases(load_events(run))
-  if (isTRUE(split_imported) || (identical(split_imported, "auto") && any(cs$imported)))
+  ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
+  ## contained imports, so the returned vocabulary depended on run CONTENT: `baseline` came
+  ## back with `relapse` and `imports` with `relapse (local)` for the same thing, and a pooled
+  ## dcast over a grid made them separate columns without erroring.
+  lv <- if (isTRUE(split_imported)) .ORIGINS_SPLIT else .ORIGINS
+  if (isTRUE(split_imported))
     cs[origin == "relapse", origin := fifelse(imported, "relapse (imported)", "relapse (local)")]
   cs[, win := (tick %/% bin) * bin]
   ## Divide each window by the days it actually covers, not by `bin`. Unless the run length is
@@ -211,7 +226,9 @@ force_of_infection <- function(run, bin = 30, split_imported = "auto") {
   ## rows it means. Note a REAL molFOB, measured by comparing genotypes between visits, would
   ## often count a recrudescence as a new clone - the gap between the two sums here is an
   ## estimate of that bias.
-  fo[, is_acquisition := sub(" \\(.*", "", origin) %in% .ACQUISITIONS]
+  fo[, is_acquisition := sub(" \\(.*", "", as.character(origin)) %in% .ACQUISITIONS]
+  fo[, origin := factor(origin, levels = lv)]
+  stopifnot(!anyNA(fo$origin))   # an origin outside `lv` would silently become NA
   fo[order(win, origin)]
 }
 
@@ -240,8 +257,21 @@ ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5, seed 
 }
 
 #' Epidemiology-only (WHO-style) import classification of each case
+#'
+#' What a surveillance system would conclude from **travel history alone**, so that it can be
+#' scored against the genetic truth in `origin` / `imported`. The two are *expected* to
+#' disagree -- that disagreement is the quantity of interest, not an error.
+#'
+#' `window` is the dominant parameter, and the reason is specific to vivax: a hypnozoite can
+#' activate long after the trip. On the audit run the gap from importation to an imported
+#' relapse had a median of 43 days but an IQR of 18-95 and a maximum of 325, so a 60-day window
+#' catches 59% of imported relapses, 90 days catches 73%, and 180 days 92% -- at the cost of
+#' flagging steadily more locally-acquired cases as imported (520 rising to 935). Any travel
+#' window is a trade between the two, and no window recovers an imported relapse that activates
+#' a year later.
+#'
 #' @param events an events data.table.
-#' @param window travel look-back window (days).
+#' @param window travel look-back window (days). See above: this choice dominates the result.
 #' @return every column [classify_cases()] returns, plus `recent_travel` and a `surveillance`
 #'   label to compare against `origin`. The schema does not depend on whether the run has
 #'   imports, so results pool across a grid.
@@ -254,7 +284,12 @@ classify_who <- function(events, window = 60) {
   ## truth flag, was present exactly where it is trivially FALSE and absent on the one run
   ## where it carries signal. Safe because pedigree_id is already unique per case row.
   keys <- names(cases)
-  imports <- as.data.table(events)[event_type == "vh_inoculation_import" & is_dormant == 0,
+  ## Any import establishment marks the trip, dormant or not. Requiring is_dormant == 0 meant a
+  ## traveller who returned carrying only hypnozoites never registered as having travelled --
+  ## 43 of 91 import-exposed hosts on the audit run, and only 59% of imported relapses were
+  ## flagged. A surveillance system records the journey, not which compartment the parasite
+  ## ended up in.
+  imports <- as.data.table(events)[event_type == "vh_inoculation_import",
                                    .(human_id, imp_tick = tick)]
   if (nrow(imports) == 0)
     return(cases[, `:=`(recent_travel = FALSE, surveillance = "Indigenous")][])

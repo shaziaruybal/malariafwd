@@ -19,6 +19,44 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D27 — The origin vocabulary and the travel window are argument-driven, never content-driven · 2026-10-23 · Accepted
+**Context.** Two items were deferred from D23 as needing their own decision rather than being
+folded into a schema fix. Both are now measured on the current model.
+(a) `force_of_infection(split_imported = "auto")` relabelled relapses as
+`relapse (imported)` / `relapse (local)` **only when the run contained imports**, so the returned
+vocabulary depended on run content: `baseline` came back with `relapse`, `imports` with
+`relapse (local)`, for the same quantity. Pooling a grid did not error -- it produced a table in
+which one origin was split across three columns.
+(b) `classify_who()`'s import predicate required `is_dormant == 0`, so a traveller who returned
+carrying only hypnozoites never registered as having travelled: 43 of 91 import-exposed hosts on
+the audit run.
+**Decision.** (a) Split unconditionally (`split_imported = TRUE` by default; `"auto"` retired),
+and return `origin` as a factor with **all** levels present, so the shape of the result follows
+the argument and never the run. (b) Count any import establishment as a trip, dormant or not.
+**Rationale.** The split is worth keeping -- an imported relapse is a distinct truth category,
+which D20 went out of its way to expose -- so the fix is to stop it being conditional rather than
+to remove it. For (b), a surveillance system records the journey, not which compartment the
+parasite ended up in; requiring a patent blood-stage infection confuses the traveller with the
+infection.
+**Consequences, and an important negative result.** (b) is correct in principle but **changes
+almost nothing**: flagged cases went 518 to 520, and imported relapses flagged stayed at 142 of
+239. The dormant filter was never the binding constraint -- **the 60-day look-back window is**.
+Measured, the gap from importation to an imported relapse has median 43 days but IQR 18-95 and
+maximum 325, so 40% fall outside a 60-day window however the predicate is written. Widening the
+window to 90 / 180 / 365 days recovers 73% / 92% / 100% of imported relapses while flagging
+520 -> 685 / 935 / 1111 cases in total. That trade is now documented on `classify_who()`, because
+it is the quantity the function exists to measure rather than a defect in it: no travel window
+recovers a hypnozoite that activates a year after the trip. Anything previously computed with
+`classify_who()` moves by two cases; anything that pooled `force_of_infection()` across runs with
+and without imports was silently splitting one origin into three columns and should be re-run.
+**How to verify.** `force_of_infection()` must return the same `levels(origin)` for a run with
+imports and one without (5 split / 4 unsplit), with `is_acquisition` correct for the split labels;
+a pooled `dcast` across both must produce one column per origin. `classify_who()` must flag a host
+whose only import establishment was dormant. Suites: `test_dir()` 97/0,
+`audit_events_and_ibd.R` 99/0, `R CMD check --as-cran --no-manual` 3 NOTEs.
+
+---
+
 ## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted
 **Context.** Step 4 shipped the suppression-to-recrudescence delay as a geometric at mean 21 d.
 Two things needed settling: the plan (`TREATMENT_IMPLEMENTATION.md:32, :361`) specified
