@@ -12,8 +12,8 @@
 runs/
 quickstart-runs/
 
-# commit rationale, kept out of the commit messages themselves
-.claude/decisions.md
+# agent-local working files; nothing under here belongs in the package or its history
+.claude/
 
 malariafwd.Rcheck/
 *.Rcheck/
