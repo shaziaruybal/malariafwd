@@ -19,7 +19,7 @@ url: "https://shaziaruybal.github.io/malariafwd/"
 authors:
   - family-names: "Ruybal-Pesántez"
     given-names: "Shazia"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"   # TODO: add your ORCID
+    orcid: "https://orcid.org/0000-0002-0495-179X"
 keywords:
   - "Plasmodium vivax"
   - malaria
