@@ -222,10 +222,10 @@ classify_who <- function(events, window = 60) {
 #' @export
 transmission_links <- function(events) {
   ev <- as.data.table(events)
-  up <- ev[event_type %in% c("hv_uptake_recombinant","hv_uptake_clonal") & oocyst_id > 0,
+  up <- ev[event_type %in% c("hv_uptake_recombinant","hv_uptake_clonal") & oocyst_id != -1,
            .(oocyst_id, A1 = parent1_pedigree_id, A2 = parent2_pedigree_id)]
   up <- unique(up, by = "oocyst_id")
-  inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0, .(oocyst_id, C = pedigree_id)]
+  inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1, .(oocyst_id, C = pedigree_id)]
   m <- merge(inoc, up, by = "oocyst_id")
   ## != -1, not > 0: -1 is the no-parent sentinel (malariafwd_vivax.slim ~1397) but pedigree
   ## 0 is a REAL genome -- the first seed founder -- whose onward edges were being dropped.

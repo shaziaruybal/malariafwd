@@ -34,7 +34,7 @@ audit_run <- function(tag, params, seed = 1) {
 
   ## creation events mint distinct pedigree_ids
   creat <- ev[event_type %in% c("vh_inoculation","vh_inoculation_import","vh_inoculation_seed",
-                                "hypnozoite_activation") & pedigree_id > 0, pedigree_id]
+                                "hypnozoite_activation") & pedigree_id != -1, pedigree_id]
   ok("creation events mint unique pedigree_ids", uniqueN(creat) == length(creat),
      sprintf("%d created", length(creat)))
 
@@ -147,7 +147,7 @@ audit_run <- function(tag, params, seed = 1) {
              ag$roots_median, ag$pct_trees_coalesced, ag$max_root_time))
   ## arg_tmrca is the relatedness measure that is valid on a forest (branch divergence is NOT:
   ## it scores coalescing and non-coalescing pairs alike -- see ?arg_divergence)
-  relp <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1:min(.N, 15)]
+  relp <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1:min(.N, 15)]
   if (nrow(relp)) {
     tm <- arg_tmrca(run, relp$pedigree_id, relp$parent1_pedigree_id)
     ok("TMRCA: relapse coalesces with its origin over the whole genome",

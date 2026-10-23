@@ -76,7 +76,7 @@ test_that("ARG summaries behave on the forest genealogy", {
   expect_gt(s$roots_median, 1)
 
   ## arg_tmrca is the relatedness measure that works on a forest
-  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1:5]
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1:5]
   if (nrow(rel) >= 1 && !any(is.na(rel$pedigree_id))) {
     tm <- arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)
     expect_true(all(tm$coalesced > 0.99, na.rm = TRUE))   # a relapse is clonal to its origin
@@ -90,7 +90,7 @@ test_that("ARG summaries behave on the forest genealogy", {
   ## D22: tmrca is a DEPTH, so one fixed relationship gives one number wherever it was
   ## sampled. Before the fix this returned the ancestor's raw node time and the same
   ## relapse-vs-origin relationship spanned 43-391 ticks on a 400-tick run.
-  spread <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]
+  spread <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   if (nrow(spread) >= 8) {
     spread <- spread[order(tick)][unique(round(seq(1, .N, length.out = 8)))]
     td <- arg_tmrca(run, spread$pedigree_id, spread$parent1_pedigree_id)

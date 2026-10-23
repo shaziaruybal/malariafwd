@@ -215,7 +215,7 @@ else:
 #' See D22 in `DECISIONS.md`.
 #' @examples
 #' \dontrun{
-#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]
+#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
 #' arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # relapse vs its origin
 #' }
 #' @export

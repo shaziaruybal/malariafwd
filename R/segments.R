@@ -48,7 +48,7 @@ chrom_map <- function(run) {
 #'   `gstart`, `gend` (concatenated bp) and `length`. A pair sharing nothing yields no rows.
 #' @examples
 #' \dontrun{
-#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1]
+#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 #' ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
 #' }
 #' @export
@@ -234,14 +234,15 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
   cl <- seeds[, .N, by = lineage_id][N > 1, lineage_id]
   for (l in utils::head(cl, max_per_class)) { pp <- seeds[lineage_id == l, pedigree_id]
     if (length(pp) >= 2) add(.LADDER[2], pp[1], pp[2]) }
-  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0]
+  ## != -1, not > 0: -1 is the no-parent sentinel but pedigree 0 is a real genome (D23).
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   add(.LADDER[3], utils::head(rel$pedigree_id, max_per_class),
                   utils::head(rel$parent1_pedigree_id, max_per_class))
   ct <- cs[origin != "relapse", .(ped = pedigree_id, human_id, lineage_id)]
   ctp <- ct[, if (data.table::uniqueN(human_id) > 1)
     .(a = ped[1], b = ped[which(human_id != human_id[1])[1]]), by = lineage_id][!is.na(b)]
   add(.LADDER[4], utils::head(ctp$a, max_per_class), utils::head(ctp$b, max_per_class))
-  oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0,
+  oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
            .(ped = pedigree_id, oocyst_id, lineage_id)]
   sib <- oo[, if (.N > 1 && data.table::uniqueN(lineage_id) > 1) {
     i <- which(lineage_id != lineage_id[1])[1]; .(a = ped[1], b = ped[i]) },

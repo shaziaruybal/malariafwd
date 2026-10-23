@@ -33,7 +33,7 @@ for (l in head(cl, 8)) { pp <- seeds[lineage_id == l, pedigree_id]
   if (length(pp) >= 2) add("clonal copies", pp[1], pp[2]) }
 
 # 3. a relapse vs the hypnozoite batch it activated from
-rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0,
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1,
           .(a = pedigree_id, b = parent1_pedigree_id)]
 add("relapse vs its origin", head(rel$a, 60), head(rel$b, 60))
 
@@ -44,7 +44,7 @@ ctp <- ct[, if (uniqueN(human_id) > 1) .(a = ped[1], b = ped[which(human_id != h
 add("same lineage, 2 hosts", head(ctp$a, 60), head(ctp$b, 60))
 
 # 5. same-oocyst sibs: two infections co-transmitted from ONE meiosis
-oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0,
+oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
          .(ped = pedigree_id, oocyst_id, lineage_id)]
 sib <- oo[, if (.N > 1 && uniqueN(lineage_id) > 1) {
   i <- which(lineage_id != lineage_id[1])[1]; .(a = ped[1], b = ped[i]) }, by = oocyst_id][!is.na(b)]

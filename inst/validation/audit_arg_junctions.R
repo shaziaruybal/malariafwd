@@ -31,7 +31,7 @@ ev <- as.data.table(load_events(run))
 ## (fresh lineage ids) and two PARENTAL CLONES (they inherit the parents' lineage ids).
 rec <- ev[event_type == "hv_uptake_recombinant",
           .(oocyst_id, p1 = parent1_lineage_id, p2 = parent2_lineage_id)]
-inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0,
+inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
            .(ped = pedigree_id, oocyst_id, lineage_id = as.character(lineage_id))]
 tet <- merge(inoc, rec, by = "oocyst_id")
 tet[, kind := fifelse(lineage_id == as.character(p1) | lineage_id == as.character(p2),

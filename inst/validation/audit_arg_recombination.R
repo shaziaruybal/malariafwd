@@ -69,7 +69,7 @@ cat(sprintf("  KS test of within-chromosome position vs Uniform(0,1): D = %.3f, 
 
 ## ---- (c) IBD segment lengths from a single meiosis ~ Exponential(mean 1/r) ----
 ev <- as.data.table(load_events(run))
-oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id > 0,
+oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
          .(ped = pedigree_id, oocyst_id, lineage_id)]
 sib <- oo[, if (.N > 1 && uniqueN(lineage_id) > 1) {
   i <- which(lineage_id != lineage_id[1])[1]; .(a = ped[1], b = ped[i]) }, by = oocyst_id][!is.na(b)]

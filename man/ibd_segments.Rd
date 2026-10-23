@@ -25,7 +25,7 @@ boundaries and reported in both concatenated and within-chromosome coordinates.
 }
 \examples{
 \dontrun{
-rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1]
+rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
 }
 }

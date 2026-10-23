@@ -102,7 +102,7 @@ is shared end to end, same-oocyst siblings show a recombination mosaic, unrelate
 share nothing:
 
 ```{r}
-rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id > 0][1]
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 plot_ibd_pair(run, rel$pedigree_id, rel$parent1_pedigree_id, labels = "relapse vs origin")
 
 # and the model-validation view: IBD by known relationship against the textbook rungs
