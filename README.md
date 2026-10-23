@@ -1,4 +1,4 @@
-# malariafwd
+# malariafwd <img src="man/figures/logo.png" align="right" height="139" alt="malariafwd hex logo: a mosquito and a human either side of a fast-forward symbol, over a lineage tree" />
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/shaziaruybal/malariafwd/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/shaziaruybal/malariafwd/actions/workflows/R-CMD-check.yaml)

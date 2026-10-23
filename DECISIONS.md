@@ -19,6 +19,40 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D28 — MDA keeps its place and gains a coverage parameter · 2026-10-23 · Accepted
+**Context.** An early step map proposed withdrawing MDA from the pre-release. The strongest reason
+given was that it reused `P_RAD_SURVIVAL`, whose meaning changed in D20, so the two paths would
+silently disagree -- and that reason died when D20 routed MDA through `applyTreatment(h, T, "mda")`.
+MDA now inherits host-level treatment, D24's patency floor, `RADCURE_MODE` and Step 4's
+suppression for free, and it demonstrably works. The one real gap was that a round was
+all-or-nothing: every host got the course.
+**Decision.** Keep MDA and add `MDA_COVERAGE` (default 1.0), the fraction of the population a
+round reaches. Drawn per host, and only when coverage is below 1.
+**Rationale.** Coverage is the whole policy question for MDA -- it is what separates a feasible
+campaign from an idealised one -- so without it the feature could not answer the question it
+exists for. Removal would have cost more than it saved: six event types out of the **exported**
+`event_types()` dictionary, `mda_bloodstage_clear` out of the episode vocabulary that span
+reconstruction depends on, a metric branch, a shipped validation scenario, the structure diagram,
+three passages in `MODEL_DESCRIPTION.md`, and two accepted ADRs needing supersession. There is
+also a live mislabel downstream: `deploy_malariafwd_vivax.R` ships a scenario named
+`E3_mda_imperfect` / "imperfect coverage" implemented as `P_RAD_SURVIVAL = 0.50`, which conflates
+coverage with efficacy. `MDA_COVERAGE` is what that scenario actually wanted.
+**Alternatives rejected.** *Remove MDA* -- above. *Leave it all-or-nothing and document the
+limitation* -- cheaper, but it leaves the mislabelled scenario with nothing correct to point at.
+**Consequences.** `MDA_COVERAGE = 1.0` is byte-identical to the previous behaviour: the draw is
+skipped entirely at full coverage, so no existing MDA run changes. Also fixes a false-positive
+fence found while testing this: `validate_params()` warned that `RADCURE_COVERAGE` has no effect
+without `BLOODCURE_COVERAGE`, which is true of **case-based** treatment but not of MDA -- MDA
+delivers radical cure to everyone it reaches. The fence was firing on exactly the scenario MDA
+exists for, and now also checks that no usable MDA round is scheduled.
+**How to verify.** At `MDA_COVERAGE = 1.0`, `events.tsv` must be identical to the pre-change model
+(verified, 2 seeds). Across 0 / 0.25 / 0.5 / 0.75 / 1 the courses given must rise monotonically
+(0 / 17 / 24 / 50 / 66) and the reservoir fall (5.39 / 4.38 / 4.12 / 2.30 / 1.38 against 5.44
+before the round). The radical-cure fence must stay silent when MDA is scheduled and still fire
+when it is not, when coverage is 0, or when the round falls after the run ends.
+
+---
+
 ## D27 — The origin vocabulary and the travel window are argument-driven, never content-driven · 2026-10-23 · Accepted
 **Context.** Two items were deferred from D23 as needing their own decision rather than being
 folded into a schema fix. Both are now measured on the current model.

@@ -32,6 +32,7 @@
   # default - see RADCURE_MODE.
   MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.29, RADCURE_MODE = "person",
   RADCURE_COVERAGE = 0.0, BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
+  MDA_COVERAGE = 1.0,
   P_RECRUD_GIVEN_FAIL = 0.0, MEAN_RECRUD_DELAY = 10.5, RECRUD_DELAY_DIST = "geometric",
   P_DETECT_RECRUD = 0.5,
   SUBPATENT_INFECTIVITY = 0.15,
@@ -86,7 +87,8 @@ validate_params <- function(p) {
   for (pr in c("P_TRANS_VH", "P_TRANS_HV", "P_GAMETOCYTE", "P_PRIMARY",
                "P_DETECT_PRIMARY", "P_DETECT_RELAPSE", "RADCURE_COVERAGE", "P_RAD_SURVIVAL",
                "BLOODCURE_COVERAGE", "P_BLOODCURE_SURVIVAL",
-               "P_RECRUD_GIVEN_FAIL", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY"))
+               "P_RECRUD_GIVEN_FAIL", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY",
+               "MDA_COVERAGE"))
     if (p[[pr]] < 0 || p[[pr]] > 1) stop(pr, " must be in [0, 1]", call. = FALSE)
   for (pr in c("SIM_DAYS", "N_HOSTS", "N_MOSQ", "BITING_RATE", "MOSQ_LIFESPAN"))
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
@@ -106,10 +108,15 @@ validate_params <- function(p) {
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)
   ## Radical cure is nested inside blood-stage treatment, so a coverage without one is
-  ## silently inert - the same failure shape as the window bug in D19.
-  if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0)
-    warning("RADCURE_COVERAGE > 0 has no effect while BLOODCURE_COVERAGE is 0: radical cure\n",
-            "  is given only to treated cases (it is never given without a schizonticide).",
+  ## silently inert - the same failure shape as the window bug in D19. But MDA delivers radical
+  ## cure to everyone it reaches regardless of BLOODCURE_COVERAGE, so an MDA-only scenario is a
+  ## legitimate configuration and must not be warned about: the fence was firing on exactly the
+  ## scenario MDA exists for.
+  mda_on <- p$MDA_TICK <= p$SIM_DAYS && p$MDA_COVERAGE > 0
+  if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0 && !mda_on)
+    warning("RADCURE_COVERAGE > 0 has no effect while BLOODCURE_COVERAGE is 0 and no MDA round\n",
+            "  is scheduled: case-based radical cure is given only to treated cases (it is never\n",
+            "  given without a schizonticide). Set BLOODCURE_COVERAGE, or schedule MDA_TICK.",
             call. = FALSE)
 
   ## ---- configurations that cannot produce a single parasite -------------------------------

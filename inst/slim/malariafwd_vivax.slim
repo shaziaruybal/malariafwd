@@ -185,6 +185,12 @@ initialize() {
 	defineDefault("ALPHA_ACTIVATE_BOOST",         1.0);  // R1: faster relapse activation
 	defineDefault("NU_HYPNOZOITE_BATCH_BOOST",    1.0);  // R1: bigger hypnozoite batches
 	defineDefault("MDA_TICK",        99999);
+	// Fraction of the population a round actually reaches. Coverage is the whole policy question
+	// for MDA - it is what distinguishes a feasible campaign from an idealised one - and without
+	// it a round is all-or-nothing, which is not a scenario anyone runs. 1.0 reproduces the
+	// previous behaviour exactly: the draw is skipped entirely, so existing MDA runs are
+	// unchanged bit for bit.
+	defineDefault("MDA_COVERAGE",    1.0);
 	// RADICAL CURE EFFICACY, per PERSON: P_RAD_SURVIVAL is the probability that the whole
 	// reservoir survives a course. 0.29 (~71% cure) is what White 2018 and malariasimulation
 	// imply for 14-day primaquine.
@@ -969,7 +975,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	for (_nm in _pn)
@@ -1363,12 +1369,22 @@ early() {
 		// now disagree with RADCURE_MODE.
 		humans_mda = sim.subpopulations[HUMANS];
 		vcat("💊 MDA administered on tick " + sim.cycle);
+		n_reached = 0;
 		for (h in humans_mda)
 		{
 			if (h.individualCount == 0)
 				next;
+			// Draw ONLY below full coverage. Eidos does not short-circuit, so a bare
+			// `runif(1) >= MDA_COVERAGE` would consume a draw per host even at 1.0 and shift
+			// the whole RNG stream - every existing MDA run would change despite the round
+			// still reaching everyone.
+			if (MDA_COVERAGE < 1.0)
+				if (runif(1) >= MDA_COVERAGE)
+					next;
 			applyTreatment(h, T, "mda");
+			n_reached = n_reached + 1;
 		}
+		vcat("💊 MDA reached " + n_reached + " host(s)");
 	}
 	
 	// ----------------------------

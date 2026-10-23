@@ -16,3 +16,4 @@
 ^quickstart-output$
 ^ignore$
 ^dev$
+^\.claude$
