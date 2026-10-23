@@ -218,6 +218,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
                                          event_type == "recrudescence", "recrudescence",
                                          default = "new infection"))]
   if (!nrow(onset)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
+  stopifnot(all(onset$kind %in% names(.KIND_SHAPE)))   # an unlisted kind would draw as shape NA
   clears <- event_types()$event_type[event_types()$ends_episode]
   ends <- ev[event_type %in% clears, .(pedigree_id, end = tick)]
   ## end > start, not >=: a lineage cleared on the tick it was created never had a patent
@@ -246,10 +247,11 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::geom_point(data = seg, ggplot2::aes(start, -0.06 * ymax, shape = kind),
                         size = 1.7, colour = "grey20") +
     ggplot2::scale_fill_manual(values = pal, guide = "none") +
-    ## every `kind` must have a shape: ggplot2 maps an unlisted level to shape = NA and draws
-    ## nothing, with no warning, so the marks simply disappear.
-    ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL,
-                                limits = names(.KIND_SHAPE), drop = FALSE) +
+    ## The legend shows only the kinds this host actually had - an untreated run has no
+    ## recrudescences and should not advertise one. The guard against a kind with no shape is
+    ## the stopifnot above, not drop = FALSE: ggplot2 maps an unlisted level to shape = NA and
+    ## draws nothing, silently, so it has to be caught before it reaches the scale.
+    ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL) +
     ggplot2::scale_y_continuous(
       "blood-stage lineages",
       sec.axis = ggplot2::sec_axis(~ . / sf, name = "hypnozoite reservoir")) +
