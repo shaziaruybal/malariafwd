@@ -89,6 +89,26 @@ representation. Both are throwaway and are not in the repo.
    `subpatent_clearance = FALSE`.
 6. `event_types()` gains an **`is_onset`** column so the onset vocabulary becomes derivable, as
    `ends_episode` already is.
+7. **Patency, infectiousness and capacity are separated.** `getActiveLineageCount()` currently
+   answers three different questions at three call sites, and subpatency splits them apart:
+   `getActiveLineageCount()` = PATENT (the state writer, `moi_active`, episodes);
+   `getTransmissibleLineageCount()` = can infect a mosquito (`h.tag`, and `human_MOI` in the bite
+   loop); `getBloodStageLineageCount()` = present at all (the `MAX_MOI` capacity check). This is
+   **required**, not optional: with them fused, `SUBPATENT_INFECTIVITY` cannot do anything, and
+   the failure is invisible. **REVISIT AND RE-VERIFY THIS DURING IMPLEMENTATION** -- it was got
+   wrong twice in prototype, see below.
+
+   The subtlety that makes it a trap: splitting `h.tag` alone is NOT enough. The bite loop's
+   `human_MOI` is drawn from the patent count and gates Event 2 with
+   `if (human_MOI == 0) { "tagged infected but MOI=0; skipping" }` -- which reads as a defensive
+   check against an impossible state, but becomes a reachable and legitimate state once a
+   subpatent compartment exists, and silently blocks exactly the transmission the parameter is
+   supposed to permit. Measured in prototype, uptakes sourced from a host with NO patent clone:
+   **0 / 0 / 0** under the fused design at `SUBPATENT_INFECTIVITY` 0 / 0.5 / 1.0, and
+   **0 / 68 / 233 / 918** (4.4% of all uptakes at the literature value of 0.15, 30% at 1.0)
+   once all three roles are separated. The intermediate state -- `h.tag` split but `human_MOI`
+   not -- looks exactly like "the subpatent compartment is too small to matter", which is the
+   wrong conclusion and the one I drew first.
 **Rationale.** Minting was chosen for pedigree uniqueness, not for node time. The node-time
 argument is real but marginal -- staleness is median 19 ticks, and `arg_tmrca()` has zero callers
 in the analyses repo. Reuse is what actually breaks things: `creation events mint unique
@@ -115,11 +135,28 @@ Literature anchors the defaults: recrudescence is **0.2-0.3% of recurrences** af
 artesunate (Taylor 2019, n=1441), so the shipped default must be ~0 and a chloroquine-resistant arm
 is needed for the state to have anything to classify; subpatent relative infectivity is
 **0.10-0.20** (Koepfli 2021; White 2018 IBM), so neither 0 nor 1 is defensible.
+**Open, to settle during implementation.** The plan's `1 + Poisson(MEAN_RECRUD_DELAY - 1)`
+(`TREATMENT_IMPLEMENTATION.md:32, :361`, default 21 d) carries **no cited source**; it is
+self-consistent with the plan's row 7 ("natural clearance while subpatent: off", which makes
+`P_BLOODCURE_SURVIVAL` = P(recrudescence | treated) exactly), but Taylor's `RecurrentVivax` models
+time-to-recrudescence as Exponential with mean 10 d (SD 10) against Poisson(20)'s SD 4.5. The
+prototype used competing hazards, which is a real deviation from row 7 and breaks that identity.
+Decide: pure delay with the clean parameter identity, or competing risks with a more mechanistic
+subpatent exit. Also open: whether a later course may reach an already-subpatent holder; what MDA
+does to a holder; whether repeated cycling may renew a clone's lifespan without a ceiling (minting
+resets `bloodstage_start_tick`); and `P_DETECT_RECRUD`, where the plan's `= P_DETECT_PRIMARY`
+is contradicted by Ross 2025 (recurrence detectability 0.13-0.49 of primary).
 **How to verify.** `P_SUBPATENT_GIVEN_FAIL = 0` must stay byte-identical to the shipped model
 (verified on the prototype). Every recrudescence must be IBD 1.000 to its holder and
 `arg_tmrca` depth 0. `creation events mint unique pedigree_ids` must pass. MOI and prevalence must
 be unchanged against a matched no-recrudescence run. The two molFOB readings must differ by exactly
-the recrudescence count.
+the recrudescence count. For item 7 specifically, the test is mechanistic rather than
+population-level: count mosquito uptakes sourced from a host with **no patent clone**, joining
+each uptake at tick T to the state snapshot at T-1 (the bite loop runs in `reproduction()`, so it
+sees the previous tick's end state). That count must be 0 at `SUBPATENT_INFECTIVITY = 0` and rise
+monotonically above it. Do NOT use patent prevalence as the test -- at four seeds it came out
+5.5 / 5.9 / 2.8 / 10.7% with SDs of 4.0 / 5.4 / 0.9 / 3.6, i.e. unresolved, while the uptake
+channel was unambiguous.
 
 ---
 
