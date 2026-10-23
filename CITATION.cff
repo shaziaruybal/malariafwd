@@ -12,6 +12,10 @@ version: 0.1.0
 date-released: "2026-09-30"
 license: MIT
 repository-code: "https://github.com/shaziaruybal/malariafwd"
+url: "https://shaziaruybal.github.io/malariafwd/"
+# TODO at release: uncomment with the Zenodo CONCEPT DOI (tracks the latest
+# version), not the per-version one. Minted when the release fires the webhook.
+# doi: "10.5281/zenodo.XXXXXXX"
 authors:
   - family-names: "Ruybal-Pesántez"
     given-names: "Shazia"
