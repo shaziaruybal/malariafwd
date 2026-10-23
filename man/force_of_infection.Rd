@@ -14,9 +14,11 @@ force_of_infection(run, bin = 30, split_imported = "auto")
 \item{split_imported}{\code{"auto"} (split only if the run has imports), \code{TRUE}, or \code{FALSE}.}
 }
 \value{
-a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers, which
-is less than \code{bin} for a trailing window when the run length is not a multiple of
-\code{bin}) and \code{rate} (new clones per host-year, scaled by \code{days}).
+a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers, which is
+less than \code{bin} for a trailing window when the run length is not a multiple of \code{bin}),
+\code{rate} (per host-year, scaled by \code{days}) and \code{is_acquisition}. Sum only the
+\code{is_acquisition} rows for FOI or molFOB: a recrudescence is returned as its own row so
+incidence stays complete, but it is not a newly acquired clone.
 }
 \description{
 New blood-stage clone acquisitions per host per year, split by origin.
@@ -27,6 +29,13 @@ blood-stage clones (Mueller et al. 2013).
 When the run contains imported cases, relapses are split into \code{relapse (imported)} and
 \code{relapse (local)} -- a relapse of an imported genotype is a distinct truth category. Set
 \code{split_imported = FALSE} to keep a single \code{relapse} class, or \code{TRUE} to force the split.
+}
+\details{
+A \strong{recrudescence} is returned as its own origin with \code{is_acquisition = FALSE}. It is a new
+patent episode but not a new clone, so including it would inflate molFOB -- which counts
+clone acquisitions. Worth noting that a real molFOB, measured by comparing genotypes between
+study visits, would often count a recrudescence as a new clone, because the clone was
+undetectable at the previous visit; the gap between the two sums here estimates that bias.
 }
 \references{
 Mueller I, et al. (2013) A high force of \emph{Plasmodium vivax} blood-stage

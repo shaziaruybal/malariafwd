@@ -2,7 +2,7 @@
 % Please edit documentation in R/metrics.R
 \name{relapse_fraction}
 \alias{relapse_fraction}
-\title{Relapse fraction: the share of blood-stage episodes that are relapses}
+\title{Relapse fraction, in two units}
 \usage{
 relapse_fraction(events)
 }
@@ -10,19 +10,28 @@ relapse_fraction(events)
 \item{events}{an events data.table (from \code{\link[=load_events]{load_events()}}).}
 }
 \value{
-a one-row data.table of \code{n_relapse}, \code{n_nonrelapse} and \code{relapse_fraction}.
+a one-row data.table of \code{n_relapse}, \code{n_reinfection}, \code{n_recrudescence},
+\code{relapse_fraction} (over acquisitions) and \code{relapse_frac_episodes} (over every patent
+episode). \code{summarise_run()$relapse_frac} reports the acquisition reading.
 }
 \description{
-Relapses divided by \strong{all} classified blood-stage episodes. That is the quantity the
-published 0.55-0.85 vivax band refers to, and the one \code{epi_summary()} in the analyses repo
-scores against. Derived from \code{\link[=classify_cases]{classify_cases()}} rather than from a literal list of event
-types, so every acquisition route is counted and any origin added later (recrudescence)
-enters the denominator without this function having to change.
+Relapses as a share of blood-stage episodes. Two readings are returned because a
+recrudescence is a new clinical \strong{episode} but not a newly \strong{acquired} parasite -- the
+genotype was already in the host (D25):
 }
 \details{
-The denominator includes each host's first-ever episode, which is not a \emph{recurrence}. For a
+\itemize{
+\item \code{relapse_fraction} -- relapses over \strong{acquisitions} (imported + local reinfection +
+relapse). This is what the published 0.55-0.85 vivax band refers to, what \code{epi_summary()}
+in the analyses repo scores against, and what \code{summarise_run()$relapse_frac} reports.
+\item \code{relapse_frac_episodes} -- relapses over \strong{every patent episode}, recrudescence included.
+}
+
+With the shipped default (\code{P_RECRUD_GIVEN_FAIL = 0}) there are no recrudescences and the two
+are identical; they separate only once treatment failure can suppress a clone.
+
+Both denominators include each host's first-ever episode, which is not a \emph{recurrence}. For a
 strict recurrences-only fraction, drop the first episode per host:
-\code{cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]}. The two are
-materially different -- on a heavily treated run this function returns 0.351 where the
-strict-recurrence variant returns 0.684 -- so never compare one against the other.
+\code{cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]}. That is a
+materially different quantity, so never compare it against either reading here.
 }

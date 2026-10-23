@@ -23,7 +23,9 @@ the hypnozoite reservoir, and circulating-lineage richness -- all over time, wit
 burn-in marked. Surfaces the common failure modes at a glance: extinction (lines crash to
 zero), saturation (prevalence pinned near 100\%), and non-stationarity (metrics still
 trending at the burn-in). The two "by origin" panels share a palette: imported /
-local reinfection (= FOI) plus relapse (the extra molFOB contribution, Mueller et al. 2013).
+local reinfection (= FOI) plus relapse (the extra molFOB contribution, Mueller et al. 2013),
+plus recrudescence where a run produces any. Only the first three are clone ACQUISITIONS, so
+the FOI panel sums those and not the fourth.
 }
 \references{
 Mueller I, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).

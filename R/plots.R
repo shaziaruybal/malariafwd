@@ -129,7 +129,9 @@ plot_host_trajectory <- function(state, events, host_id,
 #' burn-in marked. Surfaces the common failure modes at a glance: extinction (lines crash to
 #' zero), saturation (prevalence pinned near 100%), and non-stationarity (metrics still
 #' trending at the burn-in). The two "by origin" panels share a palette: imported /
-#' local reinfection (= FOI) plus relapse (the extra molFOB contribution, Mueller et al. 2013).
+#' local reinfection (= FOI) plus relapse (the extra molFOB contribution, Mueller et al. 2013),
+#' plus recrudescence where a run produces any. Only the first three are clone ACQUISITIONS, so
+#' the FOI panel sums those and not the fourth.
 #' @param run a run directory or `vivax_run`.
 #' @param bin window width in days.
 #' @param burn_frac fraction of the run marked as burn-in (a display + summary choice).
@@ -286,15 +288,18 @@ plot_force_of_infection <- function(foi, smooth = 0.4) {
   ## after any relabelling, so it survives both.
   acq  <- d[is_acquisition == TRUE]
   mosq <- grep("^relapse", unique(acq$origin), value = TRUE, invert = TRUE)
+  ## named ONCE: these strings are both the series labels and the factor levels, and writing
+  ## them twice is how the molFOB series ended up factored to NA - drawn grey, no legend entry.
+  lv <- c("molFOB (all clone acquisitions)", "FOI (mosquito-borne only)")
   w <- rbind(
-    acq[, .(rate = sum(rate), series = "molFOB (all clone acquisitions)"), by = win],
-    acq[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])
+    acq[, .(rate = sum(rate), series = lv[1]), by = win],
+    acq[origin %in% mosq, .(rate = sum(rate), series = lv[2]), by = win])
   ## carry zeros so a series does not break where a window has no episodes of one kind
   w <- merge(data.table::CJ(win = unique(d$win), series = unique(w$series)), w,
              by = c("win", "series"), all.x = TRUE)[is.na(rate), rate := 0]
 
-  lv <- c("molFOB (all blood-stage episodes)", "FOI (mosquito-borne only)")
   w[, series := factor(series, lv)]
+  stopifnot(!anyNA(w$series))   # a label/level mismatch here is silent: NA draws grey, unlabelled
   p <- ggplot2::ggplot() +
     ggplot2::geom_line(data = w, ggplot2::aes(win, rate, colour = series),
                        linewidth = .5, alpha = .45)

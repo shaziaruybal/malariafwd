@@ -10,12 +10,18 @@ classify_cases(events)
 \item{events}{an events data.table.}
 }
 \value{
-a data.table with \code{origin} and \code{imported} columns (plus case identifiers).
+a data.table of \code{tick}, \code{human_id}, \code{lineage_id}, \code{oocyst_id}, \code{pedigree_id},
+\code{origin}, \code{imported} and \code{detected} -- one row per blood-stage episode. Founder seeding
+(\code{vh_inoculation_seed}) is excluded: it is burn-in, not an acquired case.
 }
 \description{
-\code{origin} gives the acquisition mechanism: relapse = hypnozoite activation;
-imported = a new infection that arrived via importation; local reinfection = a new
-local mosquito-borne infection. \code{imported} is a separate genotype-origin flag that is
+\code{origin} gives the mechanism by which the episode arose, and takes \strong{four} values:
+\code{relapse} = a hypnozoite activated; \code{imported} = a new infection that arrived via
+importation; \verb{local reinfection} = a new local mosquito-borne infection; and
+\code{recrudescence} = a clone that survived a treatment course, was suppressed below patency,
+and re-expanded (D25). Note the fourth is \strong{not} an acquisition -- no new parasite entered
+the host -- so it is excluded from \code{\link[=force_of_infection]{force_of_infection()}}'s rates and from
+\code{\link[=new_infection_diversity]{new_infection_diversity()}}. \code{imported} is a separate genotype-origin flag that is
 \code{TRUE} whenever the parasite genotype is import-derived -- including \strong{imported
 relapses} (a relapse of an imported genotype), a key vivax truth category that \code{origin}
 alone ("relapse") does not expose. So the four truth classes are: imported new infection

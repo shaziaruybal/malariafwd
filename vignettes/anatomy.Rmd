@@ -42,8 +42,11 @@ ev <- load_events(run)                 # a data.table
 ev[, .N, by = event_type][order(-N)]   # how many of each event type
 ```
 
-Classify each blood-stage episode ("case") by its true origin — relapse, imported, or
-local reinfection:
+Classify each blood-stage episode ("case") by its true origin. There are **four**: `relapse`
+(a hypnozoite activated), `imported`, `local reinfection`, and `recrudescence` (a clone that
+survived a treatment course, was suppressed below patency, and re-expanded). The fourth only
+appears when treatment can fail *and* `P_RECRUD_GIVEN_FAIL > 0`; at the shipped defaults there
+is no treatment at all, so you will see three:
 
 ```{r}
 cs <- classify_cases(ev)
@@ -80,7 +83,7 @@ The hypnozoite reservoir is the model's distinctive, otherwise-unobservable comp
 
 ```{r}
 reservoir_trajectory(st)                     # reservoir size over time
-relapse_fraction(ev)                         # fraction of recurrences that are relapses
+relapse_fraction(ev)                         # two readings: per acquisition, and per episode
 plot_relapse_km(time_to_relapse(ev)) # time to first relapse (Kaplan-Meier)
 coi_distribution(st)                         # complexity-of-infection distribution
 ```
@@ -124,7 +127,7 @@ they occurred. The raw tskit node time (ticks before the *end of the run*) is re
 separately as `tmrca_node_time`; it moves with sampling date rather than with relatedness.
 
 ```{r}
-arg_summary(run)                                   # trees, edges, roots per tree, depth
+arg_summary(run)                                   # trees, edges, roots/tree, oldest root
 arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # coalesced = 1, tmrca = 0
 ```
 

@@ -43,22 +43,29 @@ coi_distribution <- function(state, burn_in = 0) {
   sample(x, n)
 }
 
-#' Relapse fraction: the share of blood-stage episodes that are relapses
+#' Relapse fraction, in two units
 #'
-#' Relapses divided by **all** classified blood-stage episodes. That is the quantity the
-#' published 0.55-0.85 vivax band refers to, and the one `epi_summary()` in the analyses repo
-#' scores against. Derived from [classify_cases()] rather than from a literal list of event
-#' types, so every acquisition route is counted and any origin added later (recrudescence)
-#' enters the denominator without this function having to change.
+#' Relapses as a share of blood-stage episodes. Two readings are returned because a
+#' recrudescence is a new clinical **episode** but not a newly **acquired** parasite -- the
+#' genotype was already in the host (D25):
 #'
-#' The denominator includes each host's first-ever episode, which is not a *recurrence*. For a
+#' * `relapse_fraction` -- relapses over **acquisitions** (imported + local reinfection +
+#'   relapse). This is what the published 0.55-0.85 vivax band refers to, what `epi_summary()`
+#'   in the analyses repo scores against, and what `summarise_run()$relapse_frac` reports.
+#' * `relapse_frac_episodes` -- relapses over **every patent episode**, recrudescence included.
+#'
+#' With the shipped default (`P_RECRUD_GIVEN_FAIL = 0`) there are no recrudescences and the two
+#' are identical; they separate only once treatment failure can suppress a clone.
+#'
+#' Both denominators include each host's first-ever episode, which is not a *recurrence*. For a
 #' strict recurrences-only fraction, drop the first episode per host:
-#' `cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]`. The two are
-#' materially different -- on a heavily treated run this function returns 0.351 where the
-#' strict-recurrence variant returns 0.684 -- so never compare one against the other.
+#' `cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]`. That is a
+#' materially different quantity, so never compare it against either reading here.
 #'
 #' @param events an events data.table (from [load_events()]).
-#' @return a one-row data.table of `n_relapse`, `n_nonrelapse` and `relapse_fraction`.
+#' @return a one-row data.table of `n_relapse`, `n_reinfection`, `n_recrudescence`,
+#'   `relapse_fraction` (over acquisitions) and `relapse_frac_episodes` (over every patent
+#'   episode). `summarise_run()$relapse_frac` reports the acquisition reading.
 #' @export
 relapse_fraction <- function(events) {
   cs <- classify_cases(events)
@@ -110,16 +117,22 @@ dormancy_durations <- function(events) {
 
 #' Classify each new blood-stage episode ("case") by TRUE origin
 #'
-#' `origin` gives the acquisition mechanism: relapse = hypnozoite activation;
-#' imported = a new infection that arrived via importation; local reinfection = a new
-#' local mosquito-borne infection. `imported` is a separate genotype-origin flag that is
+#' `origin` gives the mechanism by which the episode arose, and takes **four** values:
+#' `relapse` = a hypnozoite activated; `imported` = a new infection that arrived via
+#' importation; `local reinfection` = a new local mosquito-borne infection; and
+#' `recrudescence` = a clone that survived a treatment course, was suppressed below patency,
+#' and re-expanded (D25). Note the fourth is **not** an acquisition -- no new parasite entered
+#' the host -- so it is excluded from [force_of_infection()]'s rates and from
+#' [new_infection_diversity()]. `imported` is a separate genotype-origin flag that is
 #' `TRUE` whenever the parasite genotype is import-derived -- including **imported
 #' relapses** (a relapse of an imported genotype), a key vivax truth category that `origin`
 #' alone ("relapse") does not expose. So the four truth classes are: imported new infection
 #' (`origin == "imported"`), local reinfection, imported relapse (`origin == "relapse"` &
 #' `imported`), and local relapse (`origin == "relapse"` & `!imported`).
 #' @param events an events data.table.
-#' @return a data.table with `origin` and `imported` columns (plus case identifiers).
+#' @return a data.table of `tick`, `human_id`, `lineage_id`, `oocyst_id`, `pedigree_id`,
+#'   `origin`, `imported` and `detected` -- one row per blood-stage episode. Founder seeding
+#'   (`vh_inoculation_seed`) is excluded: it is burn-in, not an acquired case.
 #' @export
 classify_cases <- function(events) {
   ev <- as.data.table(events)
@@ -158,12 +171,20 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' When the run contains imported cases, relapses are split into `relapse (imported)` and
 #' `relapse (local)` -- a relapse of an imported genotype is a distinct truth category. Set
 #' `split_imported = FALSE` to keep a single `relapse` class, or `TRUE` to force the split.
+#'
+#' A **recrudescence** is returned as its own origin with `is_acquisition = FALSE`. It is a new
+#' patent episode but not a new clone, so including it would inflate molFOB -- which counts
+#' clone acquisitions. Worth noting that a real molFOB, measured by comparing genotypes between
+#' study visits, would often count a recrudescence as a new clone, because the clone was
+#' undetectable at the previous visit; the gap between the two sums here estimates that bias.
 #' @param run a run directory or `vivax_run`.
 #' @param bin window width in days.
 #' @param split_imported `"auto"` (split only if the run has imports), `TRUE`, or `FALSE`.
-#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers, which
-#'   is less than `bin` for a trailing window when the run length is not a multiple of
-#'   `bin`) and `rate` (new clones per host-year, scaled by `days`).
+#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers, which is
+#'   less than `bin` for a trailing window when the run length is not a multiple of `bin`),
+#'   `rate` (per host-year, scaled by `days`) and `is_acquisition`. Sum only the
+#'   `is_acquisition` rows for FOI or molFOB: a recrudescence is returned as its own row so
+#'   incidence stays complete, but it is not a newly acquired clone.
 #' @references Mueller I, et al. (2013) A high force of *Plasmodium vivax* blood-stage
 #'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
 #' @export
