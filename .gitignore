@@ -12,6 +12,9 @@
 runs/
 quickstart-runs/
 
+# commit rationale, kept out of the commit messages themselves
+.claude/decisions.md
+
 malariafwd.Rcheck/
 *.Rcheck/
 inst/doc
