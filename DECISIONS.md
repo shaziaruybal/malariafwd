@@ -19,6 +19,51 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted
+**Context.** Step 4 shipped the suppression-to-recrudescence delay as a geometric at mean 21 d.
+Two things needed settling: the plan (`TREATMENT_IMPLEMENTATION.md:32, :361`) specified
+`1 + Poisson(MEAN_RECRUD_DELAY - 1)` instead, and the 21 d default was uncited. A literature and
+reference-model review found that **none of the four reference models represents recrudescence
+at all** -- White 2014 has no treatment-failure branch; the White 2018 IBM puts a failure
+straight into clinical disease (`I_D`) with no delay; OpenMalaria's failure branch is literally
+commented "No change in parasitological status"; and malariasimulation routes failures to the
+untreated state and *declares* `late_parasitological_failure_probability` but never reads it.
+So the reference models cannot arbitrate this, and the model goes beyond all four.
+**Decision.** Keep the geometric and fix the mean: **`MEAN_RECRUD_DELAY` 21.0 -> 10.5**. Add
+`RECRUD_DELAY_DIST` with `"geometric"` (default), `"poisson"` (the plan's shape, as a
+tight-window sensitivity arm) and `"fixed"` (deterministic).
+**Rationale.** Geometric is the discrete analogue of the only published fit for this quantity:
+Taylor et al. (2019) model time-to-recrudescence as Exponential, and their own simulator draws
+`round(rexp(1, rate = 1/10))` -- a rounded exponential on a day scale *is* a geometric, so the
+implementation was already faithful to the reference. It is also the house style of every
+reference model's state exits. 10.5 d is the reciprocal of Taylor's posterior median, replacing
+an uncited number with a traceable one. The old 21 d was not merely unsourced but
+self-contradicting: under a geometric it puts **26% of recrudescences beyond day 28**, outside a
+standard WHO therapeutic-efficacy window, where a real study could never observe them -- while
+the code comment claimed it "sits inside a 28-day follow-up window". Measured at the new default:
+median gap 7 d, **92% inside day 28** (against 74% at 21 d).
+**Alternatives rejected.** *The plan's Poisson* -- no source in any reference model, in Taylor,
+or anywhere found, and it encodes an implausible claim: at mean 21 its SD is 4.5 d and
+P(gap <= 7 d) is 0.0003, i.e. an almost-fixed delay, where the underlying process is subpatent
+parasite regrowth from an unobserved starting density. Retained as a selectable arm rather than
+deleted, because a tight-window contrast is a useful sensitivity. *A gamma with a shape
+parameter* -- there is a real biological argument for a peaked delay with a hard floor (regrowth
+is log-linear, so the delay is a logarithm of surviving biomass, and the one large empirical
+hazard estimate for falciparum is non-monotonic), and a reviewer suggested mean 12 / min 5 /
+shape 4. Not shipped: it needs a second parameter, and the family with a published fit behind it
+should be the default. A clean extension if the biology argument wins later.
+**Consequences.** Runs with `P_RECRUD_GIVEN_FAIL > 0` change -- the delay halves. Runs at the
+shipped default are unaffected and remain byte-identical to the pre-Step-4 model (re-verified
+after this change on 4 runs). `RECRUD_DELAY_DIST` joins `.malariafwd_string_params` and is fenced
+on both sides. The plan documents' Poisson spec is now superseded and must be marked historical.
+**How to verify.** Each option produces its own signature on a run with
+`P_RECRUD_GIVEN_FAIL = 1`, pairing each recrudescence to its holder via `parent1_pedigree_id`
+(the holder keeps its own id; the recurrence mints a new one): geometric median 7 / sd 11.8 /
+P(<=7 d) 0.51 / P(<=28 d) 0.92; poisson median 10 / sd 3.3 / P(<=7 d) 0.19; fixed sd 0. An
+invalid value must be refused on both the R and SLiM sides.
+
+---
+
 ## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted
 **Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
 A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default

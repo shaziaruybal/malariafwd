@@ -7,6 +7,28 @@ test_that("vivax_params defaults stay in sync with the SLiM model", {
   r_names <- names(malariafwd:::.malariafwd_defaults)
   # SEED and OUTDIR are run-level (set by run_sim), not part of vivax_params().
   expect_setequal(setdiff(model_names, c("SEED", "OUTDIR")), r_names)
+
+  ## ...and the VALUES, not just the names. Comparing names alone let the two drift apart
+  ## silently: the check passed with P_RAD_SURVIVAL perturbed 0.29 -> 0.05 on one side, which
+  ## is exactly the divergence D20 was written to prevent (the same number means 77% efficacy
+  ## per hypnozoite but 95% per person).
+  dflt <- malariafwd:::.malariafwd_defaults
+  num <- function(x) suppressWarnings(as.numeric(x))
+  for (nm in setdiff(model_names, c("SEED", "OUTDIR"))) {
+    line <- grep(paste0('defineDefault\\("', nm, '"'), src, value = TRUE)[1]
+    raw  <- trimws(sub('.*defineDefault\\("[A-Z_]+",\\s*([^)]*)\\).*', "\\1", line))
+    rval <- dflt[[nm]]
+    sval <- if (raw %in% c("T", "F")) raw == "T"
+            else if (grepl("^'.*'$|^\".*\"$", raw)) gsub("^['\"]|['\"]$", "", raw)
+            else num(raw)
+    if (is.na(sval[1]) && !is.logical(sval)) next          # expression, not a literal
+    if (is.logical(rval) || is.character(rval))
+      expect_identical(as.character(sval), as.character(rval),
+                       info = paste(nm, "differs between the SLiM model and R"))
+    else
+      expect_equal(num(sval), num(rval), tolerance = 1e-9,
+                   info = paste(nm, "differs between the SLiM model and R"))
+  }
 })
 
 test_that("validation catches bad input", {

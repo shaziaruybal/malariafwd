@@ -67,7 +67,10 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #'   (the previous plan is restored afterward). If `NULL`, use the current plan.
 #' @param verbose passed to [run_sim()].
 #' @param ... passed to [run_sim()].
-#' @return a data.frame with one row per run (`set`, `seed`, `outdir`, `ok`).
+#' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, and `error`
+#'   (the failure message, or `NA` for a cell that ran). A failed cell does not abort the
+#'   sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
+#'   with the result rather than being discarded.
 #' @export
 run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, ...) {
@@ -87,15 +90,29 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
   out <- furrr::future_pmap(
     list(jobs$set, jobs$seed, jobs$outdir),
     function(set, seed, outdir) {
+      ## Keep the error TEXT. `ok = FALSE` alone is unactionable: a cell that failed because
+      ## SLiM is not on PATH and one that failed on a bad parameter are indistinguishable, and
+      ## a failed cell leaves no directory and no log to read afterwards. The sweep still does
+      ## not abort - one bad cell should not lose a grid - but the reason now travels with it.
+      err <- NA_character_
       ok <- tryCatch({
         run_sim(param_sets[[set]], seed = seed, outdir = outdir, model = model, verbose = verbose, ...)
         TRUE
-      }, error = function(e) FALSE)
-      data.frame(set = set, seed = seed, outdir = outdir, ok = ok, stringsAsFactors = FALSE)
+      }, error = function(e) { err <<- conditionMessage(e); FALSE })
+      data.frame(set = set, seed = seed, outdir = outdir, ok = ok, error = err,
+                 stringsAsFactors = FALSE)
     },
     .options = furrr::furrr_options(seed = TRUE)
   )
-  do.call(rbind, out)
+  res <- do.call(rbind, out)
+  ## Say it out loud. A grid is usually launched and left, and a silent half-empty result is
+  ## how a sweep gets analysed with a third of its cells missing.
+  if (any(!res$ok)) {
+    n <- sum(!res$ok)
+    warning(n, " of ", nrow(res), " grid cell(s) FAILED and produced no run. First error: ",
+            res$error[!res$ok][1], "\nSee the `error` column for the rest.", call. = FALSE)
+  }
+  res
 }
 
 #' @export

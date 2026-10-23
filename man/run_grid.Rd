@@ -31,7 +31,10 @@ run_grid(
 \item{...}{passed to \code{\link[=run_sim]{run_sim()}}.}
 }
 \value{
-a data.frame with one row per run (\code{set}, \code{seed}, \code{outdir}, \code{ok}).
+a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code{ok}, and \code{error}
+(the failure message, or \code{NA} for a cell that ran). A failed cell does not abort the
+sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
+with the result rather than being discarded.
 }
 \description{
 Runs every \verb{(parameter set, seed)} combination, each in its own output directory,

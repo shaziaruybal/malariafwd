@@ -141,11 +141,25 @@ initialize() {
 	// P(recrudescence | the course failed) and maps onto a WHO therapeutic-efficacy failure
 	// rate. 0.0 = today's behaviour: a failed course leaves the clone fully patent.
 	defineDefault("P_RECRUD_GIVEN_FAIL", 0.0);
-	// Mean days suppressed before re-expansion. Geometric, i.e. the discrete analogue of the
-	// Exponential that Taylor et al. (2019, RecurrentVivax) fit -- they put the mean at ~10 d;
-	// 21 d here is the project's recorded default and sits inside a 28-day follow-up window.
-	// One of the collaborator questions.
-	defineDefault("MEAN_RECRUD_DELAY", 21.0);
+	// Mean days suppressed before re-expansion, and the shape of that waiting time.
+	//
+	// GEOMETRIC by default: it is the discrete analogue of the Exponential that the only
+	// published fit for this quantity uses. Taylor et al. (2019) model time-to-recrudescence as
+	// exponential, and their own simulator draws round(rexp(1, 1/10)) -- a rounded exponential
+	// on a day scale IS a geometric. It is also the house style of every reference model's
+	// state exits. NB none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation
+	// represents recrudescence at all -- in all four a failed course simply leaves the
+	// infection where it is -- so they cannot arbitrate this, and we follow Taylor.
+	//
+	// 10.5 d is the reciprocal of Taylor's posterior median. The previous 21.0 was uncited and
+	// self-defeating: under a geometric it puts 26% of recrudescences BEYOND day 28, outside a
+	// standard WHO therapeutic-efficacy window, where a real study would never see them. At
+	// 10.5 the median gap is 7 d and ~93% land inside day 28.
+	//
+	// "poisson" reproduces the original planning-document shape, 1 + Poisson(mean - 1), as a
+	// tight-window sensitivity arm; "fixed" is deterministic, for debugging and sensitivity.
+	defineDefault("MEAN_RECRUD_DELAY", 10.5);
+	defineDefault("RECRUD_DELAY_DIST", "geometric");
 	// Detection of a recrudescent episode. Ross et al. (2025) put recurrence detectability at
 	// 0.13-0.49 of a primary, so this should usually be set well below P_DETECT_PRIMARY.
 	defineDefault("P_DETECT_RECRUD", 0.5);
@@ -245,6 +259,10 @@ initialize() {
 	// validate_params() on the R side is what actually produces a readable message.
 	if (SIM_DAYS < 2)
 		stop("SIM_DAYS must be >= 2 (founder seeding completes on tick 2), got " + SIM_DAYS);
+	if (!(RECRUD_DELAY_DIST == "geometric" | RECRUD_DELAY_DIST == "poisson" |
+	      RECRUD_DELAY_DIST == "fixed"))
+		stop("RECRUD_DELAY_DIST must be 'geometric', 'poisson' or 'fixed', got '" +
+			RECRUD_DELAY_DIST + "'");
 	if (N_FOUNDER_HOSTS > 0 & N_FOUNDER_LINEAGES < 1)
 		stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: " + N_FOUNDER_HOSTS +
 			" founder host(s) cannot share 0 distinct genomes.");
@@ -951,7 +969,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	for (_nm in _pn)
@@ -1910,8 +1928,13 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 					// at one tick so a clone cannot re-expand on the tick it was suppressed
 					// (addCloned also refuses a parent minted in the same tick).
 					lin.setValue("is_subpatent", T);
-					lin.setValue("recrud_tick", sim.cycle +
-						max(1, rgeom(1, 1.0 / (1.0 + MEAN_RECRUD_DELAY))[0]));
+					if (RECRUD_DELAY_DIST == "geometric")
+						d_rec = max(1, rgeom(1, 1.0 / (1.0 + MEAN_RECRUD_DELAY))[0]);
+					else if (RECRUD_DELAY_DIST == "poisson")
+						d_rec = 1 + rpois(1, max(0.0, MEAN_RECRUD_DELAY - 1.0))[0];
+					else
+						d_rec = max(1, asInteger(round(MEAN_RECRUD_DELAY)));
+					lin.setValue("recrud_tick", sim.cycle + d_rec);
 					logLineageEvent("bloodcure_subpatent", h, lin);
 				}
 				else

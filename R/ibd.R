@@ -134,10 +134,17 @@ if want_seg:
 #' Build a fast pairwise-IBD lookup from [ibd_pairs()]
 #'
 #' @param ibd_obj the list returned by [ibd_pairs()].
+#' @param warn_missing warn (once) if `getibd()` is asked about a pedigree id that is not in
+#'   the index. Such an id scores 0, which is indistinguishable from "shares nothing" -- the
+#'   warning is what tells you the difference. Set `FALSE` for a query you know is a superset.
 #' @return a list with `nm` (the pedigree/node map) and `getibd(pa, pb)`, a vectorised
-#'   function returning genome-wide IBD (0 for pairs sharing nothing).
+#'   function returning genome-wide IBD (0 for pairs sharing nothing, and 1 for a self-pair).
+#' @section Ids that are not in the index:
+#' A run written with `RETAIN_FULL_HISTORY = FALSE` keeps only a fraction of genomes in the
+#' tree sequence, so most historical pedigree ids will be absent. `getibd()` scores an absent
+#' id 0 and warns once; check ids against `$nm$pedigree_id` before relying on a result.
 #' @export
-ibd_index <- function(ibd_obj) {
+ibd_index <- function(ibd_obj, warn_missing = TRUE) {
   nm <- data.table::as.data.table(ibd_obj$node_map)[!is.na(pedigree_id)]
   nm <- unique(nm, by = "pedigree_id")
   nmap <- stats::setNames(nm$node_id, as.character(nm$pedigree_id))
@@ -147,8 +154,29 @@ ibd_index <- function(ibd_obj) {
   ib <- data.table::rbindlist(list(ib[, .(a = node_a, b = node_b, ibd = ibd_fraction)],
                                    ib[, .(a = node_b, b = node_a, ibd = ibd_fraction)]))
   data.table::setkey(ib, a, b)
+  ## Two different things used to return the same 0: a pair that genuinely shares nothing
+  ## above min_span, and a pedigree id that is NOT IN THE INDEX AT ALL. The second is a
+  ## caller error or a consequence of RETAIN_FULL_HISTORY = FALSE, and reading it as
+  ## "unrelated" is how a query can silently lose most of its data -- measured, 1265 of 1595
+  ## ids absent under RETAIN_FULL_HISTORY = FALSE, which took ibd_relapse_origin() from 1146
+  ## pairs to 79 without a word. The 0 is kept (an error would make that mode unusable, and
+  ## NA would break every downstream comparison), but it is no longer silent. Warned once per
+  ## index so a combn() loop does not emit thousands.
+  warned <- FALSE
   getibd <- function(pa, pb) {
     na <- nmap[as.character(pa)]; nb <- nmap[as.character(pb)]
+    if (warn_missing && !warned) {
+      miss <- unique(c(pa[is.na(na)], pb[is.na(nb)]))
+      if (length(miss)) {
+        warned <<- TRUE
+        warning(length(miss), " pedigree id(s) are not in this IBD index and score 0, which is ",
+                "indistinguishable from \"shares nothing\" -- e.g. ",
+                paste(utils::head(miss, 3), collapse = ", "),
+                ". Check ids against `$nm$pedigree_id`; a run with RETAIN_FULL_HISTORY = FALSE ",
+                "keeps only a fraction of genomes. Pass warn_missing = FALSE to silence.",
+                call. = FALSE)
+      }
+    }
     v <- ib[.(na, nb), ibd, on = .(a, b)]
     v <- data.table::fifelse(is.na(v), 0, v)   # 0-default = below the min_span detection floor
     ## tskit's ibd_segments(within=) only returns DISTINCT pairs, so a self-pair would fall

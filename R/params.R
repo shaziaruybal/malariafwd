@@ -32,7 +32,8 @@
   # default - see RADCURE_MODE.
   MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.29, RADCURE_MODE = "person",
   RADCURE_COVERAGE = 0.0, BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
-  P_RECRUD_GIVEN_FAIL = 0.0, MEAN_RECRUD_DELAY = 21.0, P_DETECT_RECRUD = 0.5,
+  P_RECRUD_GIVEN_FAIL = 0.0, MEAN_RECRUD_DELAY = 10.5, RECRUD_DELAY_DIST = "geometric",
+  P_DETECT_RECRUD = 0.5,
   SUBPATENT_INFECTIVITY = 0.15,
   TREATMENT_DELAY = 7.0,
   # detection / observation
@@ -48,7 +49,8 @@
 )
 
 # Params that are Eidos STRINGS (must be quoted when passed to SLiM -d).
-.malariafwd_string_params <- c("SIM_ID", "GENOME_MODE", "CHROMOSOMES", "RADCURE_MODE", "OUTDIR")
+.malariafwd_string_params <- c("SIM_ID", "GENOME_MODE", "CHROMOSOMES", "RADCURE_MODE",
+                               "RECRUD_DELAY_DIST", "OUTDIR")
 
 #' Build a validated parameter set for the vivax model
 #'
@@ -97,6 +99,9 @@ validate_params <- function(p) {
          call. = FALSE)
   if (p$TREATMENT_DELAY < 0) stop("TREATMENT_DELAY must be >= 0", call. = FALSE)
   if (p$MEAN_RECRUD_DELAY <= 0) stop("MEAN_RECRUD_DELAY must be > 0", call. = FALSE)
+  if (!p$RECRUD_DELAY_DIST %in% c("geometric", "poisson", "fixed"))
+    stop("RECRUD_DELAY_DIST must be 'geometric', 'poisson' or 'fixed', got '",
+         p$RECRUD_DELAY_DIST, "'", call. = FALSE)
   if (p$P_RECRUD_GIVEN_FAIL > 0 && p$P_BLOODCURE_SURVIVAL <= 0)
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)

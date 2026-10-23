@@ -52,6 +52,17 @@ run_cfg <- function(tag, ...) {
              over_draw = inv[["over_draw"]], dup_ids = inv[["dup_ids"]], dup_clear = inv[["dup_clear"]])
 }
 
+## A directional comparison on a noisy quantity needs more than one realisation: at these
+## settings the standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single-seed
+## "<" decides nothing whenever the true effect is comparable to that spread.
+mean_reservoir <- function(tag, ...) {
+  mean(vapply(1:3, function(sd) {
+    d <- file.path(OUT, paste0("res_", tag, "_", sd)); unlink(d, recursive = TRUE)
+    p <- do.call(vivax_params, utils::modifyList(BASE, list(...)))
+    summarise_run(run_sim(p, seed = sd, outdir = d))$mean_res
+  }, numeric(1)))
+}
+
 cat("\n================ running configurations ================\n")
 CFG <- list(
   baseline     = list(),
@@ -101,9 +112,15 @@ ok("more founder lineages -> more circulating lineages",
    sprintf("%d vs %d", g("founders_40","lineages"), g("founders_2","lineages")))
 ok("NU_HYPNOZOITE_BATCH = 0 -> no relapses at all", g("no_relapse","relapse_frac") == 0,
    sprintf("relapse_frac %.3f, reservoir %.2f", g("no_relapse","relapse_frac"), g("no_relapse","reservoir")))
+## 3-seed, like every other directional comparison on the reservoir: single-seed, this class
+## of check has already flipped once with no change in behaviour (see the radical-cure efficacy
+## check below). The standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single
+## "<" decides nothing whenever the true effect is of that order.
+rc_res <- mean_reservoir("rcbase", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
+                         RADCURE_COVERAGE = 0.9)
+bl0_res <- mean_reservoir("base0")
 ok("radical cure -> smaller reservoir than baseline",
-   g("radcure","reservoir") < g("baseline","reservoir"),
-   sprintf("%.2f vs %.2f", g("radcure","reservoir"), g("baseline","reservoir")))
+   rc_res < bl0_res, sprintf("%.2f vs %.2f (3-seed means)", rc_res, bl0_res))
 ok("blood-stage treatment -> treated cases logged & lower prevalence",
    g("bloodcure","treated") > 0 && g("bloodcure","prev") < g("baseline","prev"),
    sprintf("treated %d, prev %.2f vs %.2f", g("bloodcure","treated"),
@@ -159,17 +176,12 @@ run_sim(p_same, seed = 2, outdir = file.path(OUT, "seed_b"))    # different seed
 ok("same seed -> byte-identical event log", md5("seed_a1") == md5("seed_a2"))
 ok("different seed -> different realisation", md5("seed_a1") != md5("seed_b"))
 
-## A directional comparison on a noisy quantity needs more than one realisation: at these
-## settings the standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single-seed
-## "<" decides nothing whenever the true effect is comparable to that spread.
-mean_reservoir <- function(tag, ...) {
-  mean(vapply(1:3, function(sd) {
-    d <- file.path(OUT, paste0("res_", tag, "_", sd)); unlink(d, recursive = TRUE)
-    p <- do.call(vivax_params, utils::modifyList(BASE, list(...)))
-    summarise_run(run_sim(p, seed = sd, outdir = d))$mean_res
-  }, numeric(1)))
-}
 
+## The directional checks on PREVALENCE and RELAPSE FRACTION below are still single-seed.
+## That is a deliberate asymmetry: those effects are large relative to the between-seed spread
+## (biting high-vs-low moves prevalence by tens of points), whereas every reservoir comparison
+## has an effect of the same order as its own noise and so is run at 3 seeds. If one of them
+## ever flips, measure it across seeds before concluding the model changed.
 cat("\n================ relapse biology + treatment efficacy ================\n")
 R2 <- rbindlist(lapply(names(cfg2 <- list(
   alpha_fast   = list(ALPHA_ACTIVATE = 1/40),        # tropical-fast activation
@@ -204,16 +216,17 @@ h <- function(k, col) R2[tag == k][[col]]
 ok("faster activation -> higher relapse fraction",
    h("alpha_fast","relapse_frac") > h("alpha_slow","relapse_frac"),
    sprintf("%.2f vs %.2f", h("alpha_fast","relapse_frac"), h("alpha_slow","relapse_frac")))
+af_res <- mean_reservoir("afast", ALPHA_ACTIVATE = 1/40)
+as_res <- mean_reservoir("aslow", ALPHA_ACTIVATE = 1/400)
 ok("faster activation -> smaller standing reservoir",
-   h("alpha_fast","reservoir") < h("alpha_slow","reservoir"),
-   sprintf("%.2f vs %.2f", h("alpha_fast","reservoir"), h("alpha_slow","reservoir")))
+   af_res < as_res, sprintf("%.2f vs %.2f (3-seed means)", af_res, as_res))
 mu_res <- mean_reservoir("muhigh", MU_HYPNOZOITE = 1/60)
 bl_res <- mean_reservoir("base")
 ok("high hypnozoite death -> smaller reservoir than baseline",
    mu_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", mu_res, bl_res))
+hs_res <- mean_reservoir("hypshort", MAX_HYPNOZOITE_AGE = 120L)
 ok("short MAX_HYPNOZOITE_AGE -> smaller reservoir",
-   h("hypage_short","reservoir") < g("baseline","reservoir"),
-   sprintf("%.2f vs %.2f", h("hypage_short","reservoir"), g("baseline","reservoir")))
+   hs_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", hs_res, bl_res))
 ## 3-seed, for the same reason mean_reservoir() exists: single-seed this comparison was a
 ## near coin flip (measured 5 of 6 seeds in the right direction on the pre-fence model), so a
 ## shifted RNG stream flipped it with no change in the underlying behaviour. Over 3 seeds the
