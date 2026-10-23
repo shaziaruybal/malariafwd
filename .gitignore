@@ -7,6 +7,11 @@
 # R CMD check output: a full stale DUPLICATE of the package, ~99 MB. It was swept in by a
 # `git add -A` run while a check was on disk, and every grep of the repo then found two
 # copies of every file - the live one and a stale one under here.
+# simulation OUTPUT written by the examples, vignettes and quickstart.R - these are products
+# of running the package, not part of it (~45 MB of state.tsv / plasmo.trees)
+runs/
+quickstart-runs/
+
 malariafwd.Rcheck/
 *.Rcheck/
 inst/doc
