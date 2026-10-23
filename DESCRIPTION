@@ -2,7 +2,7 @@ Package: malariafwd
 Title: Forward Simulation of Plasmodium vivax Transmission and Genetics
 Version: 0.1.0
 Authors@R:
-    person("Shazia", "Ruybal-Pesantez", email = "shaziaruybal@gmail.com",
+    person("Shazia", "Ruybal-Pesantez", email = "shazia.ruybal@isglobal.org",
            role = c("aut", "cre"))
 Description: An R interface to a SLiM (Eidos) + tskit individual-based forward
     simulator of Plasmodium vivax malaria. Models blood-stage infection, the

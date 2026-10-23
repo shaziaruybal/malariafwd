@@ -788,3 +788,35 @@ around a corrected model.
 **Alternatives rejected.** Engine-only (too thin — loses the tested IBD/metrics); engine+framework
 (couples the package to in-progress research).
 **Consequences.** Package SemVer starts pre-1.0 (0.x); model iteration "v2" ⇔ 0.2.0.
+
+---
+
+## Appendix — pre-release correctness fixes (moved out of NEWS.md)
+
+These were fixed during development, before any public release. They were listed in `NEWS.md`
+until the 0.1.0 rewrite, which took the view that a first-release changelog should describe what
+the package **does**, not what changed on the way there — a new user never saw the broken
+versions, so the fixes are not news to them. Kept here so the record is not lost.
+
+Four of them stem from one Eidos scoping rule: a plain assignment to a global inside a callback
+or function creates a *local*, so the write was never visible.
+
+* **Hypnozoite batches never died.** Batches that were exhausted or hit the age cap kept
+  activating with their old count — in one check run **64% of batches (74/116) drew more
+  hypnozoites than they ever held** (636 excess), inflating relapses. Batches are now retired
+  with `batch_count = 0` and killed in the `early()` cleanup, and a regression test asserts no
+  batch over-draws. Relapse-related calibration from before this fix was re-run.
+* **`inoculation_id` restarted every tick** (max id 3 across a whole run); now unique.
+* **`event_id` was always `<tick>_1`** (6745 rows collapsing to 1073 ids); now unique.
+* **Relapse-triggered radical cure was mostly undone** — it thinned the batch, then the relapse
+  bookkeeping overwrote it. It now runs after the host's batches are updated.
+* **MDA errored** when a treated host was left with no infections; that host is now skipped.
+* **`ibd_index()` scored a genome against itself as 0.** tskit only stores distinct pairs, so a
+  self-pair fell through to the below-detection default, which would make the diagonal of any
+  pairwise matrix silently wrong. It now returns 1, and no longer carries node-map names on its
+  return value.
+
+The API was also renamed wholesale before release, to one prefix per family (`ibd_`, `arg_`,
+`load_`, `plot_`, `slim_`, `uptake_`), with `run_` meaning only "execute". The old names
+(`calc_ibd`, `run_params`, `run_metrics`, `who_classify`, `zt_moments`, ...) never shipped
+publicly and are not aliased.

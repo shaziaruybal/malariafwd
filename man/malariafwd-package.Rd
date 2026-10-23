@@ -24,11 +24,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Shazia Ruybal-Pesantez \email{shaziaruybal@gmail.com}
+\strong{Maintainer}: Shazia Ruybal-Pesantez \email{shazia.ruybal@isglobal.org}
 
 Authors:
 \itemize{
-  \item Shazia Ruybal-Pesantez \email{shaziaruybal@gmail.com}
+  \item Shazia Ruybal-Pesantez \email{shazia.ruybal@isglobal.org}
 }
 
 }

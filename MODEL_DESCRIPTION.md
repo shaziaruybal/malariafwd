@@ -519,6 +519,16 @@ overlap 0.03). A structured source pool is planned (§15).
 - **Treatment failure has consequences** (D25). A clone that survives a course either persists at
   full density (`bloodcure_persist`) or, with probability `P_RECRUD_GIVEN_FAIL`, is suppressed
   **below patency** (`bloodcure_subpatent`) and later re-expands as a **recrudescence**. See §9a.
+- **No post-treatment prophylaxis** (ongoing work). A course clears what is there and then
+  stops: it leaves behind no period of drug protection, so a treated host can be reinfected, or
+  relapse, the very next day. Real schizonticides protect for weeks — chloroquine for roughly a
+  month — and radical cure additionally blocks new hypnozoite batches for a time. The
+  consequence is that **recurrence is overstated** in any scenario with appreciable treatment
+  coverage, and short recurrence intervals most of all. OpenMalaria makes the same
+  simplification, so it is defensible, but it is a simplification. The design is settled
+  (malariasimulation Weibull protection curves, with a blocked relapse still consuming its
+  hypnozoites, bites still seeding batches, and imports and recrudescences bypassing
+  protection) and implementation is planned for the next release.
 - **MDA** (`MDA_TICK`) gives every host the same course as case management — blood-stage drugs
   plus radical cure — through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can
   suppress clones subpatent. Unlike case-based treatment it is **not** gated on
@@ -735,6 +745,7 @@ Stated plainly, because several matter for interpretation.
 | 15 | **A recrudescent episode renews its own clearance clock** | the minted genome gets a fresh `bloodstage_start_tick`, so a clone cycling through repeated suppression has no ceiling on total persistence |
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
+| 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled (malariasimulation Weibull curves); OpenMalaria makes the same simplification |
 
 ---
 
