@@ -7,7 +7,12 @@ and an R interface.
 Engine: `inst/slim/malariafwd_vivax.slim`. Everything below was read from that file; where a
 default is quoted it is the shipped value.
 
+Recurrence is **three-state** — relapse, reinfection and recrudescence (§9a) — and treatment is
+host-level with its own window (§9). Both are off at the shipped defaults, so a default run is an
+untreated, two-state-recurrence population.
+
 ![Model structure](man/figures/model-structure.svg)
+
 
 **A representative run** — 200 hosts, 400 mosquitoes, 3 years, `BITING_RATE` 0.08, 40 founder
 hosts carrying 10 lineages, ν = 3. Emergent: prevalence **0.246**, COI **1.14**, **13.3%**
@@ -18,12 +23,12 @@ person-year — all inside published vivax bands.
 
 **A** one host's lineage trajectory: coloured bands are blood-stage lineages, the dashed line is
 that host's hypnozoite reservoir, and the marks below show new infections (triangles) against
-relapses (circles). **B** population host-state composition over time — note the teal
+relapses (circles) — and, on a run with treatment failure, recrudescences (diamonds). **B** population host-state composition over time — note the teal
 *reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
 of relapses a host goes on to experience (boxes drawn only where there are enough hosts; every
-level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage infection
-against the mosquito-borne force alone; the distance between the lines is the relapse
-contribution. **E** the
+level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage **clone acquisition** against the
+mosquito-borne force alone; the distance between the lines is the relapse contribution. (A
+recrudescence is a new episode but not a new clone, so it enters neither series; see §9a.) **E** the
 realised IBD ladder, as the composition of each relationship class across relatedness bands.
 
 Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes per person-year,
@@ -493,25 +498,115 @@ overlap 0.03). A structured source pool is planned (§15).
 - **Vector control / seasonality** scale biting. Seasonality is
   `BITING_RATE × (1 + SEASONAL_AMP·cos(2π(t − SEASONAL_PHASE)/365))`, with `SEASONAL_PHASE` the
   day-of-year of the **peak**.
-- **Case-based radical cure** (`RADCURE_COVERAGE`, efficacy `1 − P_RAD_SURVIVAL`) is **liver-stage
-  only** — primaquine/tafenoquine. It deliberately does **not** clear the current blood-stage
-  infection.
-- **Case-based blood-stage treatment** (`BLOODCURE_COVERAGE`, efficacy `1 − P_BLOODCURE_SURVIVAL`)
-  clears the active infection only.
-- **MDA** (`MDA_TICK`) clears both.
+- **Case management** has its own window, `TREATMENT_START` / `TREATMENT_END` (default: the whole
+  run). `INTERVENTION_*` is vector control and importation only, and no longer touches treatment
+  (D19). The window gates the **decision**, not delivery: a case detected on the programme's last
+  day still completes its course afterwards.
+- **Case-based blood-stage treatment** (`BLOODCURE_COVERAGE`) is decided where a case arises and
+  applied to the **host** `TREATMENT_DELAY` days later (geometric, mean 7). It clears **every
+  patent blood-stage clone the patient carries**, not one lineage (D20). One course at a time per
+  host; a treated case stays infectious until the drugs land. A course can never land on the tick
+  the case arises — `TREATMENT_DELAY = 0` means "as fast as the model can represent", i.e. next
+  tick — because a clone that became patent this tick cannot yet have caused symptoms (D24).
+- **Case-based radical cure** is **nested inside** a blood-stage course: `RADCURE_COVERAGE` is
+  P(radical cure | treated), so it is inert unless `BLOODCURE_COVERAGE > 0` — primaquine is never
+  given without a schizonticide (D20). Liver-stage only; it deliberately does not clear the
+  current blood-stage infection. Efficacy is per **person** by default (`RADCURE_MODE = "person"`,
+  one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, White 2018 / malariasimulation).
+  `RADCURE_MODE = "hypnozoite"` restores per-hypnozoite thinning — the only mode that can
+  **partially** clear a reservoir, and so the only one that reshapes post-treatment relapse
+  diversity.
+- **Treatment failure has consequences** (D25). A clone that survives a course either persists at
+  full density (`bloodcure_persist`) or, with probability `P_RECRUD_GIVEN_FAIL`, is suppressed
+  **below patency** (`bloodcure_subpatent`) and later re-expands as a **recrudescence**. See §9a.
+- **MDA** (`MDA_TICK`) gives every host the same course as case management — blood-stage drugs
+  plus radical cure — through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can
+  suppress clones subpatent. Unlike case-based treatment it is **not** gated on
+  `TREATMENT_START` / `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
   (`NU_HYPNOZOITE_BATCH_BOOST`) and imports (`IMPORT_RATE_BOOST`) — so one scenario can run a quiet
   baseline and then switch on a single mechanism.
 
 **Observation layer.** A true episode becomes a *detected* (reported, genotyped) case with
-probability `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE`. Relapses are often sub-patent, so a realistic
-setting is much lower for relapses (e.g. 0.15). Detected cases form the observed line list and can
-trigger case-based treatment.
+probability `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD`, drawn **once per
+episode** — not per co-inoculated genotype, which used to let one bite be "detected and treated"
+for one of its genotypes and not the other (D20). Relapses are often sub-patent, so a realistic
+setting is much lower for them (e.g. 0.15); Ross et al. (2025) put recurrence detectability at
+0.13–0.49 of a primary, so `P_DETECT_RECRUD` should usually sit well below `P_DETECT_PRIMARY`.
+Detected cases form the observed line list and can trigger case-based treatment.
 
 > **Known gap:** detection is not origin-dependent beyond the primary/relapse split, so
 > *active vs passive* surveillance modes cannot currently be distinguished. This made one arm of
 > the survey-design work come out null.
+
+---
+
+## 9a. Three-state recurrence: relapse, reinfection, recrudescence
+
+A recurrence in *P. vivax* has three possible causes, and the model represents all three — the
+Pv3Rs / Taylor taxonomy. The third is the one a transmission model usually omits.
+
+| state | mechanism | genome |
+|---|---|---|
+| **reinfection** | a new mosquito bite, or an importation | a new genome, unrelated or related only through the local population |
+| **relapse** | a hypnozoite activates from the liver | a **new** genome, clonal to the inoculation that seeded the batch |
+| **recrudescence** | a clone that survived a treatment course re-expands to patency | a **new** genome, clonal to the holder it came from |
+
+**The mechanism.** When a blood-stage course fails on a clone (w.p. `P_BLOODCURE_SURVIVAL`), that
+clone either carries on at full density, or — w.p. `P_RECRUD_GIVEN_FAIL` — is **suppressed below
+patency**. A suppressed clone is still present but is not an episode: it does not count toward
+`moi_active`, it cannot be detected, and it is not re-treated by a later course. After a delay it
+re-expands, logged as `recrudescence`.
+
+Natural clearance while subpatent is **off** by design, so every suppressed clone eventually
+recrudesces and `P_RECRUD_GIVEN_FAIL` is exactly P(recrudescence | the course failed) — which maps
+directly onto a WHO therapeutic-efficacy failure rate.
+
+**The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d, selectable via
+`RECRUD_DELAY_DIST` (`"geometric"`, `"poisson"`, `"fixed"`). Geometric is the discrete analogue of
+the Exponential that Taylor et al. (2019) fit — their own simulator draws `round(rexp(1, 1/10))` —
+and 10.5 is the reciprocal of their posterior median. Median gap 7 d, ~92% within day 28. See D26;
+none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents recrudescence
+at all, so they cannot arbitrate this.
+
+**A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
+relapse does. That keeps one episode to one `pedigree_id`, gives the recurrence its own ARG node
+dated at the recurrence rather than at the original inoculation, and makes "IBD = 1 to the prior
+episode" a real measurement rather than a self-pair. Because the mint inherits `lineage_id`,
+retire-plus-mint is exactly MOI-neutral. See D25.
+
+**A case, but not an acquisition.** This distinction propagates through the metrics, and it is the
+easiest thing to get wrong:
+
+- It **is** a new clinical episode, so `classify_cases()` gives it a fourth `origin` and it appears
+  in case counts, incidence and host timelines.
+- It is **not** a newly acquired parasite — the genotype was already in the host — so it is
+  excluded from the force-of-infection rates. `force_of_infection()` returns it as its own row
+  with `is_acquisition = FALSE`; sum only the acquisition rows for FOI or molFOB.
+- `relapse_fraction()` therefore reports **two** readings: `relapse_fraction` over acquisitions
+  (the quantity the published 0.55–0.85 band refers to) and `relapse_frac_episodes` over every
+  patent episode.
+- `rc_by_origin(unit =)` likewise: `"episode"` credits onward transmission to the recurrence,
+  `"acquisition"` walks it back to the infection that brought the clone in. The second is the unit
+  a surveillance Rc estimated from routine case counts refers to (Champagne et al. 2022).
+
+Worth noting that a *real* molFOB, measured by comparing genotypes between study visits, would
+often count a recrudescence as a new clone — the clone was undetectable at the previous visit. The
+gap between the two sums estimates that bias.
+
+**Subpatent clones and transmission.** Patency and infectiousness are separate properties. A
+suppressed clone is undetectable but still transmissible at `SUBPATENT_INFECTIVITY` (0.15 by
+default; 0.035–0.10 in White's IBM, 0.10–0.20 empirically from Koepfli et al. 2021, where
+microscopy-positives are 5–10× more infective than submicroscopic). Internally this required
+splitting one lineage counter into three — patent (`moi_active`, episodes), transmissible (the
+host's infectious state and the bite loop), and present-at-all (the `MAX_MOI` capacity check).
+With them fused, `SUBPATENT_INFECTIVITY` cannot do anything; see D25 item 7.
+
+**Inert at the shipped default.** `P_RECRUD_GIVEN_FAIL = 0`, and `BLOODCURE_COVERAGE = 0` besides,
+so a default run has no treatment and therefore no recrudescence. That matches the evidence:
+Taylor et al. (2019, n = 1441 recurrences) put recrudescence at 0.2–0.3% of recurrences after
+chloroquine or artesunate. The state is only material in a chloroquine-resistant setting.
 
 ---
 
@@ -575,16 +670,45 @@ derived and written to `params.tsv` for provenance.
 
 | parameter | default |
 |---|---|
-| `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 |
+| `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 — vector control and importation only; it does **not** gate treatment (D19) |
 | `SEASONAL_AMP` / `SEASONAL_PHASE` | 0 / 0 |
-| `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` | 1.0 / 1.0 |
-| `RADCURE_COVERAGE` / `P_RAD_SURVIVAL` | 0 / 0.05 |
-| `BLOODCURE_COVERAGE` / `P_BLOODCURE_SURVIVAL` | 0 / 0 |
-| `MDA_TICK` | 99999 |
+| `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD` | 1.0 / 1.0 / 0.5 — drawn once per episode |
 | `RESURGENCE_TRIGGER_TICK` + 4 boosts | 99999, all 1.0 |
 | `IMPORT_*` | off |
-| `RETAIN_FULL_HISTORY` | `T` — needed for IBD to already-cleared infections |
+| `RETAIN_FULL_HISTORY` | `T` — needed for IBD to already-cleared infections. Under `F` most historical genomes leave the tree, and `ibd_index()` will warn that ids it was asked about are absent |
 | `VERBOSE` | `F` |
+
+### Case management
+
+Treatment is decided where a case arises and applied to the **host** (D20); radical cure is
+nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOODCURE_COVERAGE > 0`.
+
+| parameter | default | note |
+|---|---|---|
+| `TREATMENT_START` / `TREATMENT_END` | 0 / 99999 | case management has its own window, separate from `INTERVENTION_*` (D19). It gates the **decision**, not delivery |
+| `TREATMENT_DELAY` | 7.0 d | geometric, mean 7, **floored at one tick**: a course can never land on the tick the case arises, so `0` means "next tick" (D24) |
+| `BLOODCURE_COVERAGE` | 0 | P(a detected case is treated). The whole treatment path is off at the default |
+| `P_BLOODCURE_SURVIVAL` | 0 | P(a given patent clone survives the course). Literature ≈ 0.10 |
+| `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
+| `P_RAD_SURVIVAL` | **0.29** | P(the patient's whole reservoir survives), ≈71% cure (White 2018 / malariasimulation). Per **person**, not per hypnozoite — the same number would mean 95% efficacy under the old per-hypnozoite reading (D20) |
+| `RADCURE_MODE` | `"person"` | `"hypnozoite"` restores per-hypnozoite thinning — the only mode that can partially clear a reservoir |
+| `MDA_TICK` | 99999 | one round, 100% coverage, through the same `applyTreatment()`; **not** gated on the treatment window |
+
+### Recurrence: the third state (§9a)
+
+| parameter | default | note |
+|---|---|---|
+| `P_RECRUD_GIVEN_FAIL` | **0.0** | P(a surviving clone is suppressed below patency rather than persisting). At 0 the third state is inert — which matches Taylor et al. 2019: recrudescence is 0.2–0.3% of recurrences after chloroquine or artesunate |
+| `MEAN_RECRUD_DELAY` | 10.5 d | reciprocal of Taylor's posterior median. Median gap 7 d, ~92% within day 28 (D26) |
+| `RECRUD_DELAY_DIST` | `"geometric"` | the discrete analogue of Taylor's fitted Exponential. `"poisson"` reproduces the original planning shape as a tight-window sensitivity arm; `"fixed"` is deterministic |
+| `SUBPATENT_INFECTIVITY` | 0.15 | infectiousness of a suppressed clone relative to a patent one. 0.035–0.10 White 2018 IBM, 0.10–0.20 empirically (Koepfli 2021). Neither 0 nor 1 is defensible |
+
+### Run metadata
+
+| parameter | default |
+|---|---|
+| `SIM_ID` | `"default"` — written into `params.tsv` for provenance |
+| `SIM_DAYS` | 365 |
 
 ---
 
@@ -606,6 +730,11 @@ Stated plainly, because several matter for interpretation.
 | 10 | **Detection not origin-dependent** | active vs passive surveillance indistinguishable |
 | 11 | **Homogeneous mixing** | no spatial structure, no household clustering, no heterogeneous biting |
 | 12 | **`NU_HYPNOZOITE_BATCH` is a placeholder** | shipped at 5; calibrate per setting against relapse rate / fraction |
+| 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
+| 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces, which is what makes `P_RECRUD_GIVEN_FAIL` exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
+| 15 | **A recrudescent episode renews its own clearance clock** | the minted genome gets a fresh `bloodstage_start_tick`, so a clone cycling through repeated suppression has no ceiling on total persistence |
+| 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
+| 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
 
 ---
 
@@ -852,17 +981,32 @@ One row per event. Columns:
 | `oocyst_id` | the meiosis this product came from |
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
 
-**Event vocabulary** (17 types; `event_types()` returns this as a data frame with an
-`ends_episode` flag):
+**Event vocabulary** — **25 types**. `event_types()` is the authority and returns them as a data
+frame with `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than
+reproduce the table here (it would go stale, and has), generate it:
+
+```r
+event_types()                                  # all 25
+subset(event_types(), is_onset)$event_type     # every way an episode can BEGIN
+subset(event_types(), ends_episode)$event_type # ...and every way one can END
+```
 
 | stage | event types |
 |---|---|
-| blood | `vh_inoculation`, `vh_inoculation_import`, `vh_inoculation_seed`, `hypnozoite_activation`, `human_clearance`*, `case_bloodstage_clear`*, `mda_bloodstage_clear`* |
-| liver | `hypnozoite_clearance`, `radcure_hypnozoite_clear`, `mda_hypnozoite_clear`, `mda_hypnozoite_survived` |
+| blood, onset | `vh_inoculation`, `vh_inoculation_import`, `vh_inoculation_seed`, `hypnozoite_activation`, `recrudescence` |
+| blood, ends an episode | `human_clearance`, `case_bloodstage_clear`, `mda_bloodstage_clear`, `bloodcure_subpatent` |
+| blood, other | `vh_inoculation_no_take`, `vh_inoculation_import_no_take`, `bloodcure_given`, `bloodcure_persist`, `mda_bloodcure_given` |
+| liver | `hypnozoite_clearance`, `radcure_given`, `radcure_failure`, `radcure_hypnozoite_clear`, `mda_radcure_given`, `mda_radcure_failure`, `mda_hypnozoite_clear` |
 | vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `hv_uptake_seed`, `mosq_death` |
 
-\* ends an episode (`ends_episode = TRUE`). A `*_no_take` suffix is logged when an inoculation
-produces neither a primary nor a batch.
+A `*_no_take` suffix is logged when an inoculation produces neither a primary nor a batch.
+Note `bloodcure_subpatent` **ends a patent episode** without ending the infection — the clone is
+suppressed, not cleared, and returns later as a `recrudescence` (§9a).
+
+> **Derive filters from `event_types()`; do not restate them.** Hard-coded event lists in this
+> project have gone stale twice — once dropping treated cases from episode spans, once dropping
+> imported and recrudescent onsets. That is why `is_onset` exists alongside `ends_episode`: both
+> sides of the episode vocabulary are now derivable, so adding an event type is one edit.
 
 **`lineage_id` does not identify a genome.** Two properties of the column catch people out,
 and both are deliberate:
@@ -889,7 +1033,8 @@ One row per entity per tick:
 |---|---|
 | `tick`, `entity_type` (`human`/`mosquito`), `entity_id` | |
 | `tag` | infection state |
-| `moi_active` | distinct active blood-stage lineages (**this is COI**) |
+| `moi_active` | distinct **patent** blood-stage lineages (**this is COI**). Excludes suppressed clones |
+| `moi_subpatent` | distinct lineages suppressed below patency — present, undetectable, not an episode (§9a). Always 0 unless `P_RECRUD_GIVEN_FAIL > 0` |
 | `moi_dormant` | distinct dormant genotypes in the reservoir |
 | `hyp_reservoir_size` | **total hypnozoite count** (sum of batch counts) — the quantity White's ν governs |
 | `lineage_ids` | the lineage ids present, `|`-separated and de-duplicated — see below |
@@ -898,6 +1043,12 @@ One row per entity per tick:
 
 Note `moi_dormant` (genotypes) and `hyp_reservoir_size` (individuals) are different quantities and
 are routinely confused.
+
+**Prevalence is patent prevalence.** `moi_active > 0` is the model's prevalence, and it excludes
+subpatent carriers by construction — which is the right reading for a microscopy-era definition,
+and the one every calibration number here was scored against. For total carriage use
+`moi_active > 0 | moi_subpatent > 0`. Note `host_state_prevalence()` currently ignores
+`moi_subpatent` entirely, so it reports a subpatent-only host as uninfected.
 
 **`lineage_ids` is `|`-separated and de-duplicated.** The column is written as
 `paste(unique(individuals.getValue("lineage_id")), sep="|")`, so three things follow and each
@@ -934,10 +1085,10 @@ are simply in `state.tsv` rather than at the moment of creation in `events.tsv`.
 | prevalence | fraction of hosts with `moi_active > 0` |
 | COI / MOI | `moi_active` among infected hosts |
 | reservoir | mean `hyp_reservoir_size` per host |
-| relapse fraction | `hypnozoite_activation` ÷ all new blood-stage episodes |
+| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence |
 | relapses per person-year | activations ÷ (hosts × years) |
-| molFOB | **all** new blood-stage infections per person-year, relapses included (Mueller/Koepfli) |
-| FOI | mosquito-borne infections only — *not* the same as molFOB |
+| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Mueller/Koepfli). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
+| FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
 | EIR | `ma × s × 365` (§4.1) |
 
 ### 16.4 Reproducibility
@@ -967,9 +1118,10 @@ summarise_run(run)                       # prevalence, COI, reservoir, relapse f
 cs  <- classify_cases(ev)                # episode-level truth labels
 idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))   # ground-truth IBD matrix
 
-plot_host_trajectory(run, host = pick_interesting_host(run))
-plot_ibd_pair(run, id1 = cs$pedigree_id[1], id2 = cs$pedigree_id[2])
-plot_relatedness_ladder(run)
+plot_diagnostics(run)                    # six-panel run-health dashboard
+plot_host_trajectory(st, ev, host_id = cs$human_id[1])
+plot_ibd_pair(run, cs$pedigree_id[1], cs$pedigree_id[2])
+plot_relatedness_ladder(ibd_truth_pairs(run))
 ```
 
 Expect tens of seconds for the simulation and considerably longer for `ibd_pairs()` as the number
@@ -1034,10 +1186,14 @@ than one segment.
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
 | **tetrad** | the four products of one meiosis: 2 reciprocal recombinants + 2 parental clones |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
-| **episode** | one blood-stage infection event (primary or relapse) |
-| **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence |
+| **episode** | one **patent** blood-stage infection event: primary, relapse or recrudescence. A clone suppressed below patency is not an episode while it is suppressed |
+| **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence. All three are represented (§9a) |
+| **recrudescence** | re-expansion to patency of a clone that survived a treatment course. Mints a new genome clonal to the holder it came from. A **case** but not an **acquisition**: no new parasite entered the host |
+| **subpatent** | present in the blood but below the detection threshold — not counted in `moi_active`, not detectable, not re-treated, but still transmissible at `SUBPATENT_INFECTIVITY` |
+| **holder** | the suppressed clone a recrudescence comes from; it is retired when its replacement is minted, which keeps the pair MOI-neutral |
+| **acquisition** | an episode in which a new parasite genome entered the host — imported, local reinfection, or relapse. **Not** recrudescence. Force-of-infection rates count acquisitions; case counts count episodes |
 | **homologous / heterologous relapse** | relapse genetically identical to / different from the acute infection |
-| **molFOB** | compound force of blood-stage infection, relapses **included** |
+| **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone) |
 | **FOI** | mosquito-borne force of infection only |
 | **iIBD** | mean IBD among co-present strains within one host |
 | **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred |
