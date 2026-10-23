@@ -132,6 +132,28 @@ initialize() {
 	defineDefault("BLOODCURE_COVERAGE", 0.0); // P(a detected case is treated)
 	defineDefault("RADCURE_COVERAGE", 0.0);   // P(radical cure | treated) - LIVER stage only
 	defineDefault("P_BLOODCURE_SURVIVAL", 0.0); // P(a blood-stage clone survives treatment)
+	// ---- THREE-STATE RECURRENCE: relapse / reinfection / RECRUDESCENCE (D25) ----
+	// A clone that SURVIVES a blood-stage course may be suppressed below patency rather than
+	// carrying on at full density. A subpatent clone is undetectable and is not an episode,
+	// but it is still present and still (partly) infectious; after a delay it re-expands to
+	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder.
+	// Natural clearance while subpatent is OFF, so P_RECRUD_GIVEN_FAIL is exactly
+	// P(recrudescence | the course failed) and maps onto a WHO therapeutic-efficacy failure
+	// rate. 0.0 = today's behaviour: a failed course leaves the clone fully patent.
+	defineDefault("P_RECRUD_GIVEN_FAIL", 0.0);
+	// Mean days suppressed before re-expansion. Geometric, i.e. the discrete analogue of the
+	// Exponential that Taylor et al. (2019, RecurrentVivax) fit -- they put the mean at ~10 d;
+	// 21 d here is the project's recorded default and sits inside a 28-day follow-up window.
+	// One of the collaborator questions.
+	defineDefault("MEAN_RECRUD_DELAY", 21.0);
+	// Detection of a recrudescent episode. Ross et al. (2025) put recurrence detectability at
+	// 0.13-0.49 of a primary, so this should usually be set well below P_DETECT_PRIMARY.
+	defineDefault("P_DETECT_RECRUD", 0.5);
+	// Infectiousness of a SUBPATENT clone relative to a patent one. 0.035-0.10 in White's IBM,
+	// 0.0062-0.068 in malariasimulation, 0.10-0.20 empirically (Koepfli 2021: microscopy
+	// positives are 5-10x more infective than submicroscopic). NOT 0: submicroscopic carriage
+	// is a real transmission reservoir.
+	defineDefault("SUBPATENT_INFECTIVITY", 0.15);
 	// Days from blood-stage emergence to receiving drugs: symptom onset + care seeking +
 	// diagnosis. Drawn per course, geometric with this mean (White 2014 uses 7). 0 = same tick.
 	// Treatment is NOT instantaneous: a treated case is infectious until its drugs arrive.
@@ -343,6 +365,12 @@ initialize() {
 	defineGlobal("PENDING_BATCH_PED",  integer(0));
 	defineGlobal("PENDING_BATCH_N",    integer(0));
 	defineGlobal("PENDING_BATCH_INOC", integer(0));
+	// Recrudescence: pedigreeIDs of subpatent holders whose replacement genome was minted in
+	// THIS tick's reproduction(). killIndividuals() is not legal there, so the retirement is
+	// deferred to the top of early(), which runs in the same tick - no lag, and no purge is
+	// needed because the list never outlives the tick that filled it. Stores IDs, not
+	// Individual references: touching a killed reference is a hard error.
+	defineGlobal("RECRUD_RETIRE", integer(0));
 	// liveness: has a parasite existed at any point? See the guard at the end of early().
 	// LIVENESS_TICK is late enough for founder seeding (tick 1-2) and a first-tick import
 	// pulse to have happened, early enough to fail a mis-specified sweep cell quickly.
@@ -484,6 +512,7 @@ reproduction()
 					new_active.setValue("brood_ready_tick",       NULL);
 					new_active.setValue("is_imported",            hyp.getValue("is_imported"));  // carry the imported origin of the source hypnozoite (imported relapse is a distinct truth category)
 					new_active.setValue("is_dormant",             F);
+					new_active.setValue("is_subpatent", F);
 					new_active.setValue("bloodstage_start_tick",  sim.cycle);
 					new_active.setValue("gametocyte_ready_tick",  sim.cycle + GAMETOCYTE_DELAY);
 					new_active.setValue("latency_stage",          0);
@@ -595,6 +624,7 @@ reproduction()
 			new_batch.setValue("brood_ready_tick", NULL);
 			new_batch.setValue("is_imported", T);
 			new_batch.setValue("is_dormant", T);
+			new_batch.setValue("is_subpatent", F);
 			new_batch.setValue("bloodstage_start_tick", NULL);
 			new_batch.setValue("gametocyte_ready_tick", NULL);
 			new_batch.setValue("latency_stage", K_LATENCY);
@@ -646,7 +676,14 @@ reproduction()
 		h = sample(humans, 1);
 		
 		// what MOI does that human have? 
-		human_MOI = getActiveLineageCount(h);
+		// INFECTIOUSNESS, not patency. The "tagged infected but MOI=0" guard below reads as a
+		// defensive check against an impossible state, but a host carrying only subpatent clones
+		// is reachable and legitimate once subpatency exists -- and the patent count there
+		// silently blocks exactly the transmission SUBPATENT_INFECTIVITY is supposed to permit.
+		// Measured: uptakes from a host with NO patent clone go 0 -> 68 -> 233 -> 918 across
+		// SUBPATENT_INFECTIVITY 0/0.15/0.5/1.0 with this as the transmissible count, and stay
+		// flat at 0 with the patent count (D25 item 7).
+		human_MOI = getTransmissibleLineageCount(h);
 		
 		// DEBUGGING: to check who bit whom (only prints the 'bite' event not any transmission)
 		// vcat("👤 human " + h.id + " was bitten by 🦟 mosquito " + m.id + " and had MOI of " + human_MOI);
@@ -747,7 +784,7 @@ reproduction()
 				// ------------------------------------------
 				// 👤 HUMAN 👤
 				// ------------------------------------------
-				if (human_MOI < MAX_MOI)
+				if (getBloodStageLineageCount(h) < MAX_MOI)   // capacity: patent AND subpatent
 				{
 					if (size(transmissible_mosq_broods) == 0)
 					{
@@ -802,7 +839,64 @@ reproduction()
 				", m.count=" + m.individualCount + ", h.count=" + h.individualCount + ")");
 		}
 	}
-	
+
+	// ----------------------------
+	// RECRUDESCENCE: a suppressed clone re-expands to patency
+	// ----------------------------
+	// Mints a NEW genome clonal to the holder, exactly as a relapse does (D25): a fresh
+	// pedigree_id keeps one episode to one id, gives the recurrence its own ARG node dated at
+	// the recurrence rather than at the original inoculation, and keeps "IBD to the prior
+	// episode == 1" a real measurement instead of a self-pair. The holder is then queued for
+	// retirement in early(), which makes the pair exactly MOI-neutral - the minted genome
+	// inherits lineage_id, and getActiveLineageCount() dedupes on it.
+	// ----------------------------
+	for (h in humans)
+	{
+		if (h.individualCount == 0)
+			next;
+		holders = h.individuals[h.individuals.getValue("is_dormant") == F &
+		                        h.individuals.getValue("is_subpatent") == T];
+		for (hold in holders)
+		{
+			rt = hold.getValue("recrud_tick");
+			if (isNULL(rt))
+				next;
+			if (rt > sim.cycle)
+				next;
+			new_active = h.addCloned(hold);
+			new_active.setValue("brood_birth_tick",      hold.getValue("brood_birth_tick"));
+			new_active.setValue("lineage_id",            hold.getValue("lineage_id"));
+			new_active.setValue("oocyst_id",             hold.getValue("oocyst_id"));
+			new_active.setValue("brood_id",              hold.getValue("brood_id"));
+			new_active.setValue("brood_founder",         F);
+			new_active.setValue("inoculation_tick",      hold.getValue("inoculation_tick"));
+			new_active.setValue("inoculation_id",        hold.getValue("inoculation_id"));
+			new_active.setValue("activation_tick",       sim.cycle);
+			new_active.setValue("brood_ready_tick",      NULL);
+			new_active.setValue("is_imported",           hold.getValue("is_imported"));
+			new_active.setValue("is_dormant",            F);
+			new_active.setValue("is_subpatent",          F);
+			new_active.setValue("bloodstage_start_tick", sim.cycle);
+			new_active.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
+			new_active.setValue("latency_stage",         0);
+			new_active.setValue("batch_count",           NULL);
+			new_active.color = "red";
+			h.tag = INFECTED;
+			rec_detected = asInteger(runif(1) < P_DETECT_RECRUD);
+			// inoculation_id and oocyst_id are logged as -1, as a relapse does: a
+			// recrudescence is not a V-H event, and inheriting them would put it inside
+			// another case's co-transmission group. The link back to the holder (and so to
+			// the originating bite) is carried exactly by parent1_pedigree_id.
+			logEvent("recrudescence", -1, -1, h.id,
+				asString(new_active.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
+				0, asInteger(hold.getValue("is_imported")), new_active.pedigreeID,
+				hold.pedigreeID, -1, 1, -1, rec_detected);
+			defineGlobal("RECRUD_RETIRE", c(RECRUD_RETIRE, hold.pedigreeID));
+			if (rec_detected == 1)
+				decideTreatment(h);
+		}
+	}
+
 	self.active = 0;
 }
 
@@ -826,6 +920,7 @@ reproduction()
 		clone.setValue("brood_id", -1);
 		clone.setValue("brood_founder", T);
 		clone.setValue("is_dormant", F);
+		clone.setValue("is_subpatent", F);
 		clone.setValue("is_imported", F);
 		clone.setValue("activation_tick", NULL);
 		clone.setValue("latency_stage", 0);
@@ -856,7 +951,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	for (_nm in _pn)
@@ -906,6 +1001,7 @@ reproduction()
 			lin.setValue("brood_id", -1);    // founders belong to no co-hatching brood
 			lin.setValue("brood_founder", T);
 			lin.setValue("is_dormant", F);
+			lin.setValue("is_subpatent", F);
 			lin.setValue("is_imported", F);
 			lin.setValue("activation_tick", NULL);
 			lin.setValue("latency_stage", 0);
@@ -979,7 +1075,7 @@ reproduction()
 	writeFile(OUTDIR + "/state.tsv",
 		paste(c(
 		"tick", "entity_type", "entity_id",
-		"tag", "moi_active", "moi_dormant", "hyp_reservoir_size", "lineage_ids",
+		"tag", "moi_active", "moi_subpatent", "moi_dormant", "hyp_reservoir_size", "lineage_ids",
 		"n_transmissible", "mosq_age_days"
 		), sep="\t"),
 		append=F);
@@ -1071,6 +1167,29 @@ early() {
 	}
 	
 	// ----------------------------
+	// RECRUDESCENCE RETIREMENT
+	// ----------------------------
+	// Drained FIRST, before case management and before natural clearance, so a holder whose
+	// replacement was minted moments ago in reproduction() cannot also draw a
+	// P_BLOODCURE_SURVIVAL roll or a P_BLOOD_CLEAR roll and log a phantom event.
+	// ----------------------------
+	if (size(RECRUD_RETIRE) > 0)
+	{
+		for (h in humans)
+		{
+			if (h.individualCount == 0)
+				next;
+			gone = h.individuals[match(h.individuals.pedigreeID, RECRUD_RETIRE) >= 0];
+			if (size(gone) > 0)
+			{
+				sim.treeSeqRememberIndividuals(gone, permanent=RETAIN_FULL_HISTORY);
+				sim.killIndividuals(gone);
+			}
+		}
+		defineGlobal("RECRUD_RETIRE", integer(0));
+	}
+
+	// ----------------------------
 	// CASE MANAGEMENT: apply the courses that are due
 	// ----------------------------
 	// Deliberately AFTER the hypnozoite cleanup and BEFORE natural clearance. Applying here,
@@ -1104,6 +1223,12 @@ early() {
 		{
 			if (lin.getValue("is_dormant") == T)
 				next;  // skip if dormant, hypnozoite clearance is separate
+			// Natural clearance while subpatent is OFF by design (D25): every suppressed
+			// clone eventually recrudesces, which is what makes P_RECRUD_GIVEN_FAIL exactly
+			// P(recrudescence | the course failed) and directly comparable to a WHO
+			// therapeutic-efficacy failure rate.
+			if (lin.getValue("is_subpatent") == T)
+				next;
 
 			bloodstage_start = lin.getValue("bloodstage_start_tick");
 
@@ -1191,7 +1316,7 @@ early() {
 	// Update host and vector states after clearance
 	// -----------------------------
 	for (h in humans)
-		h.tag = (getActiveLineageCount(h) > 0) ? INFECTED else SUSCEPTIBLE;
+		h.tag = (getTransmissibleLineageCount(h) > 0) ? INFECTED else SUSCEPTIBLE;
 	
 	for (m in mosq)
 		m.tag = (m.individualCount > 0) ? INFECTED else SUSCEPTIBLE;
@@ -1464,8 +1589,9 @@ function (void) writeStateSnapshot(void)
 			"human",
 			asString(h.id),
 			asString(h.tag),
-			asString(getActiveLineageCount(h)), // active blood-stage
-			asString(getDormantLineageCount(h)),   // hypnozoite reservoir GENOTYPE count
+			asString(getActiveLineageCount(h)),     // PATENT blood-stage
+			asString(getSubpatentLineageCount(h)),  // suppressed: present but undetectable
+			asString(getDormantLineageCount(h)),    // hypnozoite reservoir GENOTYPE count
 			asString(getHypnozoiteReservoirSize(h)), // hypnozoite reservoir TOTAL SIZE
 			lineage_ids_str,
 			"NA",   // n_transmissible — NA for humans
@@ -1490,6 +1616,7 @@ function (void) writeStateSnapshot(void)
 			asString(m.id),
 			asString(m.tag),
 			asString(getActiveLineageCount(m)),
+			"0",   // moi_subpatent - mosquitoes have no blood stage
 			asString(getDormantLineageCount(m)),
 			asString(getHypnozoiteReservoirSize(m)), // always 0 - mosquitoes never carry dormant broods
 			lineage_ids_str,
@@ -1512,10 +1639,54 @@ function (integer$) getActiveLineageCount(o<Subpopulation>$ s)
 {
 	if (s.individualCount == 0)
 		return 0;
-	active = s.individuals[s.individuals.getValue("is_dormant") == F];
+	// PATENT blood-stage only. A subpatent clone is present but undetectable, so it is not an
+	// episode and does not belong in moi_active. See getTransmissibleLineageCount() for the
+	// infectiousness question and getBloodStageLineageCount() for the capacity question --
+	// this function used to answer all three, and subpatency separates them (D25 item 7).
+	active = s.individuals[s.individuals.getValue("is_dormant") == F &
+	                       s.individuals.getValue("is_subpatent") == F];
 	if (size(active) == 0)
 		return 0;
 	return size(unique(active.getValue("lineage_id")));
+}
+
+// INFECTIOUSNESS: can this host infect a mosquito at all? Includes subpatent clones whenever
+// SUBPATENT_INFECTIVITY > 0; the per-clone weighting is applied in gametocytePool().
+function (integer$) getTransmissibleLineageCount(o<Subpopulation>$ s)
+{
+	if (s.individualCount == 0)
+		return 0;
+	act = s.individuals[s.individuals.getValue("is_dormant") == F];
+	if (SUBPATENT_INFECTIVITY <= 0.0)
+		act = act[act.getValue("is_subpatent") == F];
+	if (size(act) == 0)
+		return 0;
+	return size(unique(act.getValue("lineage_id")));
+}
+
+// CAPACITY: every blood-stage genome present, patent or not. MAX_MOI is about parasite
+// burden, not about what a microscope or a mosquito can see.
+function (integer$) getBloodStageLineageCount(o<Subpopulation>$ s)
+{
+	if (s.individualCount == 0)
+		return 0;
+	act = s.individuals[s.individuals.getValue("is_dormant") == F];
+	if (size(act) == 0)
+		return 0;
+	return size(unique(act.getValue("lineage_id")));
+}
+
+// Suppressed but present: reported as moi_subpatent, and the compartment recrudescence
+// comes out of.
+function (integer$) getSubpatentLineageCount(o<Subpopulation>$ s)
+{
+	if (s.individualCount == 0)
+		return 0;
+	sp = s.individuals[s.individuals.getValue("is_dormant") == F &
+	                   s.individuals.getValue("is_subpatent") == T];
+	if (size(sp) == 0)
+		return 0;
+	return size(unique(sp.getValue("lineage_id")));
 }
 
 function (integer$) getDormantLineageCount(o<Subpopulation>$ s)
@@ -1696,7 +1867,13 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 	logHostEvent((src == "mda") ? "mda_bloodcure_given" else "bloodcure_given", h);
 	if (h.individualCount > 0)
 	{
-		act = h.individuals[h.individuals.getValue("is_dormant") == F];
+		// Already-suppressed clones are left alone: a holder is below patency, so a course
+		// given for a different case does not re-roll it. Without this a holder is re-drawn
+		// by every later course, emitting a second episode-ending event for a pedigree_id
+		// that already has one and tripping the "no blood-stage infection clears twice"
+		// audit (measured 8 of 193 suppressions in prototype).
+		act = h.individuals[h.individuals.getValue("is_dormant") == F &
+		                    h.individuals.getValue("is_subpatent") == F];
 		cleared = c();
 		for (lin in act)
 		{
@@ -1718,7 +1895,28 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 			if (runif(1) >= P_BLOODCURE_SURVIVAL)
 				cleared = c(cleared, lin);
 			else
-				logLineageEvent("bloodcure_persist", h, lin);  // survived; carries on untreated
+			{
+				// Draw ONLY when the feature is on. Eidos does not short-circuit, so a bare
+				// `runif(1) < P_RECRUD_GIVEN_FAIL` consumes a draw at 0 and shifts the whole
+				// RNG stream - every existing run would change despite the feature being off.
+				suppressed = F;
+				if (P_RECRUD_GIVEN_FAIL > 0)
+					if (runif(1) < P_RECRUD_GIVEN_FAIL)
+						suppressed = T;
+				if (suppressed)
+				{
+					// Suppressed below patency. Scheduled here rather than redrawn daily, the
+					// way TREATMENT_DELAY is: geometric with mean MEAN_RECRUD_DELAY, floored
+					// at one tick so a clone cannot re-expand on the tick it was suppressed
+					// (addCloned also refuses a parent minted in the same tick).
+					lin.setValue("is_subpatent", T);
+					lin.setValue("recrud_tick", sim.cycle +
+						max(1, rgeom(1, 1.0 / (1.0 + MEAN_RECRUD_DELAY))[0]));
+					logLineageEvent("bloodcure_subpatent", h, lin);
+				}
+				else
+					logLineageEvent("bloodcure_persist", h, lin);  // survived at full density
+			}
 		}
 		if (size(cleared) > 0)
 		{
@@ -1731,7 +1929,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 	}
 	if (give_liver)
 		applyRadicalCure(h, src);
-	h.tag = (getActiveLineageCount(h) > 0) ? INFECTED else SUSCEPTIBLE;
+	h.tag = (getTransmissibleLineageCount(h) > 0) ? INFECTED else SUSCEPTIBLE;
 }
 
 // mean hypnozoite batch size per infectious bite, including the R1 resurgence boost.
@@ -1873,6 +2071,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 		if (as_batch)
 		{
 			g.setValue("is_dormant", T);
+			g.setValue("is_subpatent", F);
 			g.setValue("bloodstage_start_tick", NULL);
 			g.setValue("gametocyte_ready_tick", NULL);
 			g.setValue("latency_stage", K_LATENCY);
@@ -1882,6 +2081,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 		else
 		{
 			g.setValue("is_dormant", F);
+			g.setValue("is_subpatent", F);
 			g.setValue("bloodstage_start_tick", sim.cycle);
 			g.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
 			g.setValue("latency_stage", 0);
@@ -1991,6 +2191,7 @@ function (integer) establishInfectionOutcome(
 		new_active.setValue("brood_ready_tick", NULL);
 		new_active.setValue("is_imported", asLogical(is_imported));
 		new_active.setValue("is_dormant", F);
+		new_active.setValue("is_subpatent", F);
 		new_active.setValue("bloodstage_start_tick", sim.cycle);
 		new_active.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
 		new_active.setValue("latency_stage", 0);
@@ -2035,6 +2236,7 @@ function (integer) establishInfectionOutcome(
 		new_batch.setValue("brood_ready_tick", NULL);
 		new_batch.setValue("is_imported", asLogical(is_imported));
 		new_batch.setValue("is_dormant", T);
+		new_batch.setValue("is_subpatent", F);
 		new_batch.setValue("bloodstage_start_tick", NULL);
 		new_batch.setValue("gametocyte_ready_tick", NULL);
 		new_batch.setValue("latency_stage", K_LATENCY);
@@ -2073,6 +2275,7 @@ function (void) tagMosqProduct(o<Individual>$ prod, i$ lineage, i$ oocyst, i$ br
 	prod.setValue("brood_founder", T);
 	prod.setValue("brood_ready_tick", sim.cycle + EIP_DAYS);
 	prod.setValue("is_dormant", F);
+	prod.setValue("is_subpatent", F);
 	prod.setValue("is_imported", F);
 	prod.setValue("bloodstage_start_tick", NULL); // NA in mosquito
 	prod.setValue("gametocyte_ready_tick", NULL); // NA in mosquito
@@ -2229,7 +2432,7 @@ function (integer) inoculateMosquitoToHuman(
 	// and treated" for one of its genotypes and not the other.
 	if (det == 1 & size(new_lineage_ids) > 0)
 		decideTreatment(h);
-	if (getActiveLineageCount(h) > 0)
+	if (getTransmissibleLineageCount(h) > 0)
 		h.tag = INFECTED;
 	
 	return new_lineage_ids;
@@ -2246,6 +2449,28 @@ function (o<Individual>) gametocytePool(o<Subpopulation>$ h)
 	if (h.individualCount == 0)
 		return h.individuals[integer(0)];
 	active = h.individuals[h.individuals.getValue("is_dormant") == F];
+	if (size(active) == 0)
+		return active;
+	// Subpatency gate FIRST, above the identity fast path: at the shipped defaults
+	// (GAMETOCYTE_DELAY 0, P_GAMETOCYTE 1) that path returns early, so a gate placed inside
+	// the loop below would be dead code in every default run.
+	if (SUBPATENT_INFECTIVITY <= 0.0)
+		active = active[active.getValue("is_subpatent") == F];
+	else if (SUBPATENT_INFECTIVITY < 1.0)
+	{
+		keep_sp = logical(size(active));
+		for (i in seqAlong(active))
+		{
+			// branch rather than `|`: Eidos evaluates both sides, so an or-expression would
+			// burn a draw on every PATENT clone and make the stream depend on how many of
+			// them there are.
+			if (active[i].getValue("is_subpatent") == F)
+				keep_sp[i] = T;
+			else
+				keep_sp[i] = (runif(1) < SUBPATENT_INFECTIVITY);
+		}
+		active = active[keep_sp];
+	}
 	if (size(active) == 0)
 		return active;
 	if ((GAMETOCYTE_DELAY == 0) & (P_GAMETOCYTE >= 1.0))

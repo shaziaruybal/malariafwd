@@ -93,24 +93,25 @@ plot_host_trajectory <- function(state, events, host_id,
   layout <- match.arg(layout)
   st <- as.data.table(state)[entity_type == "human" & as.integer(entity_id) == host_id]
   if (layout == "lineages") return(.host_lineage_plot(st, events, host_id, palette))
-  ## the SAME onset vocabulary as .host_lineage_plot(): omitting the import and founder
-  ## routes left every imported episode unmarked on the rug while the MOI line still counted
-  ## it, so the panel under-marked without looking wrong
-  ev <- as.data.table(events)[human_id == host_id &
-        event_type %in% c("vh_inoculation", "vh_inoculation_import",
-                          "vh_inoculation_seed", "hypnozoite_activation")]
+  ## DERIVED from the dictionary, not restated. A hard-coded list here has gone stale twice:
+  ## once dropping imported onsets, and it would have dropped recrudescent ones too.
+  ev <- as.data.table(events)[human_id == host_id & event_type %in% .onset_events()]
   ## is_dormant == 0 across ALL routes, not just vh_inoculation: a dormant row is a hypnozoite
   ## being seeded, which is not an episode onset, and keying the exclusion to one event type
   ## let dormant IMPORT inoculations through as onsets (5 spurious marks on one host).
   ev <- ev[is_dormant == 0]
-  ev[, kind := fifelse(event_type == "hypnozoite_activation", "relapse", "new infection")]
+  ev[, kind := data.table::fcase(event_type == "hypnozoite_activation", "relapse",
+                                 event_type == "recrudescence", "recrudescence",
+                                 default = "new infection")]
   ggplot2::ggplot() +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, hyp_reservoir_size, colour = "hypnozoite reservoir"), linewidth = .7) +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, moi_active, colour = "active COI"), linewidth = .7) +
     ggplot2::geom_rug(data = ev, ggplot2::aes(x = tick, colour = kind), sides = "b",
                       length = grid::unit(.05, "npc")) +
-    ggplot2::scale_colour_manual(values = c("active COI" = "goldenrod3", "hypnozoite reservoir" = "turquoise4",
-                                            "relapse" = "firebrick", "new infection" = "grey40")) +
+    ggplot2::scale_colour_manual(values = c("active COI" = "goldenrod3",
+                                            "hypnozoite reservoir" = "turquoise4",
+                                            "relapse" = "firebrick", "new infection" = "grey40",
+                                            "recrudescence" = "#b4472e")) +
     ggplot2::labs(title = paste0("Within-host trajectory - host ", host_id),
                   x = "day", y = "count", colour = NULL)
 }
@@ -145,8 +146,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   prev <- keep(h[, .(y = 100 * mean(moi_active > 0)), by = w])
   coi  <- keep(h[moi_active > 0, .(y = mean(moi_active)), by = w])
   res  <- keep(h[, .(y = mean(hyp_reservoir_size)), by = w])
-  olv  <- c("imported", "local reinfection", "relapse")
-  ocol <- c("imported" = "#2a9d8f", "local reinfection" = "#737373", "relapse" = "#c8971f")
+  olv  <- .ORIGINS
+  ocol <- c("imported" = "#2a9d8f", "local reinfection" = "#737373",
+            "relapse" = "#c8971f", "recrudescence" = "#b4472e")
   cs   <- classify_cases(ev); cs[, w := (tick %/% bin) * bin]
   ## Zero-fill the (window x origin) grid before stacking. geom_area joins consecutive ROWS,
   ## so a window with no cases of one origin is not drawn as zero - it is interpolated
@@ -162,8 +164,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   lin  <- keep(cs[, .(y = uniqueN(lineage_id)), by = w])
   m    <- summarise_run(run)
   py   <- max((endt - burn) / 365, .001)
-  foi  <- nrow(cs[origin != "relapse" & tick >= burn]) / nh / py
-  mol  <- nrow(cs[tick >= burn]) / nh / py
+  ## a positive list, not a negation: `origin != "relapse"` silently admitted recrudescence,
+  ## which is a new episode but not a new clone and so belongs in neither FOI nor molFOB.
+  foi  <- nrow(cs[origin %in% c("imported", "local reinfection") & tick >= burn]) / nh / py
+  mol  <- nrow(cs[origin %in% .ACQUISITIONS & tick >= burn]) / nh / py
 
   gg <- ggplot2::ggplot; ae <- ggplot2::aes
   vbl <- ggplot2::geom_vline(xintercept = burn, linetype = 2, colour = "grey65", linewidth = .3)
@@ -206,11 +210,11 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 .host_lineage_plot <- function(st, events, host_id, palette) {
   ev <- as.data.table(events)
   last <- max(ev$tick)
-  onset <- ev[human_id == host_id & is_dormant == 0 &
-              event_type %in% c("vh_inoculation", "vh_inoculation_import",
-                                "vh_inoculation_seed", "hypnozoite_activation"),
+  onset <- ev[human_id == host_id & is_dormant == 0 & event_type %in% .onset_events(),
               .(pedigree_id, lineage_id = as.character(lineage_id), start = tick,
-                kind = fifelse(event_type == "hypnozoite_activation", "relapse", "new infection"))]
+                kind = data.table::fcase(event_type == "hypnozoite_activation", "relapse",
+                                         event_type == "recrudescence", "recrudescence",
+                                         default = "new infection"))]
   if (!nrow(onset)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
   clears <- event_types()$event_type[event_types()$ends_episode]
   ends <- ev[event_type %in% clears, .(pedigree_id, end = tick)]
@@ -240,7 +244,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::geom_point(data = seg, ggplot2::aes(start, -0.06 * ymax, shape = kind),
                         size = 1.7, colour = "grey20") +
     ggplot2::scale_fill_manual(values = pal, guide = "none") +
-    ggplot2::scale_shape_manual(values = c("new infection" = 24, "relapse" = 21), name = NULL) +
+    ## every `kind` must have a shape: ggplot2 maps an unlisted level to shape = NA and draws
+    ## nothing, with no warning, so the marks simply disappear.
+    ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL,
+                                limits = names(.KIND_SHAPE), drop = FALSE) +
     ggplot2::scale_y_continuous(
       "blood-stage lineages",
       sec.axis = ggplot2::sec_axis(~ . / sf, name = "hypnozoite reservoir")) +
@@ -271,13 +278,17 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 plot_force_of_infection <- function(foi, smooth = 0.4) {
   .need_ggplot()
   d <- as.data.table(foi)
-  ## PREFIX match, not equality: force_of_infection(split_imported = "auto") relabels
-  ## relapses as "relapse (local)" / "relapse (imported)", which an exact setdiff misses -
-  ## FOI then equals molFOB and the gap this plot exists to show renders as zero.
-  mosq <- grep("^relapse", unique(d$origin), value = TRUE, invert = TRUE)
+  ## POSITIVE lists, not negations. Two things have to be excluded for different reasons and
+  ## a negation gets one of them wrong: force_of_infection(split_imported = "auto") relabels
+  ## relapses as "relapse (local)" / "relapse (imported)" (so an exact setdiff removes
+  ## nothing and FOI equals molFOB), while recrudescence is a new episode but not a new clone
+  ## and belongs in neither series. `is_acquisition` is computed by force_of_infection()
+  ## after any relabelling, so it survives both.
+  acq  <- d[is_acquisition == TRUE]
+  mosq <- grep("^relapse", unique(acq$origin), value = TRUE, invert = TRUE)
   w <- rbind(
-    d[, .(rate = sum(rate), series = "molFOB (all blood-stage episodes)"), by = win],
-    d[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])
+    acq[, .(rate = sum(rate), series = "molFOB (all clone acquisitions)"), by = win],
+    acq[origin %in% mosq, .(rate = sum(rate), series = "FOI (mosquito-borne only)"), by = win])
   ## carry zeros so a series does not break where a window has no episodes of one kind
   w <- merge(data.table::CJ(win = unique(d$win), series = unique(w$series)), w,
              by = c("win", "series"), all.x = TRUE)[is.na(rate), rate := 0]

@@ -69,3 +69,95 @@ test_that("a coverage against a closed treatment window is refused", {
   ## the defaults are "always on", so a coverage on its own is fine
   expect_no_error(vivax_params(BLOODCURE_COVERAGE = 1))
 })
+
+test_that("three-state recurrence: suppression, recrudescence, and a clonal mint", {
+  skip_if_no_slim()
+  base <- list(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,
+               P_DETECT_PRIMARY = 0.9, P_DETECT_RELAPSE = 0.6)
+  out <- file.path(tempdir(), "mfw-recrud"); unlink(out, recursive = TRUE)
+
+  ## OFF is a strict no-op: no suppression, no recrudescence, no subpatent compartment
+  off <- run_sim(do.call(vivax_params, c(base, list(BLOODCURE_COVERAGE = 1,
+                 P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 0))),
+                 seed = 11L, outdir = file.path(out, "off"))
+  eo <- data.table::as.data.table(load_events(off))
+  so <- data.table::as.data.table(load_state(off))
+  expect_equal(nrow(eo[event_type == "recrudescence"]), 0L)
+  expect_equal(nrow(eo[event_type == "bloodcure_subpatent"]), 0L)
+  expect_equal(max(so$moi_subpatent), 0L)
+  expect_gt(nrow(eo[event_type == "bloodcure_persist"]), 0)   # failures still happen
+
+  ## ON: every failure suppresses, and suppressed clones re-expand
+  on <- run_sim(do.call(vivax_params, c(base, list(BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1,
+                P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1))),
+                seed = 11L, outdir = file.path(out, "on"))
+  ev <- data.table::as.data.table(load_events(on))
+  st <- data.table::as.data.table(load_state(on))
+  sub <- ev[event_type == "bloodcure_subpatent"]
+  rec <- ev[event_type == "recrudescence"]
+  expect_gt(nrow(sub), 0); expect_gt(nrow(rec), 0)
+  expect_equal(nrow(ev[event_type == "bloodcure_persist"]), 0L)  # all failures suppress
+  expect_gt(max(st$moi_subpatent), 0L)
+
+  ## D25: a recrudescence MINTS a new genome whose parent is the holder
+  expect_true(all(rec$parent1_pedigree_id %in% sub$pedigree_id))
+  expect_true(all(rec$pedigree_id != rec$parent1_pedigree_id))   # a NEW id, not the holder's
+  ## a recrudescent clone is patent again, so a later course can fail on it and suppress it
+  ## a second time - chains are expected. Any such suppression must postdate its own mint.
+  cyc <- merge(rec[, .(pedigree_id, t_rec = tick)],
+               sub[, .(pedigree_id, t_sub = tick)], by = "pedigree_id")
+  if (nrow(cyc)) expect_true(all(cyc$t_sub > cyc$t_rec))
+  expect_equal(nrow(rec), data.table::uniqueN(rec$pedigree_id))  # one episode, one id
+  ## -1 for both, as a relapse does: not a V-H event, and inheriting them would place the
+  ## recurrence inside another case's co-transmission group
+  expect_true(all(rec$oocyst_id == -1)); expect_true(all(rec$inoculation_id == -1))
+  ## it re-expands strictly after it was suppressed
+  gap <- merge(rec[, .(holder = parent1_pedigree_id, t_rec = tick)],
+               sub[, .(holder = pedigree_id, t_sub = tick)], by = "holder")
+  expect_true(all(gap$t_rec > gap$t_sub))
+
+  ## it is a CASE, with its own origin
+  cs <- data.table::as.data.table(classify_cases(ev))
+  expect_true("recrudescence" %in% cs$origin)
+  expect_equal(nrow(cs[origin == "recrudescence"]), nrow(rec))
+
+  ## ...but NOT an acquisition: it must not enter a force-of-infection rate
+  fo <- data.table::as.data.table(force_of_infection(on))
+  expect_true("is_acquisition" %in% names(fo))
+  expect_false(any(fo[origin == "recrudescence"]$is_acquisition))
+  rf <- relapse_fraction(ev)
+  expect_gt(rf$relapse_fraction, rf$relapse_frac_episodes)   # bigger denominator, smaller value
+
+  ## episode conservation: both sides of the vocabulary are derived, so nothing is orphaned
+  onsets <- ev[event_type %in% .onset_events() & is_dormant == 0, pedigree_id]
+  clears <- ev[event_type %in% .bloodstage_clear_events(), pedigree_id]
+  expect_true(all(clears %in% onsets))
+  expect_equal(data.table::uniqueN(clears), length(clears))   # nothing clears twice
+})
+
+test_that("a recrudescence is clonal to its holder and MOI-neutral", {
+  skip_if_no_slim()
+  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  out <- file.path(tempdir(), "mfw-recrud-ibd"); unlink(out, recursive = TRUE)
+  run <- run_sim(vivax_params(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L,
+                              BITING_RATE = 0.14, BLOODCURE_COVERAGE = 1,
+                              P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1),
+                 seed = 11L, outdir = out)
+  ev <- data.table::as.data.table(load_events(run))
+  rec <- ev[event_type == "recrudescence"][1:min(.N, 12)]
+  skip_if(nrow(rec) < 2, "too few recrudescences in this run")
+
+  ## the payoff of minting: "IBD 1 to the prior episode" is a real measurement, not a
+  ## self-pair that ibd_index() hard-codes to 1
+  idx <- ibd_index(ibd_pairs(run, ids = unique(c(rec$pedigree_id, rec$parent1_pedigree_id))))
+  expect_true(all(idx$getibd(rec$pedigree_id, rec$parent1_pedigree_id) > 0.999))
+  tm <- data.table::as.data.table(arg_tmrca(run, rec$pedigree_id, rec$parent1_pedigree_id))
+  expect_true(all(tm$coalesced > 0.99, na.rm = TRUE))
+  expect_true(all(abs(tm$tmrca) < 1e-9, na.rm = TRUE))        # depth 0: parent -> child
+
+  ## the mint inherits lineage_id, so retire-holder + mint is exactly MOI-neutral
+  hold_lin <- ev[event_type == "bloodcure_subpatent", .(pedigree_id, lineage_id)]
+  m <- merge(rec[, .(pedigree_id, lineage_id, holder = parent1_pedigree_id)],
+             hold_lin, by.x = "holder", by.y = "pedigree_id", suffixes = c("", "_holder"))
+  expect_equal(as.character(m$lineage_id), as.character(m$lineage_id_holder))
+})

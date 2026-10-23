@@ -1,3 +1,17 @@
+## The four TRUE origins of a blood-stage episode, in a fixed order. Palettes, factor levels
+## and grid pooling all key off this, so a run that happens to contain no recrudescences still
+## produces the same shape as one that does.
+.ORIGINS <- c("imported", "local reinfection", "relapse", "recrudescence")
+
+## Origins that are an ACQUISITION of a new parasite clone. A recrudescence is a new clinical
+## EPISODE but not a new clone - the genotype was already in the host - so it belongs in case
+## counts and not in a force-of-infection rate.
+.ACQUISITIONS <- c("imported", "local reinfection", "relapse")
+
+## Onset marks on a host timeline. Named so an unlisted `kind` is a visible missing entry
+## rather than a silent shape = NA that draws nothing.
+.KIND_SHAPE <- c("new infection" = 24, "relapse" = 21, "recrudescence" = 23)
+
 ## metrics.R -- epidemiological + genetic summaries of a run's event log / state table.
 ## Inputs are the data.tables from load_events()/load_state() (or pass a vivax_run to the
 ## run-level helpers). See DECISIONS.md for the identity model (pedigree/lineage/oocyst).
@@ -48,10 +62,14 @@ coi_distribution <- function(state, burn_in = 0) {
 #' @export
 relapse_fraction <- function(events) {
   cs <- classify_cases(events)
-  n_relapse <- cs[origin == "relapse", .N]
-  n_other   <- cs[origin != "relapse", .N]
-  data.table(n_relapse = n_relapse, n_nonrelapse = n_other,
-             relapse_fraction = n_relapse / max(n_relapse + n_other, 1))
+  n_rel <- cs[origin == "relapse", .N]
+  n_new <- cs[origin %in% c("imported", "local reinfection"), .N]
+  n_rec <- cs[origin == "recrudescence", .N]
+  data.table(n_relapse = n_rel, n_reinfection = n_new, n_recrudescence = n_rec,
+             ## the band-comparable number: relapses over ACQUISITIONS
+             relapse_fraction = n_rel / max(n_rel + n_new, 1),
+             ## every patent episode, recrudescence included
+             relapse_frac_episodes = n_rel / max(n_rel + n_new + n_rec, 1))
 }
 
 #' Relapses per person-year among ever-infected hosts
@@ -106,8 +124,9 @@ dormancy_durations <- function(events) {
 classify_cases <- function(events) {
   ev <- as.data.table(events)
   cases <- ev[(event_type %in% c("vh_inoculation","vh_inoculation_import") & is_dormant == 0) |
-                event_type == "hypnozoite_activation"]
+                event_type %in% c("hypnozoite_activation", "recrudescence")]
   cases[, origin := fcase(
+    event_type == "recrudescence", "recrudescence",
     event_type == "hypnozoite_activation", "relapse",
     event_type == "vh_inoculation_import" | is_imported == 1, "imported",
     default = "local reinfection")]
@@ -164,7 +183,15 @@ force_of_infection <- function(run, bin = 30, split_imported = "auto") {
   endt <- max(as.data.table(load_state(run))$tick)
   fo <- cs[, .(n = .N), by = .(win, origin)]
   fo[, days := pmin(bin, endt - win + 1)]
-  fo[, rate := n / nh / (days / 365)][order(win, origin)]
+  fo[, rate := n / nh / (days / 365)]
+  ## A recrudescence is a new EPISODE but not a new CLONE, so it must not enter a
+  ## force-of-infection rate: molFOB (Mueller 2013) counts clone acquisitions. It is returned
+  ## as its own row rather than dropped, so incidence stays complete and the caller sums the
+  ## rows it means. Note a REAL molFOB, measured by comparing genotypes between visits, would
+  ## often count a recrudescence as a new clone - the gap between the two sums here is an
+  ## estimate of that bias.
+  fo[, is_acquisition := sub(" \\(.*", "", origin) %in% .ACQUISITIONS]
+  fo[order(win, origin)]
 }
 
 #' Mean pairwise IBD among cases active in each time window (relatedness trajectory)
@@ -236,12 +263,41 @@ transmission_links <- function(events) {
 }
 
 #' Effective reproduction number by true origin
+#'
+#' @details
+#' `unit` chooses what a "source" is, and the two readings answer different questions.
+#' `"episode"` credits onward transmission to the clinical episode it came from, so a
+#' recrudescence is its own source -- the surveillance-targeting reading. `"acquisition"`
+#' walks each transmitting genome back to the infection that originally brought it into the
+#' host, so one acquisition gets one R -- the classic reading, and the one comparable to an
+#' Rc estimated from routine case counts (Champagne et al. 2022). They differ substantially:
+#' measured on a prototype run, local-reinfection Rc was 0.520 per acquisition against 0.116
+#' per episode, with the difference re-attributed to a recrudescence class at 1.464.
 #' @param events an events data.table.
+#' @param unit `"episode"` (default) or `"acquisition"`; see Details.
 #' @return a data.table of `origin`, `n_sources`, `Rc`, `pct_onward`.
 #' @export
-rc_by_origin <- function(events) {
-  links <- transmission_links(events)
-  cases <- classify_cases(events)[, .(pedigree_id, origin)]
+rc_by_origin <- function(events, unit = c("episode", "acquisition")) {
+  unit <- match.arg(unit)
+  ev <- as.data.table(events)
+  links <- transmission_links(ev)
+  cases <- classify_cases(ev)[, .(pedigree_id, origin)]
+  if (unit == "acquisition") {
+    ## Walk each transmitting genome back to the ACQUISITION it descends from, so a clone
+    ## that was suppressed and recrudesced is credited to the infection that brought it in
+    ## rather than to the recurrence. This is the unit a surveillance Rc estimated from
+    ## routine case counts refers to (Champagne et al. 2022, Swiss TPH), so it is the one to
+    ## compare against published values.
+    rec <- ev[event_type == "recrudescence", .(ped = pedigree_id, holder = parent1_pedigree_id)]
+    if (nrow(rec)) {
+      m <- stats::setNames(rec$holder, as.character(rec$ped))
+      root <- function(p) { k <- 0L
+        while (!is.na(m[as.character(p)]) && k < 100L) { p <- unname(m[as.character(p)]); k <- k + 1L }
+        p }
+      links[, source := vapply(source, root, numeric(1))]
+      cases <- cases[origin != "recrudescence"]
+    }
+  }
   outdeg <- links[, .(secondary = .N), by = source]
   rc <- merge(cases, outdeg, by.x = "pedigree_id", by.y = "source", all.x = TRUE)
   rc[is.na(secondary), secondary := 0]
@@ -382,7 +438,11 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%
   ## import share and 4.3x at 61% -- all three biases pointing the same way as a genuine
   ## transmission decline, i.e. in the direction of the signal this metric is read for.
-  peds <- classify_cases(ev)[origin != "relapse" & tick >= burn, unique(pedigree_id)]
+  ## acquisitions only. `origin != "relapse"` would now admit recrudescences, which are not
+  ## newly acquired genomes - they were already in the host - and would bias this toward the
+  ## clonality it exists to measure.
+  peds <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= burn,
+                             unique(pedigree_id)]
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   peds <- .sample_fixed(peds, cap, seed)

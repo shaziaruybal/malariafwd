@@ -8,7 +8,7 @@ event_types()
 }
 \value{
 a data.frame with columns \code{event_type}, \code{stage}, \code{ends_episode} (does this event
-end an active blood-stage episode?) and \code{description}.
+end a patent blood-stage episode?), \code{is_onset} (does it begin one?) and \code{description}.
 }
 \description{
 Every row in a run's \code{events.tsv} carries an \code{event_type}. This returns a tidy table
@@ -17,10 +17,13 @@ log. An inoculation that establishes neither a blood-stage infection nor a hypno
 batch is logged with a \verb{_no_take} suffix (e.g. \code{vh_inoculation_no_take}).
 }
 \details{
-The three blood-stage clearance events (\code{human_clearance}, \code{mda_bloodstage_clear},
-\code{case_bloodstage_clear}) all end an active episode; treat them together when
-reconstructing episode durations.
+\strong{Derive filters from this table rather than restating event names.} \code{ends_episode}
+marks every way a patent blood-stage episode can end and \code{is_onset} every way one can
+begin, so episode reconstruction stays correct as the vocabulary grows. Hard-coded lists
+have gone stale twice: once dropping treated cases from episode spans, once dropping
+imported and recrudescent onsets.
 }
 \examples{
 event_types()
+subset(event_types(), is_onset)$event_type       # every way an episode can begin
 }

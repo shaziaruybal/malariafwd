@@ -32,6 +32,8 @@
   # default - see RADCURE_MODE.
   MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.29, RADCURE_MODE = "person",
   RADCURE_COVERAGE = 0.0, BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
+  P_RECRUD_GIVEN_FAIL = 0.0, MEAN_RECRUD_DELAY = 21.0, P_DETECT_RECRUD = 0.5,
+  SUBPATENT_INFECTIVITY = 0.15,
   TREATMENT_DELAY = 7.0,
   # detection / observation
   P_DETECT_PRIMARY = 1.0, P_DETECT_RELAPSE = 1.0,
@@ -81,7 +83,8 @@ validate_params <- function(p) {
     stop("GENOME_MODE must be 'full' or 'core', got '", p$GENOME_MODE, "'", call. = FALSE)
   for (pr in c("P_TRANS_VH", "P_TRANS_HV", "P_GAMETOCYTE", "P_PRIMARY",
                "P_DETECT_PRIMARY", "P_DETECT_RELAPSE", "RADCURE_COVERAGE", "P_RAD_SURVIVAL",
-               "BLOODCURE_COVERAGE", "P_BLOODCURE_SURVIVAL"))
+               "BLOODCURE_COVERAGE", "P_BLOODCURE_SURVIVAL",
+               "P_RECRUD_GIVEN_FAIL", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY"))
     if (p[[pr]] < 0 || p[[pr]] > 1) stop(pr, " must be in [0, 1]", call. = FALSE)
   for (pr in c("SIM_DAYS", "N_HOSTS", "N_MOSQ", "BITING_RATE", "MOSQ_LIFESPAN"))
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
@@ -93,6 +96,10 @@ validate_params <- function(p) {
     stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '", p$RADCURE_MODE, "'",
          call. = FALSE)
   if (p$TREATMENT_DELAY < 0) stop("TREATMENT_DELAY must be >= 0", call. = FALSE)
+  if (p$MEAN_RECRUD_DELAY <= 0) stop("MEAN_RECRUD_DELAY must be > 0", call. = FALSE)
+  if (p$P_RECRUD_GIVEN_FAIL > 0 && p$P_BLOODCURE_SURVIVAL <= 0)
+    warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
+            "no course ever fails, so no clone is ever suppressed.", call. = FALSE)
   ## Radical cure is nested inside blood-stage treatment, so a coverage without one is
   ## silently inert - the same failure shape as the window bug in D19.
   if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0)

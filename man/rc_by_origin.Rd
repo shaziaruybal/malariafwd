@@ -4,14 +4,26 @@
 \alias{rc_by_origin}
 \title{Effective reproduction number by true origin}
 \usage{
-rc_by_origin(events)
+rc_by_origin(events, unit = c("episode", "acquisition"))
 }
 \arguments{
 \item{events}{an events data.table.}
+
+\item{unit}{\code{"episode"} (default) or \code{"acquisition"}; see Details.}
 }
 \value{
 a data.table of \code{origin}, \code{n_sources}, \code{Rc}, \code{pct_onward}.
 }
 \description{
 Effective reproduction number by true origin
+}
+\details{
+\code{unit} chooses what a "source" is, and the two readings answer different questions.
+\code{"episode"} credits onward transmission to the clinical episode it came from, so a
+recrudescence is its own source -- the surveillance-targeting reading. \code{"acquisition"}
+walks each transmitting genome back to the infection that originally brought it into the
+host, so one acquisition gets one R -- the classic reading, and the one comparable to an
+Rc estimated from routine case counts (Champagne et al. 2022). They differ substantially:
+measured on a prototype run, local-reinfection Rc was 0.520 per acquisition against 0.116
+per episode, with the difference re-attributed to a recrudescence class at 1.464.
 }

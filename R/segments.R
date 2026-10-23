@@ -238,7 +238,9 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
   rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   add(.LADDER[3], utils::head(rel$pedigree_id, max_per_class),
                   utils::head(rel$parent1_pedigree_id, max_per_class))
-  ct <- cs[origin != "relapse", .(ped = pedigree_id, human_id, lineage_id)]
+  ## acquisitions only: `!= "relapse"` would admit recrudescences, which share an oocyst
+  ## with their own origin by inheritance rather than by co-transmission.
+  ct <- cs[origin %in% c("imported", "local reinfection"), .(ped = pedigree_id, human_id, lineage_id)]
   ctp <- ct[, if (data.table::uniqueN(human_id) > 1)
     .(a = ped[1], b = ped[which(human_id != human_id[1])[1]]), by = lineage_id][!is.na(b)]
   add(.LADDER[4], utils::head(ctp$a, max_per_class), utils::head(ctp$b, max_per_class))

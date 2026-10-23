@@ -65,8 +65,9 @@ audit_run <- function(tag, params, seed = 1) {
   ok("hypnozoite_clearance logged as dormant (is_dormant=1)",
      nrow(ev[event_type == "hypnozoite_clearance" & is_dormant != 1]) == 0)
 
-  ## detected flag only on case events
-  cases <- c("vh_inoculation","vh_inoculation_import","hypnozoite_activation")
+  ## detected flag only on case events. Derived from the dictionary, minus the founder route:
+  ## seeding is burn-in, not a detected case, so it never carries a detection flag.
+  cases <- setdiff(event_types()$event_type[event_types()$is_onset], "vh_inoculation_seed")
   ok("detected set only on case events",
      nrow(ev[!(event_type %in% cases) & detected != -1]) == 0)
 
@@ -90,8 +91,11 @@ audit_run <- function(tag, params, seed = 1) {
   ## ---- CONSERVATION: blood-stage episodes ----
   ## every way an episode can end (natural, case treatment, MDA) - from the public dictionary
   .clearers <- event_types()$event_type[event_types()$ends_episode]
-  onset <- ev[(grepl("^vh_inoculation", event_type) & is_dormant == 0) |
-                event_type == "hypnozoite_activation", pedigree_id]
+  ## BOTH sides of the vocabulary now come from the dictionary. The clearer side already did;
+  ## the onset side was hard-coded and would have missed `recrudescence`, leaving every
+  ## naturally-cleared recrudescent episode as an orphan clearance.
+  onset <- ev[event_type %in% event_types()$event_type[event_types()$is_onset] &
+                is_dormant == 0, pedigree_id]
   clear <- ev[event_type %in% .clearers, pedigree_id]
   ok("no blood-stage infection clears twice", uniqueN(clear) == length(clear))
   ok("every clearance matches an onset", all(clear %in% onset))
@@ -202,6 +206,18 @@ audit_run("wsf_nb_imports",
                        N_FOUNDER_LINEAGES = 8,
                        LAMBDA_OOCYSTS = 2.0, K_OOCYSTS = 1.0, LAMBDA_SPOROZOITES = 2.0,
                        IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.1))
+
+## ...and the three-state recurrence path (D25). Without a configuration that actually
+## produces recrudescences, every assertion about the new vocabulary passes vacuously.
+## Partial coverage and a multi-oocyst path on purpose: full coverage suppresses transmission
+## so hard that no oocyst ever outcrosses, and the "ARG recombines" assertion then has nothing
+## to measure (observed: 1 local tree).
+audit_run("recrudescence",
+          vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.16, SIM_DAYS = 400,
+                       N_FOUNDER_LINEAGES = 8,
+                       LAMBDA_OOCYSTS = 2.0, K_OOCYSTS = 1.0, LAMBDA_SPOROZOITES = 2.0,
+                       BLOODCURE_COVERAGE = 0.5, RADCURE_COVERAGE = 0.5,
+                       P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1))
 
 cat(sprintf("\n================ %d passed, %d failed ================\n", PASS, FAIL))
 if (FAIL > 0) quit(status = 1)
