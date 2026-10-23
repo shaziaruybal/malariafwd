@@ -33,10 +33,12 @@ patent clone the host carries, radical cure is nested inside it, and a clone tha
 be suppressed below patency and recrudesce later. All of it is off by default, so a bare run is
 an untreated closed system.
 
-**Epidemiology.** One host over two years — stacked blood-stage lineages (one colour each),
-the hypnozoite reservoir (dashed, right axis), and the onset of each new infection and relapse:
+**How the model fits together.** Host states and the mosquito cycle on the left; what happens to
+a parasite lineage inside a human and inside a mosquito on the right — the hypnozoite reservoir,
+the subpatent compartment a failed treatment course can push a clone into, and the recrudescence
+that follows from it:
 
-![Stacked per-lineage blood-stage infections for one host over two years, with the hypnozoite reservoir overlaid and new-infection and relapse onsets marked.](man/figures/README-host-trajectory.png)
+![Model structure: human and vector compartments on the left, and the parasite lineage life cycle within a human and within a mosquito on the right.](man/figures/model-structure.png)
 
 **Genetics.** The genealogy is recorded, so identity-by-descent is exact rather than inferred
 from markers. Shared segments for four pairs of known relationship:
