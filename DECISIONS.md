@@ -19,6 +19,110 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted
+**Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
+A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default
+of 7**, and 100% at 0 -- so the course landed in the same tick's `early()`. `reproduction()` runs
+before `early()`, so the genome that caused the case was minted moments earlier in the same tick,
+and `applyTreatment()` cleared it on its own creation tick. Measured over 5 seeds on three
+configurations: **796 episodes had zero patent days** (426 / 184 / 186), i.e. a parasite was
+treated before it had been detectable for a single day, could cause symptoms, or could transmit.
+This is not a treatment question, it is an internal inconsistency: natural clearance has enforced
+the rule since the model was written (`malariafwd_vivax.slim`, "Cannot be cleared on same tick as
+inoculation"); `applyTreatment()` simply never applied it.
+**Decision.** Two changes, both needed. (1) `decideTreatment()` floors the delay at **one tick**:
+`sim.cycle + max(1, rgeom(...))`, and `TREATMENT_DELAY = 0` now means "as fast as the model can
+represent", i.e. next tick. (2) `applyTreatment()` skips any clone whose `bloodstage_start_tick`
+is the current tick, so a course given for one case cannot reach a *different* clone that appeared
+that same tick.
+**Rationale.** A clone that became patent this tick cannot have caused symptoms, prompted
+care-seeking or been diagnosed -- OpenMalaria and malariasimulation both place delays between
+infection, symptoms and treatment. The floor must be at the decision site as well as the
+application site: with only the `applyTreatment()` fence, a course whose every target was created
+that tick is **consumed anyway** (`tx_pending` is cleared regardless of what was treated) and the
+patient silently goes untreated. Measured, that overcorrection moved prevalence 24.4% -> 55.3% on
+the `TREATMENT_DELAY = 0` run. With both changes the effect is small and in the expected direction.
+**Alternatives rejected.** *Forbid `TREATMENT_DELAY = 0`* -- restricts the parameter space for no
+reason; zero is a coherent request and now resolves to the fastest representable response.
+*Fence only in `applyTreatment()`* -- wastes courses, as above. *Leave it and document* -- the
+model would keep asserting two contradictory rules about the same tick.
+**Consequences.** Every treated run changes. Over 5 seeds: zero-patent-day episodes 796 -> **0**;
+prevalence 14.3+-8.0 -> 15.4+-4.0 (`treat_now`), 52.0+-10.7 -> 56.3+-6.2 (`cotrans`),
+35.1+-5.4 -> 35.7+-5.8 (`mild`) -- every shift well inside the between-seed SD, so no calibration
+conclusion moves. Treatment is now marginally *less* effective, which is the expected direction
+once a parasite gets at least one patent day. Untreated runs are unaffected
+(`BLOODCURE_COVERAGE = 0` is the shipped default, so `applyTreatment()` never runs).
+Also makes the radical-cure efficacy check 3-seed. It is not a regression -- the ordering is
+correct on both the old and new model, and *stronger* on the new one (6 of 6 seeds against 5 of 6)
+-- but single-seed it was a near coin flip, so the shifted RNG stream flipped it with no change in
+behaviour. Same fix as D20 applied to its sibling check; the two remaining single-seed directional
+checks in `check_parameters.R` carry the same fragility.
+**How to verify.** No episode may be cleared by `case_bloodstage_clear` or `mda_bloodstage_clear`
+on the tick it was created, on any configuration (0 across `treat_now`, `cotrans`, `mild` at 5
+seeds each, against 426/184/186 before). `tx_tick > sim.cycle` for every scheduled course. Suites:
+`test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_parameters.R` 41/0,
+`R CMD check --as-cran --no-manual` 3 NOTEs (the two known, plus "unable to verify current time",
+which is the check failing to reach the network in this sandbox).
+
+---
+
+## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted (design; implementation pending)
+**Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
+reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
+suppressed below patency and later re-expand. A scratch prototype
+(`/tmp/mfwchk/step4/proto.slim`) established the mechanics; a second prototype established the
+representation. Both are throwaway and are not in the repo.
+**Decision.**
+1. **A recrudescence MINTS a new genome** -- `h.addCloned(holder)`, fresh `pedigree_id`, fresh
+   tskit node at the recrudescence tick -- and the holder is retired. This is the relapse
+   precedent exactly. Decision and mint share `reproduction()` (the holder already exists, so
+   unlike D17 there is no deferral); retirement is the first thing in `early()`.
+2. **It is a CASE but not an ACQUISITION.** `classify_cases()` gains a fourth `origin`, so case
+   counts, incidence and the host timeline include it. The clone-acquisition metrics exclude it:
+   FOI = imported + local reinfection, molFOB = FOI + relapse.
+3. **Metrics that have both readings report both**, named by unit: `molfob_clones` against
+   `molfob_episodes`, `relapse_frac_acquisitions` against `relapse_frac_episodes`, and
+   `rc_by_origin(unit = c("episode","acquisition"))`. The published 0.55-0.85 band and the
+   Champagne/Swiss TPH Rc comparison are both **acquisition**-level quantities.
+4. `inoculation_id` and `oocyst_id` on the recrudescence row are **-1**, following the relapse.
+5. `ends_episode`: `bloodcure_subpatent = TRUE`, `recrudescence = FALSE`,
+   `subpatent_clearance = FALSE`.
+6. `event_types()` gains an **`is_onset`** column so the onset vocabulary becomes derivable, as
+   `ends_episode` already is.
+**Rationale.** Minting was chosen for pedigree uniqueness, not for node time. The node-time
+argument is real but marginal -- staleness is median 19 ticks, and `arg_tmrca()` has zero callers
+in the analyses repo. Reuse is what actually breaks things: `creation events mint unique
+pedigree_ids` fails with 33/42/15 duplicates per run, `R/metrics.R:207`'s stated invariant becomes
+false, and `rc_by_origin()` double-books 53-70% of all edges. Minting costs exactly +1 individual,
++2 nodes, +1 full-span edge, **+0 local trees** and 190 bytes (measured over 2035 relapse
+`addCloned` children with zero variance) = 0.4% of individuals at the prototype rate. MOI,
+prevalence, COI and the reservoir are *exactly* neutral, because the minted genome inherits
+`lineage_id`; a fresh id would give a phantom +1 MOI. The case/acquisition split follows the unit
+discipline D23 established: the difference between the two molFOB readings is itself the
+quantity -- intermittent genotyping cannot tell a re-expanded clone from a newly acquired one, so
+a real molFOB over-counts, and the model can measure by how much.
+**Alternatives rejected.** *Reuse the Individual* -- above. *`treeSeqRememberIndividuals()` at the
+recrudescence tick to re-date the node* -- killed by live probe: the node table comes back
+identical and depth is still 0. *Mint without retiring the holder* -- one treatment failure
+becomes a clone generator (2.21 recrudescences per holder, up to 6). *A single relapse-fraction
+denominator* -- the two readings answer different questions and the band only applies to one.
+**Consequences.** Nine origin-vocabulary sites in `R/plots.R` and `R/segments.R` need the fourth
+level; `fill0()` at `R/plots.R:156` is the dangerous one, because it left-joins against a 3-origin
+`CJ` and would drop recrudescence rows silently. Four audit assertions and one test change; only
+`every clearance matches an onset` is new to minting, and (6) is its fix. The sentinel fix
+(`181fa31`) and the patency fix (D24) were landed first so Step 4 starts from a clean base.
+Literature anchors the defaults: recrudescence is **0.2-0.3% of recurrences** after chloroquine or
+artesunate (Taylor 2019, n=1441), so the shipped default must be ~0 and a chloroquine-resistant arm
+is needed for the state to have anything to classify; subpatent relative infectivity is
+**0.10-0.20** (Koepfli 2021; White 2018 IBM), so neither 0 nor 1 is defensible.
+**How to verify.** `P_SUBPATENT_GIVEN_FAIL = 0` must stay byte-identical to the shipped model
+(verified on the prototype). Every recrudescence must be IBD 1.000 to its holder and
+`arg_tmrca` depth 0. `creation events mint unique pedigree_ids` must pass. MOI and prevalence must
+be unchanged against a matched no-recrudescence run. The two molFOB readings must differ by exactly
+the recrudescence count.
+
+---
+
 ## D23 — Metrics derive their vocabulary from classify_cases(), and output schemas do not depend on run content · 2026-10-22 · Accepted
 **Context.** A verification pass over the four remaining downstream defects found them to be one
 bug class in two forms. **Vocabulary drift:** `new_infection_diversity()` matched

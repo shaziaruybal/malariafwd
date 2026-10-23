@@ -1616,9 +1616,15 @@ function (void) decideTreatment(o<Subpopulation>$ h)
 	if (runif(1) >= BLOODCURE_COVERAGE)
 		return;
 	h.setValue("tx_pending", T);
-	// geometric with mean TREATMENT_DELAY; 0 -> treated on the tick the case is decided
-	h.setValue("tx_tick", sim.cycle + ((TREATMENT_DELAY <= 0) ? 0 else
-		rgeom(1, 1.0 / (1.0 + TREATMENT_DELAY))[0]));
+	// Geometric with mean TREATMENT_DELAY, floored at ONE tick. A course can never be given
+	// on the tick the case arises: the parasite became patent that tick, so it cannot yet have
+	// caused symptoms or prompted care-seeking. The floor belongs here rather than only in
+	// applyTreatment, because the fence there would otherwise CONSUME the course (tx_pending
+	// is cleared whether or not anything was treated) and the patient would silently go
+	// untreated - measured as a 24.4% -> 55.3% prevalence jump on the TREATMENT_DELAY=0 run.
+	// TREATMENT_DELAY = 0 therefore means "as fast as the model can represent", i.e. next tick.
+	h.setValue("tx_tick", sim.cycle + ((TREATMENT_DELAY <= 0) ? 1 else
+		max(1, rgeom(1, 1.0 / (1.0 + TREATMENT_DELAY))[0])));
 	h.setValue("tx_liver", runif(1) < RADCURE_COVERAGE);   // nested inside blood-stage treatment
 }
 
@@ -1694,6 +1700,21 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 		cleared = c();
 		for (lin in act)
 		{
+			// A clone that became patent THIS tick cannot yet have caused symptoms, prompted
+			// care-seeking or been diagnosed, so a course cannot reach it. Natural clearance
+			// has enforced this since the model was written ("Cannot be cleared on same tick
+			// as inoculation", below); applyTreatment did not, and the two have to agree.
+			// Without it, decideTreatment's geometric delay returns 0 with probability
+			// 1/(1+TREATMENT_DELAY) - 12.5% at the shipped default of 7, 100% at 0 - and the
+			// course lands in the same tick's early() on a genome reproduction() minted
+			// moments earlier. Measured: 67.6% of treatment-cleared episodes on the
+			// TREATMENT_DELAY=0 audit run, and 4-19% at the default, had ZERO patent days.
+			// Nested ifs, not `&`: Eidos does not short-circuit, and getValue() on a missing
+			// key returns NULL, which would make the comparison zero-length.
+			bs = lin.getValue("bloodstage_start_tick");
+			if (!isNULL(bs))
+				if (bs >= sim.cycle)
+					next;
 			if (runif(1) >= P_BLOODCURE_SURVIVAL)
 				cleared = c(cleared, lin);
 			else

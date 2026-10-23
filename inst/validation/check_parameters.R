@@ -214,9 +214,18 @@ ok("high hypnozoite death -> smaller reservoir than baseline",
 ok("short MAX_HYPNOZOITE_AGE -> smaller reservoir",
    h("hypage_short","reservoir") < g("baseline","reservoir"),
    sprintf("%.2f vs %.2f", h("hypage_short","reservoir"), g("baseline","reservoir")))
+## 3-seed, for the same reason mean_reservoir() exists: single-seed this comparison was a
+## near coin flip (measured 5 of 6 seeds in the right direction on the pre-fence model), so a
+## shifted RNG stream flipped it with no change in the underlying behaviour. Over 3 seeds the
+## effect is unambiguous - weak 0.50 against strong 0.12, 6 of 6 seeds - and the check now
+## measures radical-cure efficacy rather than which stream it drew.
+rc_weak   <- mean_reservoir("rcw", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
+                            RADCURE_COVERAGE = 0.9, P_RAD_SURVIVAL = 0.8)
+rc_strong <- mean_reservoir("rcs", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
+                            RADCURE_COVERAGE = 0.9)
 ok("weak radical cure leaves a bigger reservoir than strong",
-   h("radcure_weak","reservoir") > g("radcure","reservoir"),
-   sprintf("%.2f (P_RAD_SURVIVAL .8) vs %.2f (.05)", h("radcure_weak","reservoir"), g("radcure","reservoir")))
+   rc_weak > rc_strong,
+   sprintf("%.2f (P_RAD_SURVIVAL .8) vs %.2f (.05), 3-seed means", rc_weak, rc_strong))
 ok("weak blood cure leaves higher prevalence than strong",
    h("bloodcure_weak","prev") > g("bloodcure","prev"),
    sprintf("%.2f vs %.2f", h("bloodcure_weak","prev"), g("bloodcure","prev")))
