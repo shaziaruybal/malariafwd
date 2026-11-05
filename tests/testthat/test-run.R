@@ -79,3 +79,15 @@ test_that("blood-stage infections last a geometric time with mean MEAN_BLOOD_STA
   expect_gt(nrow(d), 900)
   expect_lt(abs(mean(d$t1 - d$t0) - 2), 0.15)   # a daily probability of 1 - exp(-1/2) gives 2.54
 })
+
+test_that("no blood-stage infection is forced to clear at a fixed age", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  run <- run_sim(vivax_params(N_HOSTS = 200, N_FOUNDERS = 200, N_FOUNDER_HOSTS = 200,
+                              N_FOUNDER_LINEAGES = 200, N_MOSQ = 1, BITING_RATE = 1e-6,
+                              MEAN_BLOOD_STAGE_DURATION = 1000, SIM_DAYS = 200),
+                 seed = 7, outdir = file.path(tempdir(), "mfwd_test_nocap"))
+  ev <- load_events(run)
+  d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
+             ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
+  expect_lt(sum(d$t1 - d$t0 == 181), 5)   # a 180-day cap cleared about 83% of founders on day 181
+})

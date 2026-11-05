@@ -19,6 +19,31 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D30 — No age cap on blood-stage infections · 2026-11-05 · Accepted
+**Context.** `MAX_BROOD_AGE` (180 days) force-cleared any blood-stage infection older than 180
+days (the test was `> 180`, so on day 181). It is a leftover from an early version of the model
+in which it was the infection duration itself, kept as a ceiling once clearance became a daily
+draw. At the defaults it cut about 5% of infections, so the realised mean was about 57 days
+rather than 60. Neither White et al. (2014) nor White et al. (2018) caps infection duration.
+**Decision.** Remove `MAX_BROOD_AGE`. Every infection ends by the daily clearance draw (D29).
+`validate_params()` requires `MEAN_BLOOD_STAGE_DURATION >= 1`, which the 1/D convention needs
+anyway and which covers the only case the cap protected against, a duration that disables
+clearance.
+**Rationale.** With a daily clearance probability of 1/D every infection ends, after a geometric
+time with mean D. A hard cap only truncates that distribution and makes the parameter mean
+something other than what it says.
+**Alternatives rejected.** *Raise the cap to a real safety net (e.g. 365 days)* -- it would still
+truncate the tail in long-duration scenarios and guards against nothing validation does not
+already catch.
+**Consequences.** Infections are about 4% longer on average at the defaults, so prevalence rises
+a little; the calibration bands are re-checked before the release. D25's open question of
+whether a recrudescence can renew a clone's lifespan without a ceiling no longer arises: a
+clone's daily chance of clearing does not depend on its age.
+**How to verify.** With founders only, `MEAN_BLOOD_STAGE_DURATION = 1000` and 200 days, no founder
+clears on exactly day 181; with the cap about 83% did (`tests/testthat/test-run.R`).
+
+---
+
 ## D29 — Durations are geometric with daily probability 1/D · 2026-11-05 · Accepted
 **Context.** Duration parameters were turned into daily probabilities in two different ways.
 Blood-stage clearance used `1 - exp(-1/MEAN_BLOOD_STAGE_DURATION)`, a continuous-time rate made

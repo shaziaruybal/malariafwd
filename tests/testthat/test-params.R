@@ -116,3 +116,8 @@ test_that("a biting rate that would exceed one bite per mosquito per day warns",
   expect_warning(vivax_params(BITING_RATE = 0.8, SEASONAL_AMP = 0.5), "bites at most once a day")
   expect_no_warning(vivax_params())
 })
+
+test_that("blood-stage infections have no age cap, and their mean duration is at least a day", {
+  expect_error(vivax_params(MAX_BROOD_AGE = 180), "unknown parameter")
+  expect_error(vivax_params(MEAN_BLOOD_STAGE_DURATION = 0.5), "MEAN_BLOOD_STAGE_DURATION must be >= 1")
+})

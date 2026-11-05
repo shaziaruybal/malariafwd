@@ -12,7 +12,7 @@
   BITING_RATE = 0.1, P_TRANS_VH = 0.5, P_TRANS_HV = 0.5, MOSQ_LIFESPAN = 10L,
   EIP_DAYS = 10L, MAX_MOI = 20L, MAX_BROODS_PER_MOSQ = 20L,
   # parasite / infection
-  MEAN_BLOOD_STAGE_DURATION = 60, MAX_BROOD_AGE = 180L, N_OOCYSTS_PER_BITE = 1L,
+  MEAN_BLOOD_STAGE_DURATION = 60, N_OOCYSTS_PER_BITE = 1L,
   # mosquito uptake / inoculation sampling . lambda = 0 (default) -> exactly 1
   # oocyst per uptake and 1 genotype per bite. K_OOCYSTS > 0 makes the oocyst count
   # negative-binomial (var = lambda + lambda^2/K); 0 = Poisson.
@@ -103,6 +103,9 @@ validate_params <- function(p) {
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
   for (pr in c("LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
+  if (p$MEAN_BLOOD_STAGE_DURATION < 1)
+    stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 (days): blood-stage infections clear each day ",
+         "with probability 1/MEAN_BLOOD_STAGE_DURATION.", call. = FALSE)
   peak_bite <- p$BITING_RATE * (1 + abs(p$SEASONAL_AMP)) * max(1, p$BITING_RATE_BOOST)
   if (peak_bite > 1)
     warning("BITING_RATE x (1 + SEASONAL_AMP) x BITING_RATE_BOOST reaches ", signif(peak_bite, 3),

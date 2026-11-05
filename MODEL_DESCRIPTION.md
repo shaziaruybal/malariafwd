@@ -138,7 +138,7 @@ for each tick t:
   early():
     kill every dormant batch with batch_count == 0        # cleanup, same tick
     for each active blood-stage lineage:
-        if age > MAX_BROOD_AGE or runif(1) < P_BLOOD_CLEAR:  clear it
+        if runif(1) < P_BLOOD_CLEAR:  clear it
     apply MDA / case-based treatment if scheduled
     kill mosquitoes w.p. MU_MOSQ; replace each as susceptible
 
@@ -188,8 +188,9 @@ P_BLOOD_CLEAR = 1 / MEAN_BLOOD_STAGE_DURATION     # = 0.01667 at 60 days: mean d
 
 This is White et al. (2014)'s clearance rate r = 1/60 per day, used as a daily probability.
 
-with a hard ceiling `MAX_BROOD_AGE` = 180 days. Clearance is **per-lineage**, so a polyclonal host
-loses lineages independently and MOI decays rather than collapsing at once.
+There is no age ceiling: every infection ends by this daily draw. Clearance is
+**per-lineage**, so a polyclonal host loses lineages independently and MOI decays rather than
+collapsing at once.
 
 **Superinfection** is allowed and gated by `MAX_MOI` = 20. The gate is checked once, in the
 infected-mosquito-bites-infected-human branch: a host already carrying `MAX_MOI` active lineages
@@ -648,7 +649,6 @@ derived and written to `params.tsv` for provenance.
 | `MAX_MOI` | 20 | superinfection gate (relapses bypass) |
 | `MAX_BROODS_PER_MOSQ` | 20 | mosquito lineage cap |
 | `MEAN_BLOOD_STAGE_DURATION` | 60 d | geometric (daily clearance probability 1/60; White et al. 2014) |
-| `MAX_BROOD_AGE` | 180 d | ceiling |
 
 ### Hypnozoite reservoir
 
