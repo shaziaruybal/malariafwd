@@ -114,8 +114,8 @@ for each tick t:
   reproduction():
     # --- relapse ---
     for each host h, for each dormant batch b in h:
-        n_act ~ Binomial(batch_count(b), alpha_eff)      # activation
-        n_die ~ Binomial(batch_count(b) - n_act, mu)     # competing death
+        n_act ~ Binomial(batch_count(b), alpha_eff)                     # activation
+        n_die ~ Binomial(batch_count(b) - n_act, mu / (1 - alpha_eff))  # competing death
         batch_count(b) <- batch_count(b) - n_act - n_die
         if n_act > 0:  seed ONE blood-stage episode, addCloned(b)   # IBD = 1 to origin
         if batch_count(b) == 0:  retire b
@@ -290,15 +290,15 @@ So a non-trivial fraction of bites deposit **no** hypnozoites at all: `P(N = 0) 
 **16.7% at ν = 5**, 25.0% at ν = 3, 11.1% at ν = 8.
 
 **Activation and death are competing risks** applied daily, per hypnozoite, with activation drawn
-first and death drawn from the survivors:
+first and death drawn from the survivors, so that each day a hypnozoite activates with
+probability alpha and dies with probability mu:
 
 ```
 n_act ~ Binomial(batch_count, alpha)
-n_die ~ Binomial(batch_count - n_act, mu)
+n_die ~ Binomial(batch_count - n_act, mu / (1 - alpha))
 ```
 
-For the continuous-time analogue, each hypnozoite's fate is governed by the first of two
-exponential clocks, giving
+A hypnozoite's fate is therefore settled after a geometric time, with
 
 ```
 P(activate rather than die) = alpha / (alpha + mu)
@@ -748,7 +748,7 @@ Stated plainly, because several matter for interpretation.
 | 12 | **`NU_HYPNOZOITE_BATCH` is a placeholder** | shipped at 5; calibrate per setting against relapse rate / fraction |
 | 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
 | 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces, which is what makes `P_RECRUD_GIVEN_FAIL` exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
-| 15 | **A recrudescent episode renews its own clearance clock** | the minted genome gets a fresh `bloodstage_start_tick`, so a clone cycling through repeated suppression has no ceiling on total persistence |
+| 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
 | 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled (malariasimulation Weibull curves); OpenMalaria makes the same simplification |
@@ -821,13 +821,13 @@ and because the first one changes how earlier results should be read.
 ### Validation suite
 
 `inst/validation/` ships five scripts. Last full run (v0.1.0, this document):
-**103 assertion checks, 103 passed, 0 failed**, plus two numeric audits of the recombination
+**139 assertion checks, 139 passed, 0 failed**, plus two numeric audits of the recombination
 machinery.
 
 | script | checks | result |
 |---|---|---|
-| `audit_events_and_ibd.R` | 62 (36 event-log + 26 ARG/IBD, over two uptake configurations) | all pass |
-| `check_parameters.R` | 41 | all pass |
+| `audit_events_and_ibd.R` | 99 (20 event-log + 13 ARG/IBD checks on each of three configurations) | all pass |
+| `check_parameters.R` | 40 | all pass |
 | `audit_arg_recombination.R` | numeric audit | see §13.1 |
 | `audit_arg_junctions.R` | numeric audit | see §13.1 |
 | `explain_ibd.R` | worked explainer | — |

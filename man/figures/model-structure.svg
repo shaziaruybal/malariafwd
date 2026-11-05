@@ -155,7 +155,7 @@
 
   <line x1="1429" y1="402" x2="1429" y2="448" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
   <text x="1429" y="470" font-size="20px" fill="#b8912a" text-anchor="middle" font-weight="700">&#10005;</text>
-  <text x="1440" y="420" class="ts" style="fill:#8a6a14">death &#956;, age cap,</text>
+  <text x="1440" y="420" class="ts" style="fill:#8a6a14">death &#956;,</text>
   <text x="1440" y="434" class="ts" style="fill:#8a6a14">radical cure, MDA;</text>
   <text x="1440" y="448" class="nt">batch retires at count 0</text>
 

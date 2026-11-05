@@ -23,7 +23,7 @@ refer to paths from the prototype that preceded it.
 **Context.** `MAX_HYPNOZOITE_AGE` (1,500 days) cleared a whole hypnozoite batch once it was older
 than the cap. It began at 300 days as a "maximum hypnozoite survival" with no source, and was
 raised to 1,500 when that truncated too many batches. At the defaults it binds for roughly one
-batch in 50,000, and where it binds it produces an artificial spike of whole-batch clearances
+batch in 35,000, and where it binds it produces an artificial spike of whole-batch clearances
 at exactly the cap age. White et al. (2014) give hypnozoites exponential residence with no cap.
 **Decision.** Remove `MAX_HYPNOZOITE_AGE`. A batch empties only through activation and death.
 `validate_params()` requires `MU_HYPNOZOITE > 0`, so every batch is eventually cleared.
@@ -34,7 +34,8 @@ protect.
 bends exactly the long-latency tail the model needs.
 **Consequences.** Runs shorter than 1,500 days are unchanged. `MU_HYPNOZOITE = 0` is no longer
 accepted. Until hypnozoites can also die during latency, a temperate batch (`K_LATENCY > 0`)
-leaves latency only at rate `DELTA_LATENCY`.
+leaves latency only at rate `DELTA_LATENCY`, so `validate_params()` requires `DELTA_LATENCY`
+in (0, 1] whenever `K_LATENCY > 0`.
 **How to verify.** `MAX_HYPNOZOITE_AGE` is an unknown parameter and `MU_HYPNOZOITE = 0` is
 refused (`tests/testthat/test-params.R`); `events.tsv` and `state.tsv` are byte-identical to the
 capped model for three seeded runs of 200-400 days.
@@ -57,7 +58,7 @@ something other than what it says.
 **Alternatives rejected.** *Raise the cap to a real safety net (e.g. 365 days)* -- it would still
 truncate the tail in long-duration scenarios and guards against nothing validation does not
 already catch.
-**Consequences.** Infections are about 4% longer on average at the defaults, so prevalence rises
+**Consequences.** Infections are about 5% longer on average at the defaults, so prevalence rises
 a little; the calibration bands are re-checked before the release. D25's open question of
 whether a recrudescence can renew a clone's lifespan without a ceiling no longer arises: a
 clone's daily chance of clearing does not depend on its age.
@@ -71,14 +72,16 @@ clears on exactly day 181; with the cap about 83% did (`tests/testthat/test-run.
 Blood-stage clearance used `1 - exp(-1/MEAN_BLOOD_STAGE_DURATION)`, a continuous-time rate made
 discrete, while mosquito death used `1/MOSQ_LIFESPAN`, and biting, hypnozoite activation,
 hypnozoite death and exit from latency were daily probabilities already. Under the exponential
-form the mean blood-stage infection lasted 60.5 days rather than the 60 the parameter states.
+form the mean blood-stage infection lasted 60.5 days rather than the 60 the parameter states
+(ignoring the 180-day cap that D30 removes, which brought the realised mean to 57.5 days).
 Separately, a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and
 resurgence multipliers above 1 was clipped at the peak and the realised mean fell below
 `BITING_RATE`, without any warning.
 **Decision.** Every duration parameter D is the mean of a geometric duration: the event happens
 each day with probability 1/D. Blood-stage clearance becomes `1/MEAN_BLOOD_STAGE_DURATION`.
-`validate_params()` warns when `BITING_RATE * (1 + |SEASONAL_AMP|) * max(1, BITING_RATE_BOOST)`
-exceeds 1. The convention is stated once, in `?vivax_params` and `MODEL_DESCRIPTION.md` §10.
+`validate_params()` warns when the daily biting rate the model will use, `BITING_RATE` times
+its seasonal, intervention and resurgence multipliers, exceeds 1 on any day of the run. The
+convention is stated once, in `?vivax_params` and `MODEL_DESCRIPTION.md` §10.
 **Rationale.** One reading for every duration parameter, and each parameter means what it says.
 A daily clearance probability of 1/60 is White et al. (2014)'s clearance rate (Table 1, after
 Collins et al. 2003) applied per day.
@@ -86,8 +89,9 @@ Collins et al. 2003) applied per day.
 model, but this model steps in days and its other processes already use daily probabilities.
 *Lift the one-bite-a-day cap* -- a mosquito takes at most one blood meal a day here.
 **Consequences.** At the defaults the mean blood-stage infection shortens from 60.5 to 60 days,
-so every run's output changes; the calibration bands are re-checked before the release.
-Mosquito death, biting, activation, hypnozoite death and latency exit are unchanged.
+or from 57.5 to 57.1 with the 180-day cap still in place, so every run's output changes; the
+calibration bands are re-checked before the release. Mosquito death, biting, activation,
+hypnozoite death and latency exit are unchanged.
 **How to verify.** With founders only (no hypnozoites, no transmission) and
 `MEAN_BLOOD_STAGE_DURATION = 2`, founder infections last 2 days on average; the exponential form
 gives 2.54 (`tests/testthat/test-run.R`).
