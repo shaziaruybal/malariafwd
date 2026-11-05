@@ -503,15 +503,17 @@ overlap 0.03). A structured source pool is planned (§15).
   `BITING_RATE × (1 + SEASONAL_AMP·cos(2π(t − SEASONAL_PHASE)/365))`, with `SEASONAL_PHASE` the
   day-of-year of the **peak**.
 - **Case management** has its own window, `TREATMENT_START` / `TREATMENT_END` (default: the whole
-  run). `INTERVENTION_*` is vector control and importation only, and no longer touches treatment
+  run). `INTERVENTION_*` is vector control and importation only, and does not touch treatment
   (D19). The window gates the **decision**, not delivery: a case detected on the programme's last
   day still completes its course afterwards.
 - **Case-based blood-stage treatment** (`BLOODCURE_COVERAGE`) is decided where a case arises and
-  applied to the **host** `TREATMENT_DELAY` days later (geometric, mean 7). It clears **every
-  patent blood-stage clone the patient carries**, not one lineage (D20). One course at a time per
-  host; a treated case stays infectious until the drugs land. A course can never land on the tick
-  the case arises — `TREATMENT_DELAY = 0` means "as fast as the model can represent", i.e. next
-  tick — because a clone that became patent this tick cannot yet have caused symptoms (D24).
+  applied to the **host** later: each day after the case the course arrives with probability
+  1/`TREATMENT_DELAY`, so the delay is at least one day with mean `TREATMENT_DELAY` (7 by
+  default). It clears **every patent blood-stage clone the patient carries**, not one lineage
+  (D20). One course at a time per host; a treated case stays infectious until the drugs land. A
+  course can never land on the tick the case arises — the minimum, `TREATMENT_DELAY = 1`, means
+  the next day — because a clone that became patent this tick cannot yet have caused symptoms
+  (D24, D32).
 - **Case-based radical cure** is **nested inside** a blood-stage course: `RADCURE_COVERAGE` is
   P(radical cure | treated), so it is inert unless `BLOODCURE_COVERAGE > 0` — primaquine is never
   given without a schizonticide (D20). Liver-stage only; it deliberately does not clear the
@@ -577,12 +579,13 @@ Natural clearance while subpatent is **off** by design, so every suppressed clon
 recrudesces and `P_RECRUD_GIVEN_FAIL` is exactly P(recrudescence | the course failed) — which maps
 directly onto a WHO therapeutic-efficacy failure rate.
 
-**The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d, selectable via
+**The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d and at least one day (each day
+after the suppression the clone re-expands with probability 1/10.5), selectable via
 `RECRUD_DELAY_DIST` (`"geometric"`, `"poisson"`, `"fixed"`). Geometric is the discrete analogue of
 the Exponential that Taylor et al. (2019) fit — their own simulator draws `round(rexp(1, 1/10))` —
-and 10.5 is the reciprocal of their posterior median. Median gap 7 d, ~92% within day 28. See D26;
-none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents recrudescence
-at all, so they cannot arbitrate this.
+and 10.5 is the reciprocal of their posterior median. Median gap 7 d, ~94% within day 28. See D26
+and D32; none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents
+recrudescence at all, so they cannot arbitrate this.
 
 **A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
 relapse does. That keeps one episode to one `pedigree_id`, gives the recurrence its own ARG node
@@ -627,9 +630,12 @@ chloroquine or artesunate. The state is only material in a chloroquine-resistant
 ## 10. Parameters
 
 Time is in days (one tick is one day). A duration parameter D is the mean of a geometric
-duration: the event happens each day with probability 1/D. Rates (`BITING_RATE`,
-`ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a mosquito bites at
-most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers is capped at 1.
+duration: the event happens each day with probability 1/D. The treatment delay
+(`TREATMENT_DELAY`) and, under the default `RECRUD_DELAY_DIST = "geometric"`, the recrudescence
+delay (`MEAN_RECRUD_DELAY`) follow the same rule from the day after the case or the suppression,
+so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates (`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily
+probabilities; a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and
+resurgence multipliers is capped at 1.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -670,7 +676,7 @@ derived and written to `params.tsv` for provenance.
 | `K_OOCYSTS` | 0.0 | 0 = Poisson; > 0 = NB. Vivax DMFA counts are overdispersed |
 | `LAMBDA_SPOROZOITES` | 0.0 | → exactly 1 genotype per bite. **Co-transmission impossible at the default** |
 | `N_OOCYSTS_PER_BITE` | 1 | **retired**; tripwire |
-| `GAMETOCYTE_DELAY` | 0 | vivax realistic ≈ 2–3 d |
+| `GAMETOCYTE_DELAY` | 0 | fixed; vivax realistic ≈ 2–3 d |
 | `P_GAMETOCYTE` | 1.0 | vivax realistic ≈ 0.9 |
 
 ### Genome
@@ -702,7 +708,7 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | parameter | default | note |
 |---|---|---|
 | `TREATMENT_START` / `TREATMENT_END` | 0 / 99999 | case management has its own window, separate from `INTERVENTION_*` (D19). It gates the **decision**, not delivery |
-| `TREATMENT_DELAY` | 7.0 d | geometric, mean 7, **floored at one tick**: a course can never land on the tick the case arises, so `0` means "next tick" (D24) |
+| `TREATMENT_DELAY` | 7.0 d | geometric, mean 7, **at least one day**: a course can never land on the tick the case arises, so the minimum, `1`, means the next day (D24, D32) |
 | `BLOODCURE_COVERAGE` | 0 | P(a detected case is treated). The whole treatment path is off at the default |
 | `P_BLOODCURE_SURVIVAL` | 0 | P(a given patent clone survives the course). Literature ≈ 0.10 |
 | `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
@@ -715,8 +721,8 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | parameter | default | note |
 |---|---|---|
 | `P_RECRUD_GIVEN_FAIL` | **0.0** | P(a surviving clone is suppressed below patency rather than persisting). At 0 the third state is inert — which matches Taylor et al. 2019: recrudescence is 0.2–0.3% of recurrences after chloroquine or artesunate |
-| `MEAN_RECRUD_DELAY` | 10.5 d | reciprocal of Taylor's posterior median. Median gap 7 d, ~92% within day 28 (D26) |
-| `RECRUD_DELAY_DIST` | `"geometric"` | the discrete analogue of Taylor's fitted Exponential. `"poisson"` reproduces the original planning shape as a tight-window sensitivity arm; `"fixed"` is deterministic |
+| `MEAN_RECRUD_DELAY` | 10.5 d | mean delay from suppression to recrudescence, at least one day; reciprocal of Taylor's posterior median. Geometric: median gap 7 d, ~94% within day 28 (D26, D32) |
+| `RECRUD_DELAY_DIST` | `"geometric"` | the discrete analogue of Taylor's fitted Exponential. `"poisson"` (1 + Poisson(D − 1), mean D) is a tight-window sensitivity arm; `"fixed"` is round(D) days, halves rounded up (11 d at the default 10.5). Every shape is at least one day |
 | `SUBPATENT_INFECTIVITY` | 0.15 | infectiousness of a suppressed clone relative to a patent one. 0.035–0.10 White 2018 IBM, 0.10–0.20 empirically (Koepfli 2021). Neither 0 nor 1 is defensible |
 
 ### Run metadata

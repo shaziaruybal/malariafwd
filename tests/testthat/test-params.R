@@ -125,6 +125,15 @@ test_that("hypnozoite batches have no age cap, and hypnozoites must be able to d
   expect_error(vivax_params(MU_HYPNOZOITE = 0), "MU_HYPNOZOITE must be > 0")
 })
 
+test_that("treatment and recrudescence delays are at least a day, and finite", {
+  expect_error(vivax_params(TREATMENT_DELAY = 0), "TREATMENT_DELAY must be >= 1")
+  expect_error(vivax_params(TREATMENT_DELAY = 0.5), "TREATMENT_DELAY must be >= 1")
+  expect_error(vivax_params(TREATMENT_DELAY = Inf), "TREATMENT_DELAY must be >= 1")
+  expect_error(vivax_params(MEAN_RECRUD_DELAY = 0.5), "MEAN_RECRUD_DELAY must be >= 1")
+  expect_error(vivax_params(MEAN_RECRUD_DELAY = Inf), "MEAN_RECRUD_DELAY must be >= 1")
+  expect_no_error(vivax_params(TREATMENT_DELAY = 1, MEAN_RECRUD_DELAY = 1))
+})
+
 test_that("the biting warning follows the model's own seasonal, intervention and boost timeline", {
   expect_no_warning(vivax_params(BITING_RATE = 0.8, SEASONAL_AMP = -0.5))     # the model ignores AMP < 0
   expect_no_warning(vivax_params(BITING_RATE = 0.6, BITING_RATE_BOOST = 2))   # trigger after the run

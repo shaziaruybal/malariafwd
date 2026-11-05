@@ -15,3 +15,22 @@ test_that("params.tsv records the seed and the SLiM and package versions of the 
   expect_equal(p$SLIM_VERSION, slim_version())
   expect_equal(p$MALARIAFWD_VERSION, as.character(utils::packageVersion("malariafwd")))
 })
+
+test_that("the model refuses delays below one day when SLiM is run directly", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## validate_params() refuses these too, but the model can be run with -d, bypassing R
+  slim <- function(...) {
+    out <- tempfile("mfwd_direct_"); dir.create(out)
+    processx::run(slim_path(), c("-s", "1", "-d", "SIM_DAYS=5", "-d", "N_HOSTS=10", "-d", "N_MOSQ=20",
+                                 "-d", paste0("OUTDIR='", out, "'"), ..., slim_model()),
+                  error_on_status = FALSE)
+  }
+  for (bad in c("TREATMENT_DELAY=0.0", "TREATMENT_DELAY=0.5", "MEAN_RECRUD_DELAY=0.5",
+                "MEAN_RECRUD_DELAY=INF")) {
+    r <- slim("-d", bad)
+    expect_true(r$status != 0, label = bad)
+    expect_match(paste(r$stdout, r$stderr), "must be >= 1 and finite", label = bad)
+  }
+  ## the integer spelling that -d X=7 produces is fine
+  expect_equal(slim("-d", "TREATMENT_DELAY=7", "-d", "MEAN_RECRUD_DELAY=4")$status, 0L)
+})

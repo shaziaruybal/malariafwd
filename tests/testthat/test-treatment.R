@@ -56,6 +56,47 @@ test_that("the case-management window bounds WHEN treatment happens", {
   expect_true(all(given < 120 + 5 * 7))
 })
 
+test_that("treatment and recrudescence delays are geometric with mean D days, at least one day", {
+  skip_if_no_slim()
+  ## One pulse of detected imports on day 5 is the only source of cases: a single mosquito
+  ## that almost never bites, relapses and recrudescences go undetected, and founders are
+  ## never treated. No course clears anything: every clone still patent when its course lands
+  ## is suppressed, and each recrudescence is paired with its suppression through
+  ## parent1_pedigree_id.
+  delays <- function(d) {
+    run <- run_sim(vivax_params(N_HOSTS = 1200, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 45,
+                                IMPORT_TICK = 5, N_IMPORTS = 1000,
+                                P_DETECT_RELAPSE = 0, P_DETECT_RECRUD = 0,
+                                BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 1,
+                                P_RECRUD_GIVEN_FAIL = 1,
+                                TREATMENT_DELAY = d, MEAN_RECRUD_DELAY = d),
+                   seed = 3, outdir = file.path(tempdir(), paste0("mfw-delay-", d)))
+    ev <- load_events(run)
+    gap <- merge(ev[event_type == "recrudescence", .(holder = parent1_pedigree_id, t_rec = tick)],
+                 ev[event_type == "bloodcure_subpatent", .(holder = pedigree_id, t_sub = tick)],
+                 by = "holder")
+    list(course = ev[event_type == "bloodcure_given", tick] - 5L, recrud = gap$t_rec - gap$t_sub)
+  }
+  one <- delays(1)
+  expect_gt(length(one$course), 900)
+  expect_gt(length(one$recrud), 800)
+  ## D = 1: no delay comes later than the next day. A zero-day draw would also show as one day
+  ## here (imports are seeded after the day's courses, and suppressions happen after the day's
+  ## recrudescences), so the one-day share at D = 4 is what pins the floor.
+  expect_true(all(one$course == 1))
+  expect_true(all(one$recrud == 1))
+  four <- delays(4)
+  for (nm in names(four)) {
+    x <- four[[nm]]
+    ## Both at about 4 standard errors: the delay has mean 4 and variance 12, the one-day share
+    ## is 1/4 with variance 3/16. max(1, rgeom(1/(1 + D))) gives a one-day share of 0.36, and a
+    ## draw that can return 0 gives 0.44.
+    expect_lt(abs(mean(x) - 4), 4 * sqrt(12 / length(x)), label = paste("mean", nm, "delay - 4"))
+    expect_lt(abs(mean(x == 1) - 1/4), 4 * sqrt(3 / 16 / length(x)),
+              label = paste("one-day share of", nm, "delays - 1/4"))
+  }
+})
+
 test_that("a coverage against a closed treatment window is refused", {
   ## The failure mode D19 fixed was silence, so re-creating it in the NEW parameter has to
   ## be an error rather than a quietly empty result.

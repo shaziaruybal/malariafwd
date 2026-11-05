@@ -19,6 +19,48 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D32 — Treatment and recrudescence delays follow the 1/D convention · 2026-11-05 · Accepted
+**Context.** D29 made every duration parameter the mean of a geometric duration with daily
+probability 1/D, but two delays were left out. A course was scheduled
+`max(1, rgeom(1, 1/(1 + TREATMENT_DELAY)))` days after the case, and a suppressed clone re-expanded
+`max(1, rgeom(1, 1/(1 + MEAN_RECRUD_DELAY)))` days after its suppression. The one-day floor turns
+the draw's zeros into ones, so the mean was D + 1/(1 + D): 7.125 days for the default
+`TREATMENT_DELAY` of 7, and 10.59 for the default `MEAN_RECRUD_DELAY` of 10.5. `TREATMENT_DELAY = 0`
+was accepted and meant the next day.
+**Decision.** Both delays are `1 + rgeom(1, 1/D)`: each day after the case, or after the
+suppression, the event happens with probability 1/D, so the delay is at least one day and its mean
+is exactly D. Both parameters must be finite and at least 1; `validate_params()` refuses other
+values, and so does the model's `initialize()` for runs started directly with SLiM.
+`TREATMENT_DELAY = 1` means the next day, the fastest response the model can represent. The other
+recrudescence shapes are unchanged: `"poisson"` is 1 + Poisson(D - 1), with mean D, and `"fixed"`
+is round(D) days with halves rounded up, 11 days at the default 10.5.
+**Supersedes.** In D24, the reading of `TREATMENT_DELAY = 0` as the next day, and the rejected
+alternative "Forbid `TREATMENT_DELAY = 0`"; D24's same-tick fence in `applyTreatment()` stands. In
+D26, the geometric draw and its verification signature; the 10.5-day mean and the selectable
+shapes stand.
+**Rationale.** Every duration parameter has one reading (D29), and both parameters now mean what
+they say. A daily probability of 1/10.5 is Taylor et al. (2019)'s posterior median rate applied
+per day.
+**Alternatives rejected.** *Keep the draws and list them as exceptions* -- two parameters whose
+mean is not their value, for no modelling reason. *Keep `TREATMENT_DELAY = 0` as another name
+for 1* -- two values for one behaviour, where 1 already means the next day under the convention.
+**Consequences.** Runs that schedule case-based courses (`BLOODCURE_COVERAGE > 0`) or suppress
+clones (`P_BLOODCURE_SURVIVAL > 0` and `P_RECRUD_GIVEN_FAIL > 0`, after a course or an MDA round)
+change, through slightly shorter delays and the random stream. All other runs are byte-identical,
+the defaults and MDA rounds that suppress nothing included. The `TREATMENT_DELAY = 0` runs reported
+in D20 and D24 were measured under earlier meanings of 0; the closest valid setting is now 1
+(exactly one day), and their counts are not expected to reproduce. At the default 10.5 days the
+recrudescence gap has median 7 days and about 94% fall within day 28 (93% under the old draw).
+**How to verify.** In a run whose only cases are one pulse of detected imports, and where no
+course clears anything (every clone still patent when its course lands is suppressed): at D = 1 no
+course and no recrudescence comes later than the next day; at D = 4 the mean delay is 4 and a
+quarter of the delays are one day, a share that any mass at zero would inflate
+(`tests/testthat/test-treatment.R`). Values below 1 are refused by R and by the model
+(`tests/testthat/test-params.R`, `tests/testthat/test-slim.R`). D26's recipe now gives the
+geometric signature median 7 / sd 10.0 / P(<=7 d) 0.50 / P(<=28 d) 0.94.
+
+---
+
 ## D31 — No age cap on hypnozoite batches · 2026-11-05 · Accepted
 **Context.** `MAX_HYPNOZOITE_AGE` (1,500 days) cleared a whole hypnozoite batch once it was older
 than the cap. It began at 300 days as a "maximum hypnozoite survival" with no source, and was
@@ -170,7 +212,7 @@ whose only import establishment was dormant. Suites: `test_dir()` 97/0,
 
 ---
 
-## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted
+## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted; partly superseded by D32
 **Context.** Step 4 shipped the suppression-to-recrudescence delay as a geometric at mean 21 d.
 Two things needed settling: the plan (`TREATMENT_IMPLEMENTATION.md:32, :361`) specified
 `1 + Poisson(MEAN_RECRUD_DELAY - 1)` instead, and the 21 d default was uncited. A literature and
@@ -215,7 +257,7 @@ invalid value must be refused on both the R and SLiM sides.
 
 ---
 
-## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted
+## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted; partly superseded by D32
 **Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
 A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default
 of 7**, and 100% at 0 -- so the course landed in the same tick's `early()`. `reproduction()` runs

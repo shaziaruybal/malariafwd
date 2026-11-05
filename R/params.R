@@ -61,9 +61,13 @@
 #'
 #' Time is in days: one model tick is one day. A duration parameter `D` (such as
 #' `MEAN_BLOOD_STAGE_DURATION` or `MOSQ_LIFESPAN`) is the mean of a geometric duration: the
-#' event happens each day with probability `1/D`. Rates (`BITING_RATE`, `ALPHA_ACTIVATE`,
-#' `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a mosquito bites at most once
-#' a day, so `BITING_RATE` times its seasonal and resurgence multipliers is capped at 1.
+#' event happens each day with probability `1/D`. The treatment delay (`TREATMENT_DELAY`) and,
+#' under the default `RECRUD_DELAY_DIST = "geometric"`, the recrudescence delay
+#' (`MEAN_RECRUD_DELAY`) follow the same rule from the day after the case or the suppression,
+#' so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates
+#' (`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities;
+#' a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence
+#' multipliers is capped at 1.
 #'
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
 #' @return An object of class `vivax_params` (a named list).
@@ -139,8 +143,12 @@ validate_params <- function(p) {
   if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))
     stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '", p$RADCURE_MODE, "'",
          call. = FALSE)
-  if (p$TREATMENT_DELAY < 0) stop("TREATMENT_DELAY must be >= 0", call. = FALSE)
-  if (p$MEAN_RECRUD_DELAY <= 0) stop("MEAN_RECRUD_DELAY must be > 0", call. = FALSE)
+  if (!is.finite(p$TREATMENT_DELAY) || p$TREATMENT_DELAY < 1)
+    stop("TREATMENT_DELAY must be >= 1 and finite (days): a course arrives each day after the case ",
+         "with probability 1/TREATMENT_DELAY, so 1 means the next day.", call. = FALSE)
+  if (!is.finite(p$MEAN_RECRUD_DELAY) || p$MEAN_RECRUD_DELAY < 1)
+    stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days): it is the mean delay from suppression ",
+         "to recrudescence, which is at least one day.", call. = FALSE)
   if (!p$RECRUD_DELAY_DIST %in% c("geometric", "poisson", "fixed"))
     stop("RECRUD_DELAY_DIST must be 'geometric', 'poisson' or 'fixed', got '",
          p$RECRUD_DELAY_DIST, "'", call. = FALSE)
