@@ -84,6 +84,22 @@ vivax_params <- function(...) {
   structure(p, class = "vivax_params")
 }
 
+## The largest daily biting probability the parameters ask of a mosquito, worked out over the run
+## the way the model applies them: seasonality only when SEASONAL_AMP > 0 (floored at 0), the
+## intervention factor inside [INTERVENTION_START, INTERVENTION_END), the boost from
+## RESURGENCE_TRIGGER_TICK. Biting starts on tick 2, once the populations exist.
+.peak_biting <- function(p) {
+  t <- seq.int(2L, max(2L, as.integer(p$SIM_DAYS)))
+  r <- rep(p$BITING_RATE, length(t))
+  if (p$SEASONAL_AMP > 0)
+    r <- r * pmax(0, 1 + p$SEASONAL_AMP * cos(2 * pi * (t - p$SEASONAL_PHASE) / 365))
+  inside <- t >= p$INTERVENTION_START & t < p$INTERVENTION_END
+  r[inside] <- r[inside] * (1 - p$INTERVENTION_EFFICACY)
+  boosted <- t >= p$RESURGENCE_TRIGGER_TICK
+  r[boosted] <- r[boosted] * p$BITING_RATE_BOOST
+  c(rate = max(r), day = t[which.max(r)])
+}
+
 #' @keywords internal
 validate_params <- function(p) {
   bad <- names(p)[!vapply(p, function(v) length(v) == 1L && !is.na(v), logical(1))]
@@ -106,14 +122,18 @@ validate_params <- function(p) {
   if (p$MU_HYPNOZOITE <= 0)
     stop("MU_HYPNOZOITE must be > 0: hypnozoites that cannot die keep their batch alive forever.",
          call. = FALSE)
-  if (p$MEAN_BLOOD_STAGE_DURATION < 1)
-    stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 (days): blood-stage infections clear each day ",
+  if (p$K_LATENCY > 0 && (p$DELTA_LATENCY <= 0 || p$DELTA_LATENCY > 1))
+    stop("DELTA_LATENCY must be in (0, 1] when K_LATENCY > 0: a latent batch leaves each latency ",
+         "stage with daily probability DELTA_LATENCY.", call. = FALSE)
+  if (!is.finite(p$MEAN_BLOOD_STAGE_DURATION) || p$MEAN_BLOOD_STAGE_DURATION < 1)
+    stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days): blood-stage infections clear each day ",
          "with probability 1/MEAN_BLOOD_STAGE_DURATION.", call. = FALSE)
-  peak_bite <- p$BITING_RATE * (1 + abs(p$SEASONAL_AMP)) * max(1, p$BITING_RATE_BOOST)
-  if (peak_bite > 1)
-    warning("BITING_RATE x (1 + SEASONAL_AMP) x BITING_RATE_BOOST reaches ", signif(peak_bite, 3),
-            ", but a mosquito bites at most once a day, so the realised biting rate is capped ",
-            "below what BITING_RATE implies.", call. = FALSE)
+  peak <- .peak_biting(p)
+  if (peak[["rate"]] > 1)
+    warning("BITING_RATE with its seasonal, intervention and resurgence multipliers reaches ",
+            signif(peak[["rate"]], 3), " on day ", peak[["day"]], ", but a mosquito bites at most ",
+            "once a day, so the realised biting rate is capped below what the parameters imply.",
+            call. = FALSE)
   if (p$N_OOCYSTS_PER_BITE != 1)
     stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES instead.", call. = FALSE)
   if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))

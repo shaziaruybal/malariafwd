@@ -124,3 +124,19 @@ test_that("hypnozoite batches have no age cap, and hypnozoites must be able to d
   expect_error(vivax_params(MAX_HYPNOZOITE_AGE = 1500), "unknown parameter")
   expect_error(vivax_params(MU_HYPNOZOITE = 0), "MU_HYPNOZOITE must be > 0")
 })
+
+test_that("the biting warning follows the model's own seasonal, intervention and boost timeline", {
+  expect_no_warning(vivax_params(BITING_RATE = 0.8, SEASONAL_AMP = -0.5))     # the model ignores AMP < 0
+  expect_no_warning(vivax_params(BITING_RATE = 0.6, BITING_RATE_BOOST = 2))   # trigger after the run
+  expect_warning(vivax_params(BITING_RATE = 0.6, BITING_RATE_BOOST = 2, RESURGENCE_TRIGGER_TICK = 100L),
+                 "bites at most once a day")
+  expect_no_warning(vivax_params(BITING_RATE = 0.07, BITING_RATE_BOOST = 16, RESURGENCE_TRIGGER_TICK = 100L,
+                                 INTERVENTION_START = 50L, INTERVENTION_END = 400L,
+                                 INTERVENTION_EFFICACY = 0.92))                # peak 0.07 x 0.08 x 16 = 0.09
+})
+
+test_that("latent hypnozoites must be able to leave latency, and durations must be finite", {
+  expect_error(vivax_params(K_LATENCY = 2L, DELTA_LATENCY = 0), "DELTA_LATENCY must be in \\(0, 1\\]")
+  expect_no_error(vivax_params(K_LATENCY = 0L, DELTA_LATENCY = 0))
+  expect_error(vivax_params(MEAN_BLOOD_STAGE_DURATION = Inf), "MEAN_BLOOD_STAGE_DURATION must be >= 1")
+})
