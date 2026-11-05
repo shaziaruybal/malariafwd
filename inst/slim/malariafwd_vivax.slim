@@ -1594,6 +1594,11 @@ function (void) writeStateSnapshot(void)
 	humans = sim.subpopulations[HUMANS];
 	mosq   = sim.subpopulations[VECTORS];
 	
+	// Rows are collected and appended in one call at the end: opening and closing the file
+	// once per row cost most of a run's time.
+	rows = rep("", size(humans) + size(mosq));
+	k = 0;
+	
 	for (h in humans)
 	{
 		// Count only lineages that are actually PRESENT: a dormant batch retired to
@@ -1632,7 +1637,8 @@ function (void) writeStateSnapshot(void)
 			"NA"    // mosq_age_days   — NA for humans
 			), sep="\t");
 		
-		writeFile(OUTDIR + "/state.tsv", line, append=T);
+		rows[k] = line;
+		k = k + 1;
 	}
 	
 	for (m in mosq)
@@ -1658,8 +1664,12 @@ function (void) writeStateSnapshot(void)
 			asString(mosq_age)
 			), sep="\t");
 		
-		writeFile(OUTDIR + "/state.tsv", line, append=T);
+		rows[k] = line;
+		k = k + 1;
 	}
+	
+	if (size(rows) > 0)
+		writeFile(OUTDIR + "/state.tsv", rows, append=T);
 }
 
 // -----------------------
