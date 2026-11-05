@@ -95,10 +95,12 @@ Time advances in **daily ticks**. Each tick runs in this order:
 | `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
 | `late()` | `state.tsv` logging; the tree sequence at the end of the run |
 
-Ordering matters for one subtlety: a batch exhausted or age-capped during `reproduction()` is
-**retired** by setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in
-the **same** tick, so there is no activation lag. (This replaced a queue that an Eidos scoping slip
-had made function-local; see §18.)
+Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
+setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**
+tick, so there is no activation lag. A batch emptied by radical cure or MDA, which run later in
+`early()`, stays until the next tick's cleanup, and `reproduction()` skips it in between.
+(Retirement is recorded on the batch itself rather than in a global list, which sidesteps the
+Eidos scoping trap described in §18.)
 
 Population sizes are **fixed**: `N_HOSTS` humans, `N_MOSQ` mosquitoes. A mosquito that dies is
 replaced by a susceptible one, so vector density is constant and there is no larval or

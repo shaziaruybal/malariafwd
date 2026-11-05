@@ -419,11 +419,10 @@ reproduction()
 	// ----------------------------
 	// HYPNOZOITE ACTIVATION (relapse) - DECIDE + SEED (combined)
 	// ----------------------------
-	// anything that needs to be killed (age-cutoff clearance, a batch fully
-	// exhausted after this tick's thinning) is RETIRED by setting batch_count = 0;
-	// the "HYPNOZOITE CLEANUP" pass at the top of early() kills every dormant batch
-	// with batch_count == 0. It runs immediately after this callback in the SAME
-	// tick, so there is no additional lag.
+	// A batch fully exhausted after this tick's thinning is RETIRED by setting
+	// batch_count = 0; the "HYPNOZOITE CLEANUP" pass at the top of early() kills every
+	// dormant batch with batch_count == 0. It runs immediately after this callback in the
+	// SAME tick, so there is no additional lag.
 	// (State shared with early() MUST be written with defineGlobal(). A plain assignment
 	// inside a callback is scoped LOCAL in Eidos, so early() would not see it and an
 	// exhausted batch would stay alive and keep activating against a stale count.)
@@ -455,6 +454,10 @@ reproduction()
 				next;
 			
 			batch_count   = hyp.getValue("batch_count");
+			// Emptied by radical cure or MDA after last tick's cleanup ran: nothing is left to
+			// progress, activate or die, and the next cleanup in early() removes it.
+			if (batch_count == 0)
+				next;
 			latency_stage = hyp.getValue("latency_stage"); // 0=non-latent, 1-K = latent
 			
 			// Latency progression (only relevant for K_LATENCY > 0, temperate
@@ -1143,11 +1146,11 @@ early() {
 	// ----------------------------
 	// HYPNOZOITE CLEANUP
 	// ----------------------------
-	// kills every dormant batch RETIRED with batch_count == 0 (age-capped,
-	// exhausted by activation/death, or emptied by radical cure / MDA).
-	// killIndividuals() isn't legal in reproduction(), so this is deferred here -
-	// early() runs immediately after reproduction() within the same tick's cycle,
-	// so there is no additional lag.
+	// kills every dormant batch RETIRED with batch_count == 0 (exhausted by activation or
+	// death, or emptied by radical cure / MDA). killIndividuals() isn't legal in
+	// reproduction(), so this is deferred here. A batch exhausted in reproduction() is
+	// removed later in the same tick; one emptied by treatment or MDA, which run after this
+	// cleanup, stays until the next tick's cleanup, and reproduction() skips it meanwhile.
 	// ----------------------------
 	for (h in humans)
 	{
@@ -1713,14 +1716,10 @@ function (integer$) getDormantLineageCount(o<Subpopulation>$ s)
 	dormant = s.individuals[s.individuals.getValue("is_dormant") == T];
 	if (size(dormant) == 0)
 		return 0;
-	// Exclude "zombie" batches (batch_count == 0): these are batches that
-	// fully activated this tick and are deliberately left alive until the
-	// next early() pass retires them (see reproduction()'s SPAWN PHASE
-	// comment on why killIndividuals() can't happen there directly). A
-	// zombie batch no longer represents any real hypnozoite, so it should
-	// not count toward genotype diversity - keeps this consistent with
-	// getHypnozoiteReservoirSize(), which already correctly contributes 0
-	// for these objects.
+	// Exclude batches with batch_count == 0. This runs in late(), where such a batch is one
+	// that radical cure or MDA emptied this tick, after the early() cleanup had run; the
+	// next tick's cleanup removes it. It holds no hypnozoites, so it is not a dormant
+	// genotype, and getHypnozoiteReservoirSize() counts it as 0 too.
 	dormant = dormant[dormant.getValue("batch_count") > 0];
 	if (size(dormant) == 0)
 		return 0;
