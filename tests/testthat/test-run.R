@@ -101,6 +101,14 @@ test_that("run_grid() gives each warning from its cells once, after its FAILED s
   expect_match(w[2], "bites at most once a day.* \\[3 cells\\]$")
 })
 
+test_that("under options(warn = 2) a warning fails its cell, as R makes it an error", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  p <- suppressWarnings(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, BITING_RATE = 2))
+  op <- options(warn = 2); on.exit(options(op), add = TRUE)
+  expect_error(run_grid(p, seeds = 1:2, outdir_base = tempfile("mfwd_grid2_")),
+               "2 of 2 grid cell\\(s\\) FAILED.*converted from warning")
+})
+
 test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   tiny <- tempfile(fileext = ".slim")

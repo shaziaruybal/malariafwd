@@ -36,7 +36,9 @@ a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code
 sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
 with the result rather than being discarded. A warning given in the cells (such as a
 parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, with
-the number of cells it came from.
+the number of cells it came from, also when the grid stops part-way. Under
+\code{options(warn = 2)} a warning fails its cell, as R makes it an error, and the FAILED summary
+is then an error too.
 }
 \description{
 Runs every \verb{(parameter set, seed)} combination, each in its own output directory,

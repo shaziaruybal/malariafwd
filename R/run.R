@@ -100,7 +100,9 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #'   sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
 #'   with the result rather than being discarded. A warning given in the cells (such as a
 #'   parameter set's own warnings, which [run_sim()] repeats for each run) is given once, with
-#'   the number of cells it came from.
+#'   the number of cells it came from, also when the grid stops part-way. Under
+#'   `options(warn = 2)` a warning fails its cell, as R makes it an error, and the FAILED summary
+#'   is then an error too.
 #' @export
 run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, ...) {
@@ -119,15 +121,28 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
 
   ## A set that warns when it is checked (biting above 1 a day, say) warns again in each of its
   ## cells, and R keeps only the first 50 warnings, which would crowd out the FAILED summary below.
-  ## So each distinct warning is kept back and given once, after it.
-  caught <- character()
+  ## So each distinct warning is kept back (its first condition, so its class survives) and given
+  ## once, after it, from on.exit() so that a grid stopped part-way still gives them. Under
+  ## warn = 2 a warning is left for R to turn into the cell's error; the cells run with the
+  ## caller's warn, which workers do not inherit.
+  warn_level <- getOption("warn")
+  msgs <- character(); conds <- list(); counts <- integer()
   keep <- function(w) {
-    caught <<- c(caught, conditionMessage(w))
+    if (warn_level >= 2) return()
+    m <- conditionMessage(w); i <- match(m, msgs)
+    if (is.na(i)) { msgs <<- c(msgs, m); conds[[length(conds) + 1L]] <<- w; counts <<- c(counts, 1L) }
+    else counts[i] <<- counts[i] + 1L
     invokeRestart("muffleWarning")
   }
+  on.exit(for (i in seq_along(msgs)) {
+    w <- conds[[i]]
+    if (counts[i] > 1) w$message <- paste0(msgs[i], " [", counts[i], " cells]")
+    warning(w)
+  }, add = TRUE)
   out <- withCallingHandlers(furrr::future_pmap(
     list(jobs$set, jobs$seed, jobs$outdir),
     function(set, seed, outdir) {
+      op <- options(warn = warn_level); on.exit(options(op))
       ## Keep the error TEXT. `ok = FALSE` alone is unactionable: a cell that failed because
       ## SLiM is not on PATH and one that failed on a bad parameter are indistinguishable, and
       ## a failed cell leaves no directory and no log to read afterwards. The sweep still does
@@ -149,10 +164,6 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
     n <- sum(!res$ok)
     warning(n, " of ", nrow(res), " grid cell(s) FAILED and produced no run. First error: ",
             res$error[!res$ok][1], "\nSee the `error` column for the rest.", call. = FALSE)
-  }
-  for (m in unique(caught)) {
-    n <- sum(caught == m)
-    warning(m, if (n > 1) paste0(" [", n, " cells]"), call. = FALSE)
   }
   res
 }
