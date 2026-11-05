@@ -1,5 +1,6 @@
 ## Values that validate_params() accepts must run to the end: the model may not stop part-way
-## with an Eidos error. Each case below stopped the run before the guard it tests.
+## with an Eidos error. Each case below stopped the run before the guard it tests, and each
+## checks that the run reached the state the guard handles, so a lucky seed cannot pass it.
 
 edge_run <- function(tag, ...) {
   run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 100, CHROMOSOMES = "1", ...), seed = 3,
@@ -8,15 +9,24 @@ edge_run <- function(tag, ...) {
 
 test_that("SUBPATENT_INFECTIVITY = 0 runs when a host carries only dormant batches", {
   skip_if_no_slim()
-  run <- edge_run("subpat0", SIM_DAYS = 60, SUBPATENT_INFECTIVITY = 0)
-  expect_equal(max(load_state(run)$tick), 60)
+  run <- edge_run("subpat0", SIM_DAYS = 120, SUBPATENT_INFECTIVITY = 0)
+  st <- load_state(run)
+  expect_equal(max(st$tick), 120)
+  ## a host with nothing but dormant batches is infected and not infectious
+  dormant_only <- st[entity_type == "human" & moi_active == 0 & moi_subpatent == 0 & moi_dormant > 0]
+  expect_gt(nrow(dormant_only), 0)
+  expect_true(all(dormant_only$tag == 0))
 })
 
 test_that("the hypnozoite death probability stays a probability when alpha + mu = 1", {
   skip_if_no_slim()
   ## 0.1 / (1 - 0.9) is 1.0000000000000002 in floating point
-  run <- edge_run("alphamu", SIM_DAYS = 60, ALPHA_ACTIVATE = 0.9, MU_HYPNOZOITE = 0.1)
-  expect_equal(max(load_state(run)$tick), 60)
+  run <- edge_run("alphamu", SIM_DAYS = 120, ALPHA_ACTIVATE = 0.9, MU_HYPNOZOITE = 0.1)
+  expect_equal(max(load_state(run)$tick), 120)
+  ## each batch is gone after its first dormant day: what does not activate dies
+  clear <- load_events(run)[event_type == "hypnozoite_clearance"]
+  expect_gt(nrow(clear), 0)
+  expect_equal(max(table(clear$pedigree_id)), 1)
 })
 
 test_that("an import rate that reaches zero means no imports, not an error", {
@@ -26,6 +36,14 @@ test_that("an import rate that reaches zero means no imports, not an error", {
                   IMPORT_RATE_PER_TICK = 0.2, RESURGENCE_TRIGGER_TICK = 10, IMPORT_RATE_BOOST = 0)
   ev <- load_events(run)
   expect_equal(max(load_state(run)$tick), 30)
+  expect_equal(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 0L)
+  ## ...full border control stops imports from the start of the intervention (a batch imported on
+  ## day 9 is logged on day 10)...
+  run <- edge_run("impeff1", SIM_DAYS = 60, IMPORT_START = 5, IMPORT_END = 60,
+                  IMPORT_RATE_PER_TICK = 1, INTERVENTION_START = 10, INTERVENTION_EFFICACY = 1)
+  ev <- load_events(run)
+  expect_equal(max(load_state(run)$tick), 60)
+  expect_gt(nrow(ev[event_type == "vh_inoculation_import" & tick < 10]), 0L)
   expect_equal(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 0L)
   ## ...and a seasonal amplitude above 1 floors the seasonal factor at 0 for part of the year
   run <- edge_run("impseason", SIM_DAYS = 140, IMPORT_START = 5, IMPORT_END = 140,

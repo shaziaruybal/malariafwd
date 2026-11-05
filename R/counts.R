@@ -37,9 +37,12 @@ uptake_moments <- function(lambda, k = 0) {
 #' feeding study) and it returns the `LAMBDA_*` / `K_OOCYSTS` values to set.
 #'
 #' If `var` is omitted, or is not larger than the Poisson variance at that mean, a Poisson
-#' (`k = 0`) solution is returned -- the negative binomial can only *add* dispersion.
+#' (`k = 0`) solution is returned -- the negative binomial can only *add* dispersion. `k` is
+#' never below 0.001, the most dispersed count the model can draw, so a target variance beyond
+#' that is matched only approximately (with a warning).
 #'
-#' @param mean target realised (zero-truncated) mean; must be > 1.
+#' @param mean target realised (zero-truncated) mean; must be > 1 and at most 1000, the largest
+#'   mean [vivax_params()] accepts.
 #' @param var optional target realised variance.
 #' @return list with `lambda`, `k`, and the `achieved` moments from [uptake_moments()].
 #' @examples
@@ -48,6 +51,8 @@ uptake_moments <- function(lambda, k = 0) {
 #' @export
 uptake_calibrate <- function(mean, var = NULL) {
   if (mean <= 1) stop("a zero-truncated count has mean > 1; got ", mean, call. = FALSE)
+  if (mean > 1000)
+    stop("the model accepts a mean of at most 1000 per uptake or bite; got ", mean, call. = FALSE)
   ## Poisson branch: one unknown, solve the mean directly (monotone in lambda).
   lam0 <- stats::uniroot(function(l) uptake_moments(l, 0)["mean"] - mean,
                          interval = c(1e-10, 20 * mean), tol = 1e-12)$root
@@ -61,7 +66,8 @@ uptake_calibrate <- function(mean, var = NULL) {
   }
   fit <- stats::optim(c(log(lam0), log(max(mean, 1))), obj, method = "L-BFGS-B",
                       lower = c(log(1e-6), log(1e-3)), upper = c(log(1e4), log(1e6)))
-  lam <- exp(fit$par[1]); k <- exp(fit$par[2]); ach <- uptake_moments(lam, k)
+  ## exp(log(1e-3)) can land a bit below 1e-3, which vivax_params() would refuse
+  lam <- exp(fit$par[1]); k <- max(exp(fit$par[2]), 1e-3); ach <- uptake_moments(lam, k)
   if (abs(ach[["mean"]] / mean - 1) > 0.01 || abs(ach[["var"]] / var - 1) > 0.01)
     warning("could not match the target moments closely; see $achieved", call. = FALSE)
   list(lambda = lam, k = k, achieved = ach)

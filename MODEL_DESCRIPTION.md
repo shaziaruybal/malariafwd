@@ -239,8 +239,9 @@ biting_rate_eff(t) = BITING_RATE * (1 + SEASONAL_AMP * cos(2*pi*(t - SEASONAL_PH
 ```
 
 clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (`cos`, not `sin` — an
-earlier `sin` put the peak ~91 d late). `SEASONAL_AMP` ≈ 0.85 gives strong annual peaks swinging
-biting between roughly 0.15× and 1.85× the mean.
+earlier `sin` put the peak ~91 d late). `SEASONAL_AMP` is non-negative and 0 means no
+seasonality; ≈ 0.85 gives strong annual peaks swinging biting between roughly 0.15× and 1.85× the
+mean.
 
 > **Scale warning.** Because `ma` depends on `N_MOSQ / N_HOSTS`, prevalence and COI are
 > **scale-dependent**. A biting rate calibrated at 150 hosts does **not** transfer to 400 hosts.
@@ -633,9 +634,23 @@ Time is in days (one tick is one day). A duration parameter D is the mean of a g
 duration: the event happens each day with probability 1/D. The treatment delay
 (`TREATMENT_DELAY`) and, under the default `RECRUD_DELAY_DIST = "geometric"`, the recrudescence
 delay (`MEAN_RECRUD_DELAY`) follow the same rule from the day after the case or the suppression,
-so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates (`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily
-probabilities; a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and
-resurgence multipliers is capped at 1.
+so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates
+(`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a
+mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers
+is capped at 1.
+`vivax_params()` refuses values the model cannot run (D33). Each value is a number, `T`/`F` or a
+string, as its default is, and numbers are finite. Counts, `SIM_DAYS`, the scheduling days
+(`MDA_TICK`, `IMPORT_TICK`, `RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed
+delays are whole numbers; mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities
+and coverages lie in [0, 1] (a `BITING_RATE` above 1 only warns, and `DELTA_LATENCY` is checked
+when `K_LATENCY` > 0); boosts, import rates, λ values, `SEASONAL_AMP` and counts are
+non-negative. A few sizes are capped far above anything realistic: a mean of 1000 oocysts per
+successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; ν × boost ≤
+10⁶ hypnozoites per bite once the trigger falls inside the run; at most 10⁶ imports a day; and
+`TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most 10⁹, SLiM's last
+tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
+past its end. A founder-free run whose imports never establish a parasite is not refused; the
+model's liveness check stops it.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -685,7 +700,7 @@ derived and written to `params.tsv` for provenance.
 |---|---|
 | `GENOME_MODE` | `"full"` (24.2 Mb) |
 | `CHROMOSOMES` | `"1-14"` |
-| `RECOMB_RATE` | −1 (auto → 7.4e-7/bp) |
+| `RECOMB_RATE` | −1 (any value ≤ 0 means the default, 7.4e-7/bp; at most 0.5, and run time grows steeply with it) |
 | mutation rate | **0** (hard-coded) |
 
 ### Interventions, observation, importation
@@ -693,7 +708,7 @@ derived and written to `params.tsv` for provenance.
 | parameter | default |
 |---|---|
 | `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 — vector control and importation only; it does **not** gate treatment (D19) |
-| `SEASONAL_AMP` / `SEASONAL_PHASE` | 0 / 0 |
+| `SEASONAL_AMP` / `SEASONAL_PHASE` | 0 / 0 — `SEASONAL_AMP` ≥ 0, and 0 means no seasonality; `SEASONAL_PHASE` is the day of the peak |
 | `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD` | 1.0 / 1.0 / 0.5 — drawn once per episode |
 | `RESURGENCE_TRIGGER_TICK` + 4 boosts | 99999, all 1.0 |
 | `IMPORT_*` | off |

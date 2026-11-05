@@ -27,6 +27,30 @@ so they are at least one day; \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are fi
 (\code{BITING_RATE}, \code{ALPHA_ACTIVATE}, \code{MU_HYPNOZOITE}, \code{DELTA_LATENCY}) are daily probabilities;
 a mosquito bites at most once a day, so \code{BITING_RATE} times its seasonal and resurgence
 multipliers is capped at 1.
+
+Values the model cannot run are refused here, before SLiM starts. Each value is a number,
+\code{TRUE}/\code{FALSE} or a string, as its default is, and numbers are finite. Counts, \code{SIM_DAYS},
+the scheduling days (\code{MDA_TICK}, \code{IMPORT_TICK}, \code{RESURGENCE_TRIGGER_TICK} and the \verb{*_START}
+and \verb{*_END} bounds) and the fixed delays \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are whole numbers;
+mean durations, rates and \code{SEASONAL_PHASE} need not be. Probabilities and coverages,
+\code{ALPHA_ACTIVATE} and \code{INTERVENTION_EFFICACY} lie in [0, 1], \code{MU_HYPNOZOITE} in (0, 1], and
+\code{DELTA_LATENCY} in (0, 1] when \code{K_LATENCY > 0}. \code{BITING_RATE} is positive (above 1 it only
+warns). Boosts, import rates, \verb{LAMBDA_*}, \code{SEASONAL_AMP} and counts are non-negative.
+\code{RECOMB_RATE} is at most 0.5 per bp (any value <= 0 means the default map rate), and run time
+grows steeply with it.
+
+A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
+uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYSTS} either 0 or at least 0.001;
+\code{LAMBDA_SPOROZOITES} at 1000; the hypnozoite batch mean at 1e6, times its boost once the
+trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_DELAY} and
+\code{MEAN_RECRUD_DELAY} at 1e6 days. \code{SIM_DAYS} is at most 1e9, SLiM's last tick, and a run that
+reaches day 99999, the day the defaults use for "never", must move those days past its end. A
+founder-free run whose imports never establish a parasite is not refused here; the model's
+liveness check stops it.
+
+A whole number carrying floating-point noise (such as \code{1.1 * 100}), a number or factor given
+for a string parameter, and spaces around the commas and dashes of \code{CHROMOSOMES} are stored
+in the form SLiM is given.
 }
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")

@@ -19,6 +19,72 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted
+**Context.** A search of the model's random draws, empty vectors, parameter edges and arithmetic
+found about seventeen ways for a run to stop part-way with an Eidos error, or never finish, on
+values `validate_params()` accepted. Some of those values are legitimate and the model mishandled
+them: `SUBPATENT_INFECTIVITY = 0`, the competing-risks clamp, an import rate that reaches 0
+(border closure, full border control, a seasonal amplitude above 1), the `"poisson"` delay at its
+minimum, and the small `K_OOCYSTS` that `uptake_calibrate()` can return. The rest are values the
+model cannot run, or runs as something else: probabilities outside [0, 1], negative boosts and
+counts, non-whole counts and scheduling days, values of the wrong kind, `Inf`, and sizes far
+beyond anything realistic.
+**Decision.** The model takes every legitimate edge value at its natural limit: no imports at a
+rate of 0, a one-day delay at the minimum, a death probability capped at 1, no infectiousness for
+a host without a blood stage, and a zero count from a gamma draw of 0. `validate_params()` refuses
+everything else before SLiM starts, with a message that names the parameter. Each value is a
+number, `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and 0 or at least
+1e-300 in size. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
+`RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays `EIP_DAYS` and
+`GAMETOCYTE_DELAY` are whole; mean durations, rates and `SEASONAL_PHASE` need not be.
+Probabilities and coverages, `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1],
+`MU_HYPNOZOITE` in (0, 1] and `DELTA_LATENCY` in (0, 1] when `K_LATENCY > 0`; `BITING_RATE` is
+positive; boosts, import rates, `LAMBDA_*`, `SEASONAL_AMP` and counts are non-negative;
+`MOSQ_LIFESPAN` is at least 1 (D29); `RECOMB_RATE` is at most 0.5. `CHROMOSOMES` names
+chromosomes 1-14 once each, and strings carry no control characters. A few sizes are capped: a
+mean of 1000 oocysts per successful uptake, with `K_OOCYSTS` 0 or at least 0.001;
+`LAMBDA_SPOROZOITES` at 1000; the hypnozoite batch mean, times its boost once the trigger falls
+inside the run, at 10^6; the import rate at 10^6 a day; `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY`
+at 10^6 days; and `SIM_DAYS` at 10^9, SLiM's last tick. A run of 99999 days or more must move the
+days that default to 99999 past its end. Spellings that mean the same value are stored in the
+form SLiM is given: a whole number with floating-point noise (`1.1 * 100`), a number or factor
+for a string parameter (`expand.grid()` makes factors), and spaces around the commas and dashes
+of `CHROMOSOMES`. The model's `initialize()` repeats the checks that guard its own draws (the
+delays, `K_OOCYSTS`, the rate factors, `SEASONAL_AMP`, the "never" days) for runs started
+directly with `-d`.
+**Rationale.** A sweep must not lose cells to engine errors, and a refusal that names the
+parameter is better than a stack trace from tick 200. The caps sit far above any realistic
+setting and well below where SLiM's draws fail (binomial sizes are 32-bit, Poisson draws wrap
+above 2^32, the geometric delay saturates near 4e9 days), and they bound the work of a single
+draw. The oocyst cap is on the mean count per uptake rather than on `LAMBDA_OOCYSTS`, because a
+small `K_OOCYSTS` gives a tail whose mean is many times lambda. Below `K_OOCYSTS = 0.001` the
+gamma-Poisson sampler stops drawing the distribution it is asked for: its gamma draws underflow
+to 0 and the uptake falls back to one oocyst. 99999 is the day the defaults use for "never", so a
+run that reaches it would trigger every default intervention on that day.
+**Alternatives rejected.** *Clamp silently in the model* -- an out-of-range value would run as
+something else. *Refuse the legitimate edge values too* -- border closure, a null arm without
+subpatent infectivity and the minimum delay are real scenarios. *Cap the import rate at
+`N_HOSTS` a day* -- the model runs such rates, and the cap only refused small populations.
+*Refuse alternative spellings* -- `1.1 * 100` and the factors of an `expand.grid()` sweep ran
+correctly, and refusing them would cost sweep cells for nothing.
+**Consequences.** Every run that completed before and is still accepted gives byte-identical
+events and state. Many of the refused values used to complete while silently meaning something
+else, e.g. `MOSQ_LIFESPAN = 0.5`, `N_FOUNDERS = 12.5`, `MDA_TICK = 50.5`, `CHROMOSOMES = "1,1"`,
+`EIP_DAYS = -5`, `VERBOSE = 0` and `SEASONAL_AMP = -0.5`. `MOSQ_LIFESPAN` and `SEASONAL_PHASE`
+become doubles, since a mean and a day of the year need not be whole, so `params.tsv` writes them
+as `10.0` and `0.0`. `uptake_calibrate()` returns a `k` of at least 0.001 and refuses a target
+mean above 1000. Run time is not bounded: `N_HOSTS`, `N_MOSQ` and `SIM_DAYS` are uncapped, and a
+high `RECOMB_RATE` or a dispersed uptake within the caps can be slow. Not settled here: a
+founder-free run whose imports fail to establish by chance still stops at the model's liveness
+check, and some impossible import schedules are caught only there.
+**How to verify.** `tests/testthat/test-edge-values.R` runs the legitimate edge values to the end
+and checks that each run reached the state its guard handles; the minimum delays are in
+`tests/testthat/test-treatment.R`, and the direct `-d` checks in `tests/testthat/test-slim.R`.
+`tests/testthat/test-params.R` refuses each impossible value with a message that names the
+parameter, and stores the alternative spellings in SLiM's form.
+
+---
+
 ## D32 — Treatment and recrudescence delays follow the 1/D convention · 2026-11-05 · Accepted
 **Context.** D29 made every duration parameter the mean of a geometric duration with daily
 probability 1/D, but two delays were left out. A course was scheduled

@@ -17,7 +17,7 @@ initialize() {
 	defineDefault("BITING_RATE",             0.1); // F11: per-MOSQUITO daily biting probability (realized at line ~477 as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
 	defineDefault("P_TRANS_VH",              0.5); // b = probability an infectious mosquito bite infects a human
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
-	defineDefault("MOSQ_LIFESPAN",           10); // expected mosquito lifespan 10 days
+	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
 	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked once, in the infected-mosquito-bites-infected-human branch: a host already carrying MAX_MOI active lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 4 observed with MAX_MOI=2). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
 	defineDefault("MAX_BROODS_PER_MOSQ",     20); // capping the max brood carrying capacity per mosquito - TODO later make mosq mortality and transmissibility decline with increasing broods (ie high burden = lower fitness)
@@ -111,7 +111,7 @@ initialize() {
 	// (biting swings ~0.15x..1.85x the mean). Clamped >= 0. SEASONAL_PHASE = day-of-year of the
 	// PEAK (F4: cos peaks at t=PHASE; the earlier sin() put the peak ~91 d after PHASE).
 	defineDefault("SEASONAL_AMP",    0.0);
-	defineDefault("SEASONAL_PHASE",  0);
+	defineDefault("SEASONAL_PHASE",  0.0);
 
 	// detection / observation layer: a true blood-stage episode becomes a DETECTED
 	// (reported, genotyped) case w.p. P_DETECT_[type]. Relapses are mostly sub-patent
@@ -256,14 +256,40 @@ initialize() {
 		stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES (zero-truncated count of oocyst products per bite) instead.");
 	if (LAMBDA_OOCYSTS < 0 | LAMBDA_SPOROZOITES < 0)
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be >= 0");
+	// The checks below are mirrored in validate_params() and repeated here for runs started
+	// directly with -d. They are written as comparisons rather than isFinite(), which refuses
+	// the integer that -d X=7 produces, and so that NAN fails them.
+	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates; below K = 1e-3 its gamma draws
+	// underflow to 0 so often that the counts fall back to 1, the reverse of the dispersion asked for.
+	if (!(K_OOCYSTS <= 0 | K_OOCYSTS >= 1e-3))
+		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got " + K_OOCYSTS +
+			": the model cannot draw a more dispersed oocyst count.");
+	// These factors scale the biting and import rates, which must stay non-negative.
+	if (!(INTERVENTION_EFFICACY >= 0 & INTERVENTION_EFFICACY <= 1))
+		stop("INTERVENTION_EFFICACY must be in [0, 1], got " + INTERVENTION_EFFICACY);
+	if (!(IMPORT_RATE_PER_TICK >= 0 & IMPORT_RATE_BOOST >= 0 & BITING_RATE_BOOST >= 0))
+		stop("IMPORT_RATE_PER_TICK, IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0");
+	if (!(SEASONAL_AMP >= 0))
+		stop("SEASONAL_AMP must be >= 0 (0 means no seasonality), got " + SEASONAL_AMP);
+	// The days that default to 99999 mean 'never', and a run this long would reach them.
+	if (SIM_DAYS >= 99999)
+	{
+		never_names = c("INTERVENTION_START", "INTERVENTION_END", "TREATMENT_END", "MDA_TICK",
+			"RESURGENCE_TRIGGER_TICK", "IMPORT_START", "IMPORT_END", "IMPORT_TICK");
+		never_days = c(INTERVENTION_START, INTERVENTION_END, TREATMENT_END, MDA_TICK,
+			RESURGENCE_TRIGGER_TICK, IMPORT_START, IMPORT_END, IMPORT_TICK);
+		if (any(never_days == 99999))
+			stop("SIM_DAYS = " + SIM_DAYS + " reaches day 99999, which the defaults use for 'never', and " +
+				paste(never_names[never_days == 99999], sep=", ") +
+				" still equal 99999: set each to a day after SIM_DAYS, or to the day you mean.");
+	}
 	// Each day after its trigger a delay ends with probability 1/D (D32), so D must be at least
-	// 1. Mirrored in validate_params(); repeated here for runs started directly with -d. Written
-	// as comparisons rather than isFinite(), which refuses the integer that -d X=7 produces.
-	if (!(TREATMENT_DELAY >= 1 & TREATMENT_DELAY < INF))
-		stop("TREATMENT_DELAY must be >= 1 and finite (days), got " + TREATMENT_DELAY +
+	// 1; the cap of 1e6 days keeps the draws far below where they saturate (about 4e9 days).
+	if (!(TREATMENT_DELAY >= 1 & TREATMENT_DELAY <= 1e6))
+		stop("TREATMENT_DELAY must be >= 1 and finite (days, at most 1e6), got " + TREATMENT_DELAY +
 			": a course arrives each day after the case with probability 1/TREATMENT_DELAY, so 1 means the next day.");
-	if (!(MEAN_RECRUD_DELAY >= 1 & MEAN_RECRUD_DELAY < INF))
-		stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days), got " + MEAN_RECRUD_DELAY +
+	if (!(MEAN_RECRUD_DELAY >= 1 & MEAN_RECRUD_DELAY <= 1e6))
+		stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days, at most 1e6), got " + MEAN_RECRUD_DELAY +
 			": it is the mean delay from suppression to recrudescence, which is at least one day.");
 
 	// ---- configurations that cannot produce a single parasite ----------------------------
@@ -2003,16 +2029,19 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 		return rztpois(1, lambda)[0];
 	for (attempt in seqLen(10000))          // rejection; terminates a.s. since P(0) < 1
 	{
-		// With a small shape k the gamma draw can underflow to exactly 0.0, which rpois()
-		// refuses. A zero rate gives a zero count, which the truncation rejects anyway.
+		// With a small shape k the gamma draw can underflow to exactly 0.0, or overflow to NAN,
+		// both of which rpois() refuses. A zero rate gives a zero count, which the truncation
+		// rejects anyway.
 		g = rgamma(1, lambda, k)[0];
-		if (g <= 0.0)
+		if (!(g > 0.0))
 			next;
 		n = rpois(1, g)[0];
 		if (n > 0)
 			return n;
 	}
-	return 1;                                // pathological guard (never reached in practice)
+	// Reached only when a positive count is rarer than about 1 draw in 1e4: a LAMBDA_OOCYSTS
+	// below about 1e-3 with a small K, where the truncated mean is close to 1 anyway.
+	return 1;
 }
 
 

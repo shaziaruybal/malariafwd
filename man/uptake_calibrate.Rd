@@ -7,7 +7,8 @@
 uptake_calibrate(mean, var = NULL)
 }
 \arguments{
-\item{mean}{target realised (zero-truncated) mean; must be > 1.}
+\item{mean}{target realised (zero-truncated) mean; must be > 1 and at most 1000, the largest
+mean \code{\link[=vivax_params]{vivax_params()}} accepts.}
 
 \item{var}{optional target realised variance.}
 }
@@ -21,7 +22,9 @@ feeding study) and it returns the \verb{LAMBDA_*} / \code{K_OOCYSTS} values to s
 }
 \details{
 If \code{var} is omitted, or is not larger than the Poisson variance at that mean, a Poisson
-(\code{k = 0}) solution is returned -- the negative binomial can only \emph{add} dispersion.
+(\code{k = 0}) solution is returned -- the negative binomial can only \emph{add} dispersion. \code{k} is
+never below 0.001, the most dispersed count the model can draw, so a target variance beyond
+that is matched only approximately (with a warning).
 }
 \examples{
 uptake_calibrate(2.5)                 # Poisson: lambda giving a realised mean of 2.5

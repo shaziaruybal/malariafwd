@@ -16,26 +16,40 @@ test_that("params.tsv records the seed and the SLiM and package versions of the 
   expect_equal(p$MALARIAFWD_VERSION, as.character(utils::packageVersion("malariafwd")))
 })
 
-test_that("the model refuses delays below one day when SLiM is run directly", {
+test_that("the model refuses values its draws cannot take when SLiM is run directly", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   ## validate_params() refuses these too, but the model can be run with -d, bypassing R
-  slim <- function(...) {
+  slim <- function(..., days = 5) {
     out <- tempfile("mfwd_direct_"); dir.create(out)
-    processx::run(slim_path(), c("-s", "1", "-d", "SIM_DAYS=5", "-d", "N_HOSTS=10", "-d", "N_MOSQ=20",
+    processx::run(slim_path(), c("-s", "1", "-d", paste0("SIM_DAYS=", days), "-d", "N_HOSTS=10", "-d", "N_MOSQ=20",
                                  "-d", paste0("OUTDIR='", out, "'"), ..., slim_model()),
                   error_on_status = FALSE)
   }
-  for (bad in c("TREATMENT_DELAY=0.0", "TREATMENT_DELAY=0.5", "MEAN_RECRUD_DELAY=0.5",
-                "MEAN_RECRUD_DELAY=INF")) {
-    r <- slim("-d", bad)
-    expect_true(r$status != 0, label = bad)
-    expect_match(paste(r$stdout, r$stderr), "must be >= 1 and finite", label = bad)
+  bad <- c("TREATMENT_DELAY=0.0" = "must be >= 1 and finite",
+           "TREATMENT_DELAY=0.5" = "must be >= 1 and finite",
+           "MEAN_RECRUD_DELAY=0.5" = "must be >= 1 and finite",
+           "MEAN_RECRUD_DELAY=INF" = "must be >= 1 and finite",
+           "K_OOCYSTS=0.0001" = "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001",
+           "INTERVENTION_EFFICACY=1.5" = "INTERVENTION_EFFICACY must be in \\[0, 1\\]",
+           "IMPORT_RATE_BOOST=-1.0" = "must be >= 0",
+           "SEASONAL_AMP=-0.5" = "SEASONAL_AMP must be >= 0")
+  for (arg in names(bad)) {
+    r <- slim("-d", arg)
+    expect_true(r$status != 0, label = arg)
+    expect_match(paste(r$stdout, r$stderr), bad[[arg]], label = arg)
   }
-  ## the integer spelling that -d X=7 produces is fine, for every recrudescence shape
+  ## a run long enough to reach day 99999, which the defaults use for 'never'
+  r <- slim(days = 100000)
+  expect_true(r$status != 0)
+  expect_match(paste(r$stdout, r$stderr), "reaches day 99999")
+  ## the integer spelling that -d X=7 produces is accepted at the start...
   expect_equal(slim("-d", "TREATMENT_DELAY=7", "-d", "MEAN_RECRUD_DELAY=4")$status, 0L)
-  fixed <- slim("-d", "MEAN_RECRUD_DELAY=4", "-d", "RECRUD_DELAY_DIST='fixed'",
-                "-d", "IMPORT_TICK=3", "-d", "N_IMPORTS=10", "-d", "TREATMENT_DELAY=1",
-                "-d", "BLOODCURE_COVERAGE=1.0", "-d", "P_BLOODCURE_SURVIVAL=1.0",
-                "-d", "P_RECRUD_GIVEN_FAIL=1.0")
-  expect_equal(fixed$status, 0L, label = "a 'fixed' delay given as an integer")
+  ## ...and each recrudescence shape draws its delay from it
+  for (shape in c("geometric", "poisson", "fixed")) {
+    r <- slim("-d", "MEAN_RECRUD_DELAY=4", "-d", paste0("RECRUD_DELAY_DIST='", shape, "'"),
+              "-d", "IMPORT_TICK=3", "-d", "N_IMPORTS=10", "-d", "TREATMENT_DELAY=1",
+              "-d", "BLOODCURE_COVERAGE=1.0", "-d", "P_BLOODCURE_SURVIVAL=1.0",
+              "-d", "P_RECRUD_GIVEN_FAIL=1.0")
+    expect_equal(r$status, 0L, label = paste0("a '", shape, "' delay given as an integer"))
+  }
 })
