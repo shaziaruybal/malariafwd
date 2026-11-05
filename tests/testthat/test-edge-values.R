@@ -53,7 +53,7 @@ test_that("an import rate that reaches zero means no imports, not an error", {
 
 test_that("a small K_OOCYSTS runs, although its gamma draws can underflow to zero", {
   skip_if_no_slim()
-  ## what uptake_calibrate(3, var = 30) returns
+  ## a dispersed uptake at the K_OOCYSTS floor (a mean of 4.08 oocysts)
   run <- edge_run("kooc", SIM_DAYS = 10, LAMBDA_OOCYSTS = 0.009644, K_OOCYSTS = 0.001)
   expect_equal(max(load_state(run)$tick), 10)
 })

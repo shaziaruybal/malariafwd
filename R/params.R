@@ -70,7 +70,8 @@
 #' multipliers is capped at 1.
 #'
 #' Values the model cannot run are refused here, before SLiM starts. Each value is a number,
-#' `TRUE`/`FALSE` or a string, as its default is, and numbers are finite. Counts, `SIM_DAYS`,
+#' `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and strings are UTF-8 text
+#' without control characters. Counts, `SIM_DAYS`,
 #' the scheduling days (`MDA_TICK`, `IMPORT_TICK`, `RESURGENCE_TRIGGER_TICK` and the `*_START`
 #' and `*_END` bounds) and the fixed delays `EIP_DAYS` and `GAMETOCYTE_DELAY` are whole numbers;
 #' mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
@@ -85,13 +86,14 @@
 #' `LAMBDA_SPOROZOITES` at 1000; the hypnozoite batch mean at 1e6, times its boost once the
 #' trigger falls inside the run; the import rate at 1e6 a day; and `TREATMENT_DELAY` and
 #' `MEAN_RECRUD_DELAY` at 1e6 days. `SIM_DAYS` is at most 1e9, SLiM's last tick, and a run that
-#' reaches day 99999, the day the defaults use for "never", must move those days past its end. A
-#' founder-free run whose imports never establish a parasite is not refused here; the model's
-#' liveness check stops it.
+#' reaches day 99999, the day the defaults use for "never", must move those days past its end and
+#' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
+#' a parasite is not refused here; the model's liveness check stops it.
 #'
-#' A whole number carrying floating-point noise (such as `1.1 * 100`), a number or factor given
-#' for a string parameter, and spaces around the commas and dashes of `CHROMOSOMES` are stored
-#' in the form SLiM is given.
+#' A named number (such as `coef(fit)["k"]`), a whole number carrying floating-point noise (such
+#' as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given for a string parameter,
+#' latin1 text, and spaces around the commas and dashes of `CHROMOSOMES` are stored in the form
+#' SLiM is given.
 #'
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
 #' @return An object of class `vivax_params` (a named list).
@@ -128,25 +130,31 @@ vivax_params <- function(...) {
 .slim_num <- function(x) format(x, scientific = FALSE, trim = TRUE, digits = 15)
 
 ## Spellings that mean the same value are stored in the form SLiM is given, so the object,
-## params.tsv and the run agree: a whole number with floating-point noise (1.1 * 100 is
-## 110.00000000000001, written as 110), a number or factor for a string parameter (expand.grid()
-## makes factors), and spaces around the commas and dashes of CHROMOSOMES. Spaces anywhere else
-## are left for the check to refuse: "1 4" is not "14".
+## params.tsv and the run agree: a named number (coef(fit)["k"]) or a 1 x 1 matrix, a whole number
+## with floating-point noise (1.1 * 100 is 110.00000000000001, written as 110; 0.1 * 3 - 0.3 is
+## 5.6e-17, written as 0), a number or factor for a string parameter (expand.grid() makes
+## factors), latin1 text (as UTF-8, which SLiM reads), and spaces around the commas and dashes of
+## CHROMOSOMES. Spaces anywhere else are left for the check to refuse: "1 4" is not "14".
 .normalise_params <- function(p) {
   d <- .malariafwd_defaults
   for (nm in intersect(names(p), names(d))) {
     v <- p[[nm]]
-    if (length(v) != 1L || is.na(v)) next
-    if (is.integer(d[[nm]]) && is.double(v) && is.finite(v) && grepl("^-?[0-9]+$", .slim_num(v)))
+    if (is.atomic(v) && !is.object(v) && length(v)) v <- p[[nm]] <- as.vector(v)
+    ## functions, symbols and calls are left for the type check to refuse
+    if (!(is.atomic(v) || is.list(v)) || length(v) != 1L || is.na(v)) next
+    if (is.integer(d[[nm]]) && is.double(v) && is.finite(v) &&
+        (abs(v) < 1e-9 || grepl("^-?[0-9]+$", .slim_num(v))))
       p[[nm]] <- round(v)
     else if (is.character(d[[nm]]) && is.factor(v))
       p[[nm]] <- as.character(v)
     else if (is.character(d[[nm]]) && is.numeric(v))
       p[[nm]] <- .slim_num(v)
+    else if (is.character(v) && Encoding(v) == "latin1")
+      p[[nm]] <- iconv(v, "latin1", "UTF-8")
   }
   ch <- p$CHROMOSOMES
   if (is.character(ch) && length(ch) == 1L && !is.na(ch) &&
-      grepl("^ *[0-9]+ *(- *[0-9]+ *)?(, *[0-9]+ *(- *[0-9]+ *)?)*$", ch))
+      grepl("^ *[0-9]+ *(- *[0-9]+ *)?(, *[0-9]+ *(- *[0-9]+ *)?)*$", ch, useBytes = TRUE))
     p$CHROMOSOMES <- gsub(" ", "", ch, fixed = TRUE)
   p
 }
@@ -180,7 +188,9 @@ vivax_params <- function(...) {
 
 #' @keywords internal
 validate_params <- function(p) {
-  bad <- names(p)[!vapply(p, function(v) length(v) == 1L && !is.na(v), logical(1))]
+  ## functions, symbols and calls are left for the type check, which names what was given
+  bad <- names(p)[!vapply(p, function(v) !(is.atomic(v) || is.list(v)) ||
+                            (length(v) == 1L && !is.na(v)), logical(1))]
   if (length(bad))
     stop(paste(bad, collapse = ", "), " must be a single non-missing value", call. = FALSE)
   .check_types(p)
@@ -206,11 +216,12 @@ validate_params <- function(p) {
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
   ## N_FOUNDERS itself is only the default of N_FOUNDER_HOSTS, so it is not checked
   if (p$N_FOUNDER_HOSTS > p$N_HOSTS)
-    stop("N_FOUNDER_HOSTS (", p$N_FOUNDER_HOSTS, ") must be at most N_HOSTS (", p$N_HOSTS, "). ",
-         "It defaults to N_FOUNDERS, so set either one.", call. = FALSE)
+    stop("N_FOUNDER_HOSTS (", .slim_num(p$N_FOUNDER_HOSTS), ") must be at most N_HOSTS (",
+         .slim_num(p$N_HOSTS), "). It defaults to N_FOUNDERS, so set either one.", call. = FALSE)
   if (p$N_FOUNDER_LINEAGES > p$N_FOUNDER_HOSTS)
-    stop("N_FOUNDER_LINEAGES (", p$N_FOUNDER_LINEAGES, ") must be at most N_FOUNDER_HOSTS (",
-         p$N_FOUNDER_HOSTS, "): each founder host carries one of the founding genomes.", call. = FALSE)
+    stop("N_FOUNDER_LINEAGES (", .slim_num(p$N_FOUNDER_LINEAGES), ") must be at most N_FOUNDER_HOSTS (",
+         .slim_num(p$N_FOUNDER_HOSTS), "): each founder host carries one of the founding genomes.",
+         call. = FALSE)
   if (p$SEASONAL_AMP < 0)
     stop("SEASONAL_AMP must be >= 0 (0 means no seasonality). SEASONAL_PHASE is the day of the ",
          "peak, so for a trough on day x use SEASONAL_PHASE = x + 182.5.", call. = FALSE)
@@ -220,7 +231,8 @@ validate_params <- function(p) {
   if (p$SIM_DAYS >= 99999 && length(never))
     stop("SIM_DAYS = ", .slim_num(p$SIM_DAYS), " reaches day 99999, which the defaults use for ",
          "'never', and ", paste(never, collapse = ", "), if (length(never) > 1) " are" else " is",
-         " still 99999: set each to a day after SIM_DAYS, or to the day you mean.", call. = FALSE)
+         " still 99999: set each to a day after SIM_DAYS, or to the day you mean (in a run this ",
+         "long, day 99999 itself cannot be used).", call. = FALSE)
   if (!is.finite(p$MOSQ_LIFESPAN) || p$MOSQ_LIFESPAN < 1)
     stop("MOSQ_LIFESPAN must be >= 1 and finite (days): a mosquito dies each day with probability ",
          "1/MOSQ_LIFESPAN.", call. = FALSE)
@@ -310,7 +322,9 @@ validate_params <- function(p) {
 }
 
 ## Each value must have its default's type, since SLiM reads numbers, T/F and strings
-## differently and a wrong type stops the run at its first use. Numbers must be finite and
+## differently: a wrong type stops the run at its first use, or runs with another meaning (a string
+## P_TRANS_VH is compared as text). Strings must be valid UTF-8, which SLiM and the tree-sequence
+## provenance it writes require. Numbers must be finite and
 ## survive SLiM's command line, which cannot read a number between 0 and about 2.2e-308; the
 ## floor of 1e-300 leaves room for the 15 digits as_slim_args() writes. Where the
 ## default is an integer (a count, SIM_DAYS, a day the run is scheduled on, or a fixed delay) the
@@ -326,6 +340,9 @@ validate_params <- function(p) {
     want <- if (is.numeric(def)) "a number" else if (is.logical(def)) "TRUE or FALSE" else "a string"
     ok <- if (is.numeric(def)) is.numeric(v) else if (is.logical(def)) is.logical(v) else is.character(v)
     if (!ok) stop(nm, " must be ", want, ", got ", deparse(v), call. = FALSE)
+    if (is.character(v) && !validUTF8(v))
+      stop(nm, " must be valid UTF-8 text; convert it with iconv(x, from = \"latin1\", to = \"UTF-8\") ",
+           "or read the file it came from with its encoding declared.", call. = FALSE)
     ## byte-wise, so that accented and other non-ASCII labels pass in every locale
     if (is.character(v) && grepl("[\001-\037\177]", v, useBytes = TRUE))
       stop(nm, " must not contain control characters (newlines, tabs): SLiM and params.tsv ",
@@ -351,11 +368,15 @@ validate_params <- function(p) {
 }
 
 ## Sizes far beyond anything realistic, which would make a run crawl or fill memory, capped well
-## below where SLiM's draws fail (binomial sizes are 32-bit; Poisson draws wrap above 2^32).
+## below where SLiM's draws fail (binomial sizes are 32-bit; Poisson draws wrap above 2^32). A
+## value over a cap only by rounding (a fitted or computed value a few ulps above it) is accepted,
+## so a refused value prints visibly above the cap.
+.over_cap <- function(x, cap) !(x <= cap * (1 + 1e-12))
 .check_sizes <- function(p) {
-  if (p$LAMBDA_SPOROZOITES > 1000)
-    stop("LAMBDA_SPOROZOITES must be <= 1000: it is the pre-truncation rate of oocyst products ",
-         "sampled per infectious bite.", call. = FALSE)
+  if (.over_cap(p$LAMBDA_SPOROZOITES, 1000))
+    stop("LAMBDA_SPOROZOITES must be <= 1000, got ", format(p$LAMBDA_SPOROZOITES, digits = 15),
+         ": it is the pre-truncation rate of oocyst products sampled per infectious bite.",
+         call. = FALSE)
   ## The gamma-Poisson sampler stops drawing the distribution it is asked for below this K:
   ## its gamma draws underflow to 0, and the run falls back to one oocyst per uptake.
   if (p$K_OOCYSTS > 0 && p$K_OOCYSTS < 1e-3)
@@ -364,19 +385,22 @@ validate_params <- function(p) {
   ## A cap on the mean, not on LAMBDA_OOCYSTS alone: a small K gives a heavy tail whose mean, and
   ## so the work per uptake, can be many times lambda.
   m <- uptake_moments(p$LAMBDA_OOCYSTS, p$K_OOCYSTS)[["mean"]]
-  if (m > 1000)
+  if (.over_cap(m, 1000))
     stop("LAMBDA_OOCYSTS = ", p$LAMBDA_OOCYSTS, " with K_OOCYSTS = ", p$K_OOCYSTS, " gives a mean ",
-         "of ", signif(m, 6), " oocysts per successful uptake (see uptake_moments()); the model ",
-         "accepts at most 1000.", call. = FALSE)
+         "of ", format(m, digits = 15), " oocysts per successful uptake (see uptake_moments()); the ",
+         "model accepts at most 1000.", call. = FALSE)
+  ## a boost below 1 lowers the rate only after the trigger, so the peak is the unboosted rate
   boost <- function(b) if (p$RESURGENCE_TRIGGER_TICK <= p$SIM_DAYS) max(1, b) else 1
-  if (p$NU_HYPNOZOITE_BATCH * boost(p$NU_HYPNOZOITE_BATCH_BOOST) > 1e6)
-    stop("NU_HYPNOZOITE_BATCH, times NU_HYPNOZOITE_BATCH_BOOST once the trigger falls inside the run, ",
-         "must be at most 1e6 hypnozoites per bite, far below the 32-bit sizes of SLiM's binomial ",
-         "draws.", call. = FALSE)
+  nu <- p$NU_HYPNOZOITE_BATCH * boost(p$NU_HYPNOZOITE_BATCH_BOOST)
+  if (.over_cap(nu, 1e6))
+    stop("NU_HYPNOZOITE_BATCH, times NU_HYPNOZOITE_BATCH_BOOST (if above 1) once the trigger falls ",
+         "inside the run, is ", format(nu, digits = 15), " hypnozoites per bite; it must be at most ",
+         "1e6, far below the 32-bit sizes of SLiM's binomial draws.", call. = FALSE)
   peak <- p$IMPORT_RATE_PER_TICK * boost(p$IMPORT_RATE_BOOST) * (1 + p$SEASONAL_AMP)
-  if (peak > 1e6)
-    stop("IMPORT_RATE_PER_TICK x IMPORT_RATE_BOOST x (1 + SEASONAL_AMP) is ", signif(peak, 6),
-         "; it must be at most 1e6 imports a day.", call. = FALSE)
+  if (.over_cap(peak, 1e6))
+    stop("IMPORT_RATE_PER_TICK, times IMPORT_RATE_BOOST (if above 1) once the trigger falls inside ",
+         "the run and 1 + SEASONAL_AMP at the seasonal peak, reaches ", format(peak, digits = 15),
+         " imports a day; it must be at most 1e6 imports a day.", call. = FALSE)
 }
 
 ## The model accepts "1-14", "1,3,5" or "5-8": comma-separated chromosome numbers or low-high
@@ -385,7 +409,7 @@ validate_params <- function(p) {
   bad <- function(why) stop("CHROMOSOMES must be chromosome numbers 1-14, comma-separated, with ",
                             "low-high ranges, e.g. \"1-14\" or \"1-3,5\" (", why, "); got \"", x,
                             "\".", call. = FALSE)
-  if (!grepl("^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$", x)) bad("unreadable")
+  if (!grepl("^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$", x, useBytes = TRUE)) bad("unreadable")
   idx <- unlist(lapply(strsplit(strsplit(x, ",")[[1]], "-"), function(r) {
     r <- as.numeric(r)
     if (any(r < 1 | r > 14)) bad("out of range")

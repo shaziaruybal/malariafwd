@@ -58,6 +58,21 @@ test_that("run_sim() works with an apostrophe and a space in the output path and
   expect_equal(load_params(run)$SIM_ID, "Bob's sweep")
 })
 
+test_that("a non-ASCII SIM_ID reaches SLiM unchanged, in a C locale too", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  old <- Sys.getlocale("LC_CTYPE")
+  on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
+  skip_if(Sys.setlocale("LC_CTYPE", "C") == "", "cannot switch to the C locale")
+  ## marked UTF-8, as read.csv(encoding = "UTF-8") or data.table::fread() give it
+  id <- intToUtf8(c(0x43, 0xf4, 0x74, 0x65, 0x20, 0x65e5, 0x672c))
+  od <- tempfile("mfwd_utf8_")
+  run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, SIM_ID = id), seed = 1, outdir = od)
+  for (f in c("params.tsv", "cmdline.txt")) {
+    txt <- rawToChar(readBin(file.path(od, f), "raw", file.size(file.path(od, f))))
+    expect_true(grepl(id, txt, fixed = TRUE, useBytes = TRUE), label = f)
+  }
+})
+
 test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   tiny <- tempfile(fileext = ".slim")

@@ -258,19 +258,37 @@ initialize() {
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be >= 0");
 	// The checks below are mirrored in validate_params() and repeated here for runs started
 	// directly with -d. They are written as comparisons rather than isFinite(), which refuses
-	// the integer that -d X=7 produces, and so that NAN fails them.
+	// the integer that -d X=7 produces, and so that NAN fails them. The size caps allow the same
+	// rounding as validate_params(), a factor of 1 + 1e-12.
 	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates; below K = 1e-3 its gamma draws
 	// underflow to 0 so often that the counts fall back to 1, the reverse of the dispersion asked for.
-	if (!(K_OOCYSTS <= 0 | K_OOCYSTS >= 1e-3))
-		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got " + K_OOCYSTS +
+	if (!(K_OOCYSTS <= 0 | (K_OOCYSTS >= 1e-3 & K_OOCYSTS < INF)))
+		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001 and finite, got " + K_OOCYSTS +
 			": the model cannot draw a more dispersed oocyst count.");
-	// These factors scale the biting and import rates, which must stay non-negative.
+	// validate_params() caps the mean oocyst count per uptake at 1000, which caps lambda too; with
+	// K at least 1e-3 this keeps every gamma rate finite.
+	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-12) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-12)))
+		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be at most 1000");
+	// These factors scale the biting and import rates, which must stay non-negative and finite.
 	if (!(INTERVENTION_EFFICACY >= 0 & INTERVENTION_EFFICACY <= 1))
 		stop("INTERVENTION_EFFICACY must be in [0, 1], got " + INTERVENTION_EFFICACY);
-	if (!(IMPORT_RATE_PER_TICK >= 0 & IMPORT_RATE_BOOST >= 0 & BITING_RATE_BOOST >= 0))
-		stop("IMPORT_RATE_PER_TICK, IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0");
-	if (!(SEASONAL_AMP >= 0))
-		stop("SEASONAL_AMP must be >= 0 (0 means no seasonality), got " + SEASONAL_AMP);
+	if (!(IMPORT_RATE_PER_TICK >= 0 & IMPORT_RATE_BOOST >= 0 & IMPORT_RATE_BOOST < INF &
+		BITING_RATE_BOOST >= 0 & BITING_RATE_BOOST < INF))
+		stop("IMPORT_RATE_PER_TICK, IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0 and finite");
+	if (!(SEASONAL_AMP >= 0 & SEASONAL_AMP < INF))
+		stop("SEASONAL_AMP must be >= 0 and finite (0 means no seasonality), got " + SEASONAL_AMP);
+	// The peak daily import rate and hypnozoite batch mean: rpois() wraps above 2^32 and does not
+	// return for a rate near 1e18, and rgeom() saturates near 4e9. A boost below 1 lowers a rate
+	// only after the trigger, so the peak is then the unboosted rate.
+	boost_in_run = (RESURGENCE_TRIGGER_TICK <= SIM_DAYS);
+	if (!(IMPORT_RATE_PER_TICK * (boost_in_run ? max(1.0, asFloat(IMPORT_RATE_BOOST)) else 1.0) *
+		(1 + SEASONAL_AMP) <= 1e6 * (1 + 1e-12)))
+		stop("IMPORT_RATE_PER_TICK, times IMPORT_RATE_BOOST (if above 1) once the trigger falls inside " +
+			"the run and 1 + SEASONAL_AMP at the seasonal peak, must be at most 1e6 imports a day");
+	if (!(NU_HYPNOZOITE_BATCH * (boost_in_run ? max(1.0, asFloat(NU_HYPNOZOITE_BATCH_BOOST)) else 1.0) <=
+		1e6 * (1 + 1e-12)))
+		stop("NU_HYPNOZOITE_BATCH, times NU_HYPNOZOITE_BATCH_BOOST (if above 1) once the trigger falls " +
+			"inside the run, must be at most 1e6 hypnozoites per bite");
 	// The days that default to 99999 mean 'never', and a run this long would reach them.
 	if (SIM_DAYS >= 99999)
 	{
@@ -278,10 +296,12 @@ initialize() {
 			"RESURGENCE_TRIGGER_TICK", "IMPORT_START", "IMPORT_END", "IMPORT_TICK");
 		never_days = c(INTERVENTION_START, INTERVENTION_END, TREATMENT_END, MDA_TICK,
 			RESURGENCE_TRIGGER_TICK, IMPORT_START, IMPORT_END, IMPORT_TICK);
-		if (any(never_days == 99999))
+		still_never = never_names[never_days == 99999];
+		if (size(still_never) > 0)
 			stop("SIM_DAYS = " + SIM_DAYS + " reaches day 99999, which the defaults use for 'never', and " +
-				paste(never_names[never_days == 99999], sep=", ") +
-				" still equal 99999: set each to a day after SIM_DAYS, or to the day you mean.");
+				paste(still_never, sep=", ") + ((size(still_never) > 1) ? " are" else " is") +
+				" still 99999: set each to a day after SIM_DAYS, or to the day you mean (in a run this " +
+				"long, day 99999 itself cannot be used).");
 	}
 	// Each day after its trigger a delay ends with probability 1/D (D32), so D must be at least
 	// 1; the cap of 1e6 days keeps the draws far below where they saturate (about 4e9 days).
@@ -2029,9 +2049,9 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 		return rztpois(1, lambda)[0];
 	for (attempt in seqLen(10000))          // rejection; terminates a.s. since P(0) < 1
 	{
-		// With a small shape k the gamma draw can underflow to exactly 0.0, or overflow to NAN,
-		// both of which rpois() refuses. A zero rate gives a zero count, which the truncation
-		// rejects anyway.
+		// With a small shape k the gamma draw can underflow to exactly 0.0, which rpois() refuses.
+		// A zero rate gives a zero count, which the truncation rejects anyway. (initialize() bounds
+		// lambda and k, so the draw cannot overflow.)
 		g = rgamma(1, lambda, k)[0];
 		if (!(g > 0.0))
 			next;

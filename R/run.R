@@ -49,12 +49,17 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   pkg_version <- .eidos_quote(as.character(utils::packageVersion("malariafwd")))
   args <- c("-s", as.character(params$SEED), as_slim_args(params),
             "-d", paste0("MALARIAFWD_VERSION=", pkg_version), model)
+  ## SLiM reads and writes UTF-8, and vivax_params() has made every string UTF-8. On Unix,
+  ## processx converts arguments to the native encoding, which in a C locale (cron, say) turns
+  ## UTF-8 text into "<U+00F4>", so they go as the bytes they are; the paths are native already.
+  if (.Platform$OS.type == "unix") Encoding(args) <- "bytes"
   file.copy(model, file.path(outdir, "model.slim"), overwrite = TRUE)  # provenance
-  writeLines(c(paste0("# ", format(Sys.time(), tz = "UTC")), args), file.path(outdir, "cmdline.txt"))
+  writeLines(c(paste0("# ", format(Sys.time(), tz = "UTC")), args), file.path(outdir, "cmdline.txt"),
+             useBytes = TRUE)
 
-  res <- processx::run(slim_path(), args, error_on_status = FALSE,
-                       timeout = timeout, echo = echo, spinner = FALSE)
-  writeLines(res$stdout, file.path(outdir, "run.log"))
+  res <- processx::run(slim_path(), args, error_on_status = FALSE, timeout = timeout,
+                       echo = echo, spinner = FALSE, encoding = "UTF-8")
+  writeLines(res$stdout, file.path(outdir, "run.log"), useBytes = TRUE)
   if (!identical(res$status, 0L)) {
     tail_err <- utils::tail(strsplit(paste0(res$stdout, res$stderr), "\n")[[1]], 6)
     stop("SLiM run failed (exit ", res$status, "). Log: ", file.path(outdir, "run.log"), "\n",

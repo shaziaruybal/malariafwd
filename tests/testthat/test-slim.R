@@ -32,7 +32,16 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
            "K_OOCYSTS=0.0001" = "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001",
            "INTERVENTION_EFFICACY=1.5" = "INTERVENTION_EFFICACY must be in \\[0, 1\\]",
            "IMPORT_RATE_BOOST=-1.0" = "must be >= 0",
-           "SEASONAL_AMP=-0.5" = "SEASONAL_AMP must be >= 0")
+           "SEASONAL_AMP=-0.5" = "SEASONAL_AMP must be >= 0",
+           ## infinite or huge values pass a sign check, then hang a draw or run as something else
+           "K_OOCYSTS=INF" = "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001 and finite",
+           "LAMBDA_OOCYSTS=1001.0" = "must be at most 1000",
+           "IMPORT_RATE_PER_TICK=INF" = "at most 1e6 imports a day",
+           "IMPORT_RATE_PER_TICK=1.0e18" = "at most 1e6 imports a day",
+           "IMPORT_RATE_BOOST=INF" = "must be >= 0 and finite",
+           "BITING_RATE_BOOST=INF" = "must be >= 0 and finite",
+           "SEASONAL_AMP=INF" = "SEASONAL_AMP must be >= 0 and finite",
+           "NU_HYPNOZOITE_BATCH=2.0e6" = "at most 1e6 hypnozoites per bite")
   for (arg in names(bad)) {
     r <- slim("-d", arg)
     expect_true(r$status != 0, label = arg)

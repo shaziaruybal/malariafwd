@@ -22,9 +22,11 @@ feeding study) and it returns the \verb{LAMBDA_*} / \code{K_OOCYSTS} values to s
 }
 \details{
 If \code{var} is omitted, or is not larger than the Poisson variance at that mean, a Poisson
-(\code{k = 0}) solution is returned -- the negative binomial can only \emph{add} dispersion. \code{k} is
-never below 0.001, the most dispersed count the model can draw, so a target variance beyond
-that is matched only approximately (with a warning).
+(\code{k = 0}) solution is returned -- the negative binomial can only \emph{add} dispersion. The mean is
+always matched. A zero-truncated count with a given mean can be only so dispersed: its variance
+is largest as \code{k} approaches 0 (about 11.1 at a mean of 3, 271 at a mean of 10), and
+\code{k = 0.001}, the smallest the model draws, comes within 0.5\% of that limit. A larger target
+variance returns \code{k = 0.001} with a warning.
 }
 \examples{
 uptake_calibrate(2.5)                 # Poisson: lambda giving a realised mean of 2.5

@@ -29,7 +29,8 @@ a mosquito bites at most once a day, so \code{BITING_RATE} times its seasonal an
 multipliers is capped at 1.
 
 Values the model cannot run are refused here, before SLiM starts. Each value is a number,
-\code{TRUE}/\code{FALSE} or a string, as its default is, and numbers are finite. Counts, \code{SIM_DAYS},
+\code{TRUE}/\code{FALSE} or a string, as its default is; numbers are finite, and strings are UTF-8 text
+without control characters. Counts, \code{SIM_DAYS},
 the scheduling days (\code{MDA_TICK}, \code{IMPORT_TICK}, \code{RESURGENCE_TRIGGER_TICK} and the \verb{*_START}
 and \verb{*_END} bounds) and the fixed delays \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are whole numbers;
 mean durations, rates and \code{SEASONAL_PHASE} need not be. Probabilities and coverages,
@@ -44,13 +45,14 @@ uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYS
 \code{LAMBDA_SPOROZOITES} at 1000; the hypnozoite batch mean at 1e6, times its boost once the
 trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_DELAY} and
 \code{MEAN_RECRUD_DELAY} at 1e6 days. \code{SIM_DAYS} is at most 1e9, SLiM's last tick, and a run that
-reaches day 99999, the day the defaults use for "never", must move those days past its end. A
-founder-free run whose imports never establish a parasite is not refused here; the model's
-liveness check stops it.
+reaches day 99999, the day the defaults use for "never", must move those days past its end and
+cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
+a parasite is not refused here; the model's liveness check stops it.
 
-A whole number carrying floating-point noise (such as \code{1.1 * 100}), a number or factor given
-for a string parameter, and spaces around the commas and dashes of \code{CHROMOSOMES} are stored
-in the form SLiM is given.
+A named number (such as \code{coef(fit)["k"]}), a whole number carrying floating-point noise (such
+as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given for a string parameter,
+latin1 text, and spaces around the commas and dashes of \code{CHROMOSOMES} are stored in the form
+SLiM is given.
 }
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")

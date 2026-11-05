@@ -53,6 +53,8 @@ test_that("founder counts are checked against each other, with messages that nam
   expect_error(vivax_params(N_HOSTS = 0L), "N_HOSTS must be > 0")
   expect_error(vivax_params(N_FOUNDER_HOSTS = 5L, N_FOUNDER_LINEAGES = 6L),
                "N_FOUNDER_LINEAGES \\(6\\) must be at most N_FOUNDER_HOSTS \\(5\\)")
+  expect_error(vivax_params(N_HOSTS = 1e5, N_FOUNDER_HOSTS = 2e5),
+               "N_FOUNDER_HOSTS \\(200000\\) must be at most N_HOSTS \\(100000\\)")
 })
 
 test_that("run_sim() checks a parameter set edited after it was built", {
@@ -186,6 +188,8 @@ test_that("each value has its default's type, is finite, and is whole where the 
   expect_error(vivax_params(MDA_TICK = 1e19), "MDA_TICK must lie within \\+/- 2\\^53")
   ## a mean duration and a day of the year need not be whole
   expect_no_error(vivax_params(MOSQ_LIFESPAN = 10.5, SEASONAL_PHASE = 40.5))
+  ## a value that is not a vector at all is named in the refusal, without R's own warnings
+  expect_no_warning(expect_error(vivax_params(N_HOSTS = function() 1), "N_HOSTS must be a number"))
 })
 
 test_that("spellings of the same value are stored in the form SLiM is given", {
@@ -194,6 +198,22 @@ test_that("spellings of the same value are stored in the form SLiM is given", {
                     SIM_DAYS = 365 * 2.2)
   expect_identical(c(p$N_MOSQ, p$N_FOUNDER_HOSTS, p$SIM_DAYS), c(110, 30, 803))
   expect_true("N_MOSQ=110" %in% as_slim_args(p))
+  ## ...and so is 0 with noise, while a small fraction is still refused
+  p <- vivax_params(TREATMENT_START = 0.1 * 3 - 0.3, N_IMPORTS = 10 * (1 - 0.9) - 1)
+  expect_true(p$TREATMENT_START == 0 && p$N_IMPORTS == 0)
+  expect_true("TREATMENT_START=0" %in% as_slim_args(p))
+  expect_error(vivax_params(N_IMPORTS = 1e-5), "N_IMPORTS must be a whole number")
+  ## a named number, as coef() or MASS::fitdistr() give it, and a 1 x 1 matrix
+  est <- c(size = 0.8, mu = 2.3)
+  p <- vivax_params(LAMBDA_OOCYSTS = est["mu"], K_OOCYSTS = est["size"], N_HOSTS = c(n = 50L),
+                    INTERVENTION_START = matrix(10L), INTERVENTION_END = 20L,
+                    INTERVENTION_EFFICACY = crossprod(0.5, 1))
+  expect_identical(p[c("LAMBDA_OOCYSTS", "K_OOCYSTS", "N_HOSTS", "INTERVENTION_START", "INTERVENTION_EFFICACY")],
+                   list(LAMBDA_OOCYSTS = 2.3, K_OOCYSTS = 0.8, N_HOSTS = 50L, INTERVENTION_START = 10L,
+                        INTERVENTION_EFFICACY = 0.5))
+  ## latin1 text is stored as UTF-8, which SLiM reads
+  lat <- "Par\xe1"; Encoding(lat) <- "latin1"
+  expect_identical(charToRaw(vivax_params(SIM_ID = lat)$SIM_ID), charToRaw("Pará"))
   ## a number or a factor for a string parameter, as expand.grid() makes
   expect_identical(vivax_params(SIM_ID = 1)$SIM_ID, "1")
   expect_identical(vivax_params(SIM_ID = 100000)$SIM_ID, "100000")
@@ -241,12 +261,42 @@ test_that("the oocyst count is capped by its mean, and K_OOCYSTS by what the sam
   ## a small K gives a heavy tail: the mean is many times lambda
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1000, K_OOCYSTS = 0.01), "oocysts per successful uptake")
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1, K_OOCYSTS = 1e-4), "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001")
-  ## every value uptake_calibrate() returns is accepted
-  for (target in list(c(3, 30), c(5, 100), c(10, 1000), c(2.5, 6))) {
-    u <- suppressWarnings(uptake_calibrate(target[1], var = target[2]))  # some need a smaller k
+  ## a value over the cap only by rounding is accepted, and a refused one prints above the cap
+  expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1000 * (1 + 1e-13)))
+  expect_error(vivax_params(LAMBDA_OOCYSTS = 1000.0004), "mean of 1000.0004 oocysts")
+  ## uptake_calibrate() holds the target mean, so every value it returns is accepted
+  for (target in list(c(2.5, 6), c(1000, 1500), c(1000, 3e5), c(1000, 2e6), c(1000, 5e6),
+                      c(999.999, 5e6))) {
+    expect_no_warning(u <- uptake_calibrate(target[1], var = target[2]))
+    expect_equal(u$achieved[["mean"]], target[1], tolerance = 1e-12)
+    expect_equal(u$achieved[["var"]], target[2], tolerance = 1e-6)
+    expect_no_error(vivax_params(LAMBDA_OOCYSTS = u$lambda, K_OOCYSTS = u$k))
+  }
+  ## a variance more than any zero-truncated count with that mean can have: k = 0.001, the mean held
+  for (target in list(c(3, 30), c(5, 100), c(10, 1000), c(1000, 1e7), c(300, 1.7e7))) {
+    expect_warning(u <- uptake_calibrate(target[1], var = target[2]),
+                   "more than a zero-truncated count with mean")
+    expect_identical(u$k, 1e-3)
+    expect_equal(u$achieved[["mean"]], target[1], tolerance = 1e-12)
     expect_no_error(vivax_params(LAMBDA_OOCYSTS = u$lambda, K_OOCYSTS = u$k))
   }
   expect_error(uptake_calibrate(1500), "at most 1000")
+})
+
+test_that("uptake_moments() keeps its precision for a tiny lambda or a huge K", {
+  expect_equal(uptake_moments(2, k = 1), c(mean = 3, var = 6))
+  expect_equal(uptake_moments(2, k = 1e17), uptake_moments(2), tolerance = 1e-12)
+  expect_equal(uptake_moments(1e-17), c(mean = 1, var = 0))
+  expect_equal(uptake_moments(1e-300, k = 0.5), c(mean = 1, var = 0))
+  ## a zero-truncated count has a mean of at least 1 and a variance of at least 0
+  grid <- expand.grid(lambda = 10^seq(-300, 3, by = 3), k = c(0, 10^seq(-3, 306, by = 3)))
+  m <- mapply(uptake_moments, grid$lambda, grid$k)
+  expect_true(all(is.finite(m) & m["mean", ] >= 1 & m["var", ] >= 0))
+  ## so these are accepted rather than refused as a mean of Inf
+  expect_no_error(vivax_params(LAMBDA_OOCYSTS = 2, K_OOCYSTS = 1e17))
+  expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1e-17))
+  expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1e-300, K_OOCYSTS = 1e300))
+  expect_named(uptake_moments(c(lambda = 2), k = c(k = 1)), c("mean", "var"))
 })
 
 test_that("the import rate is capped where its draw would fail, not at the number of hosts", {
@@ -256,6 +306,11 @@ test_that("the import rate is capped where its draw would fail, not at the numbe
                                IMPORT_RATE_BOOST = 2, SIM_DAYS = 200L))
   expect_error(vivax_params(IMPORT_START = 5L, IMPORT_END = 300L, IMPORT_RATE_PER_TICK = 1e19),
                "at most 1e6 imports a day")
+  expect_error(vivax_params(IMPORT_RATE_PER_TICK = 1e6 + 0.4), "reaches 1000000.4 imports a day")
+  ## a rate worked out to sit at the cap is accepted, though it lands an ulp above it
+  amp <- 0.997; b <- 9.722
+  expect_no_error(vivax_params(IMPORT_RATE_PER_TICK = 1e6 / (b * (1 + amp)), IMPORT_RATE_BOOST = b,
+                               SEASONAL_AMP = amp, RESURGENCE_TRIGGER_TICK = 100L))
 })
 
 test_that("a run of 99999 days or more must move the days that default to 'never'", {
@@ -266,6 +321,10 @@ test_that("a run of 99999 days or more must move the days that default to 'never
   expect_no_error(do.call(vivax_params, c(list(SIM_DAYS = 146000L), later)))
   expect_error(do.call(vivax_params, c(list(SIM_DAYS = 146000L), later[-1])), never[1])
   expect_error(do.call(vivax_params, c(list(SIM_DAYS = 1e9 + 1), later)), "at most 1e9")
+  ## in a run that long, day 99999 itself reads as 'never'
+  later$MDA_TICK <- 99999L
+  expect_error(do.call(vivax_params, c(list(SIM_DAYS = 120000L), later)),
+               "MDA_TICK is still 99999.*day 99999 itself cannot be used")
 })
 
 test_that("strings that SLiM or params.tsv cannot carry are refused", {
@@ -273,6 +332,9 @@ test_that("strings that SLiM or params.tsv cannot carry are refused", {
   expect_error(vivax_params(SIM_ID = "a\tb"), "SIM_ID must not contain control characters")
   ## non-ASCII labels are not control characters, in any locale
   expect_no_error(vivax_params(SIM_ID = "Côte d’Ivoire 日本"))
+  ## bytes that are not UTF-8 (a latin1 file read without its encoding) cannot run
+  expect_error(vivax_params(SIM_ID = "Par\xe1"), "SIM_ID must be valid UTF-8")
+  expect_no_warning(expect_error(vivax_params(CHROMOSOMES = "\xe9"), "CHROMOSOMES must be valid UTF-8"))
   for (bad in c("", "1,", "a", "15", "0", "1:2", "1,1", "3-1", "1 4", "1-3 5", "1\t2",
                 "99999999999", "1-99999999999"))
     expect_error(vivax_params(CHROMOSOMES = bad), "CHROMOSOMES must", label = shQuote(bad))

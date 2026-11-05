@@ -238,8 +238,8 @@ MU_MOSQ = 1 / MOSQ_LIFESPAN                # daily mosquito mortality
 biting_rate_eff(t) = BITING_RATE * (1 + SEASONAL_AMP * cos(2*pi*(t - SEASONAL_PHASE)/365))
 ```
 
-clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (`cos`, not `sin` — an
-earlier `sin` put the peak ~91 d late). `SEASONAL_AMP` is non-negative and 0 means no
+clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (the curve is a `cos`; a
+`sin` would put the peak ~91 d later, D10). `SEASONAL_AMP` is non-negative and 0 means no
 seasonality; ≈ 0.85 gives strong annual peaks swinging biting between roughly 0.15× and 1.85× the
 mean.
 
@@ -639,18 +639,20 @@ so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays
 mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers
 is capped at 1.
 `vivax_params()` refuses values the model cannot run (D33). Each value is a number, `T`/`F` or a
-string, as its default is, and numbers are finite. Counts, `SIM_DAYS`, the scheduling days
-(`MDA_TICK`, `IMPORT_TICK`, `RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed
-delays are whole numbers; mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities
-and coverages lie in [0, 1] (a `BITING_RATE` above 1 only warns, and `DELTA_LATENCY` is checked
-when `K_LATENCY` > 0); boosts, import rates, λ values, `SEASONAL_AMP` and counts are
-non-negative. A few sizes are capped far above anything realistic: a mean of 1000 oocysts per
+string, as its default is; numbers are finite, and strings are UTF-8 text without control
+characters. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
+`RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays are whole numbers;
+mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
+`ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1], `MU_HYPNOZOITE` in (0, 1], and
+`DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only
+warns); boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative. A few sizes
+are capped far above anything realistic: a mean of 1000 oocysts per
 successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; ν × boost ≤
 10⁶ hypnozoites per bite once the trigger falls inside the run; at most 10⁶ imports a day; and
 `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most 10⁹, SLiM's last
 tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
-past its end. A founder-free run whose imports never establish a parasite is not refused; the
-model's liveness check stops it.
+past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports
+never establish a parasite is not refused; the model's liveness check stops it.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
