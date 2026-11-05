@@ -498,8 +498,10 @@ reproduction()
 			n_activating = rbinom(1, batch_count, effective_alpha_activate);
 			remaining    = batch_count - n_activating;
 			
+			// min(): when alpha = 1 - MU exactly (the clamp above binds, or alpha + MU = 1),
+			// MU / (1 - alpha) can round to just above 1 in floating point.
 			if (remaining > 0)
-				n_dying = rbinom(1, remaining, MU_HYPNOZOITE / (1 - effective_alpha_activate));
+				n_dying = rbinom(1, remaining, min(1.0, MU_HYPNOZOITE / (1 - effective_alpha_activate)));
 			else
 				n_dying = 0;
 			
@@ -1423,7 +1425,10 @@ early() {
 		// import-driven resurgence: leaky border reopens after the trigger
 		if (sim.cycle >= RESURGENCE_TRIGGER_TICK)
 			eff_import_rate = eff_import_rate * IMPORT_RATE_BOOST;
-		n_import_target = n_import_target + rpois(1, eff_import_rate);
+		// rpois() refuses a rate of 0, which a closed border (IMPORT_RATE_BOOST = 0), full border
+		// control (INTERVENTION_EFFICACY = 1) or a seasonal amplitude above 1 all produce
+		if (eff_import_rate > 0.0)
+			n_import_target = n_import_target + rpois(1, eff_import_rate);
 	}
 	
 	if (n_import_target > 0)
@@ -1692,6 +1697,10 @@ function (integer$) getTransmissibleLineageCount(o<Subpopulation>$ s)
 	if (s.individualCount == 0)
 		return 0;
 	act = s.individuals[s.individuals.getValue("is_dormant") == F];
+	// A host holding only dormant batches has no blood stage, and getValue() below refuses
+	// an empty vector.
+	if (size(act) == 0)
+		return 0;
 	if (SUBPATENT_INFECTIVITY <= 0.0)
 		act = act[act.getValue("is_subpatent") == F];
 	if (size(act) == 0)
@@ -1912,7 +1921,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 			// treats only the clones that were already patent (D24). Natural clearance in early()
 			// follows the same rule ("Cannot be cleared on same tick as inoculation").
 			// Nested ifs, not `&`: Eidos does not short-circuit, and getValue() on a missing
-			// key returns NULL, which would make the comparison zero-length.
+			// key returns NULL, which cannot be compared.
 			bs = lin.getValue("bloodstage_start_tick");
 			if (!isNULL(bs))
 				if (bs >= sim.cycle)
@@ -1939,9 +1948,11 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 					if (RECRUD_DELAY_DIST == "geometric")
 						d_rec = 1 + rgeom(1, 1.0 / MEAN_RECRUD_DELAY)[0];
 					else if (RECRUD_DELAY_DIST == "poisson")
-						d_rec = 1 + rpois(1, max(0.0, MEAN_RECRUD_DELAY - 1.0))[0];
+						// rpois() refuses a rate of 0, so at the minimum, 1, the delay is one day
+						d_rec = 1 + ((MEAN_RECRUD_DELAY > 1.0) ? rpois(1, MEAN_RECRUD_DELAY - 1.0)[0] else 0);
 					else
-						d_rec = max(1, asInteger(round(MEAN_RECRUD_DELAY)));
+						// asFloat(): round() refuses the integer that -d MEAN_RECRUD_DELAY=4 produces
+						d_rec = max(1, asInteger(round(asFloat(MEAN_RECRUD_DELAY))));
 					lin.setValue("recrud_tick", sim.cycle + d_rec);
 					logLineageEvent("bloodcure_subpatent", h, lin);
 				}
@@ -1992,7 +2003,12 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 		return rztpois(1, lambda)[0];
 	for (attempt in seqLen(10000))          // rejection; terminates a.s. since P(0) < 1
 	{
-		n = rpois(1, rgamma(1, lambda, k)[0])[0];
+		// With a small shape k the gamma draw can underflow to exactly 0.0, which rpois()
+		// refuses. A zero rate gives a zero count, which the truncation rejects anyway.
+		g = rgamma(1, lambda, k)[0];
+		if (g <= 0.0)
+			next;
+		n = rpois(1, g)[0];
 		if (n > 0)
 			return n;
 	}

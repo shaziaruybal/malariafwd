@@ -31,6 +31,11 @@ test_that("the model refuses delays below one day when SLiM is run directly", {
     expect_true(r$status != 0, label = bad)
     expect_match(paste(r$stdout, r$stderr), "must be >= 1 and finite", label = bad)
   }
-  ## the integer spelling that -d X=7 produces is fine
+  ## the integer spelling that -d X=7 produces is fine, for every recrudescence shape
   expect_equal(slim("-d", "TREATMENT_DELAY=7", "-d", "MEAN_RECRUD_DELAY=4")$status, 0L)
+  fixed <- slim("-d", "MEAN_RECRUD_DELAY=4", "-d", "RECRUD_DELAY_DIST='fixed'",
+                "-d", "IMPORT_TICK=3", "-d", "N_IMPORTS=10", "-d", "TREATMENT_DELAY=1",
+                "-d", "BLOODCURE_COVERAGE=1.0", "-d", "P_BLOODCURE_SURVIVAL=1.0",
+                "-d", "P_RECRUD_GIVEN_FAIL=1.0")
+  expect_equal(fixed$status, 0L, label = "a 'fixed' delay given as an integer")
 })

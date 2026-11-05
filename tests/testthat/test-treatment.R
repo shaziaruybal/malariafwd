@@ -63,14 +63,15 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
   ## never treated. No course clears anything: every clone still patent when its course lands
   ## is suppressed, and each recrudescence is paired with its suppression through
   ## parent1_pedigree_id.
-  delays <- function(d) {
+  delays <- function(d, shape = "geometric") {
     run <- run_sim(vivax_params(N_HOSTS = 1200, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 45,
                                 IMPORT_TICK = 5, N_IMPORTS = 1000,
                                 P_DETECT_RELAPSE = 0, P_DETECT_RECRUD = 0,
                                 BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 1,
                                 P_RECRUD_GIVEN_FAIL = 1,
-                                TREATMENT_DELAY = d, MEAN_RECRUD_DELAY = d),
-                   seed = 3, outdir = file.path(tempdir(), paste0("mfw-delay-", d)))
+                                TREATMENT_DELAY = d, MEAN_RECRUD_DELAY = d,
+                                RECRUD_DELAY_DIST = shape),
+                   seed = 3, outdir = file.path(tempdir(), paste0("mfw-delay-", d, "-", shape)))
     ev <- load_events(run)
     gap <- merge(ev[event_type == "recrudescence", .(holder = parent1_pedigree_id, t_rec = tick)],
                  ev[event_type == "bloodcure_subpatent", .(holder = pedigree_id, t_sub = tick)],
@@ -85,6 +86,12 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
   ## recrudescences), so the one-day share at D = 4 is what pins the floor.
   expect_true(all(one$course == 1))
   expect_true(all(one$recrud == 1))
+  ## every recrudescence shape is at least one day, so at D = 1 each is exactly one day
+  for (shape in c("poisson", "fixed")) {
+    gaps <- delays(1, shape)$recrud
+    expect_gt(length(gaps), 800)
+    expect_true(all(gaps == 1), label = paste("every", shape, "gap is one day"))
+  }
   four <- delays(4)
   for (nm in names(four)) {
     x <- four[[nm]]
