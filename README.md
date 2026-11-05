@@ -74,7 +74,7 @@ library(malariafwd)
 slim_version()                                    # e.g. "5.2"
 
 # one run
-p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # 66 validated params; full genome by default
+p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # validated params; full genome by default
 run <- run_sim(p, seed = 1, outdir = "runs/demo")
 
 # tidy outputs

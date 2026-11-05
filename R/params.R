@@ -100,12 +100,23 @@
 #' @export
 vivax_params <- function(...) {
   over <- list(...)
+  if (length(over) && (is.null(names(over)) || !all(nzchar(names(over)))))
+    stop("every argument must be named, e.g. vivax_params(N_HOSTS = 300).", call. = FALSE)
   unknown <- setdiff(names(over), names(.malariafwd_defaults))
   if (length(unknown))
     stop("unknown parameter(s): ", paste(unknown, collapse = ", "),
          "\nsee names(vivax_params()) for valid names.", call. = FALSE)
+  twice <- unique(names(over)[duplicated(names(over))])
+  if (length(twice))
+    stop(paste(twice, collapse = ", "), " given more than once.", call. = FALSE)
+  ## modifyList() would drop a NULL, leaving SLiM's own default in its place
+  nulls <- names(over)[vapply(over, is.null, logical(1))]
+  if (length(nulls))
+    stop(paste(nulls, collapse = ", "), " cannot be NULL: leave a parameter out to use its default.",
+         call. = FALSE)
   p <- utils::modifyList(.malariafwd_defaults, over)
-  # v3 backward-compat: if the founder decoupling isn't explicitly set, mirror the legacy N_FOUNDERS
+  ## As in the model, N_FOUNDER_HOSTS defaults to N_FOUNDERS, and N_FOUNDER_LINEAGES to
+  ## N_FOUNDER_HOSTS
   if (!"N_FOUNDER_HOSTS"    %in% names(over)) p$N_FOUNDER_HOSTS    <- p$N_FOUNDERS
   if (!"N_FOUNDER_LINEAGES" %in% names(over)) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
   p <- .normalise_params(p)
@@ -173,8 +184,6 @@ validate_params <- function(p) {
   if (length(bad))
     stop(paste(bad, collapse = ", "), " must be a single non-missing value", call. = FALSE)
   .check_types(p)
-  stopifnot(p$N_FOUNDERS <= p$N_HOSTS,
-            p$N_FOUNDER_LINEAGES <= p$N_FOUNDER_HOSTS, p$N_FOUNDER_HOSTS <= p$N_HOSTS)
   if (!p$GENOME_MODE %in% c("full", "core"))
     stop("GENOME_MODE must be 'full' or 'core', got '", p$GENOME_MODE, "'", call. = FALSE)
   .check_chromosomes(p$CHROMOSOMES)
@@ -195,6 +204,13 @@ validate_params <- function(p) {
                "N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
                "GAMETOCYTE_DELAY", "MAX_MOI", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
+  ## N_FOUNDERS itself is only the default of N_FOUNDER_HOSTS, so it is not checked
+  if (p$N_FOUNDER_HOSTS > p$N_HOSTS)
+    stop("N_FOUNDER_HOSTS (", p$N_FOUNDER_HOSTS, ") must be at most N_HOSTS (", p$N_HOSTS, "). ",
+         "It defaults to N_FOUNDERS, so set either one.", call. = FALSE)
+  if (p$N_FOUNDER_LINEAGES > p$N_FOUNDER_HOSTS)
+    stop("N_FOUNDER_LINEAGES (", p$N_FOUNDER_LINEAGES, ") must be at most N_FOUNDER_HOSTS (",
+         p$N_FOUNDER_HOSTS, "): each founder host carries one of the founding genomes.", call. = FALSE)
   if (p$SEASONAL_AMP < 0)
     stop("SEASONAL_AMP must be >= 0 (0 means no seasonality). SEASONAL_PHASE is the day of the ",
          "peak, so for a trough on day x use SEASONAL_PHASE = x + 182.5.", call. = FALSE)

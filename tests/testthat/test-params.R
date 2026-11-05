@@ -39,6 +39,37 @@ test_that("validation catches bad input", {
   expect_error(vivax_params(SIM_DAYS = -1))
 })
 
+test_that("every argument is named, given once, and not NULL", {
+  expect_error(vivax_params(300), "every argument must be named")
+  expect_error(vivax_params(N_HOSTS = 300, 0.5), "every argument must be named")
+  expect_error(vivax_params(N_HOSTS = 300, N_HOSTS = 200), "N_HOSTS given more than once")
+  expect_error(vivax_params(DELTA_LATENCY = NULL), "DELTA_LATENCY cannot be NULL")
+})
+
+test_that("founder counts are checked against each other, with messages that name them", {
+  ## N_FOUNDERS is only the default of N_FOUNDER_HOSTS
+  expect_no_error(vivax_params(N_HOSTS = 5L, N_FOUNDER_HOSTS = 2L))
+  expect_error(vivax_params(N_HOSTS = 5L), "N_FOUNDER_HOSTS \\(12\\) must be at most N_HOSTS \\(5\\)")
+  expect_error(vivax_params(N_HOSTS = 0L), "N_HOSTS must be > 0")
+  expect_error(vivax_params(N_FOUNDER_HOSTS = 5L, N_FOUNDER_LINEAGES = 6L),
+               "N_FOUNDER_LINEAGES \\(6\\) must be at most N_FOUNDER_HOSTS \\(5\\)")
+})
+
+test_that("run_sim() checks a parameter set edited after it was built", {
+  p <- vivax_params(SIM_DAYS = 10L)
+  p$N_HOST <- 7L                                            # a misspelt name
+  expect_error(run_sim(p, outdir = tempfile()), "unknown parameter\\(s\\): N_HOST")
+  p <- vivax_params(SIM_DAYS = 10L)
+  p$N_IMPORTS <- 2.5
+  expect_error(run_sim(p, outdir = tempfile()), "N_IMPORTS must be a whole number")
+  q <- utils::modifyList(vivax_params(), list(ALPHA_ACTIVATE = FALSE))   # keeps the class
+  expect_s3_class(q, "vivax_params")
+  expect_error(run_sim(q, outdir = tempfile()), "ALPHA_ACTIVATE must be a number")
+  ## an unedited set is rebuilt unchanged
+  p <- vivax_params(N_HOSTS = 30L, SEASONAL_AMP = 0.4)
+  expect_identical(do.call(vivax_params, as.list(unclass(p))), p)
+})
+
 test_that("as_slim_args quotes strings, formats logicals, passes numbers", {
   a <- as_slim_args(vivax_params(GENOME_MODE = "core", VERBOSE = TRUE, N_HOSTS = 200))
   expect_true("GENOME_MODE='core'" %in% a)

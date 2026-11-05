@@ -10,7 +10,8 @@
 #' (`model.slim`, `cmdline.txt`, `run.log`). The launch is shell-free (processx), so it
 #' handles the SLiM quoting/`mkdir` pitfalls for you.
 #'
-#' @param params a [vivax_params()] object (or a named list of overrides).
+#' @param params a [vivax_params()] object, or a named list of overrides. Either is checked by
+#'   [vivax_params()] again before the run, so an object edited after it was built is checked too.
 #' @param seed integer RNG seed. SLiM starts from it (`-s`) and the model sets it as `SEED`,
 #'   so the outputs and the tree-sequence provenance both record it.
 #' @param outdir output directory (created if needed).
@@ -30,12 +31,15 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) || seed != round(seed) ||
       abs(seed) > .Machine$integer.max)
     stop("`seed` must be a single whole number (|seed| <= ", .Machine$integer.max, ").", call. = FALSE)
+  ## Rebuilt every time, so that a set edited after vivax_params() (with $<- or modifyList(),
+  ## which keep the class) is checked as well: a misspelt name or an impossible value is refused
+  ## here rather than run.
+  params <- do.call(vivax_params, as.list(unclass(params)))
   if (!slim_available())
     stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
   .check_slim_version()
   if (missing(outdir)) stop("`outdir` is required.", call. = FALSE)
   if (!nzchar(model)) stop("model template not found (is the package installed?).", call. = FALSE)
-  if (!inherits(params, "vivax_params")) params <- do.call(vivax_params, as.list(params))
 
   dir.create(outdir, recursive = TRUE, showWarnings = FALSE)  # SLiM won't create OUTDIR itself
   params$SEED   <- as.integer(seed)

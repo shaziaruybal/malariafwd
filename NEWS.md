@@ -71,8 +71,8 @@ apart rather than choosing for you:
 
 ## The R interface
 
-* `vivax_params()` builds a validated parameter set (66 parameters, each range-checked and kept
-  in sync with the model); `run_sim()` launches SLiM as a shell-free subprocess (`processx`) and
+* `vivax_params()` builds a parameter set, kept in sync with the model and checked again before
+  each run; `run_sim()` launches SLiM as a shell-free subprocess (`processx`) and
   returns a run handle; `run_grid()` runs parameter × seed sweeps in parallel via
   `future`/`furrr`, reporting any failed cell with its error.
 

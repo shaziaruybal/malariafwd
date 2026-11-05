@@ -8,7 +8,7 @@ initialize() {
 	defineDefault("SEED",                    55);
 	defineDefault("SIM_DAYS",                365); // 365 days or one year
 	defineDefault("N_HOSTS",                 40);
-	defineDefault("N_FOUNDERS",              12); // legacy founder count. v3 DECOUPLES this into N_FOUNDER_HOSTS (establishment) x N_FOUNDER_LINEAGES (diversity); both default to N_FOUNDERS so N_FOUNDERS-only runs == v2. Must be <= N_HOSTS. Ignored when IMPORT_TICK==1.
+	defineDefault("N_FOUNDERS",              12); // legacy founder count. v3 DECOUPLES this into N_FOUNDER_HOSTS (establishment) x N_FOUNDER_LINEAGES (diversity); both default to N_FOUNDERS so N_FOUNDERS-only runs == v2. Ignored when IMPORT_TICK==1.
 	defineDefault("N_FOUNDER_HOSTS",         N_FOUNDERS); // v3: number of INFECTED founder hosts at t=0 (establishment / does the epidemic sustain). Hold FIXED to isolate diversity from transmission.
 	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // v3: number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS). The clean GENEALOGICAL diversity knob: fewer lineages -> more hosts carry clonal copies -> higher background relatedness, at fixed establishment.
 	defineDefault("N_MOSQ",                  100);
