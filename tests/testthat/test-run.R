@@ -109,6 +109,35 @@ test_that("under options(warn = 2) a warning fails its cell, as R makes it an er
                "2 of 2 grid cell\\(s\\) FAILED.*converted from warning")
 })
 
+test_that("a caller catching run_grid()'s warnings gets the FAILED summary, and a stopped grid its error", {
+  sets <- list(warns = vivax_params(SIM_ID = "warns"), broken = vivax_params(SIM_ID = "broken"))
+  local_mocked_bindings(run_sim = function(params, seed, ...) {
+    if (params$SIM_ID == "warns") warning("cell warning") else stop("cell error")
+    list(extinct_tick = NA_integer_)
+  })
+  got <- tryCatch(run_grid(sets, seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")),
+                  warning = function(w) conditionMessage(w))
+  expect_match(got, "^2 of 4 grid cell\\(s\\) FAILED")
+  ## a value that cannot go in the result table stops the grid in its second cell: the error
+  ## reaches the caller, carrying the warnings of the cells that ran, and no warning is given
+  local_mocked_bindings(run_sim = function(params, seed, ...) {
+    warning("cell warning")
+    list(extinct_tick = if (seed == 2) sum else NA_integer_)
+  })
+  expect_no_warning(expect_error(run_grid(sets["warns"], seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")),
+                                 "cells that had reported gave these warnings:\n  cell warning [2 cells]",
+                                 fixed = TRUE))
+  ## under warn = 2 a warning fails its cell, also inside suppressWarnings()
+  local_mocked_bindings(run_sim = function(params, seed, ...) {
+    warning("cell warning")
+    list(extinct_tick = NA_integer_)
+  })
+  op <- options(warn = 2); on.exit(options(op), add = TRUE)
+  g <- suppressWarnings(run_grid(sets["warns"], seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")))
+  expect_false(any(g$ok))
+  expect_match(g$error, "^\\(converted from warning\\) cell warning$")
+})
+
 test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   tiny <- tempfile(fileext = ".slim")

@@ -36,10 +36,13 @@ failure message, or \code{NA} for a cell that ran), and \code{extinct_tick} (the
 went extinct and ended, \code{NA} otherwise; see \code{\link[=load_run]{load_run()}}). A failed cell does not abort the
 sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
 with the result rather than being discarded. A warning given in the cells (such as a
-parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, with
-the number of cells it came from, also when the grid stops part-way. Under
-\code{options(warn = 2)} a warning fails its cell, as R makes it an error, and the FAILED summary
-is then an error too.
+parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, after
+the FAILED summary, with the number of cells it came from. If the grid stops part-way with
+an error, that error's message lists the warnings of the cells whose results had reached
+this session; with workers, a cell's warnings travel with its chunk's result, so those of a
+chunk lost with its worker are lost. Under \code{options(warn = 2)} a warning in a cell fails
+that cell, in any plan and also inside \code{suppressWarnings()}, and the FAILED summary is then
+an error, so nothing is returned; the cells that ran are on disk.
 }
 \description{
 Runs every \verb{(parameter set, seed)} combination, each in its own output directory,
