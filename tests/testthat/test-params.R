@@ -94,3 +94,20 @@ test_that("probabilities of exactly 0 and 1 run to completion", {
     expect_no_error(run_sim(do.call(vivax_params, cases[[nm]]), seed = 1, outdir = out))
   }
 })
+
+test_that("as_slim_args() escapes quotes and backslashes in string values", {
+  a <- as_slim_args(list(SIM_ID = "Bob's sweep", OUTDIR = "C:\\temp\\new dir"))
+  expect_equal(a, c("-d", "SIM_ID='Bob\\'s sweep'", "-d", "OUTDIR='C:\\\\temp\\\\new dir'"))
+})
+
+test_that("vector or missing parameter values are refused before SLiM is launched", {
+  expect_error(vivax_params(EIP_DAYS = c(5, 10)), "EIP_DAYS must be a single non-missing value")
+  expect_error(vivax_params(N_HOSTS = NA), "N_HOSTS must be a single non-missing value")
+  expect_error(as_slim_args(list(EIP_DAYS = c(5, 10))), "EIP_DAYS must be a single non-missing value")
+})
+
+test_that("run_sim() refuses a seed that is not a single whole number", {
+  expect_error(run_sim(seed = 1:3, outdir = tempfile()), "`seed` must be a single whole number")
+  expect_error(run_sim(seed = 2.5, outdir = tempfile()), "`seed` must be a single whole number")
+  expect_error(run_sim(seed = 2^31, outdir = tempfile()), "`seed` must be a single whole number")
+})

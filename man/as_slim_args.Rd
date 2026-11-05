@@ -13,7 +13,8 @@ as_slim_args(params)
 character vector of \verb{-d NAME=value} tokens.
 }
 \description{
-Logicals become \code{T}/\code{F}, strings are wrapped in Eidos single quotes, and numbers are
+Logicals become \code{T}/\code{F}, strings are wrapped in Eidos single quotes (with quotes and
+backslashes escaped, so Windows paths and apostrophes survive), and numbers are
 written so that Eidos infers the type the model expects. Returned as a flat character
 vector \code{c("-d","NAME=val", ...)} suitable for a shell-free process launch.
 }

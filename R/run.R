@@ -27,6 +27,9 @@
 #' @export
 run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_model(),
                     verbose = NULL, timeout = Inf, echo = FALSE) {
+  if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) || seed != round(seed) ||
+      abs(seed) > .Machine$integer.max)
+    stop("`seed` must be a single whole number (|seed| <= ", .Machine$integer.max, ").", call. = FALSE)
   if (!slim_available())
     stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
   .check_slim_version()
@@ -36,11 +39,12 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 
   dir.create(outdir, recursive = TRUE, showWarnings = FALSE)  # SLiM won't create OUTDIR itself
   params$SEED   <- as.integer(seed)
-  params$OUTDIR <- normalizePath(outdir, mustWork = FALSE)
+  params$OUTDIR <- normalizePath(outdir, winslash = "/", mustWork = FALSE)
   if (!is.null(verbose)) params$VERBOSE <- isTRUE(verbose)
 
+  pkg_version <- .eidos_quote(as.character(utils::packageVersion("malariafwd")))
   args <- c("-s", as.character(params$SEED), as_slim_args(params),
-            "-d", paste0("MALARIAFWD_VERSION='", utils::packageVersion("malariafwd"), "'"), model)
+            "-d", paste0("MALARIAFWD_VERSION=", pkg_version), model)
   file.copy(model, file.path(outdir, "model.slim"), overwrite = TRUE)  # provenance
   writeLines(c(paste0("# ", format(Sys.time(), tz = "UTC")), args), file.path(outdir, "cmdline.txt"))
 
@@ -52,6 +56,11 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
     stop("SLiM run failed (exit ", res$status, "). Log: ", file.path(outdir, "run.log"), "\n",
          paste(tail_err, collapse = "\n"), call. = FALSE)
   }
+  written <- file.exists(file.path(outdir, c("params.tsv", "events.tsv")))
+  if (!all(written))
+    stop("SLiM exited without an error but did not write ",
+         paste(c("params.tsv", "events.tsv")[!written], collapse = " or "), " to ", outdir,
+         ". Log: ", file.path(outdir, "run.log"), call. = FALSE)
   invisible(load_run(outdir))  # resolved params from params.tsv is the authoritative record
 }
 

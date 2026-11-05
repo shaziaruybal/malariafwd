@@ -80,6 +80,9 @@ vivax_params <- function(...) {
 
 #' @keywords internal
 validate_params <- function(p) {
+  bad <- names(p)[!vapply(p, function(v) length(v) == 1L && !is.na(v), logical(1))]
+  if (length(bad))
+    stop(paste(bad, collapse = ", "), " must be a single non-missing value", call. = FALSE)
   stopifnot(p$N_FOUNDERS <= p$N_HOSTS,
             p$N_FOUNDER_LINEAGES <= p$N_FOUNDER_HOSTS, p$N_FOUNDER_HOSTS <= p$N_HOSTS)
   if (!p$GENOME_MODE %in% c("full", "core"))
@@ -166,9 +169,14 @@ has_import_path <- function(p) {
   isTRUE(pulse) || isTRUE(windowed)
 }
 
+## An Eidos single-quoted string literal: backslashes first, then quotes, so a Windows path
+## or an apostrophe in OUTDIR or SIM_ID reaches the model unchanged.
+.eidos_quote <- function(s) paste0("'", gsub("'", "\\'", gsub("\\", "\\\\", s, fixed = TRUE), fixed = TRUE), "'")
+
 #' Convert a parameter set into SLiM `-d` command-line arguments
 #'
-#' Logicals become `T`/`F`, strings are wrapped in Eidos single quotes, and numbers are
+#' Logicals become `T`/`F`, strings are wrapped in Eidos single quotes (with quotes and
+#' backslashes escaped, so Windows paths and apostrophes survive), and numbers are
 #' written so that Eidos infers the type the model expects. Returned as a flat character
 #' vector `c("-d","NAME=val", ...)` suitable for a shell-free process launch.
 #'
@@ -198,9 +206,11 @@ as_slim_args <- function(params) {
     if (grepl("^-?[0-9]+$", v)) paste0(v, ".0") else v
   }
   fmt <- function(name, val) {
+    if (length(val) != 1L || is.na(val))
+      stop(name, " must be a single non-missing value (got length ", length(val), ")", call. = FALSE)
     default <- .malariafwd_defaults[[name]]   # NULL for SEED/OUTDIR, added by run_sim()
     if (is.logical(val)) v <- if (isTRUE(val)) "T" else "F"
-    else if (is.character(val) || name %in% .malariafwd_string_params) v <- sprintf("'%s'", val)
+    else if (is.character(val) || name %in% .malariafwd_string_params) v <- .eidos_quote(val)
     else if (!is.null(default) && is.double(default)) v <- as_float(val)
     else v <- num(val)
     c("-d", paste0(name, "=", v))

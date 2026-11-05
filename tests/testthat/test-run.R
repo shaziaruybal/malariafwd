@@ -48,3 +48,20 @@ test_that("relapse-to-origin IBD is clonal (= 1)", {
   skip_if(nrow(roi) < 10, "too few relapse-origin pairs")
   expect_equal(median(roi$ibd), 1, tolerance = 0.001)
 })
+
+test_that("run_sim() works with an apostrophe and a space in the output path and SIM_ID", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  od <- file.path(tempdir(), "o'neil runs", "a")
+  run <- run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 5, SIM_ID = "Bob's sweep"),
+                 seed = 1, outdir = od)
+  expect_true(file.exists(file.path(od, "events.tsv")))
+  expect_equal(load_params(run)$SIM_ID, "Bob's sweep")
+})
+
+test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  tiny <- tempfile(fileext = ".slim")
+  writeLines(c("initialize() { }", "1 early() { sim.simulationFinished(); }"), tiny)
+  expect_error(run_sim(vivax_params(), seed = 1, outdir = tempfile(), model = tiny),
+               "did not write")
+})
