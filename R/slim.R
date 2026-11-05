@@ -16,6 +16,23 @@ slim_path <- function() {
 #' @export
 slim_available <- function() nzchar(Sys.which(slim_path()))
 
+## The model is tested on SLiM 5.2; 5.0 and 5.1 give different output for the same seed.
+.slim_floor <- "5.2"
+.slim_cache <- new.env(parent = emptyenv())
+
+.slim_version_ok <- function(v) is.na(v) || numeric_version(v) >= numeric_version(.slim_floor)
+
+## Checked once per SLiM binary per session, because slim_version() starts a process.
+.check_slim_version <- function() {
+  path <- slim_path()
+  v <- .slim_cache[[path]]
+  if (is.null(v)) v <- .slim_cache[[path]] <- slim_version()
+  if (!.slim_version_ok(v))
+    stop("malariafwd needs SLiM >= ", .slim_floor, ", but ", path, " is SLiM ", v,
+         ". Install a newer SLiM, or point MALARIAFWD_SLIM at one.", call. = FALSE)
+  invisible(v)
+}
+
 #' SLiM version string
 #' @return the version (e.g. `"5.2"`) or `NA` if SLiM is not found.
 #' @export

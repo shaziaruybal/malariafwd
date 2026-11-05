@@ -17,7 +17,8 @@ run_sim(
 \arguments{
 \item{params}{a \code{\link[=vivax_params]{vivax_params()}} object (or a named list of overrides).}
 
-\item{seed}{integer RNG seed passed to SLiM.}
+\item{seed}{integer RNG seed. SLiM starts from it (\code{-s}) and the model sets it as \code{SEED},
+so the outputs and the tree-sequence provenance both record it.}
 
 \item{outdir}{output directory (created if needed).}
 

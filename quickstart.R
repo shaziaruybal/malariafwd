@@ -9,7 +9,7 @@
 #   Rscript quickstart.R --github        # install from GitHub instead
 #   Rscript quickstart.R --outdir path   # where to put the run and the figures
 #
-# Needs SLiM (>= 5.0) on your PATH; the IBD and ARG steps additionally need Python with
+# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps additionally need Python with
 # tskit (reticulate fetches it on first use). Everything else degrades gracefully.
 # ---------------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ cat("   installed version:", as.character(utils::packageVersion("malariafwd")), 
 # -- 2. check the toolchain ---------------------------------------------------------------
 say("2. Checking the toolchain")
 if (!slim_available())
-  stop("SLiM is not on your PATH. Install SLiM >= 5.0, or set MALARIAFWD_SLIM to the binary.",
+  stop("SLiM is not on your PATH. Install SLiM >= 5.2, or set MALARIAFWD_SLIM to the binary.",
        call. = FALSE)
 cat("   SLiM:", slim_version(), "\n   model:", basename(slim_model()), "\n")
 has_py <- requireNamespace("reticulate", quietly = TRUE)

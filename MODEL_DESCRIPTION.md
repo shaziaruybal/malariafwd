@@ -1105,7 +1105,7 @@ are simply in `state.tsv` rather than at the moment of creation in `events.tsv`.
 ### 16.4 Reproducibility
 
 `SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter and the
-derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`. Requires SLiM ≥ 5.0 on `PATH` and
+derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`. Requires SLiM ≥ 5.2 on `PATH` and
 Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared
 infections — without it, relapse-to-prior comparisons silently lose ancestors.
 

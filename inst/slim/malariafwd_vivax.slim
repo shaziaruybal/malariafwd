@@ -286,7 +286,11 @@ initialize() {
 
 	setSeed(SEED);
 	
+	// SLiM 5.2 is the supported version: 5.0 and 5.1 give different output for the same seed.
+	if (version(F)[1] < 5.2)
+		stop("malariafwd needs SLiM 5.2 or newer; this is SLiM " + version(F)[1] + ".");
 	initializeSLiMModelType("nonWF");
+	initializeSLiMOptions(keepPedigrees=T);   // lineage ids are pedigree ids throughout
 	initializeTreeSeq();
 	
 	// ── GENOME: PvP01 (Auburn et al. 2016; GCA_900093555) 14 nuclear chromosomes ──
@@ -978,6 +982,8 @@ reproduction()
 	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","MAX_BROOD_AGE","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
+	_plines = c(_plines, "SLIM_VERSION\t" + version(F)[1]);
+	_plines = c(_plines, "MALARIAFWD_VERSION\t" + (exists("MALARIAFWD_VERSION") ? MALARIAFWD_VERSION else "unknown"));
 	for (_nm in _pn)
 		_plines = c(_plines, _nm + "\t" + paste(executeLambda(_nm + ";"), sep=","));
 	writeFile(OUTDIR + "/params.tsv", _plines);

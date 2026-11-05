@@ -17,7 +17,8 @@ BugReports: https://github.com/shaziaruybal/malariafwd/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-SystemRequirements: SLiM (>= 5.0) on PATH; Python 3 with tskit + pandas (for IBD)
+SystemRequirements: SLiM (>= 5.2) on PATH; Python 3 with tskit (>= 1.0), pandas and
+    numpy (for IBD and the ARG functions)
 Imports:
     data.table,
     processx,

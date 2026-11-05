@@ -11,7 +11,8 @@
 #' handles the SLiM quoting/`mkdir` pitfalls for you.
 #'
 #' @param params a [vivax_params()] object (or a named list of overrides).
-#' @param seed integer RNG seed passed to SLiM.
+#' @param seed integer RNG seed. SLiM starts from it (`-s`) and the model sets it as `SEED`,
+#'   so the outputs and the tree-sequence provenance both record it.
 #' @param outdir output directory (created if needed).
 #' @param model path to the SLiM model (defaults to the bundled template).
 #' @param verbose if `TRUE`, run the model in VERBOSE mode (full per-event narration).
@@ -27,7 +28,8 @@
 run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_model(),
                     verbose = NULL, timeout = Inf, echo = FALSE) {
   if (!slim_available())
-    stop("SLiM not found. Install SLiM (>= 5.0) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
+    stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
+  .check_slim_version()
   if (missing(outdir)) stop("`outdir` is required.", call. = FALSE)
   if (!nzchar(model)) stop("model template not found (is the package installed?).", call. = FALSE)
   if (!inherits(params, "vivax_params")) params <- do.call(vivax_params, as.list(params))
@@ -37,7 +39,8 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   params$OUTDIR <- normalizePath(outdir, mustWork = FALSE)
   if (!is.null(verbose)) params$VERBOSE <- isTRUE(verbose)
 
-  args <- c(as_slim_args(params), model)
+  args <- c("-s", as.character(params$SEED), as_slim_args(params),
+            "-d", paste0("MALARIAFWD_VERSION='", utils::packageVersion("malariafwd"), "'"), model)
   file.copy(model, file.path(outdir, "model.slim"), overwrite = TRUE)  # provenance
   writeLines(c(paste0("# ", format(Sys.time(), tz = "UTC")), args), file.path(outdir, "cmdline.txt"))
 

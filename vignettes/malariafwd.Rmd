@@ -20,7 +20,7 @@ Python `tskit`); run them locally after checking your setup.
 
 ## Setup
 
-The model runs the external `slim` binary (SLiM ≥ 5.0) as a subprocess, and uses Python
+The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess, and uses Python
 `tskit` (via `reticulate`) for IBD. Check both:
 
 ```{r}

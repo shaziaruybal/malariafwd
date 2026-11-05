@@ -47,7 +47,7 @@ from markers. Shared segments for four pairs of known relationship:
 
 ## Requirements
 
-- **SLiM ≥ 5.0** on your `PATH` (or set `MALARIAFWD_SLIM`). Check with `slim_available()`.
+- **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`). Check with `slim_available()`.
 - For IBD: **Python 3 with `tskit` + `pandas`** (via the `reticulate` package).
 
 ## Install
