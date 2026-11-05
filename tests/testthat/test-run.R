@@ -73,6 +73,22 @@ test_that("a non-ASCII SIM_ID reaches SLiM unchanged, in a C locale too", {
   }
 })
 
+test_that("run_grid() gives each warning from its cells once, after its FAILED summary", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## R keeps only the first 50 warnings, so a set that warns in every cell would crowd it out
+  p <- suppressWarnings(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, BITING_RATE = 2))
+  q <- vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3)
+  q$N_MOSQ <- 40.5                                   # refused in each of its cells
+  w <- character()
+  g <- withCallingHandlers(
+    run_grid(list(warns = p, broken = q), seeds = 1:3, outdir_base = tempfile("mfwd_grid_")),
+    warning = function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
+  expect_identical(g$ok, g$set == "warns")
+  expect_length(w, 2)
+  expect_match(w[1], "3 of 6 grid cell\\(s\\) FAILED")
+  expect_match(w[2], "bites at most once a day.* \\[3 cells\\]$")
+})
+
 test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   tiny <- tempfile(fileext = ".slim")

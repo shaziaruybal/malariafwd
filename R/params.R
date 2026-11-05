@@ -107,6 +107,8 @@ vivax_params <- function(...) {
   unknown <- setdiff(names(over), names(.malariafwd_defaults))
   if (length(unknown))
     stop("unknown parameter(s): ", paste(unknown, collapse = ", "),
+         if (any(c("SEED", "OUTDIR") %in% unknown))
+           "\nSEED and OUTDIR are set by run_sim(seed =, outdir =), not in the parameter set.",
          "\nsee names(vivax_params()) for valid names.", call. = FALSE)
   twice <- unique(names(over)[duplicated(names(over))])
   if (length(twice))

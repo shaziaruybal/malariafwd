@@ -67,9 +67,20 @@ test_that("run_sim() checks a parameter set edited after it was built", {
   q <- utils::modifyList(vivax_params(), list(ALPHA_ACTIVATE = FALSE))   # keeps the class
   expect_s3_class(q, "vivax_params")
   expect_error(run_sim(q, outdir = tempfile()), "ALPHA_ACTIVATE must be a number")
+  ## SEED and OUTDIR belong to run_sim()
+  p <- vivax_params(SIM_DAYS = 10L)
+  p$SEED <- 5L
+  expect_error(run_sim(p, outdir = tempfile()), "SEED and OUTDIR are set by run_sim\\(seed =, outdir =\\)")
+  ## a stored call or symbol is refused as it stands, not evaluated
+  p <- vivax_params(SIM_DAYS = 10L)
+  p$SIM_ID <- quote(paste("run", 1))
+  expect_error(run_sim(p, outdir = tempfile()), "SIM_ID must be a string, got paste")
+  p <- vivax_params(SIM_DAYS = 10L)
+  p$N_HOSTS <- quote(x)
+  expect_no_warning(expect_error(run_sim(p, outdir = tempfile()), "N_HOSTS must be a number, got x"))
   ## an unedited set is rebuilt unchanged
   p <- vivax_params(N_HOSTS = 30L, SEASONAL_AMP = 0.4)
-  expect_identical(do.call(vivax_params, as.list(unclass(p))), p)
+  expect_identical(do.call(vivax_params, as.list(unclass(p)), quote = TRUE), p)
 })
 
 test_that("as_slim_args quotes strings, formats logicals, passes numbers", {

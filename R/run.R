@@ -34,7 +34,7 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   ## Rebuilt every time, so that a set edited after vivax_params() (with $<- or modifyList(),
   ## which keep the class) is checked as well: a misspelt name or an impossible value is refused
   ## here rather than run.
-  params <- do.call(vivax_params, as.list(unclass(params)))
+  params <- do.call(vivax_params, as.list(unclass(params)), quote = TRUE)
   if (!slim_available())
     stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
   .check_slim_version()
@@ -91,7 +91,9 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, and `error`
 #'   (the failure message, or `NA` for a cell that ran). A failed cell does not abort the
 #'   sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
-#'   with the result rather than being discarded.
+#'   with the result rather than being discarded. A warning given in the cells (such as a
+#'   parameter set's own warnings, which [run_sim()] repeats for each run) is given once, with
+#'   the number of cells it came from.
 #' @export
 run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, ...) {
@@ -108,7 +110,15 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
     on.exit(future::plan(oldplan), add = TRUE)
   }
 
-  out <- furrr::future_pmap(
+  ## A set that warns when it is checked (biting above 1 a day, say) warns again in each of its
+  ## cells, and R keeps only the first 50 warnings, which would crowd out the FAILED summary below.
+  ## So each distinct warning is kept back and given once, after it.
+  caught <- character()
+  keep <- function(w) {
+    caught <<- c(caught, conditionMessage(w))
+    invokeRestart("muffleWarning")
+  }
+  out <- withCallingHandlers(furrr::future_pmap(
     list(jobs$set, jobs$seed, jobs$outdir),
     function(set, seed, outdir) {
       ## Keep the error TEXT. `ok = FALSE` alone is unactionable: a cell that failed because
@@ -124,7 +134,7 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                  stringsAsFactors = FALSE)
     },
     .options = furrr::furrr_options(seed = TRUE)
-  )
+  ), warning = keep)
   res <- do.call(rbind, out)
   ## Say it out loud. A grid is usually launched and left, and a silent half-empty result is
   ## how a sweep gets analysed with a third of its cells missing.
@@ -132,6 +142,10 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
     n <- sum(!res$ok)
     warning(n, " of ", nrow(res), " grid cell(s) FAILED and produced no run. First error: ",
             res$error[!res$ok][1], "\nSee the `error` column for the rest.", call. = FALSE)
+  }
+  for (m in unique(caught)) {
+    n <- sum(caught == m)
+    warning(m, if (n > 1) paste0(" [", n, " cells]"), call. = FALSE)
   }
   res
 }
