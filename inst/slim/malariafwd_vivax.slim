@@ -258,23 +258,27 @@ initialize() {
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be >= 0");
 	// The checks below are mirrored in validate_params() and repeated here for runs started
 	// directly with -d. They are written as comparisons rather than isFinite(), which refuses
-	// the integer that -d X=7 produces, and so that NAN fails them. The size caps allow the same
-	// rounding as validate_params(), a factor of 1 + 1e-12.
+	// the integer that -d X=7 produces, and so that NAN fails them. The caps allow a little more
+	// rounding than validate_params() does, since the values arrive rounded to 15 digits, so a set
+	// R accepts is never refused here.
 	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates; below K = 1e-3 its gamma draws
 	// underflow to 0 so often that the counts fall back to 1, the reverse of the dispersion asked for.
-	if (!(K_OOCYSTS <= 0 | (K_OOCYSTS >= 1e-3 & K_OOCYSTS < INF)))
+	if (!(K_OOCYSTS == 0 | (K_OOCYSTS >= 1e-3 * (1 - 1e-11) & K_OOCYSTS < INF)))
 		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001 and finite, got " + K_OOCYSTS +
 			": the model cannot draw a more dispersed oocyst count.");
 	// validate_params() caps the mean oocyst count per uptake at 1000, which caps lambda too; with
 	// K at least 1e-3 this keeps every gamma rate finite.
-	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-12) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-12)))
+	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-11) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-11)))
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be at most 1000");
-	// These factors scale the biting and import rates, which must stay non-negative and finite.
+	// These factors scale the biting, import and activation rates, which must stay non-negative
+	// (and the first two finite; the activation rate is clamped, D9, so its boost may be INF).
 	if (!(INTERVENTION_EFFICACY >= 0 & INTERVENTION_EFFICACY <= 1))
 		stop("INTERVENTION_EFFICACY must be in [0, 1], got " + INTERVENTION_EFFICACY);
 	if (!(IMPORT_RATE_PER_TICK >= 0 & IMPORT_RATE_BOOST >= 0 & IMPORT_RATE_BOOST < INF &
 		BITING_RATE_BOOST >= 0 & BITING_RATE_BOOST < INF))
 		stop("IMPORT_RATE_PER_TICK, IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0 and finite");
+	if (!(ALPHA_ACTIVATE_BOOST >= 0))
+		stop("ALPHA_ACTIVATE_BOOST must be >= 0, got " + ALPHA_ACTIVATE_BOOST);
 	if (!(SEASONAL_AMP >= 0 & SEASONAL_AMP < INF))
 		stop("SEASONAL_AMP must be >= 0 and finite (0 means no seasonality), got " + SEASONAL_AMP);
 	// The peak daily import rate and hypnozoite batch mean: rpois() wraps above 2^32 and does not
@@ -282,11 +286,11 @@ initialize() {
 	// only after the trigger, so the peak is then the unboosted rate.
 	boost_in_run = (RESURGENCE_TRIGGER_TICK <= SIM_DAYS);
 	if (!(IMPORT_RATE_PER_TICK * (boost_in_run ? max(1.0, asFloat(IMPORT_RATE_BOOST)) else 1.0) *
-		(1 + SEASONAL_AMP) <= 1e6 * (1 + 1e-12)))
+		(1 + SEASONAL_AMP) <= 1e6 * (1 + 1e-11)))
 		stop("IMPORT_RATE_PER_TICK, times IMPORT_RATE_BOOST (if above 1) once the trigger falls inside " +
 			"the run and 1 + SEASONAL_AMP at the seasonal peak, must be at most 1e6 imports a day");
 	if (!(NU_HYPNOZOITE_BATCH * (boost_in_run ? max(1.0, asFloat(NU_HYPNOZOITE_BATCH_BOOST)) else 1.0) <=
-		1e6 * (1 + 1e-12)))
+		1e6 * (1 + 1e-11)))
 		stop("NU_HYPNOZOITE_BATCH, times NU_HYPNOZOITE_BATCH_BOOST (if above 1) once the trigger falls " +
 			"inside the run, must be at most 1e6 hypnozoites per bite");
 	// The days that default to 99999 mean 'never', and a run this long would reach them.

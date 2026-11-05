@@ -57,11 +57,18 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   writeLines(c(paste0("# ", format(Sys.time(), tz = "UTC")), args), file.path(outdir, "cmdline.txt"),
              useBytes = TRUE)
 
-  res <- processx::run(slim_path(), args, error_on_status = FALSE, timeout = timeout,
-                       echo = echo, spinner = FALSE, encoding = "UTF-8")
-  writeLines(res$stdout, file.path(outdir, "run.log"), useBytes = TRUE)
+  ## SLiM's output is UTF-8. processx's own buffer translates it to the native encoding and then
+  ## cuts it at the UTF-8 byte count, which in a C locale loses the end of the log, so the chunks
+  ## are kept here as they arrive (and echoed here when asked).
+  out <- character(); err <- character()
+  res <- processx::run(slim_path(), args, error_on_status = FALSE, timeout = timeout, echo = FALSE,
+                       spinner = FALSE, encoding = "UTF-8",
+                       stdout_callback = function(x, proc) { out[[length(out) + 1L]] <<- x; if (echo) cat(x) },
+                       stderr_callback = function(x, proc) { err[[length(err) + 1L]] <<- x; if (echo) cat(x, file = stderr()) })
+  out <- paste(out, collapse = ""); err <- paste(err, collapse = "")
+  writeLines(out, file.path(outdir, "run.log"), useBytes = TRUE)
   if (!identical(res$status, 0L)) {
-    tail_err <- utils::tail(strsplit(paste0(res$stdout, res$stderr), "\n")[[1]], 6)
+    tail_err <- utils::tail(strsplit(paste0(out, err), "\n")[[1]], 6)
     stop("SLiM run failed (exit ", res$status, "). Log: ", file.path(outdir, "run.log"), "\n",
          paste(tail_err, collapse = "\n"), call. = FALSE)
   }

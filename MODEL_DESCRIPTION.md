@@ -647,8 +647,9 @@ mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and covera
 `DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only
 warns); boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative. A few sizes
 are capped far above anything realistic: a mean of 1000 oocysts per
-successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; ν × boost ≤
-10⁶ hypnozoites per bite once the trigger falls inside the run; at most 10⁶ imports a day; and
+successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; the
+hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at
+most 10⁶ imports a day; and
 `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most 10⁹, SLiM's last
 tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
 past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports

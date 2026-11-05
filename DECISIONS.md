@@ -29,34 +29,38 @@ minimum, and the small `K_OOCYSTS` that `uptake_calibrate()` can return. The res
 model cannot run, or runs as something else: probabilities outside [0, 1], negative boosts and
 counts, non-whole counts and scheduling days, values of the wrong kind, `Inf`, and sizes far
 beyond anything realistic.
-**Decision.** The model takes every legitimate edge value at its natural limit: no imports at a
-rate of 0, a one-day delay at the minimum, a death probability capped at 1, no infectiousness for
-a host without a blood stage, and a zero count from a gamma draw of 0. `validate_params()` refuses
-everything else before SLiM starts, with a message that names the parameter. Each value is a
-number, `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and 0 or at least
-1e-300 in size. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
-`RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays `EIP_DAYS` and
-`GAMETOCYTE_DELAY` are whole; mean durations, rates and `SEASONAL_PHASE` need not be.
+**Decision.** The model takes every legitimate edge value at its natural limit: no imports at a rate
+of 0, a one-day delay at the minimum, a death probability capped at 1, no infectiousness for a host
+without a blood stage, and a zero count from a gamma draw of 0. `validate_params()` refuses
+everything else before SLiM starts, with a message that names the parameter. Each value is a number,
+`TRUE`/`FALSE` or a string, as its default is; numbers are plain (not, say, a lubridate duration)
+and finite, and 0 or at least 1e-300 in size. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`,
+`IMPORT_TICK`, `RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays
+`EIP_DAYS` and `GAMETOCYTE_DELAY` are whole; mean durations, rates and `SEASONAL_PHASE` need not be.
 Probabilities and coverages, `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1],
 `MU_HYPNOZOITE` in (0, 1] and `DELTA_LATENCY` in (0, 1] when `K_LATENCY > 0`; `BITING_RATE` is
 positive; boosts, import rates, `LAMBDA_*`, `SEASONAL_AMP` and counts are non-negative;
-`MOSQ_LIFESPAN` is at least 1 (D29); `RECOMB_RATE` is at most 0.5. `CHROMOSOMES` names
-chromosomes 1-14 once each, and strings are valid UTF-8 without control characters. A few sizes
-are capped: a mean of 1000 oocysts per successful uptake, with `K_OOCYSTS` 0 or at least 0.001;
-`LAMBDA_SPOROZOITES` at 1000; the hypnozoite batch mean, times its boost once the trigger falls
-inside the run, at 10^6; the import rate at 10^6 a day; `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY`
-at 10^6 days; and `SIM_DAYS` at 10^9, SLiM's last tick. The size caps allow a relative rounding of
-10^-12. A run of 99999 days or more must move the days that default to 99999 past its end, and
-cannot schedule anything on day 99999 itself. Spellings that mean the same value are stored in the
-form SLiM is given: a named number or a 1 x 1 matrix, a whole number with floating-point noise
-(`1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor for a string parameter
-(`expand.grid()` makes factors), latin1 text (as UTF-8), and spaces around the commas and dashes
-of `CHROMOSOMES`. The model's `initialize()` repeats, for runs started directly with `-d`, the
-checks that guard its own draws: the delays, `K_OOCYSTS` and `LAMBDA_*` at most 1000, the rate
-factors and `SEASONAL_AMP` (non-negative and finite), the peak import rate and hypnozoite batch
-mean, and the "never" days. The oocyst mean cap, which bounds run time rather than a draw, is
-checked in R only. `run_sim()` passes strings to SLiM as UTF-8 bytes, so a label survives a C
-locale.
+`MOSQ_LIFESPAN` is at least 1 (D29); `RECOMB_RATE` is at most 0.5. `CHROMOSOMES` names chromosomes
+1-14 once each, and strings are valid UTF-8 without control characters. A few sizes are capped: a
+mean of 1000 oocysts per successful uptake, with `K_OOCYSTS` 0 or at least 0.001;
+`LAMBDA_SPOROZOITES` at 1000; the hypnozoite batch mean at 10^6, and times its boost (if above 1)
+once the trigger falls inside the run; the import rate at 10^6 a day; `TREATMENT_DELAY` and
+`MEAN_RECRUD_DELAY` at 10^6 days; and `SIM_DAYS` at 10^9, SLiM's last tick. The oocyst mean,
+`LAMBDA_SPOROZOITES`, hypnozoite batch and import caps, and the `K_OOCYSTS` floor, allow a relative
+rounding of 10^-12. A run of 99999 days or more must move the days that default to 99999 past its
+end, and cannot schedule anything on day 99999 itself. Spellings that mean the same value are stored
+in the form SLiM is given: a named number or a 1 x 1 matrix, a whole number with floating-point
+noise (`1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor for a string parameter
+(`expand.grid()` makes factors), text in another encoding (latin1, UTF-8 marked as bytes, or a
+non-UTF-8 native encoding R can convert) as UTF-8, and spaces around the commas and dashes of
+`CHROMOSOMES`. The model's `initialize()` repeats, for runs started directly with `-d`, the checks
+that guard its own draws: the delays; `K_OOCYSTS`, 0 or at least 0.001 and finite, and `LAMBDA_*` at
+most 1000; the biting and import rate factors and `SEASONAL_AMP`, non-negative and finite, and the
+activation boost, non-negative; the peak import rate and hypnozoite batch mean; and the "never"
+days. Its caps allow a little more rounding than R's, since the values arrive rounded to 15 digits.
+The oocyst mean cap, which bounds run time rather than a draw, is checked in R only. On Unix,
+`run_sim()` passes strings to SLiM as UTF-8 bytes, so a label survives a C locale, and it keeps
+SLiM's output whole in `run.log`.
 **Rationale.** A sweep must not lose cells to engine errors, and a refusal that names the
 parameter is better than a stack trace from tick 200. The caps sit far above any realistic
 setting and well below where SLiM's draws fail (binomial sizes are 32-bit, Poisson draws wrap
@@ -83,8 +87,8 @@ compared as text) and `SEASONAL_AMP = -0.5`. `MOSQ_LIFESPAN` and `SEASONAL_PHASE
 since a mean and a day of the year need not be whole, so `params.tsv` writes them as `10.0` and
 `0.0`. `uptake_moments()` keeps its precision for a tiny lambda or a huge `k`, where it returned a
 mean of Inf or below 1. `uptake_calibrate()` matches the target mean exactly, returns a `k` of at
-least 0.001 (and warns when the target variance is more than a zero-truncated count with that
-mean can have), and refuses a target mean above 1000. Run time is not bounded: `N_HOSTS` and
+least 0.001 (and warns when the target variance is more than the zero-truncated negative binomial
+reaches at that mean), and refuses a target mean above 1000. Run time is not bounded: `N_HOSTS` and
 `N_MOSQ` are uncapped, `SIM_DAYS` is capped only at SLiM's 10^9, and a high `RECOMB_RATE` or a
 dispersed uptake within the caps can be slow. Not settled here: a
 founder-free run whose imports fail to establish by chance still stops at the model's liveness
@@ -94,7 +98,8 @@ and checks that each run reached the state its guard handles; the minimum delays
 `tests/testthat/test-treatment.R`, and the direct `-d` checks in `tests/testthat/test-slim.R`.
 `tests/testthat/test-params.R` refuses each impossible value with a message that names the
 parameter, and stores the alternative spellings in SLiM's form. `tests/testthat/test-run.R` runs
-a non-ASCII label in a C locale and reads it back unchanged from `params.tsv`.
+a non-ASCII label in a C locale and reads it back unchanged from `params.tsv`, with `run.log`
+complete.
 
 ---
 

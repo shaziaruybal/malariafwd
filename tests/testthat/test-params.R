@@ -201,6 +201,12 @@ test_that("each value has its default's type, is finite, and is whole where the 
   expect_no_error(vivax_params(MOSQ_LIFESPAN = 10.5, SEASONAL_PHASE = 40.5))
   ## a value that is not a vector at all is named in the refusal, without R's own warnings
   expect_no_warning(expect_error(vivax_params(N_HOSTS = function() 1), "N_HOSTS must be a number"))
+  ## a Date is not a day number, and a classed number whose text is not a number cannot reach SLiM
+  expect_error(vivax_params(MDA_TICK = as.Date("1970-01-03")), "MDA_TICK must be a number")
+  expect_no_error(vivax_params(N_HOSTS = I(200 + 1e-13)))
+  registerS3method("format", "mfwd_duration", function(x, ...) paste0(unclass(x) * 86400, "s"))
+  expect_error(vivax_params(TREATMENT_DELAY = structure(7, class = "mfwd_duration")),
+               "TREATMENT_DELAY must be a plain number, got a mfwd_duration")
 })
 
 test_that("spellings of the same value are stored in the form SLiM is given", {
@@ -225,6 +231,14 @@ test_that("spellings of the same value are stored in the form SLiM is given", {
   ## latin1 text is stored as UTF-8, which SLiM reads
   lat <- "Par\xe1"; Encoding(lat) <- "latin1"
   expect_identical(charToRaw(vivax_params(SIM_ID = lat)$SIM_ID), charToRaw("Pará"))
+  ## also as a factor (expand.grid() of latin1 text), and with R's CP1252 reading of latin1
+  expect_identical(charToRaw(vivax_params(SIM_ID = factor(lat))$SIM_ID), charToRaw("Pará"))
+  dash <- "a\x96b"; Encoding(dash) <- "latin1"
+  expect_identical(charToRaw(vivax_params(SIM_ID = dash)$SIM_ID), as.raw(c(0x61, 0xe2, 0x80, 0x93, 0x62)))
+  ## UTF-8 marked as bytes is stored as UTF-8, and refused by the parameter's own check when wrong
+  byt <- "C\xc3\xb4te"; Encoding(byt) <- "bytes"
+  expect_identical(Encoding(vivax_params(SIM_ID = byt)$SIM_ID), "UTF-8")
+  expect_error(vivax_params(GENOME_MODE = byt), "GENOME_MODE must be 'full' or 'core'")
   ## a number or a factor for a string parameter, as expand.grid() makes
   expect_identical(vivax_params(SIM_ID = 1)$SIM_ID, "1")
   expect_identical(vivax_params(SIM_ID = 100000)$SIM_ID, "100000")
@@ -272,6 +286,9 @@ test_that("the oocyst count is capped by its mean, and K_OOCYSTS by what the sam
   ## a small K gives a heavy tail: the mean is many times lambda
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1000, K_OOCYSTS = 0.01), "oocysts per successful uptake")
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1, K_OOCYSTS = 1e-4), "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001")
+  expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1, K_OOCYSTS = 1e-3 * (1 - 1e-13)))
+  ## a mean too large to work out with lambda / K is still refused by name
+  expect_error(vivax_params(LAMBDA_OOCYSTS = 1e306, K_OOCYSTS = 0.001), "LAMBDA_OOCYSTS = 1e\\+306 .* gives a mean of")
   ## a value over the cap only by rounding is accepted, and a refused one prints above the cap
   expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1000 * (1 + 1e-13)))
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1000.0004), "mean of 1000.0004 oocysts")
@@ -286,11 +303,14 @@ test_that("the oocyst count is capped by its mean, and K_OOCYSTS by what the sam
   ## a variance more than any zero-truncated count with that mean can have: k = 0.001, the mean held
   for (target in list(c(3, 30), c(5, 100), c(10, 1000), c(1000, 1e7), c(300, 1.7e7))) {
     expect_warning(u <- uptake_calibrate(target[1], var = target[2]),
-                   "more than a zero-truncated count with mean")
+                   "more than the model's zero-truncated negative binomial reaches at mean")
     expect_identical(u$k, 1e-3)
     expect_equal(u$achieved[["mean"]], target[1], tolerance = 1e-12)
     expect_no_error(vivax_params(LAMBDA_OOCYSTS = u$lambda, K_OOCYSTS = u$k))
   }
+  ## near a mean of 1 the Poisson variance is tiny; a target a little above it is still out of reach
+  expect_warning(u <- uptake_calibrate(1 + 1e-9, var = 1.9e-9), "zero-truncated negative binomial")
+  expect_identical(u$k, 1e-3)
   expect_error(uptake_calibrate(1500), "at most 1000")
 })
 
@@ -308,6 +328,11 @@ test_that("uptake_moments() keeps its precision for a tiny lambda or a huge K", 
   expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1e-17))
   expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1e-300, K_OOCYSTS = 1e300))
   expect_named(uptake_moments(c(lambda = 2), k = c(k = 1)), c("mean", "var"))
+  ## where lambda / K overflows, and where the variance is a rounding error from 0
+  expect_equal(uptake_moments(1e306, 1e-3)[["mean"]], 1.9642810272581538e306, tolerance = 1e-12)
+  expect_gte(uptake_moments(1.6e-16)[["var"]], 0)
+  expect_gte(uptake_moments(1.14838e-17, 0.0605668)[["var"]], 0)
+  expect_equal(uptake_moments(1e-300, 1e-300)[["var"]], uptake_moments(1e-100, 1e-100)[["var"]], tolerance = 1e-9)
 })
 
 test_that("the import rate is capped where its draw would fail, not at the number of hosts", {

@@ -26,15 +26,14 @@ uptake_moments <- function(lambda, k = 0) {
   if (lambda <= 0) return(c(mean = 1, var = 0))
   ## q = 1 - p0, by expm1() and log1p(): 1 - exp(...) rounds to 0 once lambda or lambda/k is
   ## below about 1e-16. k log(1 + lambda/k) is written as lambda log1p(r)/r, whose ratio tends to 1
-  ## (the Poisson limit) where r = lambda/k underflows.
-  if (k <= 0) { q <- -expm1(-lambda); ex2 <- lambda + lambda^2 }
-  else {
-    r <- lambda / k
-    q <- -expm1(-lambda * (if (r < 1e-8) 1 - r / 2 else log1p(r) / r))
-    ex2 <- lambda + lambda^2 / k + lambda^2
-  }
+  ## (the Poisson limit) where r = lambda/k underflows, and as k (log(lambda) - log(k)) where r
+  ## overflows. E[X^2]/q is written as m (1 + lambda + r), which has no lambda^2 to underflow.
+  r <- if (k <= 0) 0 else lambda / k
+  x <- if (k <= 0) lambda else if (r < 1e-8) lambda * (1 - r / 2) else if (is.finite(r)) lambda * (log1p(r) / r)
+       else k * (log(lambda) - log(k))
+  q <- -expm1(-x)
   m <- lambda / q
-  c(mean = unname(m), var = unname(ex2 / q - m^2))
+  c(mean = unname(m), var = unname(max(0, m * (1 + lambda + r) - m^2)))
 }
 
 #' Convert a target realised mean (and variance) into lambda and k
@@ -45,10 +44,11 @@ uptake_moments <- function(lambda, k = 0) {
 #'
 #' If `var` is omitted, or is not larger than the Poisson variance at that mean, a Poisson
 #' (`k = 0`) solution is returned -- the negative binomial can only *add* dispersion. The mean is
-#' always matched. A zero-truncated count with a given mean can be only so dispersed: its variance
-#' is largest as `k` approaches 0 (about 11.1 at a mean of 3, 271 at a mean of 10), and
-#' `k = 0.001`, the smallest the model draws, comes within 0.5% of that limit. A larger target
-#' variance returns `k = 0.001` with a warning.
+#' always matched. The zero-truncated negative binomial the model draws can be only so dispersed
+#' at a given mean: its variance is largest as `k` approaches 0 (about 11.1 at a mean of 3, 271 at
+#' a mean of 10), and `k = 0.001`, the smallest `k` the model draws, comes within 0.5% of that
+#' limit. A target variance more than 1% above what `k = 0.001` gives returns `k = 0.001` with a
+#' warning.
 #'
 #' @param mean target realised (zero-truncated) mean; must be > 1 and at most 1000, the largest
 #'   mean [vivax_params()] accepts.
@@ -68,7 +68,9 @@ uptake_calibrate <- function(mean, var = NULL) {
     stats::uniroot(function(l) uptake_moments(l, k)[["mean"]] - mean, c(1e-300, mean),
                    tol = 1e-15 * mean)$root
   lam0 <- lambda_at(0)
-  if (is.null(var) || var <= uptake_moments(lam0, 0)[["var"]] + 1e-9)
+  ## relative, so that it also holds near a mean of 1, where the Poisson variance is tiny; the
+  ## last term allows for the rounding of that variance
+  if (is.null(var) || var <= uptake_moments(lam0, 0)[["var"]] * (1 + 1e-9) + 8 * .Machine$double.eps * mean^2)
     return(list(lambda = lam0, k = 0, achieved = uptake_moments(lam0, 0)))
   ## With the mean held, the variance falls as k rises, so k is a one-dimensional search between
   ## 0.001, the most dispersed count the model draws, and 1e6, which is all but Poisson.
@@ -78,8 +80,8 @@ uptake_calibrate <- function(mean, var = NULL) {
     exp(stats::uniroot(function(lk) log(var_at(lk) / var), c(lo, hi), tol = 1e-10)$root)
   lam <- lambda_at(k); ach <- uptake_moments(lam, k)
   if (abs(ach[["var"]] / var - 1) > 0.01)
-    warning("var = ", var, " is more than a zero-truncated count with mean ", mean, " can have: ",
-            "the most dispersed count the model draws (k = 0.001) has variance ",
-            signif(ach[["var"]], 4), ". Returning that; see $achieved.", call. = FALSE)
+    warning("var = ", var, " is more than the model's zero-truncated negative binomial reaches at mean ",
+            mean, ": its variance is at most about ", signif(ach[["var"]], 4), " (k = 0.001, the smallest k ",
+            "the model draws). Returning k = 0.001; see $achieved.", call. = FALSE)
   list(lambda = lam, k = k, achieved = ach)
 }

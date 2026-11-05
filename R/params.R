@@ -135,8 +135,9 @@ vivax_params <- function(...) {
 ## params.tsv and the run agree: a named number (coef(fit)["k"]) or a 1 x 1 matrix, a whole number
 ## with floating-point noise (1.1 * 100 is 110.00000000000001, written as 110; 0.1 * 3 - 0.3 is
 ## 5.6e-17, written as 0), a number or factor for a string parameter (expand.grid() makes
-## factors), latin1 text (as UTF-8, which SLiM reads), and spaces around the commas and dashes of
-## CHROMOSOMES. Spaces anywhere else are left for the check to refuse: "1 4" is not "14".
+## factors), text in another encoding (as UTF-8, which SLiM reads), and spaces around the commas
+## and dashes of CHROMOSOMES. Spaces anywhere else are left for the check to refuse: "1 4" is not
+## "14".
 .normalise_params <- function(p) {
   d <- .malariafwd_defaults
   for (nm in intersect(names(p), names(d))) {
@@ -144,15 +145,28 @@ vivax_params <- function(...) {
     if (is.atomic(v) && !is.object(v) && length(v)) v <- p[[nm]] <- as.vector(v)
     ## functions, symbols and calls are left for the type check to refuse
     if (!(is.atomic(v) || is.list(v)) || length(v) != 1L || is.na(v)) next
-    if (is.integer(d[[nm]]) && is.double(v) && is.finite(v) &&
+    ## is.numeric() is FALSE for a Date or a POSIXct, which the type check then refuses by name
+    if (is.integer(d[[nm]]) && is.double(v) && is.numeric(v) && is.finite(v) &&
         (abs(v) < 1e-9 || grepl("^-?[0-9]+$", .slim_num(v))))
       p[[nm]] <- round(v)
     else if (is.character(d[[nm]]) && is.factor(v))
       p[[nm]] <- as.character(v)
     else if (is.character(d[[nm]]) && is.numeric(v))
       p[[nm]] <- .slim_num(v)
-    else if (is.character(v) && Encoding(v) == "latin1")
-      p[[nm]] <- iconv(v, "latin1", "UTF-8")
+    ## Text as UTF-8, after the factor step (expand.grid() of latin1 text gives a latin1 factor):
+    ## latin1, which R reads as CP1252, as enc2utf8() converts it; UTF-8 marked as bytes; and text in
+    ## a non-UTF-8 native encoding, where iconv() gives NA, so leaves it to be refused, if it cannot
+    ## convert it (as in a C locale).
+    v <- p[[nm]]
+    if (is.character(v) && length(v) == 1L && !is.na(v)) {
+      enc <- Encoding(v)
+      if (enc == "latin1") p[[nm]] <- enc2utf8(v)
+      else if (enc == "bytes" && validUTF8(v)) p[[nm]] <- `Encoding<-`(v, "UTF-8")
+      else if (enc == "unknown" && !validUTF8(v)) {
+        u <- iconv(v, "", "UTF-8")
+        if (!is.na(u)) p[[nm]] <- u
+      }
+    }
   }
   ch <- p$CHROMOSOMES
   if (is.character(ch) && length(ch) == 1L && !is.na(ch) &&
@@ -342,6 +356,10 @@ validate_params <- function(p) {
     want <- if (is.numeric(def)) "a number" else if (is.logical(def)) "TRUE or FALSE" else "a string"
     ok <- if (is.numeric(def)) is.numeric(v) else if (is.logical(def)) is.logical(v) else is.character(v)
     if (!ok) stop(nm, " must be ", want, ", got ", deparse(v), call. = FALSE)
+    ## a classed number whose -d text is not a number, such as a lubridate duration ("604800s")
+    if (is.numeric(v) && is.na(suppressWarnings(as.numeric(.slim_num(v)))))
+      stop(nm, " must be a plain number, got a ", class(v)[1], "; for a duration give the number of days.",
+           call. = FALSE)
     if (is.character(v) && !validUTF8(v))
       stop(nm, " must be valid UTF-8 text; convert it with iconv(x, from = \"latin1\", to = \"UTF-8\") ",
            "or read the file it came from with its encoding declared.", call. = FALSE)
@@ -372,8 +390,8 @@ validate_params <- function(p) {
 ## Sizes far beyond anything realistic, which would make a run crawl or fill memory, capped well
 ## below where SLiM's draws fail (binomial sizes are 32-bit; Poisson draws wrap above 2^32). A
 ## value over a cap only by rounding (a fitted or computed value a few ulps above it) is accepted,
-## so a refused value prints visibly above the cap.
-.over_cap <- function(x, cap) !(x <= cap * (1 + 1e-12))
+## so a refused value prints visibly above the cap. NaN is over every cap.
+.over_cap <- function(x, cap) !isTRUE(x <= cap * (1 + 1e-12))
 .check_sizes <- function(p) {
   if (.over_cap(p$LAMBDA_SPOROZOITES, 1000))
     stop("LAMBDA_SPOROZOITES must be <= 1000, got ", format(p$LAMBDA_SPOROZOITES, digits = 15),
@@ -381,16 +399,16 @@ validate_params <- function(p) {
          call. = FALSE)
   ## The gamma-Poisson sampler stops drawing the distribution it is asked for below this K:
   ## its gamma draws underflow to 0, and the run falls back to one oocyst per uptake.
-  if (p$K_OOCYSTS > 0 && p$K_OOCYSTS < 1e-3)
-    stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got ", p$K_OOCYSTS, ": the model ",
-         "cannot draw a more dispersed oocyst count.", call. = FALSE)
+  if (p$K_OOCYSTS > 0 && p$K_OOCYSTS < 1e-3 * (1 - 1e-12))
+    stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got ", format(p$K_OOCYSTS, digits = 15),
+         ": the model cannot draw a more dispersed oocyst count.", call. = FALSE)
   ## A cap on the mean, not on LAMBDA_OOCYSTS alone: a small K gives a heavy tail whose mean, and
   ## so the work per uptake, can be many times lambda.
   m <- uptake_moments(p$LAMBDA_OOCYSTS, p$K_OOCYSTS)[["mean"]]
   if (.over_cap(m, 1000))
     stop("LAMBDA_OOCYSTS = ", p$LAMBDA_OOCYSTS, " with K_OOCYSTS = ", p$K_OOCYSTS, " gives a mean ",
          "of ", format(m, digits = 15), " oocysts per successful uptake (see uptake_moments()); the ",
-         "model accepts at most 1000.", call. = FALSE)
+         "mean must be at most 1000.", call. = FALSE)
   ## a boost below 1 lowers the rate only after the trigger, so the peak is the unboosted rate
   boost <- function(b) if (p$RESURGENCE_TRIGGER_TICK <= p$SIM_DAYS) max(1, b) else 1
   nu <- p$NU_HYPNOZOITE_BATCH * boost(p$NU_HYPNOZOITE_BATCH_BOOST)
