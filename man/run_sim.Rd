@@ -33,7 +33,8 @@ so the outputs and the tree-sequence provenance both record it.}
 \item{echo}{if \code{TRUE}, stream SLiM output live to the console.}
 }
 \value{
-invisibly, a \code{vivax_run} object (\code{outdir}, \code{params}, \code{seed}).
+invisibly, a \code{vivax_run} object (\code{outdir}, \code{params}, \code{seed}, \code{extinct_tick}; see
+\code{\link[=load_run]{load_run()}}). A run that goes extinct before \code{SIM_DAYS} ends there, with a message.
 }
 \description{
 Launches SLiM with the given parameters and writes its outputs into \code{outdir}

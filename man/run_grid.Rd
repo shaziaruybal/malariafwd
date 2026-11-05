@@ -31,8 +31,9 @@ run_grid(
 \item{...}{passed to \code{\link[=run_sim]{run_sim()}}.}
 }
 \value{
-a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code{ok}, and \code{error}
-(the failure message, or \code{NA} for a cell that ran). A failed cell does not abort the
+a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code{ok}, \code{error} (the
+failure message, or \code{NA} for a cell that ran), and \code{extinct_tick} (the tick on which a run
+went extinct and ended, \code{NA} otherwise; see \code{\link[=load_run]{load_run()}}). A failed cell does not abort the
 sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
 with the result rather than being discarded. A warning given in the cells (such as a
 parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, with

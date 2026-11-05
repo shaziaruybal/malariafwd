@@ -92,6 +92,11 @@ Time advances in **daily ticks**. Each tick runs in this order:
 | `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
 | `late()` | `state.tsv` logging; the tree sequence at the end of the run |
 
+A run ends at `SIM_DAYS`, or earlier on the tick when no blood-stage parasite, no hypnozoite and no
+importation still to come is left: every further tick would be empty. It then writes the tree
+sequence, `events.tsv` and `state.tsv` stop on that tick, and `params.tsv` records it as
+`EXTINCT_TICK` (D37); `run_sim()` says so, and the run's `extinct_tick` holds it.
+
 Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
 setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**
 tick, so there is no activation lag. A batch emptied by radical cure or MDA, which run later in

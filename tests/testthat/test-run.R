@@ -159,3 +159,18 @@ test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapse
   expect_gt(act + died, 600)
   expect_equal(act / (act + died), stage^2 * a / (a + mu), tolerance = 0.05 / 0.48)
 })
+
+test_that("a run that goes extinct says so and records the tick", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  dies <- vivax_params(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.03, SIM_DAYS = 400, N_FOUNDERS = 6,
+                       NU_HYPNOZOITE_BATCH = 0, CHROMOSOMES = "1")
+  expect_message(run <- run_sim(dies, seed = 1, outdir = tempfile("mfwd_extinct_")), "went extinct on tick")
+  expect_lt(run$extinct_tick, 400)
+  expect_equal(max(load_state(run)$tick), run$extinct_tick)
+  expect_equal(load_run(run$outdir)$extinct_tick, run$extinct_tick)
+  full <- run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 5), seed = 1, outdir = tempfile("mfwd_full_"))
+  expect_true(is.na(full$extinct_tick))
+  expect_message(g <- run_grid(dies, seeds = 1:2, outdir_base = tempfile("mfwd_extinct_grid_")),
+                 "2 of 2 grid cell\\(s\\) went extinct")
+  expect_true(all(g$extinct_tick < 400))
+})

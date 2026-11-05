@@ -19,6 +19,23 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D37 — A run that goes extinct records the tick and says so · 2026-11-05 · Accepted
+**Context.** A run in which every parasite and hypnozoite was gone, with no importation to come,
+ended on that tick without telling R (review M7). Only run.log carried the EXTINCT line;
+`run_sim()` returned as for a full run, and `run_grid()` reported the cell as ok. Metrics that take
+the run length from the last tick then used a truncated window.
+**Decision.** The extinction branch appends `EXTINCT_TICK` to `params.tsv`. `load_run()` reads it
+into the run's `extinct_tick` (`NA` for a run that reached `SIM_DAYS`), `print()` shows it,
+`run_sim()` gives a message, and `run_grid()` returns an `extinct_tick` column with one message
+for the grid. `state.tsv` is not padded to `SIM_DAYS`. The metrics' windows move to `SIM_DAYS`, with
+ticks after extinction counted as uninfected, in the R-side half of M7 (Phase B).
+**Consequences.** `params.tsv` of an extinct run gains one row; other runs are byte-identical.
+**How to verify.** `tests/testthat/test-run.R` runs a set that dies out: the message appears,
+`extinct_tick` is below `SIM_DAYS` and equals the last tick of `state.tsv`, and `run_grid()` reports
+it; a full run has `extinct_tick` `NA`.
+
+---
+
 ## D36 — A bite that seeds only hypnozoites is no case · 2026-11-05 · Accepted
 **Context.** `inoculateMosquitoToHuman()` drew detection once per bite and scheduled a course
 whenever the bite established anything. With `P_PRIMARY < 1` a bite can seed only a hypnozoite

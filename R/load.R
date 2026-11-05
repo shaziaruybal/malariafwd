@@ -16,15 +16,22 @@ read_params_tsv <- function(path) {
 #'
 #' Wraps a run's output directory; use [load_events()], [load_state()], [trees_path()]
 #' and [load_params()] to access its contents.
+#'
+#' A run in which every parasite and hypnozoite is gone, with no importation still to come, ends
+#' on that tick rather than at `SIM_DAYS`: its `events.tsv` and `state.tsv` stop there, and
+#' `params.tsv` records the tick as `EXTINCT_TICK`.
 #' @param outdir a run output directory (or an existing `vivax_run`).
-#' @return a `vivax_run` object.
+#' @return a `vivax_run` object: `outdir`, `params` (from `params.tsv`), `seed`, and
+#'   `extinct_tick`, the tick on which the run went extinct and ended, or `NA` for a run that
+#'   reached `SIM_DAYS`.
 #' @export
 load_run <- function(outdir) {
   outdir <- .run_dir(outdir)
   if (!dir.exists(outdir)) stop("no such run directory: ", outdir, call. = FALSE)
   p <- read_params_tsv(file.path(outdir, "params.tsv"))
   seed <- suppressWarnings(as.integer(p[["ACTUAL_SEED"]] %||% p[["SEED"]] %||% NA))
-  structure(list(outdir = outdir, params = p, seed = seed), class = "vivax_run")
+  extinct <- suppressWarnings(as.integer(p[["EXTINCT_TICK"]] %||% NA))
+  structure(list(outdir = outdir, params = p, seed = seed, extinct_tick = extinct), class = "vivax_run")
 }
 
 #' Load the event log of a run

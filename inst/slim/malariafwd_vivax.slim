@@ -1563,6 +1563,8 @@ early() {
 			// current tick finish, so this tick's late() still runs and writes it. Doing both
 			// duplicated every entity row on the final tick.
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
+			// recorded so that R can tell a run that ended early from a full one (D37)
+			writeFile(OUTDIR + "/params.tsv", "EXTINCT_TICK\t" + sim.cycle, append=T);
 			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
 			sim.simulationFinished();
 		}

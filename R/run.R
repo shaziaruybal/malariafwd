@@ -20,7 +20,8 @@
 #'   `NULL` (default) leaves the param as set (quiet).
 #' @param timeout seconds before the run is killed (`Inf` = no limit).
 #' @param echo if `TRUE`, stream SLiM output live to the console.
-#' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`).
+#' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`; see
+#'   [load_run()]). A run that goes extinct before `SIM_DAYS` ends there, with a message.
 #' @examples
 #' \dontrun{
 #' run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1, outdir = "runs/demo")
@@ -77,7 +78,11 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
     stop("SLiM exited without an error but did not write ",
          paste(c("params.tsv", "events.tsv")[!written], collapse = " or "), " to ", outdir,
          ". Log: ", file.path(outdir, "run.log"), call. = FALSE)
-  invisible(load_run(outdir))  # resolved params from params.tsv is the authoritative record
+  run <- load_run(outdir)  # resolved params from params.tsv is the authoritative record
+  if (!is.na(run$extinct_tick))
+    message("The run went extinct on tick ", run$extinct_tick, " of ", params$SIM_DAYS,
+            ": no parasite, hypnozoite or importation was left, so its outputs end there.")
+  invisible(run)
 }
 
 #' Run a grid of parameter sets x seeds in parallel
@@ -95,8 +100,9 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #'   (the previous plan is restored afterward). If `NULL`, use the current plan.
 #' @param verbose passed to [run_sim()].
 #' @param ... passed to [run_sim()].
-#' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, and `error`
-#'   (the failure message, or `NA` for a cell that ran). A failed cell does not abort the
+#' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, `error` (the
+#'   failure message, or `NA` for a cell that ran), and `extinct_tick` (the tick on which a run
+#'   went extinct and ended, `NA` otherwise; see [load_run()]). A failed cell does not abort the
 #'   sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
 #'   with the result rather than being discarded. A warning given in the cells (such as a
 #'   parameter set's own warnings, which [run_sim()] repeats for each run) is given once, with
@@ -147,13 +153,16 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
       ## SLiM is not on PATH and one that failed on a bad parameter are indistinguishable, and
       ## a failed cell leaves no directory and no log to read afterwards. The sweep still does
       ## not abort - one bad cell should not lose a grid - but the reason now travels with it.
-      err <- NA_character_
+      err <- NA_character_; extinct <- NA_integer_
       ok <- tryCatch({
-        run_sim(param_sets[[set]], seed = seed, outdir = outdir, model = model, verbose = verbose, ...)
+        ## the extinction message is summed up once for the grid, below
+        r <- suppressMessages(run_sim(param_sets[[set]], seed = seed, outdir = outdir, model = model,
+                                      verbose = verbose, ...))
+        extinct <- r$extinct_tick
         TRUE
       }, error = function(e) { err <<- conditionMessage(e); FALSE })
       data.frame(set = set, seed = seed, outdir = outdir, ok = ok, error = err,
-                 stringsAsFactors = FALSE)
+                 extinct_tick = extinct, stringsAsFactors = FALSE)
     },
     .options = furrr::furrr_options(seed = TRUE)
   ), warning = keep)
@@ -165,11 +174,16 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
     warning(n, " of ", nrow(res), " grid cell(s) FAILED and produced no run. First error: ",
             res$error[!res$ok][1], "\nSee the `error` column for the rest.", call. = FALSE)
   }
+  if (any(!is.na(res$extinct_tick)))
+    message(sum(!is.na(res$extinct_tick)), " of ", nrow(res), " grid cell(s) went extinct and ended ",
+            "early; see the `extinct_tick` column.")
   res
 }
 
 #' @export
 print.vivax_run <- function(x, ...) {
   cat("<vivax_run> seed", x$seed, "\n  outdir:", x$outdir, "\n")
+  if (!is.null(x$extinct_tick) && !is.na(x$extinct_tick))
+    cat("  went extinct on tick", x$extinct_tick, "of", x$params$SIM_DAYS %||% NA, "\n")
   invisible(x)
 }

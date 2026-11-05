@@ -10,9 +10,16 @@ load_run(outdir)
 \item{outdir}{a run output directory (or an existing \code{vivax_run}).}
 }
 \value{
-a \code{vivax_run} object.
+a \code{vivax_run} object: \code{outdir}, \code{params} (from \code{params.tsv}), \code{seed}, and
+\code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA} for a run that
+reached \code{SIM_DAYS}.
 }
 \description{
 Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_path]{trees_path()}}
 and \code{\link[=load_params]{load_params()}} to access its contents.
+}
+\details{
+A run in which every parasite and hypnozoite is gone, with no importation still to come, ends
+on that tick rather than at \code{SIM_DAYS}: its \code{events.tsv} and \code{state.tsv} stop there, and
+\code{params.tsv} records the tick as \code{EXTINCT_TICK}.
 }
