@@ -88,7 +88,9 @@
 #' `MEAN_RECRUD_DELAY` at 1e6 days. `SIM_DAYS` is at most 1e9, SLiM's last tick, and a run that
 #' reaches day 99999, the day the defaults use for "never", must move those days past its end and
 #' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
-#' a parasite is not refused here; the model's liveness check stops it.
+#' a parasite is not refused here; the model's liveness check stops it. Each host takes at most one
+#' import a day, so `N_IMPORTS` or `N_IMPORTS_PER_TICK` above `N_HOSTS` warns: the excess never
+#' arrives.
 #'
 #' A named number (such as `coef(fit)["k"]`), a whole number carrying floating-point noise (such
 #' as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given for a string parameter,
@@ -320,6 +322,18 @@ validate_params <- function(p) {
             signif(peak[["rate"]], 3), " on day ", peak[["day"]], ", but a mosquito bites at most ",
             "once a day, so the realised biting rate is capped below what the parameters imply.",
             call. = FALSE)
+  ## Each host takes at most one import a day (D38), so the fixed counts above N_HOSTS lose the
+  ## excess. A Poisson rate can draw above N_HOSTS too, but only by chance, so it is not warned.
+  first <- max(1, p$IMPORT_START); last <- min(p$IMPORT_END - 1, p$SIM_DAYS)
+  daily <- if (first <= last) p$N_IMPORTS_PER_TICK else 0
+  pulse <- if (p$N_IMPORTS > 0 && p$IMPORT_TICK >= 1 && p$IMPORT_TICK <= p$SIM_DAYS)
+    p$N_IMPORTS + (if (p$IMPORT_TICK >= first && p$IMPORT_TICK <= last) daily else 0) else 0
+  if (max(daily, pulse) > p$N_HOSTS)
+    warning(if (pulse < daily) paste0("N_IMPORTS_PER_TICK brings ", .slim_num(daily), " imports a day")
+            else paste0(if (pulse > p$N_IMPORTS) "N_IMPORTS and N_IMPORTS_PER_TICK bring " else "N_IMPORTS brings ",
+                        .slim_num(pulse), " imports on day ", .slim_num(p$IMPORT_TICK)),
+            ", but each host takes at most one import a day, so at most N_HOSTS = ",
+            .slim_num(p$N_HOSTS), " of them arrive.", call. = FALSE)
   if (p$P_RECRUD_GIVEN_FAIL > 0 && p$P_BLOODCURE_SURVIVAL <= 0)
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)

@@ -159,6 +159,24 @@ test_that("a biting rate that would exceed one bite per mosquito per day warns",
   expect_no_warning(vivax_params())
 })
 
+test_that("a day's fixed imports above N_HOSTS warn, since a host takes one import a day", {
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 3, N_IMPORTS = 50),
+                 "N_IMPORTS brings 50 imports on day 3, but each host takes at most one import a day, so at most N_HOSTS = 30 of them arrive.",
+                 fixed = TRUE)
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, N_IMPORTS_PER_TICK = 31),
+                 "N_IMPORTS_PER_TICK brings 31 imports a day", fixed = TRUE)
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 5, N_IMPORTS = 20, IMPORT_START = 1,
+                              IMPORT_END = 10, N_IMPORTS_PER_TICK = 20),
+                 "N_IMPORTS and N_IMPORTS_PER_TICK bring 40 imports on day 5", fixed = TRUE)
+  ## exactly N_HOSTS, a pulse or a window after the run, a window before day 1, or a rate
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 3, N_IMPORTS = 30))
+  expect_no_warning(vivax_params(N_HOSTS = 30, SIM_DAYS = 100, IMPORT_TICK = 200, N_IMPORTS = 50))
+  expect_no_warning(vivax_params(N_HOSTS = 30, SIM_DAYS = 100, IMPORT_START = 150, IMPORT_END = 300,
+                                 N_IMPORTS_PER_TICK = 50))
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 0, IMPORT_END = 1, N_IMPORTS_PER_TICK = 50))
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 50))
+})
+
 test_that("blood-stage infections have no age cap, and their mean duration is at least a day", {
   expect_error(vivax_params(MAX_BROOD_AGE = 180), "unknown parameter")
   expect_error(vivax_params(MEAN_BLOOD_STAGE_DURATION = 0.5), "MEAN_BLOOD_STAGE_DURATION must be >= 1")

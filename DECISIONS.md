@@ -19,6 +19,31 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D38 — Imports go to uniformly random hosts, with the MAX_MOI check a bite gets · 2026-11-05 · Accepted
+**Context.** The importation block filled its quota from hosts without a blood-stage infection
+first, using infected hosts only when those ran out, and checked no capacity (review M6). An
+import therefore almost never arrived in a host that already carried a clone, which made import
+detection and classification easier than the documented random placement, and the docs said
+random hosts.
+**Decision.** Imports go to hosts sampled uniformly at random, at most one per host a day as
+before, so a day's imports beyond `N_HOSTS` are dropped. A host already carrying `MAX_MOI`
+blood-stage lineages takes none, as a local bite does, and the refusal is logged as
+`vh_inoculation_import_no_take`. `vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK`
+exceeds `N_HOSTS`.
+**Rejected.** Placing every import, with replacement, as review M6 proposed. At D33's cap of 1e6
+imports a day each host would take about 25,000 imports a tick, and such a run never finishes;
+the check suite's `-d` rows at the cap caught it.
+**Consequences.** A run changes once imports arrive while some host is infected: imports now
+land in infected hosts in proportion to prevalence, so mixed infections with an import, and
+treatment of imported cases, are more common. Runs without imports, and a founder-free pulse into
+a wholly susceptible population, are byte-identical.
+**How to verify.** `tests/testthat/test-run.R` imports 100 infections into 200 hosts, half of
+them founders: about half the imports land in founder hosts (none did before), and with
+`MAX_MOI = 1` those are refused and logged. A pulse of 50 into 30 hosts brings exactly 30, with
+the warning.
+
+---
+
 ## D37 — A run that goes extinct records the tick and says so · 2026-11-05 · Accepted
 **Context.** A run in which every parasite and hypnozoite was gone, with no importation to come,
 ended on that tick without telling R (review M7). Only run.log carried the EXTINCT line;

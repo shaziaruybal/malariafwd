@@ -52,7 +52,7 @@ event_types <- function() {
     r("vh_inoculation_no_take",        "blood",  FALSE, FALSE,
       "a bite established neither a blood-stage infection nor hypnozoites (P_PRIMARY failed and the batch drew 0)"),
     r("vh_inoculation_import_no_take", "blood",  FALSE, FALSE,
-      "an importation established neither compartment (P_PRIMARY failed and the batch drew 0)"),
+      "an importation established neither compartment (P_PRIMARY failed and the batch drew 0), or its host was at MAX_MOI"),
     r("hypnozoite_activation",         "blood",  FALSE, TRUE,
       "hypnozoite activates -> a blood-stage relapse (clonal to its origin)"),
     r("recrudescence",                 "blood",  FALSE, TRUE,

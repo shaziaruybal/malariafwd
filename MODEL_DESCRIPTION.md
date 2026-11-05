@@ -147,7 +147,8 @@ for each tick t:
 
     # --- importation ---
     n_imp <- N_IMPORTS_PER_TICK + Poisson(IMPORT_RATE_PER_TICK * IMPORT_RATE_BOOST)
-    mint n_imp unrelated founder genotypes and move them into random hosts
+    mint n_imp unrelated founder genotypes and move them into hosts chosen uniformly at random,
+        at most one per host (a host already at MAX_MOI takes none)
     queue a hypnozoite batch for each, to be cloned next tick
 
   late():
@@ -195,12 +196,12 @@ There is no age ceiling: every infection ends by this daily draw. Clearance is
 **per-lineage**, so a polyclonal host loses lineages independently and MOI decays rather than
 collapsing at once.
 
-**Superinfection** is allowed and gated by `MAX_MOI` = 20. The gate is checked once, in the
-infected-mosquito-bites-infected-human branch: a host already carrying `MAX_MOI` active lineages
-has the **whole** inoculation skipped — primary *and* hypnozoite batch, so the reservoir also stops
-being topped up. **Relapses bypass the gate entirely**, so realised MOI can exceed it. At 20 it is
-a runaway guard that essentially never binds (COI is typically 1–3); set it low and you are
-measuring the cap, not the biology.
+**Superinfection** is allowed and gated by `MAX_MOI` = 20. The gate is checked for every new
+inoculation, a local bite on an infected host or an import: a host already carrying `MAX_MOI`
+blood-stage lineages has the **whole** inoculation skipped — primary *and* hypnozoite batch, so
+the reservoir also stops being topped up. **Relapses bypass the gate entirely**, so realised MOI
+can exceed it. At 20 it is a runaway guard that essentially never binds (COI is typically 1–3);
+set it low and you are measuring the cap, not the biology.
 
 ---
 
@@ -503,7 +504,11 @@ Three mechanisms, additive:
 
 Imports use the **same bite outcomes** as local transmission (primary and/or batch) and are
 labelled `is_imported`, which is **carried through to relapses** so an imported relapse is a
-distinct truth category.
+distinct truth category. They go to hosts chosen uniformly at random, as bites do, so an import
+can land in a host that already carries a clone (D38). A host already carrying `MAX_MOI`
+blood-stage lineages takes none, and the refusal is logged as `vh_inoculation_import_no_take`.
+Each host takes at most one import a day, so a day's imports beyond `N_HOSTS` are dropped;
+`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`.
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
 source population, so imports are maximally distinguishable from local parasites (measured founder

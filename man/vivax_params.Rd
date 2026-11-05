@@ -47,7 +47,9 @@ trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_
 \code{MEAN_RECRUD_DELAY} at 1e6 days. \code{SIM_DAYS} is at most 1e9, SLiM's last tick, and a run that
 reaches day 99999, the day the defaults use for "never", must move those days past its end and
 cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
-a parasite is not refused here; the model's liveness check stops it.
+a parasite is not refused here; the model's liveness check stops it. Each host takes at most one
+import a day, so \code{N_IMPORTS} or \code{N_IMPORTS_PER_TICK} above \code{N_HOSTS} warns: the excess never
+arrives.
 
 A named number (such as \code{coef(fit)["k"]}), a whole number carrying floating-point noise (such
 as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given for a string parameter,

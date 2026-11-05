@@ -19,7 +19,7 @@ initialize() {
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked once, in the infected-mosquito-bites-infected-human branch: a host already carrying MAX_MOI active lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 4 observed with MAX_MOI=2). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked for every new inoculation, a local bite on an infected host or an import (D38): a host already carrying MAX_MOI blood-stage lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 4 observed with MAX_MOI=2). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
 	defineDefault("MAX_BROODS_PER_MOSQ",     20); // capping the max brood carrying capacity per mosquito - TODO later make mosq mortality and transmissibility decline with increasing broods (ie high burden = lower fitness)
 	
 	// parasite
@@ -1457,8 +1457,9 @@ early() {
 	//   (C) repeated importation, stochastic rate: IMPORT_START <= tick < IMPORT_END with IMPORT_RATE_PER_TICK
 	//       (Poisson-distributed arrivals, e.g. IMPORT_RATE_PER_TICK=0.25 -> ~1 import every 4 days on average)
 	//
-	// Imports prefer susceptible humans, then fall back to infected humans if needed.
-	// Each import is logged as "vh_inoculation_import" with inoculation_id.
+	// Imports go to hosts chosen uniformly at random, as bites do, at most one per host a tick
+	// (D38); a host already at MAX_MOI takes none. Each import is logged as
+	// "vh_inoculation_import" with inoculation_id.
 	// TODO: In future, we will create a subpopulation of import pool parasite individuals and we will use takeMigrants() from that subpopulation, this will also support modeling of importation rates.
 	// ----------------------------
 	
@@ -1501,28 +1502,24 @@ early() {
 	
 	if (n_import_target > 0)
 	{
-		// refresh host sets after all earlier updates this tick
-		infected_humans = humans[humans.tag == INFECTED];
-		susc_humans     = humans[humans.tag == SUSCEPTIBLE];
-		
-		n_susc = size(susc_humans);
-		n_inf  = size(infected_humans);
-		
-		n_from_susc = min(n_import_target, n_susc);
-		n_need_more = n_import_target - n_from_susc;
-		n_from_inf  = min(n_need_more, n_inf);
-		
-		import_hosts = c();
-		if (n_from_susc > 0)
-			import_hosts = c(import_hosts, sample(susc_humans, n_from_susc));
-		if (n_from_inf  > 0)
-			import_hosts = c(import_hosts, sample(infected_humans, n_from_inf));
-		
+		// Uniformly random hosts, at most one import per host a tick, so a tick's imports beyond
+		// N_HOSTS are dropped (this keeps the R cap of 1e6 imports a day cheap to run). A host
+		// already carrying MAX_MOI blood-stage lineages takes none, as for a local bite; the
+		// refusal is logged as vh_inoculation_import_no_take.
+		import_hosts = sample(humans, min(n_import_target, size(humans)));
+		full = (sapply(import_hosts, "getBloodStageLineageCount(applyValue);") >= MAX_MOI);
+		for (h_full in import_hosts[full])
+		{
+			defineGlobal("INOCULATION_ID", INOCULATION_ID + 1);
+			logEvent("vh_inoculation_import_no_take", INOCULATION_ID, -1, h_full.id,
+				"NA", "NA", "NA", 0, 0.0, "human", -1, 1);
+		}
+		import_hosts = import_hosts[!full];
+
 		// D17: seed HERE, not in reproduction(). reproduction() is called once per existing
 		// individual, so an empty parasite population never drained the old queue.
 		if (size(import_hosts) > 0)
 			seedImports(import_hosts);
-
 	}
 
 	// ---- LIVENESS ------------------------------------------------------------------------

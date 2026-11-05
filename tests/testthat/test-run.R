@@ -174,3 +174,33 @@ test_that("a run that goes extinct says so and records the tick", {
                  "2 of 2 grid cell\\(s\\) went extinct")
   expect_true(all(g$extinct_tick < 400))
 })
+
+test_that("imports go to random hosts, and a host at MAX_MOI takes none", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## 200 hosts, 100 of them founders, and a pulse of 100 imports on tick 3 with no transmission
+  base <- list(N_HOSTS = 200, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 5, N_FOUNDERS = 100,
+               N_FOUNDER_LINEAGES = 10, IMPORT_TICK = 3, N_IMPORTS = 100, CHROMOSOMES = "1")
+  counts <- function(...) {
+    run <- run_sim(do.call(vivax_params, utils::modifyList(base, list(...))), seed = 4,
+                   outdir = tempfile("mfwd_import_"))
+    ev <- load_events(run)
+    founders <- unique(ev[event_type == "vh_inoculation_seed", human_id])
+    imp <- ev[event_type == "vh_inoculation_import" & is_dormant == 0]
+    c(into_founders = sum(imp$human_id %in% founders), refused = ev[event_type == "vh_inoculation_import_no_take", .N])
+  }
+  open <- counts()
+  expect_gt(open[["into_founders"]], 30)
+  expect_lt(open[["into_founders"]], 70)
+  capped <- counts(MAX_MOI = 1L)
+  expect_equal(capped[["into_founders"]], 0)
+  expect_gt(capped[["refused"]], 30)
+  ## a pulse larger than the population brings one import to each host, and warns
+  expect_warning(over <- vivax_params(N_HOSTS = 30, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 4,
+                                      IMPORT_TICK = 2, N_IMPORTS = 50, CHROMOSOMES = "1"),
+                 "at most one import a day")
+  expect_warning(ev <- load_events(run_sim(over, seed = 1, outdir = tempfile("mfwd_import_"))),
+                 "at most one import a day")
+  imp <- ev[event_type == "vh_inoculation_import" & is_dormant == 0]
+  expect_equal(nrow(imp), 30)
+  expect_equal(length(unique(imp$human_id)), 30)
+})
