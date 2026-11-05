@@ -211,11 +211,12 @@ once the trigger falls inside the run; the import rate at 10^6 a day; `TREATMENT
 `LAMBDA_SPOROZOITES`, hypnozoite batch and import caps, and the `K_OOCYSTS` floor, allow a relative
 rounding of 10^-12. A run of 99999 days or more must move the days that default to 99999 past its
 end, and cannot schedule anything on day 99999 itself. Spellings that mean the same value are stored
-in the form SLiM is given: a named number or a 1 x 1 matrix, a whole number with floating-point
-noise (`1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor for a string parameter
-(`expand.grid()` makes factors), text in another encoding (latin1, UTF-8 marked as bytes, or a
-non-UTF-8 native encoding R can convert) as UTF-8, and spaces around the commas and dashes of
-`CHROMOSOMES`. The model's `initialize()` repeats, for runs started directly with `-d`, the checks
+in the form SLiM is given: a named number or a 1 x 1 matrix, a value wrapped in `I()`, a whole
+number with floating-point noise (`1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor for a
+string parameter (`expand.grid()` makes factors), text in another encoding (latin1, UTF-8 marked as
+bytes, or a non-UTF-8 native encoding R can convert) as UTF-8, and spaces around the commas and
+dashes of `CHROMOSOMES`. A number with any other class (a lubridate duration, a `bit64::integer64`,
+a `ts`) is refused, since it need not mean its bare value. The model's `initialize()` repeats, for runs started directly with `-d`, the checks
 that guard its own draws: the delays; `K_OOCYSTS`, 0 or at least 0.001 and finite, and `LAMBDA_*` at
 most 1000; the biting and import rate factors and `SEASONAL_AMP`, non-negative and finite, and the
 activation boost, non-negative; the peak import rate and hypnozoite batch mean; and the "never"

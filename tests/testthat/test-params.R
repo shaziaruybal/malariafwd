@@ -133,7 +133,7 @@ test_that("probabilities of exactly 0 and 1 run to completion", {
   for (nm in names(cases)) {
     out <- file.path(tempdir(), paste0("mfw-zero-one-", nm))
     unlink(out, recursive = TRUE)
-    expect_no_error(run_sim(do.call(vivax_params, cases[[nm]]), seed = 1, outdir = out))
+    expect_no_error(suppressMessages(run_sim(do.call(vivax_params, cases[[nm]]), seed = 1, outdir = out)))
   }
 })
 
@@ -224,7 +224,17 @@ test_that("each value has its default's type, is finite, and is whole where the 
   expect_no_error(vivax_params(N_HOSTS = I(200 + 1e-13)))
   registerS3method("format", "mfwd_duration", function(x, ...) paste0(unclass(x) * 86400, "s"))
   expect_error(vivax_params(TREATMENT_DELAY = structure(7, class = "mfwd_duration")),
-               "TREATMENT_DELAY must be a plain number, got a mfwd_duration")
+               "TREATMENT_DELAY must be a plain number, got an object of class mfwd_duration; give the number itself",
+               fixed = TRUE)
+  ## I() is dropped, whatever the value's type; a number with another class is refused
+  expect_identical(vivax_params(ALPHA_ACTIVATE = I(1/170))$ALPHA_ACTIVATE, 1/170)
+  expect_identical(vivax_params(SIM_DAYS = I(365L))$SIM_DAYS, 365L)
+  expect_identical(vivax_params(SIM_ID = I("run_a"))$SIM_ID, "run_a")
+  expect_identical(vivax_params(SIM_ID = I(factor("run_a")))$SIM_ID, "run_a")
+  expect_identical(vivax_params(RETAIN_FULL_HISTORY = I(TRUE))$RETAIN_FULL_HISTORY, TRUE)
+  expect_error(vivax_params(N_HOSTS = ts(50)), "N_HOSTS must be a plain number, got an object of class ts")
+  expect_error(vivax_params(SIM_DAYS = as.difftime(3, units = "days")),
+               "SIM_DAYS must be a number, got an object of class difftime", fixed = TRUE)
 })
 
 test_that("spellings of the same value are stored in the form SLiM is given", {

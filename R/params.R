@@ -92,10 +92,11 @@
 #' import a day, so `N_IMPORTS` or `N_IMPORTS_PER_TICK` above `N_HOSTS` warns: the excess never
 #' arrives.
 #'
-#' A named number (such as `coef(fit)["k"]`), a whole number carrying floating-point noise (such
-#' as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given for a string parameter,
-#' latin1 text, and spaces around the commas and dashes of `CHROMOSOMES` are stored in the form
-#' SLiM is given.
+#' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
+#' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given
+#' for a string parameter, latin1 text, and spaces around the commas and dashes of `CHROMOSOMES` are
+#' stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
+#' a `bit64::integer64`, is refused: give the number itself.
 #'
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
 #' @return An object of class `vivax_params` (a named list).
@@ -144,11 +145,14 @@ vivax_params <- function(...) {
   d <- .malariafwd_defaults
   for (nm in intersect(names(p), names(d))) {
     v <- p[[nm]]
+    ## I() only asks for a value to be taken as it is, so its class is dropped; oldClass() keeps
+    ## I(factor(x)) a factor
+    if (inherits(v, "AsIs")) v <- p[[nm]] <- `oldClass<-`(v, setdiff(oldClass(v), "AsIs"))
     if (is.atomic(v) && !is.object(v) && length(v)) v <- p[[nm]] <- as.vector(v)
     ## functions, symbols and calls are left for the type check to refuse
     if (!(is.atomic(v) || is.list(v)) || length(v) != 1L || is.na(v)) next
-    ## is.numeric() is FALSE for a Date or a POSIXct, which the type check then refuses by name
-    if (is.integer(d[[nm]]) && is.double(v) && is.numeric(v) && is.finite(v) &&
+    ## a classed value (a Date, a duration, units) is left for the type check to refuse by name
+    if (is.integer(d[[nm]]) && is.double(v) && !is.object(v) && is.finite(v) &&
         (abs(v) < 1e-9 || grepl("^-?[0-9]+$", .slim_num(v))))
       p[[nm]] <- round(v)
     else if (is.character(d[[nm]]) && is.factor(v))
@@ -369,10 +373,15 @@ validate_params <- function(p) {
     v <- p[[nm]]; def <- d[[nm]]
     want <- if (is.numeric(def)) "a number" else if (is.logical(def)) "TRUE or FALSE" else "a string"
     ok <- if (is.numeric(def)) is.numeric(v) else if (is.logical(def)) is.logical(v) else is.character(v)
-    if (!ok) stop(nm, " must be ", want, ", got ", deparse(v), call. = FALSE)
-    ## a classed number whose -d text is not a number, such as a lubridate duration ("604800s")
-    if (is.numeric(v) && is.na(suppressWarnings(as.numeric(.slim_num(v)))))
-      stop(nm, " must be a plain number, got a ", class(v)[1], "; for a duration give the number of days.",
+    dur <- if (inherits(v, c("difftime", "Duration", "Period"))) "; for a duration give the number of days" else ""
+    if (!ok) stop(nm, " must be ", want, ", got ",
+                  if (is.object(v)) paste("an object of class", class(v)[1]) else deparse(v), dur, call. = FALSE)
+    ## a number with a class need not mean its bare value (a lubridate duration counts seconds, and
+    ## bit64's integer64 is not a double at all), so only plain numbers are taken; I() is dropped
+    ## before this
+    if (is.numeric(v) && is.object(v))
+      stop(nm, " must be a plain number, got an object of class ", class(v)[1],
+           if (nzchar(dur)) dur else "; give the number itself, for example with as.numeric()", ".",
            call. = FALSE)
     if (is.character(v) && !validUTF8(v))
       stop(nm, " must be valid UTF-8 text; convert it with iconv(x, from = \"latin1\", to = \"UTF-8\") ",

@@ -51,10 +51,11 @@ a parasite is not refused here; the model's liveness check stops it. Each host t
 import a day, so \code{N_IMPORTS} or \code{N_IMPORTS_PER_TICK} above \code{N_HOSTS} warns: the excess never
 arrives.
 
-A named number (such as \code{coef(fit)["k"]}), a whole number carrying floating-point noise (such
-as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given for a string parameter,
-latin1 text, and spaces around the commas and dashes of \code{CHROMOSOMES} are stored in the form
-SLiM is given.
+A named number (such as \code{coef(fit)["k"]}), a value wrapped in \code{I()}, a whole number carrying
+floating-point noise (such as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given
+for a string parameter, latin1 text, and spaces around the commas and dashes of \code{CHROMOSOMES} are
+stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
+a \code{bit64::integer64}, is refused: give the number itself.
 }
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
