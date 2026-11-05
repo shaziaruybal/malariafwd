@@ -28,7 +28,7 @@ so the outputs and the tree-sequence provenance both record it.}
 \item{verbose}{if \code{TRUE}, run the model in VERBOSE mode (full per-event narration).
 \code{NULL} (default) leaves the param as set (quiet).}
 
-\item{timeout}{seconds before the run is killed (\code{Inf} = no limit).}
+\item{timeout}{seconds before the run is stopped, with an error saying so (\code{Inf} = no limit).}
 
 \item{echo}{if \code{TRUE}, stream SLiM output live to the console.}
 }

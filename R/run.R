@@ -18,7 +18,7 @@
 #' @param model path to the SLiM model (defaults to the bundled template).
 #' @param verbose if `TRUE`, run the model in VERBOSE mode (full per-event narration).
 #'   `NULL` (default) leaves the param as set (quiet).
-#' @param timeout seconds before the run is killed (`Inf` = no limit).
+#' @param timeout seconds before the run is stopped, with an error saying so (`Inf` = no limit).
 #' @param echo if `TRUE`, stream SLiM output live to the console.
 #' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`; see
 #'   [load_run()]). A run that goes extinct before `SIM_DAYS` ends there, with a message.
@@ -68,6 +68,9 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
                        stderr_callback = function(x, proc) { err[[length(err) + 1L]] <<- x; if (echo) cat(x, file = stderr()) })
   out <- paste(out, collapse = ""); err <- paste(err, collapse = "")
   writeLines(out, file.path(outdir, "run.log"), useBytes = TRUE)
+  if (isTRUE(res$timeout))
+    stop("SLiM run timed out after ", if (inherits(timeout, "difftime")) format(timeout) else paste(timeout, "s"),
+         " and was stopped. Log: ", file.path(outdir, "run.log"), call. = FALSE)
   if (!identical(res$status, 0L)) {
     tail_err <- utils::tail(strsplit(paste0(out, err), "\n")[[1]], 6)
     stop("SLiM run failed (exit ", res$status, "). Log: ", file.path(outdir, "run.log"), "\n",

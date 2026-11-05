@@ -272,3 +272,16 @@ test_that("into_patent_lineage marks a relapse into a patent clone of its own li
   expect_equal(act$into_patent_lineage, seen)
   expect_true(all(ev[event_type != "hypnozoite_activation", into_patent_lineage] == -1))
 })
+
+test_that("run_sim() says when it stops a run at its timeout", {
+  skip_on_os("windows")
+  ## a stand-in for SLiM that reports its version and then hangs
+  fake <- tempfile("fakeslim")
+  writeLines(c("#!/bin/sh", 'if [ "$1" = "-v" ]; then echo "SLiM version 5.2"; exit 0; fi', "exec sleep 30"), fake)
+  Sys.chmod(fake, "755")
+  old <- Sys.getenv("MALARIAFWD_SLIM", NA)
+  Sys.setenv(MALARIAFWD_SLIM = fake)
+  on.exit(if (is.na(old)) Sys.unsetenv("MALARIAFWD_SLIM") else Sys.setenv(MALARIAFWD_SLIM = old), add = TRUE)
+  expect_error(run_sim(vivax_params(), outdir = tempfile("mfwd_timeout_"), timeout = 1),
+               "SLiM run timed out after 1 s and was stopped")
+})
