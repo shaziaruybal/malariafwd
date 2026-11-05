@@ -204,3 +204,12 @@ test_that("imports go to random hosts, and a host at MAX_MOI takes none", {
   expect_equal(nrow(imp), 30)
   expect_equal(length(unique(imp$human_id)), 30)
 })
+
+test_that("a pulse of imports on the first day keeps the founders", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  run <- run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 40, SIM_DAYS = 5, IMPORT_TICK = 1, N_IMPORTS = 5,
+                              CHROMOSOMES = "1"), seed = 1, outdir = tempfile("mfwd_pulse1_"))
+  ev <- load_events(run)
+  expect_equal(ev[event_type == "vh_inoculation_seed", length(unique(human_id))], 12)
+  expect_gt(ev[event_type == "vh_inoculation_import" & tick == 1, .N], 0)
+})

@@ -508,7 +508,9 @@ distinct truth category. They go to hosts chosen uniformly at random, as bites d
 can land in a host that already carries a clone (D38). A host already carrying `MAX_MOI`
 blood-stage lineages takes none, and the refusal is logged as `vh_inoculation_import_no_take`.
 Each host takes at most one import a day, so a day's imports beyond `N_HOSTS` are dropped;
-`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`.
+`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`. A pulse can
+fall on any day, the first included; a naive population seeded only by imports is
+`N_FOUNDER_HOSTS = 0` with an import path (D39).
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
 source population, so imports are maximally distinguishable from local parasites (measured founder

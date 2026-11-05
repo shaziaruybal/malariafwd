@@ -19,6 +19,22 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D39 — IMPORT_TICK = 1 is an ordinary pulse · 2026-11-05 · Accepted
+**Context.** `IMPORT_TICK = 1` created every host empty, silently dropping `N_FOUNDER_HOSTS` and
+`N_FOUNDER_LINEAGES` whether or not `N_IMPORTS > 0`: a pulse on the first day turned the run into a
+naive population (review M5). With `N_IMPORTS = 0` the run then stopped at the liveness check with
+advice about `N_FOUNDER_HOSTS`. Since D17 a naive population is expressible directly.
+**Decision.** The special case is removed. A pulse on day 1 lands like a pulse on any other day,
+alongside the founders; a naive population, seeded only by imports, is `N_FOUNDER_HOSTS = 0` with an
+import path.
+**Consequences.** Runs with `IMPORT_TICK = 1` keep their founders, and so change. No analysis in
+either repository uses `IMPORT_TICK = 1`, and no saved `params.tsv` has it. Other runs are
+byte-identical.
+**How to verify.** `tests/testthat/test-run.R`: with `IMPORT_TICK = 1` the founders are seeded and
+the imports arrive on tick 1.
+
+---
+
 ## D38 — Imports go to uniformly random hosts, with the MAX_MOI check a bite gets · 2026-11-05 · Accepted
 **Context.** The importation block filled its quota from hosts without a blood-stage infection
 first, using infected hosts only when those ran out, and checked no capacity (review M6). An

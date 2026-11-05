@@ -8,7 +8,7 @@ initialize() {
 	defineDefault("SEED",                    55);
 	defineDefault("SIM_DAYS",                365); // 365 days or one year
 	defineDefault("N_HOSTS",                 40);
-	defineDefault("N_FOUNDERS",              12); // legacy founder count. v3 DECOUPLES this into N_FOUNDER_HOSTS (establishment) x N_FOUNDER_LINEAGES (diversity); both default to N_FOUNDERS so N_FOUNDERS-only runs == v2. Ignored when IMPORT_TICK==1.
+	defineDefault("N_FOUNDERS",              12); // legacy founder count. v3 DECOUPLES this into N_FOUNDER_HOSTS (establishment) x N_FOUNDER_LINEAGES (diversity); both default to N_FOUNDERS so N_FOUNDERS-only runs == v2.
 	defineDefault("N_FOUNDER_HOSTS",         N_FOUNDERS); // v3: number of INFECTED founder hosts at t=0 (establishment / does the epidemic sustain). Hold FIXED to isolate diversity from transmission.
 	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // v3: number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS). The clean GENEALOGICAL diversity knob: fewer lineages -> more hosts carry clonal copies -> higher background relatedness, at fixed establishment.
 	defineDefault("N_MOSQ",                  100);
@@ -1056,9 +1056,8 @@ reproduction()
 		// v3: decouple establishment (N_FOUNDER_HOSTS infected hosts) from diversity (N_FOUNDER_LINEAGES distinct
 		// genomes). First N_FOUNDER_LINEAGES founder hosts = new distinct lineages; the rest = GENETIC CLONES of them
 		// (addCloned -> IBD 1 in the tree). N_FOUNDERS-only runs (defaults) reproduce v2 exactly.
-		if (IMPORT_TICK == 1)                        // totally naive population; importation creates the epidemic
-			subpop = sim.addSubpop(s, 0);
-		else if (s < N_HOSTS & s < N_FOUNDER_LINEAGES) // a NEW distinct founder lineage (genome root), human host
+		// A naive population, seeded only by imports, is N_FOUNDER_HOSTS = 0 with an import path (D39).
+		if (s < N_HOSTS & s < N_FOUNDER_LINEAGES)    // a NEW distinct founder lineage (genome root), human host
 		{
 			subpop = sim.addSubpop(s, 1);
 			founder_templates = c(founder_templates, subpop.individuals);
@@ -2126,9 +2125,8 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 //
 // Imports used to be seeded inside reproduction(), which SLiM calls once per EXISTING
 // individual - so with zero parasites alive it never ran, the queue accumulated forever,
-// and the run ended with exit 0 and no events. That made the naive-population mode
-// (IMPORT_TICK == 1) dead since it was written, and meant no run reaching elimination
-// could ever be re-seeded.
+// and the run ended with exit 0 and no events. That meant a naive population could never be
+// seeded by imports, and no run reaching elimination could ever be re-seeded.
 //
 // addEmpty()/addCloned() are reproduction()-only, so the genome is minted HERE with
 // sim.addSubpop() - the same idiom the founder lineages use at tick 1 - and moved into
