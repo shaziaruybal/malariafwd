@@ -397,11 +397,11 @@ validate_params <- function(p) {
     stop("LAMBDA_SPOROZOITES must be <= 1000, got ", format(p$LAMBDA_SPOROZOITES, digits = 15),
          ": it is the pre-truncation rate of oocyst products sampled per infectious bite.",
          call. = FALSE)
-  ## The gamma-Poisson sampler stops drawing the distribution it is asked for below this K:
-  ## its gamma draws underflow to 0, and the run falls back to one oocyst per uptake.
+  ## Below this K a positive count is so rare that the model's gamma-Poisson sampler takes
+  ## thousands of draws per uptake, and the scale of its gamma draws, lambda / K, can overflow.
   if (p$K_OOCYSTS > 0 && p$K_OOCYSTS < 1e-3 * (1 - 1e-12))
     stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got ", format(p$K_OOCYSTS, digits = 15),
-         ": the model cannot draw a more dispersed oocyst count.", call. = FALSE)
+         ": below that the model's oocyst draws become very slow and can overflow.", call. = FALSE)
   ## A cap on the mean, not on LAMBDA_OOCYSTS alone: a small K gives a heavy tail whose mean, and
   ## so the work per uptake, can be many times lambda.
   m <- uptake_moments(p$LAMBDA_OOCYSTS, p$K_OOCYSTS)[["mean"]]

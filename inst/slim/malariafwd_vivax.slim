@@ -261,11 +261,11 @@ initialize() {
 	// the integer that -d X=7 produces, and so that NAN fails them. The caps allow a little more
 	// rounding than validate_params() does, since the values arrive rounded to 15 digits, so a set
 	// R accepts is never refused here.
-	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates; below K = 1e-3 its gamma draws
-	// underflow to 0 so often that the counts fall back to 1, the reverse of the dispersion asked for.
+	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates. Below K = 1e-3 a positive count is
+	// so rare that each uptake takes thousands of draws, and the scale lambda / K can overflow.
 	if (!(K_OOCYSTS == 0 | (K_OOCYSTS >= 1e-3 * (1 - 1e-11) & K_OOCYSTS < INF)))
 		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001 and finite, got " + K_OOCYSTS +
-			": the model cannot draw a more dispersed oocyst count.");
+			": below that the oocyst draws become very slow and can overflow.");
 	// validate_params() caps the mean oocyst count per uptake at 1000, which caps lambda too; with
 	// K at least 1e-3 this keeps every gamma rate finite.
 	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-11) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-11)))
@@ -2063,9 +2063,27 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 		if (n > 0)
 			return n;
 	}
-	// Reached only when a positive count is rarer than about 1 draw in 1e4: a LAMBDA_OOCYSTS
-	// below about 1e-3 with a small K, where the truncated mean is close to 1 anyway.
-	return 1;
+	// Reached only when a positive count is rarer than about 1 draw in 1e4, which needs a
+	// LAMBDA_OOCYSTS below about 1e-3. The count is then drawn exactly, by inversion: the
+	// zero-truncated negative binomial has P(x + 1) / P(x) = (x + k) / (x + 1) * p with
+	// p = lambda / (k + lambda), and p is small there, so a few hundred terms carry all but 1e-17
+	// of the mass. Runs that never get here draw exactly as before.
+	p = lambda / (k + lambda);
+	w = 1.0;
+	weights = 1.0;
+	total = 1.0;
+	x = 1;
+	while (T)
+	{
+		ratio = (x + k) / (x + 1) * p;
+		w = w * ratio;
+		if (w < 1e-17 * total & ratio < 1)
+			break;
+		weights = c(weights, w);
+		total = total + w;
+		x = x + 1;
+	}
+	return sample(seqLen(size(weights)) + 1, 1, weights = weights)[0];
 }
 
 

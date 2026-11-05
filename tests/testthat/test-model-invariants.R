@@ -170,3 +170,27 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   imp <- take[grepl("import", kind)]
   if (nrow(imp)) expect_true(all(imp$ibd == 1))
 })
+
+test_that("the oocyst count is drawn exactly where a positive count is rare", {
+  skip_if_no_slim()
+  ## The model's drawZTCount(), with its rejection loop skipped, so that every draw is the exact
+  ## draw it makes once 10000 tries have found no positive count.
+  src <- readLines(slim_model(), warn = FALSE)
+  i <- grep("^function \\(integer\\$\\) drawZTCount", src)
+  j <- i + which(src[(i + 1):length(src)] == "}")[1]
+  fn <- sub("seqLen(10000)", "seqLen(0)", src[i:j], fixed = TRUE)
+  expect_true(any(grepl("seqLen(0)", fn, fixed = TRUE)))
+  for (case in list(c(1.0153e-4, 0.001), c(0.05, 0.05), c(0.3, 2))) {
+    script <- tempfile(fileext = ".slim")
+    writeLines(c(fn, "initialize() {", "  setSeed(4);",
+                 sprintf("  catn('X ' + paste(sapply(seqLen(20000), 'drawZTCount(%.17g, %.17g);')));", case[1], case[2]),
+                 "}", "1 early() { sim.simulationFinished(); }"), script)
+    r <- processx::run(slim_path(), script, error_on_status = FALSE)
+    expect_equal(r$status, 0L)
+    x <- scan(text = sub("^X ", "", grep("^X ", strsplit(r$stdout, "\n")[[1]], value = TRUE)), quiet = TRUE)
+    want <- uptake_moments(case[1], case[2])
+    lab <- sprintf("lambda %g, k %g", case[1], case[2])
+    expect_lt(abs(mean(x) - want[["mean"]]), 5 * sd(x) / sqrt(length(x)), label = paste("mean,", lab))
+    expect_lt(abs(var(x) - want[["var"]]), 5 * sd((x - mean(x))^2) / sqrt(length(x)), label = paste("variance,", lab))
+  }
+})

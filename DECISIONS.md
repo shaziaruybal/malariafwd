@@ -66,9 +66,12 @@ parameter is better than a stack trace from tick 200. The caps sit far above any
 setting and well below where SLiM's draws fail (binomial sizes are 32-bit, Poisson draws wrap
 above 2^32, the geometric delay saturates near 4e9 days), and they bound the work of a single
 draw. The oocyst cap is on the mean count per uptake rather than on `LAMBDA_OOCYSTS`, because a
-small `K_OOCYSTS` gives a tail whose mean is many times lambda. Below `K_OOCYSTS = 0.001` the
-gamma-Poisson sampler stops drawing the distribution it is asked for: its gamma draws underflow
-to 0 and the uptake falls back to one oocyst. The rounding allowance lets a fitted or computed
+small `K_OOCYSTS` gives a tail whose mean is many times lambda. Below `K_OOCYSTS = 0.001` a
+positive count is so rare that each uptake takes thousands of gamma-Poisson draws, and the scale
+of the draws, lambda/K, can overflow. Wherever a positive count is rarer than one in 10,000 tries
+(a `LAMBDA_OOCYSTS` below about 0.001), the model draws the count exactly, by inversion, rather
+than settle for one oocyst, which would make it less dispersed than `uptake_moments()` says. The
+rounding allowance lets a fitted or computed
 value that lands a few ulps above a cap (`uptake_calibrate()` at a mean of 1000) run, and a
 refused value then prints visibly above the cap. 99999 is the day the defaults use for "never", so
 a run that reaches it would trigger every default intervention on that day; since `run_sim()`
@@ -88,7 +91,8 @@ since a mean and a day of the year need not be whole, so `params.tsv` writes the
 `0.0`. `uptake_moments()` keeps its precision for a tiny lambda or a huge `k`, where it returned a
 mean of Inf or below 1. `uptake_calibrate()` matches the target mean exactly, returns a `k` of at
 least 0.001 (and warns when the target variance is more than the zero-truncated negative binomial
-reaches at that mean), and refuses a target mean above 1000. Run time is not bounded: `N_HOSTS` and
+reaches at that mean), and refuses a target mean above 1000. The exact draw changes only runs in
+which some uptake exhausts the 10,000 tries; every run that never does is unchanged. Run time is not bounded: `N_HOSTS` and
 `N_MOSQ` are uncapped, `SIM_DAYS` is capped only at SLiM's 10^9, and a high `RECOMB_RATE` or a
 dispersed uptake within the caps can be slow. Not settled here: a
 founder-free run whose imports fail to establish by chance still stops at the model's liveness
