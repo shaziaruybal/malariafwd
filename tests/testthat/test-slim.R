@@ -43,6 +43,7 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
            "SEASONAL_AMP=INF" = "SEASONAL_AMP must be >= 0 and finite",
            "NU_HYPNOZOITE_BATCH=2.0e6" = "at most 1e6 hypnozoites per bite",
            "ALPHA_ACTIVATE_BOOST=NAN" = "ALPHA_ACTIVATE_BOOST must be >= 0",
+           "ALPHA_ACTIVATE_BOOST=INF" = "ALPHA_ACTIVATE_BOOST must be >= 0 and finite",
            "K_OOCYSTS=-1.0" = "K_OOCYSTS must be 0 \\(Poisson\\)")
   for (arg in names(bad)) {
     r <- slim("-d", arg)

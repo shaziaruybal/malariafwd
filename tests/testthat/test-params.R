@@ -308,7 +308,7 @@ test_that("rates and probabilities stay in range, and sizes stay within what SLi
   expect_error(vivax_params(SEASONAL_AMP = 0.5, SEASONAL_PHASE = 3e307), "cannot be worked out")
 })
 
-test_that("the oocyst count is capped by its mean, and K_OOCYSTS by what the sampler can draw", {
+test_that("the oocyst count is capped by its mean, and K_OOCYSTS floored at 0.001", {
   expect_no_error(vivax_params(LAMBDA_OOCYSTS = 1000))
   expect_error(vivax_params(LAMBDA_OOCYSTS = 1000.5), "mean of 1000.5 oocysts per successful uptake")
   ## a small K gives a heavy tail: the mean is many times lambda
@@ -328,7 +328,8 @@ test_that("the oocyst count is capped by its mean, and K_OOCYSTS by what the sam
     expect_equal(u$achieved[["var"]], target[2], tolerance = 1e-6)
     expect_no_error(vivax_params(LAMBDA_OOCYSTS = u$lambda, K_OOCYSTS = u$k))
   }
-  ## a variance more than any zero-truncated count with that mean can have: k = 0.001, the mean held
+  ## a variance more than the model's zero-truncated negative binomial reaches at that mean:
+  ## k = 0.001, the mean held
   for (target in list(c(3, 30), c(5, 100), c(10, 1000), c(1000, 1e7), c(300, 1.7e7))) {
     expect_warning(u <- uptake_calibrate(target[1], var = target[2]),
                    "more than the model's zero-truncated negative binomial reaches at mean")
@@ -394,10 +395,13 @@ test_that("a run of 99999 days or more must move the days that default to 'never
 test_that("strings that SLiM or params.tsv cannot carry are refused", {
   expect_error(vivax_params(SIM_ID = "a\nb"), "SIM_ID must not contain control characters")
   expect_error(vivax_params(SIM_ID = "a\tb"), "SIM_ID must not contain control characters")
+  ## C1 controls too, such as the U+0096 that iconv(from = "latin1") makes of a Windows dash
+  expect_error(vivax_params(SIM_ID = "a\u0096b"), "SIM_ID must not contain control characters")
+  expect_identical(vivax_params(SIM_ID = "a\u00a0b\u00a3")$SIM_ID, "a\u00a0b\u00a3")
   ## non-ASCII labels are not control characters, in any locale
   expect_no_error(vivax_params(SIM_ID = "Côte d’Ivoire 日本"))
   ## bytes that are not UTF-8 (a latin1 file read without its encoding) cannot run
-  expect_error(vivax_params(SIM_ID = "Par\xe1"), "SIM_ID must be valid UTF-8")
+  expect_error(vivax_params(SIM_ID = "Par\xe1"), "SIM_ID must be valid UTF-8.*CP1252")
   expect_no_warning(expect_error(vivax_params(CHROMOSOMES = "\xe9"), "CHROMOSOMES must be valid UTF-8"))
   for (bad in c("", "1,", "a", "15", "0", "1:2", "1,1", "3-1", "1 4", "1-3 5", "1\t2",
                 "99999999999", "1-99999999999"))

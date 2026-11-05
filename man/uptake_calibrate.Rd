@@ -26,8 +26,8 @@ If \code{var} is omitted, or is not larger than the Poisson variance at that mea
 always matched. The zero-truncated negative binomial the model draws can be only so dispersed
 at a given mean: its variance is largest as \code{k} approaches 0 (about 11.1 at a mean of 3, 271 at
 a mean of 10), and \code{k = 0.001}, the smallest \code{k} the model draws, comes within 0.5\% of that
-limit. A target variance more than 1\% above what \code{k = 0.001} gives returns \code{k = 0.001} with a
-warning.
+limit. A target variance that \code{k = 0.001} falls more than 1\% short of returns \code{k = 0.001} with
+a warning.
 }
 \examples{
 uptake_calibrate(2.5)                 # Poisson: lambda giving a realised mean of 2.5

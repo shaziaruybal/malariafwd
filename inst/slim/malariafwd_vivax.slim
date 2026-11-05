@@ -261,24 +261,28 @@ initialize() {
 	// the integer that -d X=7 produces, and so that NAN fails them. The caps allow a little more
 	// rounding than validate_params() does, since the values arrive rounded to 15 digits, so a set
 	// R accepts is never refused here.
-	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates. Below K = 1e-3 a positive count is
-	// so rare that each uptake takes thousands of draws, and the scale lambda / K can overflow.
+	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates. At a given mean, the tries an
+	// uptake takes grow about as 1 / K below K = 1e-3, and so does the exact draw that follows
+	// 10,000 failed tries (about lambda / K terms). In a -d run, where R's mean cap is not
+	// checked, both grow without bound (lambda 1000 with K 1e-9 would take about 6e12 terms), and
+	// lambda / K overflows below K of about 5.6e-306. K = 1e-3 already gives a variance within 0.5%
+	// of the K -> 0 limit at the same mean.
 	if (!(K_OOCYSTS == 0 | (K_OOCYSTS >= 1e-3 * (1 - 1e-11) & K_OOCYSTS < INF)))
 		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001 and finite, got " + K_OOCYSTS +
-			": below that the oocyst draws become very slow and can overflow.");
+			((K_OOCYSTS > 0 & K_OOCYSTS < 1e-3) ? ": below that the oocyst draws take ever more work." else "."));
 	// validate_params() caps the mean oocyst count per uptake at 1000, which caps lambda too; with
 	// K at least 1e-3 this keeps every gamma rate finite.
 	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-11) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-11)))
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be at most 1000");
 	// These factors scale the biting, import and activation rates, which must stay non-negative
-	// (and the first two finite; the activation rate is clamped, D9, so its boost may be INF).
+	// and finite (an infinite activation boost times ALPHA_ACTIVATE = 0 is NAN).
 	if (!(INTERVENTION_EFFICACY >= 0 & INTERVENTION_EFFICACY <= 1))
 		stop("INTERVENTION_EFFICACY must be in [0, 1], got " + INTERVENTION_EFFICACY);
 	if (!(IMPORT_RATE_PER_TICK >= 0 & IMPORT_RATE_BOOST >= 0 & IMPORT_RATE_BOOST < INF &
 		BITING_RATE_BOOST >= 0 & BITING_RATE_BOOST < INF))
 		stop("IMPORT_RATE_PER_TICK, IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0 and finite");
-	if (!(ALPHA_ACTIVATE_BOOST >= 0))
-		stop("ALPHA_ACTIVATE_BOOST must be >= 0, got " + ALPHA_ACTIVATE_BOOST);
+	if (!(ALPHA_ACTIVATE_BOOST >= 0 & ALPHA_ACTIVATE_BOOST < INF))
+		stop("ALPHA_ACTIVATE_BOOST must be >= 0 and finite, got " + ALPHA_ACTIVATE_BOOST);
 	if (!(SEASONAL_AMP >= 0 & SEASONAL_AMP < INF))
 		stop("SEASONAL_AMP must be >= 0 and finite (0 means no seasonality), got " + SEASONAL_AMP);
 	// The peak daily import rate and hypnozoite batch mean: rpois() wraps above 2^32 and does not
@@ -2089,11 +2093,13 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 		if (n > 0)
 			return n;
 	}
-	// Reached only when a positive count is rarer than about 1 draw in 1e4, which needs a
-	// LAMBDA_OOCYSTS below about 1e-3. The count is then drawn exactly, by inversion: the
-	// zero-truncated negative binomial has P(x + 1) / P(x) = (x + k) / (x + 1) * p with
-	// p = lambda / (k + lambda), and p is small there, so a few hundred terms carry all but 1e-17
-	// of the mass. Runs that never get here draw exactly as before.
+	// An uptake gets here with probability P(0)^10000: 37% where a positive count is 1 draw in
+	// 1e4 (LAMBDA_OOCYSTS about 1e-4, at any k), and below 1e-6 above a LAMBDA_OOCYSTS of about
+	// 3e-3. The count is then drawn exactly, by inversion: the zero-truncated negative binomial has
+	// P(x + 1) / P(x) = (x + k) / (x + 1) * p with p = lambda / (k + lambda). Wherever an uptake
+	// gets here with a probability above 1e-12 (lambda below about 0.015 at k = 0.001), p is at
+	// most about 0.94, so at most about 500 terms carry all but about 1e-16 of the mass. Runs that
+	// never get here draw exactly as before.
 	p = lambda / (k + lambda);
 	w = 1.0;
 	weights = 1.0;

@@ -161,8 +161,8 @@ vivax_params <- function(...) {
       p[[nm]] <- .slim_num(v)
     ## Text as UTF-8, after the factor step (expand.grid() of latin1 text gives a latin1 factor):
     ## latin1, which R reads as CP1252, as enc2utf8() converts it; UTF-8 marked as bytes; and text in
-    ## a non-UTF-8 native encoding, where iconv() gives NA, so leaves it to be refused, if it cannot
-    ## convert it (as in a C locale).
+    ## a non-UTF-8 native encoding, through iconv(), which gives NA where it cannot convert (as in a
+    ## C locale) and so leaves the text for the UTF-8 check to refuse.
     v <- p[[nm]]
     if (is.character(v) && length(v) == 1L && !is.na(v)) {
       enc <- Encoding(v)
@@ -384,10 +384,13 @@ validate_params <- function(p) {
            if (nzchar(dur)) dur else "; give the number itself, for example with as.numeric()", ".",
            call. = FALSE)
     if (is.character(v) && !validUTF8(v))
-      stop(nm, " must be valid UTF-8 text; convert it with iconv(x, from = \"latin1\", to = \"UTF-8\") ",
-           "or read the file it came from with its encoding declared.", call. = FALSE)
-    ## byte-wise, so that accented and other non-ASCII labels pass in every locale
-    if (is.character(v) && grepl("[\001-\037\177]", v, useBytes = TRUE))
+      stop(nm, " must be valid UTF-8 text; for Windows or latin1 text, mark it with ",
+           "Encoding(x) <- \"latin1\" (R reads it as Windows-1252) or convert it with ",
+           "iconv(x, from = \"CP1252\", to = \"UTF-8\"), or read the file it came from with its ",
+           "encoding declared.", call. = FALSE)
+    ## byte-wise, so that accented and other non-ASCII labels pass in every locale: the C0
+    ## controls and DEL, and the C1 controls U+0080-U+009F, which are C2 80 to C2 9F in UTF-8
+    if (is.character(v) && grepl("[\001-\037\177]|\302[\200-\237]", v, useBytes = TRUE))
       stop(nm, " must not contain control characters (newlines, tabs): SLiM and params.tsv ",
            "cannot carry them.", call. = FALSE)
     if (!is.numeric(v)) next
@@ -420,11 +423,14 @@ validate_params <- function(p) {
     stop("LAMBDA_SPOROZOITES must be <= 1000, got ", format(p$LAMBDA_SPOROZOITES, digits = 15),
          ": it is the pre-truncation rate of oocyst products sampled per infectious bite.",
          call. = FALSE)
-  ## Below this K a positive count is so rare that the model's gamma-Poisson sampler takes
-  ## thousands of draws per uptake, and the scale of its gamma draws, lambda / K, can overflow.
+  ## K = 0.001 already comes within 0.5% of the largest variance the zero-truncated negative
+  ## binomial reaches at its mean (the K -> 0 limit), for any mean up to 1000, while at a given
+  ## mean the model's gamma-Poisson tries per uptake grow about as 1 / K below it.
   if (p$K_OOCYSTS > 0 && p$K_OOCYSTS < 1e-3 * (1 - 1e-12))
     stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001, got ", format(p$K_OOCYSTS, digits = 15),
-         ": below that the model's oocyst draws become very slow and can overflow.", call. = FALSE)
+         ": at 0.001 the count already comes within 0.5% of the largest variance a zero-truncated ",
+         "negative binomial reaches at its mean, and a smaller K makes each uptake take ",
+         "proportionally more draws.", call. = FALSE)
   ## A cap on the mean, not on LAMBDA_OOCYSTS alone: a small K gives a heavy tail whose mean, and
   ## so the work per uptake, can be many times lambda.
   m <- uptake_moments(p$LAMBDA_OOCYSTS, p$K_OOCYSTS)[["mean"]]
