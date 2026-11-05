@@ -23,8 +23,8 @@ vector \code{c("-d","NAME=val", ...)} suitable for a shell-free process launch.
 Eidos types \verb{-d P=0} as an \strong{integer} and does not promote it, so a probability set to
 exactly 0 or 1 crashed the model mid-run in at least two different ways:
 \code{rbinom()} rejecting an integer \code{prob} (reached by \code{P_RAD_SURVIVAL} with radical cure or
-MDA on), and \code{min()} refusing mixed types (reached by \code{ALPHA_ACTIVATE = 0} or
-\code{MU_HYPNOZOITE = 0}). Both are latent: the same parameter set completes if the code path
+MDA on), and \code{min()} refusing mixed types (reached by \code{ALPHA_ACTIVATE = 0}). Both are
+latent: the same parameter set completes if the code path
 never fires, so a sweep fails in only some cells. "Perfect radical cure" and
 "no relapses" are the two most natural settings in that space, and \code{validate_params()}
 explicitly admits \verb{[0, 1]}.

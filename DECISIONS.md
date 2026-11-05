@@ -19,6 +19,28 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D31 — No age cap on hypnozoite batches · 2026-11-05 · Accepted
+**Context.** `MAX_HYPNOZOITE_AGE` (1,500 days) cleared a whole hypnozoite batch once it was older
+than the cap. It began at 300 days as a "maximum hypnozoite survival" with no source, and was
+raised to 1,500 when that truncated too many batches. At the defaults it binds for roughly one
+batch in 50,000, and where it binds it produces an artificial spike of whole-batch clearances
+at exactly the cap age. White et al. (2014) give hypnozoites exponential residence with no cap.
+**Decision.** Remove `MAX_HYPNOZOITE_AGE`. A batch empties only through activation and death.
+`validate_params()` requires `MU_HYPNOZOITE > 0`, so every batch is eventually cleared.
+**Rationale.** A finite hypnozoite lifespan is expressed through the daily death probability
+`MU_HYPNOZOITE`, not through a hard cutoff that distorts the late-relapse tail it was meant to
+protect.
+**Alternatives rejected.** *Keep it as a silent safety net* -- it rarely binds, but when it does it
+bends exactly the long-latency tail the model needs.
+**Consequences.** Runs shorter than 1,500 days are unchanged. `MU_HYPNOZOITE = 0` is no longer
+accepted. Until hypnozoites can also die during latency, a temperate batch (`K_LATENCY > 0`)
+leaves latency only at rate `DELTA_LATENCY`.
+**How to verify.** `MAX_HYPNOZOITE_AGE` is an unknown parameter and `MU_HYPNOZOITE = 0` is
+refused (`tests/testthat/test-params.R`); `events.tsv` and `state.tsv` are byte-identical to the
+capped model for three seeded runs of 200-400 days.
+
+---
+
 ## D30 — No age cap on blood-stage infections · 2026-11-05 · Accepted
 **Context.** `MAX_BROOD_AGE` (180 days) force-cleared any blood-stage infection older than 180
 days (the test was `> 180`, so on day 181). It is a leftover from an early version of the model

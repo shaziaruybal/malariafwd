@@ -20,7 +20,7 @@
   GAMETOCYTE_DELAY = 0L, P_GAMETOCYTE = 1.0, P_PRIMARY = 1.0,
   # hypnozoite reservoir
   NU_HYPNOZOITE_BATCH = 5.0, ALPHA_ACTIVATE = 1/170, MU_HYPNOZOITE = 1/442,
-  K_LATENCY = 0L, DELTA_LATENCY = 1/100, MAX_HYPNOZOITE_AGE = 1500L,
+  K_LATENCY = 0L, DELTA_LATENCY = 1/100,
   # genome (see DECISIONS D2/D3/D13): pure coordinate switch; both modes rate 7.4e-7
   GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
   # vector control: biting rate and importation rate only, never case management
@@ -103,6 +103,9 @@ validate_params <- function(p) {
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
   for (pr in c("LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
+  if (p$MU_HYPNOZOITE <= 0)
+    stop("MU_HYPNOZOITE must be > 0: hypnozoites that cannot die keep their batch alive forever.",
+         call. = FALSE)
   if (p$MEAN_BLOOD_STAGE_DURATION < 1)
     stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 (days): blood-stage infections clear each day ",
          "with probability 1/MEAN_BLOOD_STAGE_DURATION.", call. = FALSE)
@@ -198,8 +201,8 @@ has_import_path <- function(p) {
 #' Eidos types `-d P=0` as an **integer** and does not promote it, so a probability set to
 #' exactly 0 or 1 crashed the model mid-run in at least two different ways:
 #' `rbinom()` rejecting an integer `prob` (reached by `P_RAD_SURVIVAL` with radical cure or
-#' MDA on), and `min()` refusing mixed types (reached by `ALPHA_ACTIVATE = 0` or
-#' `MU_HYPNOZOITE = 0`). Both are latent: the same parameter set completes if the code path
+#' MDA on), and `min()` refusing mixed types (reached by `ALPHA_ACTIVATE = 0`). Both are
+#' latent: the same parameter set completes if the code path
 #' never fires, so a sweep fails in only some cells. "Perfect radical cure" and
 #' "no relapses" are the two most natural settings in that space, and `validate_params()`
 #' explicitly admits `[0, 1]`.

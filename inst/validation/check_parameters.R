@@ -187,7 +187,6 @@ R2 <- rbindlist(lapply(names(cfg2 <- list(
   alpha_fast   = list(ALPHA_ACTIVATE = 1/40),        # tropical-fast activation
   alpha_slow   = list(ALPHA_ACTIVATE = 1/400),       # slow activation
   mu_high      = list(MU_HYPNOZOITE = 1/60),         # hypnozoites die fast
-  hypage_short = list(MAX_HYPNOZOITE_AGE = 120L),    # hard age cap bites
   radcure_weak = list(TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
                       RADCURE_COVERAGE = 0.9, P_RAD_SURVIVAL = 0.8),
   bloodcure_weak = list(INTERVENTION_START = 100L, INTERVENTION_END = 99999L,
@@ -224,9 +223,6 @@ mu_res <- mean_reservoir("muhigh", MU_HYPNOZOITE = 1/60)
 bl_res <- mean_reservoir("base")
 ok("high hypnozoite death -> smaller reservoir than baseline",
    mu_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", mu_res, bl_res))
-hs_res <- mean_reservoir("hypshort", MAX_HYPNOZOITE_AGE = 120L)
-ok("short MAX_HYPNOZOITE_AGE -> smaller reservoir",
-   hs_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", hs_res, bl_res))
 ## 3-seed, for the same reason mean_reservoir() exists: single-seed this comparison was a
 ## near coin flip (measured 5 of 6 seeds in the right direction on the pre-fence model), so a
 ## shifted RNG stream flipped it with no change in the underlying behaviour. Over 3 seeds the

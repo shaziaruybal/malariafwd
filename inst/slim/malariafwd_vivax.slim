@@ -86,7 +86,6 @@ initialize() {
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day (White 2014)
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
-	defineDefault("MAX_HYPNOZOITE_AGE",      1500); // safety ceiling only, ~3.4x White's 442-d mean lifespan, so death is governed by MU_HYPNOZOITE (exponential) and the long late-relapse tail is preserved. Was 300, which truncated the mean, force-cleared ~9% of hypnozoites, and removed late relapses
 	
 	// VECTOR-CONTROL interventions (off by default). These affect TRANSMISSION ONLY -
 	// biting rate and the importation rate. They must never switch case management on or
@@ -456,36 +455,7 @@ reproduction()
 				next;
 			
 			batch_count   = hyp.getValue("batch_count");
-			hyp_age       = sim.cycle - hyp.getValue("inoculation_tick");
 			latency_stage = hyp.getValue("latency_stage"); // 0=non-latent, 1-K = latent
-			
-			// ----------------------------
-			// Spontaneous age-based clearance of the WHOLE batch
-			// ----------------------------
-			if (hyp_age > MAX_HYPNOZOITE_AGE)
-			{
-				logEvent(
-					"hypnozoite_clearance",
-					-1, // no inoc ID bc not V-H event
-					-1, h.id,
-					asString(hyp.getValue("lineage_id")),
-					"NA", "NA",
-					0, 0.0,
-					"human",
-					1,   // was dormant
-					0,
-					hyp.pedigreeID,
-					-1, -1,
-					batch_count  // whole remaining batch cleared at once
-					);
-				
-				vcat("💀 Hypnozoite batch (brood " + hyp.getValue("lineage_id") +
-					", n=" + batch_count + ") cleared from 👤 human " + h.id +
-					" after " + hyp_age + " days dormant (lineage born tick " + hyp.getValue("brood_birth_tick") + ")");
-
-				hyp.setValue("batch_count", 0); // retire; killed by the early() HYPNOZOITE CLEANUP
-				next;
-			}
 			
 			// Latency progression (only relevant for K_LATENCY > 0, temperate
 			// strains). SIMPLIFICATION: the whole batch progresses through
@@ -978,7 +948,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","MAX_HYPNOZOITE_AGE","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	_plines = c(_plines, "SLIM_VERSION\t" + version(F)[1]);

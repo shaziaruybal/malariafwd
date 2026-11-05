@@ -112,7 +112,6 @@ for each tick t:
   reproduction():
     # --- relapse ---
     for each host h, for each dormant batch b in h:
-        if age(b) > MAX_HYPNOZOITE_AGE:        retire b (batch_count <- 0)
         n_act ~ Binomial(batch_count(b), alpha_eff)      # activation
         n_die ~ Binomial(batch_count(b) - n_act, mu)     # competing death
         batch_count(b) <- batch_count(b) - n_act - n_die
@@ -264,8 +263,8 @@ Follows the **White et al. 2014** batch model.
 - **Death:** `MU_HYPNOZOITE` = 1/442 per day (White 2014), competing with activation.
 - **Latency:** `K_LATENCY` = 0 (tropical) or 2 (temperate), with `DELTA_LATENCY` = 1/100 governing
   progression when enabled.
-- **Age ceiling:** `MAX_HYPNOZOITE_AGE` = 1500 days — a safety ceiling only, ~3.4× White's 442-day
-  mean lifespan, so death is governed by the exponential and the long late-relapse tail survives.
+- **No age ceiling:** a batch empties only by activation and death, as in White et al. (2014), so
+  the long late-relapse tail survives; `MU_HYPNOZOITE` must be above 0 so every batch ends.
 
 **A relapse is a clone of its originating hypnozoite** (`addCloned`), so relapse-to-origin IBD is
 exactly 1. Relative to a host's *prior observed* infection it can be clonal, sibling, half-sibling
@@ -660,7 +659,6 @@ derived and written to `params.tsv` for provenance.
 | `MU_HYPNOZOITE` | 1/442 /d | White 2014 |
 | `K_LATENCY` | 0 | 0 tropical, 2 temperate |
 | `DELTA_LATENCY` | 1/100 | used only if `K_LATENCY > 0` |
-| `MAX_HYPNOZOITE_AGE` | 1500 d | safety ceiling, ~3.4× mean lifespan |
 
 ### Mosquito-stage genetics
 
@@ -874,7 +872,6 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | `NU_HYPNOZOITE_BATCH = 0` → no relapses at all | relapse fraction 0.000, reservoir 0.00 |
 | faster activation → higher relapse fraction | 0.77 vs 0.52 |
 | faster activation → **smaller** standing reservoir | 0.80 vs 2.10 |
-| shorter `MAX_HYPNOZOITE_AGE` → smaller reservoir | 1.30 vs 1.90 |
 | batch boost enlarges the reservoir | 3.30 vs 1.90 |
 | radical cure → smaller reservoir | 0.50 vs 1.90 |
 | vector control → lower prevalence | 0.04 vs 0.34 |

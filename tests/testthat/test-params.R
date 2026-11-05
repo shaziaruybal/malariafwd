@@ -56,11 +56,10 @@ test_that("float parameters always carry a decimal point, integers never do", {
   ## Eidos types `-d P=0` as an integer and will not promote it, which crashed the model
   ## mid-run: rbinom() rejects an integer `prob`, and min() refuses mixed argument types.
   a <- as_slim_args(vivax_params(P_RAD_SURVIVAL = 0, BLOODCURE_COVERAGE = 1,
-                                 ALPHA_ACTIVATE = 0, MU_HYPNOZOITE = 0, N_HOSTS = 100))
+                                 ALPHA_ACTIVATE = 0, N_HOSTS = 100))
   expect_true("P_RAD_SURVIVAL=0.0" %in% a)
   expect_true("BLOODCURE_COVERAGE=1.0" %in% a)
   expect_true("ALPHA_ACTIVATE=0.0" %in% a)
-  expect_true("MU_HYPNOZOITE=0.0" %in% a)
   ## integer parameters must NOT gain one, or Eidos rejects them where it wants an integer
   expect_true("N_HOSTS=100" %in% a)
   expect_true("SIM_DAYS=365" %in% a)
@@ -85,8 +84,7 @@ test_that("probabilities of exactly 0 and 1 run to completion", {
   cases <- list(
     rbinom_zero = c(base, list(P_RAD_SURVIVAL = 0, MDA_TICK = 30L)),
     rbinom_one  = c(base, list(P_RAD_SURVIVAL = 1, MDA_TICK = 30L)),
-    min_alpha   = c(base, list(ALPHA_ACTIVATE = 0)),
-    min_mu      = c(base, list(MU_HYPNOZOITE = 0))
+    min_alpha   = c(base, list(ALPHA_ACTIVATE = 0))
   )
   for (nm in names(cases)) {
     out <- file.path(tempdir(), paste0("mfw-zero-one-", nm))
@@ -120,4 +118,9 @@ test_that("a biting rate that would exceed one bite per mosquito per day warns",
 test_that("blood-stage infections have no age cap, and their mean duration is at least a day", {
   expect_error(vivax_params(MAX_BROOD_AGE = 180), "unknown parameter")
   expect_error(vivax_params(MEAN_BLOOD_STAGE_DURATION = 0.5), "MEAN_BLOOD_STAGE_DURATION must be >= 1")
+})
+
+test_that("hypnozoite batches have no age cap, and hypnozoites must be able to die", {
+  expect_error(vivax_params(MAX_HYPNOZOITE_AGE = 1500), "unknown parameter")
+  expect_error(vivax_params(MU_HYPNOZOITE = 0), "MU_HYPNOZOITE must be > 0")
 })
