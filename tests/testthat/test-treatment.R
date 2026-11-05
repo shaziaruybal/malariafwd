@@ -209,3 +209,15 @@ test_that("a recrudescence is clonal to its holder and MOI-neutral", {
              hold_lin, by.x = "holder", by.y = "pedigree_id", suffixes = c("", "_holder"))
   expect_equal(as.character(m$lineage_id), as.character(m$lineage_id_holder))
 })
+
+test_that("a bite that seeds only hypnozoites is no case and gets no course", {
+  skip_if_no_slim()
+  ## With P_PRIMARY = 0 every bite seeds only a batch. Relapses are undetected, so nothing here
+  ## is a case: no course may be given.
+  out <- file.path(tempdir(), "mfw-tx-liver-only"); unlink(out, recursive = TRUE)
+  r <- run_sim(shared(P_PRIMARY = 0, BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1, P_DETECT_RELAPSE = 0),
+               seed = 2, outdir = out)
+  ev <- data.table::as.data.table(load_events(r))
+  expect_gt(ev[event_type == "vh_inoculation" & is_dormant == 1, .N], 0)
+  expect_equal(ev[event_type %in% c("bloodcure_given", "radcure_given"), .N], 0)
+})

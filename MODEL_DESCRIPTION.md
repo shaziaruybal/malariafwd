@@ -561,7 +561,9 @@ episode** — not per co-inoculated genotype, which used to let one bite be "det
 for one of its genotypes and not the other (D20). Relapses are often sub-patent, so a realistic
 setting is much lower for them (e.g. 0.15); Ross et al. (2025) put recurrence detectability at
 0.13–0.49 of a primary, so `P_DETECT_RECRUD` should usually sit well below `P_DETECT_PRIMARY`.
-Detected cases form the observed line list and can trigger case-based treatment.
+Detected cases form the observed line list and can trigger case-based treatment. A bite that seeds
+only hypnozoites (possible when `P_PRIMARY < 1`) makes no blood stage, so it is no case and gets no
+course (D36), as for an import.
 
 > **Known gap:** detection is not origin-dependent beyond the primary/relapse split, so
 > *active vs passive* surveillance modes cannot currently be distinguished. This made one arm of

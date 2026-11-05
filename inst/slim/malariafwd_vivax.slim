@@ -2290,6 +2290,8 @@ function (integer) establishInfectionOutcome(
 	inf_brood  = source.getValue("brood_id");
 
 	has_primary = (runif(1) < P_PRIMARY);
+	// read by inoculateMosquitoToHuman(): only a bite that makes a blood stage is a case (D36)
+	defineGlobal("LAST_HAS_PRIMARY", has_primary);
 	// Resurgence trigger boost on batch size (R1: relapse-driven, reservoir
 	// version) - same trigger tick as the activation-rate boost, applied
 	// independently since a scenario might want one, the other, or both.
@@ -2602,6 +2604,7 @@ function (integer) inoculateMosquitoToHuman(
 	else if (bite_batch > 0)
 		shares = tabulate(sample(0:(k - 1), bite_batch, replace=T), k - 1);
 
+	any_primary = F;
 	for (i in seqLen(k))
 	{
 		established = establishInfectionOutcome(
@@ -2610,11 +2613,13 @@ function (integer) inoculateMosquitoToHuman(
 			);
 
 		new_lineage_ids = c(new_lineage_ids, established);
+		any_primary = any_primary | LAST_HAS_PRIMARY;
 	}
 	// One bite is ONE episode, so one detection draw and at most one course - even when the
 	// bite delivered several genotypes. Drawing per genotype let a single bite be "detected
-	// and treated" for one of its genotypes and not the other.
-	if (det == 1 & size(new_lineage_ids) > 0)
+	// and treated" for one of its genotypes and not the other. A bite that seeds only
+	// hypnozoites makes no blood stage, so it is no case and gets no course (D36).
+	if (det == 1 & any_primary)
 		decideTreatment(h);
 	if (getTransmissibleLineageCount(h) > 0)
 		h.tag = INFECTED;

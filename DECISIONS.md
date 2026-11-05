@@ -19,6 +19,23 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D36 — A bite that seeds only hypnozoites is no case · 2026-11-05 · Accepted
+**Context.** `inoculateMosquitoToHuman()` drew detection once per bite and scheduled a course
+whenever the bite established anything. With `P_PRIMARY < 1` a bite can seed only a hypnozoite
+batch; it made no blood stage, yet a detected one got a blood-stage course and, with
+`RADCURE_COVERAGE`, radical cure that removed the batch it had just seeded (review M2). Imports
+already skipped this.
+**Decision.** A course is scheduled only when the bite created a blood-stage primary (D20's
+"decided where a case arises"). The detection draw is unchanged, so the random stream upstream is
+the same.
+**Consequences.** Runs with `P_PRIMARY < 1` and case management on change: no phantom courses, and
+hypnozoite batches survive the bite that seeded them. With `P_PRIMARY = 1` (the default) every bite
+that establishes anything makes a primary, so those runs are byte-identical.
+**How to verify.** `tests/testthat/test-treatment.R`: at `P_PRIMARY = 0`, full coverage and
+undetected relapses, no `bloodcure_given` or `radcure_given` row appears (there were 34 before).
+
+---
+
 ## D35 — Latent hypnozoites die at MU_HYPNOZOITE · 2026-11-05 · Accepted
 **Context.** With `K_LATENCY > 0` the latency branch only drew the batch's move to the next stage,
 so hypnozoites could not die while latent (review M4). White et al. (2014), whose batch model the
