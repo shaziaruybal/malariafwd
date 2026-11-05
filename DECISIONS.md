@@ -19,6 +19,27 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D35 — Latent hypnozoites die at MU_HYPNOZOITE · 2026-11-05 · Accepted
+**Context.** With `K_LATENCY > 0` the latency branch only drew the batch's move to the next stage,
+so hypnozoites could not die while latent (review M4). White et al. (2014), whose batch model the
+reservoir follows, apply death at rate mu in every latent compartment. At `K_LATENCY = 2` and
+`DELTA_LATENCY = 1/100` a hypnozoite relapsed with probability 0.722 rather than 0.480, about 1.5
+times the relapses per bite, all of the extra ones late.
+**Decision.** Each day a latent batch first loses Binomial(`batch_count`, `MU_HYPNOZOITE`)
+hypnozoites, logged as `hypnozoite_clearance` like any other death; then, if any are left, the batch
+moves to the next stage with probability `DELTA_LATENCY`. The batch still moves through latency as
+one unit, which matches White et al., who also track latency per infection.
+**Rationale.** It is the model the documentation cites. P(relapse) becomes
+[delta(1 - mu)/(1 - (1 - delta)(1 - mu))]^k x alpha/(alpha + mu), close to
+(delta/(delta + mu))^k x alpha/(alpha + mu).
+**Consequences.** Runs with `K_LATENCY > 0` change: fewer relapses and a smaller reservoir.
+Tropical runs (`K_LATENCY = 0`, the default) are byte-identical.
+**How to verify.** `tests/testthat/test-run.R` imports 300 infections at `K_LATENCY = 2` with no
+onward transmission and runs to 1500 days. The share of resolved hypnozoites that activated must be
+within 0.05 of 0.480; it was 0.73 before.
+
+---
+
 ## D34 — Outcrossed oocysts undergo per-chromosome four-strand meiosis · 2026-11-05 · Accepted
 **Context.** `seedTetrad()` built the four products of an outcrossed oocyst as two reciprocal
 recombinants from one breakpoint draw plus two whole-genome copies of the parents. That applies a

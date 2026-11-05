@@ -528,13 +528,28 @@ reproduction()
 				next;
 			latency_stage = hyp.getValue("latency_stage"); // 0=non-latent, 1-K = latent
 			
-			// Latency progression (only relevant for K_LATENCY > 0, temperate
-			// strains). SIMPLIFICATION: the whole batch progresses through
-			// latency in lockstep - we do not track independently-variable
-			// latency within a batch.
+			// Latency (K_LATENCY > 0, temperate strains, D35). Latent hypnozoites die at
+			// MU_HYPNOZOITE, as in White et al. (2014); then the batch moves to the next stage with
+			// probability DELTA_LATENCY. The whole batch moves together, as White et al. also track
+			// latency per infection.
 			if (latency_stage > 0)
 			{
-				if (runif(1) < DELTA_LATENCY)
+				n_dying = rbinom(1, batch_count, MU_HYPNOZOITE);
+				if (n_dying > 0)
+				{
+					logEvent("hypnozoite_clearance",
+						-1, // no inoc ID bc not V-H event
+						-1, h.id,
+						asString(hyp.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 1, 0,
+						hyp.pedigreeID,
+						-1, -1,
+						n_dying
+						);
+					vcat("💀 " + n_dying + " latent hypnozoite(s) died in 👤 human " + h.id + " (brood " + hyp.getValue("lineage_id") + ")");
+					batch_count = batch_count - n_dying;
+					hyp.setValue("batch_count", batch_count);   // 0 retires it; killed by the early() HYPNOZOITE CLEANUP
+				}
+				if (batch_count > 0 & runif(1) < DELTA_LATENCY)
 				{
 					hyp.setValue("latency_stage", latency_stage - 1);
 					vcat("💤 Hypnozoite batch (brood " + hyp.getValue("lineage_id") + ") progressed to latency stage " + (latency_stage - 1));

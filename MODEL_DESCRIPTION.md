@@ -262,7 +262,7 @@ Follows the **White et al. 2014** batch model.
   clonal hypnozoites activated that tick.
 - **Death:** `MU_HYPNOZOITE` = 1/442 per day (White 2014), competing with activation.
 - **Latency:** `K_LATENCY` = 0 (tropical) or 2 (temperate), with `DELTA_LATENCY` = 1/100 governing
-  progression when enabled.
+  progression when enabled; latent hypnozoites die at `MU_HYPNOZOITE` too, as in White 2014.
 - **No age ceiling:** a batch empties only by activation and death, as in White et al. (2014), so
   the long late-relapse tail survives; `MU_HYPNOZOITE` must be above 0 so every batch ends.
 
@@ -320,9 +320,20 @@ one thing). The expected number of relapse *episodes* is therefore lower than 3.
 batch size — a larger batch yields more simultaneous activations and so proportionally fewer
 episodes per hypnozoite. This is why relapse *rate* is not linear in ν.
 
-**Temperate latency.** With `K_LATENCY = k > 0`, a hypnozoite must traverse `k` Erlang stages at
-rate `DELTA_LATENCY` before it becomes eligible to activate, producing the long-latency phenotype.
-`K_LATENCY = 0` (tropical) makes activation immediately eligible.
+**Temperate latency.** With `K_LATENCY = k > 0`, a new batch must pass `k` latency stages before
+its hypnozoites can activate, producing the long-latency phenotype (D35). Each day every latent
+hypnozoite dies with probability μ, as in White et al. (2014), and then the batch moves on to the
+next stage with probability δ = `DELTA_LATENCY`. The batch moves through latency as one unit, as
+White et al. also track latency per infection. A hypnozoite therefore survives each stage with
+probability δ(1 − μ) / (1 − (1 − δ)(1 − μ)), close to δ / (δ + μ), and
+
+```
+P(relapse) = [δ(1 − μ) / (1 − (1 − δ)(1 − μ))]^k × alpha / (alpha + mu)
+```
+
+which is **0.480** at `K_LATENCY = 2`, `DELTA_LATENCY = 1/100` and the shipped α, μ, against 0.722
+without latency. The mean time a batch spends latent is k / δ (200 days at k = 2). `K_LATENCY = 0`
+(tropical) makes activation immediately eligible.
 
 **Resurgence boosts.** From `RESURGENCE_TRIGGER_TICK`, `alpha_eff = ALPHA_ACTIVATE ×
 ALPHA_ACTIVATE_BOOST` (clamped so `alpha_eff <= 1 - mu`) and `nu_eff = ν × NU_HYPNOZOITE_BATCH_BOOST`.

@@ -142,3 +142,20 @@ test_that("no blood-stage infection is forced to clear at a fixed age", {
              ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
   expect_lt(sum(d$t1 - d$t0 == 181), 5)   # a 180-day cap cleared about 83% of founders on day 181
 })
+
+test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapses less", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## one pulse of imports, no onward transmission, long enough for every batch to resolve
+  run <- run_sim(vivax_params(N_HOSTS = 300, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 1500,
+                              N_FOUNDERS = 0, IMPORT_TICK = 2, N_IMPORTS = 300,
+                              K_LATENCY = 2L, DELTA_LATENCY = 1 / 100, CHROMOSOMES = "1"),
+                 seed = 3, outdir = file.path(tempdir(), "mfwd_test_latency"))
+  ev <- load_events(run)
+  act  <- ev[event_type == "hypnozoite_activation", sum(n_hypnozoites)]
+  died <- ev[event_type == "hypnozoite_clearance",  sum(n_hypnozoites)]
+  a <- 1 / 170; mu <- 1 / 442; d <- 1 / 100
+  ## each latent day a hypnozoite dies w.p. mu, then the batch moves on w.p. d (two stages)
+  stage <- d * (1 - mu) / (1 - (1 - mu) * (1 - d))
+  expect_gt(act + died, 600)
+  expect_equal(act / (act + died), stage^2 * a / (a + mu), tolerance = 0.05 / 0.48)
+})
