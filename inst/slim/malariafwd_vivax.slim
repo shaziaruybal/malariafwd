@@ -582,6 +582,14 @@ reproduction()
 			if (n_activating > 0)
 			{
 				{
+					// Is a patent clone of the same lineage already in the host? Such a relapse is
+					// counted like any other, but no observer could see it as a recurrence, so the
+					// row says so (D40). A clone born this tick is not visible yet.
+					blood = h.individuals[h.individuals.getValue("is_dormant") == F];
+					into_patent = 0;
+					if (size(blood) > 0)
+						into_patent = asInteger(any((blood.getValue("is_subpatent") == F) &
+							(blood.getValue("lineage_id") == hyp.getValue("lineage_id"))));
 					// A relapse is a clone of the hypnozoite that woke, so it inherits
 					// its originating infection's ancestry and is IBD 1 to it. This
 					// invariant is asserted in inst/validation/audit_events_and_ibd.R.
@@ -616,7 +624,7 @@ reproduction()
 						hyp.pedigreeID,  // parent1_pedigree_id links back to the source batch object
 						// F6: ONE episode row, but n_hypnozoites = the n_activating clonal hypnozoites
 						// it represents (so hypnozoite-activation counts stay correct downstream).
-						-1, n_activating, hyp.getValue("oocyst_id"), rel_detected
+						-1, n_activating, hyp.getValue("oocyst_id"), rel_detected, into_patent
 						);
 
 					// A detected relapse is a case like any other: it gets the same course a
@@ -1154,7 +1162,7 @@ reproduction()
 		"lineage_id", "parent1_lineage_id", "parent2_lineage_id",
 		"is_recombinant", "p_outcross", "recipient", "is_dormant", "is_imported",
 		"pedigree_id", "parent1_pedigree_id", "parent2_pedigree_id", "n_hypnozoites",
-		"oocyst_id", "detected"
+		"oocyst_id", "detected", "into_patent_lineage"
 		), sep="\t"),
 		append=F);
 	
@@ -1620,7 +1628,8 @@ function (void) logEvent(
 	[i$ parent2_pedigree_id = -1],     // pedigreeID of parent2 Individual (recombination source only), -1 if NA
 	[i$ n_hypnozoites = 1],            // count represented by this event; 1 for non-batch events, actual batch/thinning count for hypnozoite batch establishment/activation/death/MDA events
 	[i$ oocyst_id = -1],               // meiosis id shared by a tetrad's products; -1 for founders/imports (no meiosis)
-	[i$ detected = -1])                // detection layer: 1 = detected/reported case, 0 = true-but-undetected episode, -1 = N/A (non-case event)
+	[i$ detected = -1],                // detection layer: 1 = detected/reported case, 0 = true-but-undetected episode, -1 = N/A (non-case event)
+	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage was already in the host (D40), 0 if not; -1 elsewhere
 {
 	defineGlobal("TICK_EVENT_ID", TICK_EVENT_ID + 1); // was LOCAL inside this function, so every event_id was <tick>_1
 	event_id = asString(sim.cycle) + "_" + asString(TICK_EVENT_ID);
@@ -1645,7 +1654,8 @@ function (void) logEvent(
 		asString(parent2_pedigree_id),
 		asString(n_hypnozoites),
 		asString(oocyst_id),
-		asString(detected)
+		asString(detected),
+		asString(into_patent_lineage)
 		), sep="\t");
 
 	writeFile(OUTDIR + "/events.tsv", line, append=T);

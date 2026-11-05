@@ -213,3 +213,33 @@ test_that("a pulse of imports on the first day keeps the founders", {
   expect_equal(ev[event_type == "vh_inoculation_seed", length(unique(human_id))], 12)
   expect_gt(ev[event_type == "vh_inoculation_import" & tick == 1, .N], 0)
 })
+
+test_that("into_patent_lineage marks a relapse into a patent clone of its own lineage", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## treatment failures and an MDA round, so clones are also cleared, suppressed and recrudesce
+  run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 150, SIM_DAYS = 400, CHROMOSOMES = "1",
+                              BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
+                              P_RECRUD_GIVEN_FAIL = 0.5, MDA_TICK = 200, MDA_COVERAGE = 0.5),
+                 seed = 3, outdir = tempfile("mfwd_masked_"))
+  ev <- load_events(run)
+  et <- event_types()
+  ## each blood-stage clone is patent from its onset row to its first row that ends an episode
+  on <- ev[event_type %in% et$event_type[et$is_onset] & is_dormant == 0,
+           .(pedigree_id, human_id, lineage_id, start = tick)]
+  ends <- ev[event_type %in% et$event_type[et$ends_episode], .(end = min(tick)), by = pedigree_id]
+  spans <- merge(on, ends, by = "pedigree_id", all.x = TRUE)
+  act <- ev[event_type == "hypnozoite_activation"]
+  ## an activation runs in reproduction(): it sees clones born on earlier days, and a clone that
+  ## ends on its own day ends after it
+  seen <- vapply(seq_len(nrow(act)), function(i) {
+    s <- spans[human_id == act$human_id[i] & lineage_id == act$lineage_id[i]]
+    as.integer(any(s$start < act$tick[i] & (is.na(s$end) | s$end >= act$tick[i])))
+  }, integer(1))
+  expect_gt(nrow(act), 100)
+  expect_gt(sum(ev$event_type == "recrudescence"), 0)
+  expect_gt(sum(ev$event_type == "mda_bloodstage_clear"), 0)
+  expect_gt(sum(seen), 0)
+  expect_lt(sum(seen), nrow(act))
+  expect_equal(act$into_patent_lineage, seen)
+  expect_true(all(ev[event_type != "hypnozoite_activation", into_patent_lineage] == -1))
+})

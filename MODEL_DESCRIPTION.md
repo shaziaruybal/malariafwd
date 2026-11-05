@@ -276,6 +276,13 @@ Follows the **White et al. 2014** batch model.
 exactly 1. Relative to a host's *prior observed* infection it can be clonal, sibling, half-sibling
 or unrelated — which is the whole point of the identifiability work.
 
+**A relapse can start while a patent clone of its own lineage is still in the host**, most often
+the primary from the same bite or an earlier relapse of the same batch: at the defaults about 85%
+of relapses do. Such a relapse is logged and counted like any other, as a new episode and a new
+acquisition, and the lineage stays patent in the host until all its clones have cleared. No
+observer could see it as a recurrence or as a new clone. Its `hypnozoite_activation` row has
+`into_patent_lineage = 1` (§16.1).
+
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
 > blood-stage genotypes**; at the default (one genotype per bite) both are the same single
@@ -593,6 +600,9 @@ Pv3Rs / Taylor taxonomy. The third is the one a transmission model usually omits
 | **reinfection** | a new mosquito bite, or an importation | a new genome, unrelated or related only through the local population |
 | **relapse** | a hypnozoite activates from the liver | a **new** genome, clonal to the inoculation that seeded the batch |
 | **recrudescence** | a clone that survived a treatment course re-expands to patency | a **new** genome, clonal to the holder it came from |
+
+A relapse that starts while a patent clone of its own lineage is still in the host is a relapse
+too, but it cannot be observed as a recurrence (§5).
 
 **The mechanism.** When a blood-stage course fails on a clone (w.p. `P_BLOODCURE_SURVIVAL`), that
 clone either carries on at full density, or — w.p. `P_RECRUD_GIVEN_FAIL` — is **suppressed below
@@ -1039,6 +1049,7 @@ One row per event. Columns:
 | `n_hypnozoites` | count this row represents (1 for non-batch events; the batch/thinning count otherwise) |
 | `oocyst_id` | the meiosis this product came from |
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
+| `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage was already in the host, 0 if not (§5); −1 on other rows |
 
 **Event vocabulary** — **25 types**. `event_types()` is the authority and returns them as a data
 frame with `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than
@@ -1144,7 +1155,7 @@ of creation in `events.tsv`.
 | prevalence | fraction of hosts with `moi_active > 0` |
 | COI / MOI | `moi_active` among infected hosts |
 | reservoir | mean `hyp_reservoir_size` per host |
-| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence |
+| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) |
 | relapses per person-year | activations ÷ (hosts × years) |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Mueller/Koepfli). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |

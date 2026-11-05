@@ -19,6 +19,30 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D40 — A relapse into a patent clone of its own lineage is counted, and flagged · 2026-11-05 · Accepted
+**Context.** At the defaults about 85% of relapses start while a patent clone of the same lineage
+is already in the host (70-82% in review M3's larger runs). Over four 3-year default runs that
+clone was the primary from the same bite for 43% of them, an earlier relapse of the same batch for
+45%, another batch's relapse for 10% and another inoculation of the lineage for 2%. Each such
+relapse is logged as a new episode and counted by `relapse_fraction()` and the other metrics,
+although no observer could see it as a recurrence.
+**Decision.** The model is kept: a new genome per activation, counted as other relapses are. Each
+`hypnozoite_activation` row gains `into_patent_lineage`: 1 if a patent clone of the same lineage
+was already in the host, 0 if not (-1 on other rows). In Phase B, `classify_cases()`,
+`relapse_fraction()` and `force_of_infection()` gain `exclude_masked = FALSE`, and the 0.55-0.85
+relapse band is compared with the acquisitions reading with these relapses left out.
+**Rejected.** Merging such an activation into the ongoing clone. It would change every run, and
+the flag gives each analysis both readings.
+**Consequences.** `events.tsv` gains a last column; its other columns, and every other output, are
+byte-identical.
+**How to verify.** `tests/testthat/test-run.R` rebuilds each host's patent clones from
+`events.tsv` in a run with treatment failures, recrudescence and an MDA round, and the flag
+matches on every activation. It also matched on all 1,331 activations of eight other runs
+(defaults, treatment failures, MDA, temperate latency, imports with `MAX_MOI = 3`). At the
+defaults, 86% of 11,676 activations over eight 3-year runs are flagged.
+
+---
+
 ## D39 — IMPORT_TICK = 1 is an ordinary pulse · 2026-11-05 · Accepted
 **Context.** `IMPORT_TICK = 1` created every host empty, silently dropping `N_FOUNDER_HOSTS` and
 `N_FOUNDER_LINEAGES` whether or not `N_IMPORTS > 0`: a pulse on the first day turned the run into a
