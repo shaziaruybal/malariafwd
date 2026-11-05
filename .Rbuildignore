@@ -17,3 +17,7 @@
 ^ignore$
 ^dev$
 ^\.claude$
+^runs$
+^output$
+^.*\.Rcheck$
+^.*\.tar\.gz$

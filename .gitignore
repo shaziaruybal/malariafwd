@@ -1,26 +1,26 @@
+# R and RStudio
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
 .DS_Store
+
+# build and check products
 *.tar.gz
-# R CMD check output: a full stale DUPLICATE of the package, ~99 MB. It was swept in by a
-# `git add -A` run while a check was on disk, and every grep of the repo then found two
-# copies of every file - the live one and a stale one under here.
-# simulation OUTPUT written by the examples, vignettes and quickstart.R - these are products
-# of running the package, not part of it (~45 MB of state.tsv / plasmo.trees)
-runs/
-quickstart-runs/
-
-# agent-local working files; nothing under here belongs in the package or its history
-.claude/
-
-malariafwd.Rcheck/
 *.Rcheck/
 inst/doc
 /doc/
 /Meta/
+
+# the pkgdown site is built into docs/ locally; CI deploys it to the gh-pages branch
+docs/
+
+# simulation output written by the examples, the vignettes, quickstart.R, or the model run
+# directly with slim; these are products of running the package, not part of it
+runs/
+output/
 quickstart-output/
 
-# dev scratch: notes, scoping docs, exploratory scripts - never shipped, never tracked
+# agent-local working files and dev scratch: never shipped, never tracked
+.claude/
 ignore/
