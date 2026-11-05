@@ -246,7 +246,7 @@ initialize() {
 
 	// ── DERIVED CONSTANTS (always computed from above) ────────────
 	defineConstant("MU_MOSQ",       1/MOSQ_LIFESPAN); // daily mosquito mortality rate
-	defineConstant("P_BLOOD_CLEAR", 1 - exp(-1/MEAN_BLOOD_STAGE_DURATION)); // daily clearance prob
+	defineConstant("P_BLOOD_CLEAR", 1/MEAN_BLOOD_STAGE_DURATION); // daily clearance prob: a geometric duration, mean MEAN_BLOOD_STAGE_DURATION days
 	// N_OOCYSTS_PER_BITE is retired (it capped LINEAGES per bite, not oocysts).
 	if (N_OOCYSTS_PER_BITE != 1)
 		stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES (zero-truncated count of oocyst products per bite) instead.");

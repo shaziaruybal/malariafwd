@@ -17,6 +17,13 @@ Returns a named list of all model parameters, starting from the defaults (which
 mirror the SLiM model) and overriding any you name. \code{SEED} and \code{OUTDIR} are set by
 \code{\link[=run_sim]{run_sim()}}, not here.
 }
+\details{
+Time is in days: one model tick is one day. A duration parameter \code{D} (such as
+\code{MEAN_BLOOD_STAGE_DURATION} or \code{MOSQ_LIFESPAN}) is the mean of a geometric duration: the
+event happens each day with probability \code{1/D}. Rates (\code{BITING_RATE}, \code{ALPHA_ACTIVATE},
+\code{MU_HYPNOZOITE}, \code{DELTA_LATENCY}) are daily probabilities; a mosquito bites at most once
+a day, so \code{BITING_RATE} times its seasonal and resurgence multipliers is capped at 1.
+}
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
 }

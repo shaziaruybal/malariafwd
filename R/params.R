@@ -59,6 +59,12 @@
 #' mirror the SLiM model) and overriding any you name. `SEED` and `OUTDIR` are set by
 #' [run_sim()], not here.
 #'
+#' Time is in days: one model tick is one day. A duration parameter `D` (such as
+#' `MEAN_BLOOD_STAGE_DURATION` or `MOSQ_LIFESPAN`) is the mean of a geometric duration: the
+#' event happens each day with probability `1/D`. Rates (`BITING_RATE`, `ALPHA_ACTIVATE`,
+#' `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a mosquito bites at most once
+#' a day, so `BITING_RATE` times its seasonal and resurgence multipliers is capped at 1.
+#'
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
 #' @return An object of class `vivax_params` (a named list).
 #' @examples
@@ -97,6 +103,11 @@ validate_params <- function(p) {
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
   for (pr in c("LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
+  peak_bite <- p$BITING_RATE * (1 + abs(p$SEASONAL_AMP)) * max(1, p$BITING_RATE_BOOST)
+  if (peak_bite > 1)
+    warning("BITING_RATE x (1 + SEASONAL_AMP) x BITING_RATE_BOOST reaches ", signif(peak_bite, 3),
+            ", but a mosquito bites at most once a day, so the realised biting rate is capped ",
+            "below what BITING_RATE implies.", call. = FALSE)
   if (p$N_OOCYSTS_PER_BITE != 1)
     stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES instead.", call. = FALSE)
   if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))

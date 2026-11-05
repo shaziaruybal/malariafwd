@@ -65,3 +65,17 @@ test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
   expect_error(run_sim(vivax_params(), seed = 1, outdir = tempfile(), model = tiny),
                "did not write")
 })
+
+test_that("blood-stage infections last a geometric time with mean MEAN_BLOOD_STAGE_DURATION days", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  # founders only: they carry no hypnozoites, and a single mosquito almost never bites
+  run <- run_sim(vivax_params(N_HOSTS = 1000, N_FOUNDERS = 1000, N_FOUNDER_HOSTS = 1000,
+                              N_FOUNDER_LINEAGES = 1000, N_MOSQ = 1, BITING_RATE = 1e-6,
+                              MEAN_BLOOD_STAGE_DURATION = 2, SIM_DAYS = 40),
+                 seed = 6, outdir = file.path(tempdir(), "mfwd_test_clearance"))
+  ev <- load_events(run)
+  d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
+             ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
+  expect_gt(nrow(d), 900)
+  expect_lt(abs(mean(d$t1 - d$t0) - 2), 0.15)   # a daily probability of 1 - exp(-1/2) gives 2.54
+})

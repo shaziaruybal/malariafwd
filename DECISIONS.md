@@ -19,6 +19,34 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D29 — Durations are geometric with daily probability 1/D · 2026-11-05 · Accepted
+**Context.** Duration parameters were turned into daily probabilities in two different ways.
+Blood-stage clearance used `1 - exp(-1/MEAN_BLOOD_STAGE_DURATION)`, a continuous-time rate made
+discrete, while mosquito death used `1/MOSQ_LIFESPAN`, and biting, hypnozoite activation,
+hypnozoite death and exit from latency were daily probabilities already. Under the exponential
+form the mean blood-stage infection lasted 60.5 days rather than the 60 the parameter states.
+Separately, a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and
+resurgence multipliers above 1 was clipped at the peak and the realised mean fell below
+`BITING_RATE`, without any warning.
+**Decision.** Every duration parameter D is the mean of a geometric duration: the event happens
+each day with probability 1/D. Blood-stage clearance becomes `1/MEAN_BLOOD_STAGE_DURATION`.
+`validate_params()` warns when `BITING_RATE * (1 + |SEASONAL_AMP|) * max(1, BITING_RATE_BOOST)`
+exceeds 1. The convention is stated once, in `?vivax_params` and `MODEL_DESCRIPTION.md` §10.
+**Rationale.** One reading for every duration parameter, and each parameter means what it says.
+A daily clearance probability of 1/60 is White et al. (2014)'s clearance rate (Table 1, after
+Collins et al. 2003) applied per day.
+**Alternatives rejected.** *Convert every duration with `1 - exp(-1/D)`* -- natural for an ODE
+model, but this model steps in days and its other processes already use daily probabilities.
+*Lift the one-bite-a-day cap* -- a mosquito takes at most one blood meal a day here.
+**Consequences.** At the defaults the mean blood-stage infection shortens from 60.5 to 60 days,
+so every run's output changes; the calibration bands are re-checked before the release.
+Mosquito death, biting, activation, hypnozoite death and latency exit are unchanged.
+**How to verify.** With founders only (no hypnozoites, no transmission) and
+`MEAN_BLOOD_STAGE_DURATION = 2`, founder infections last 2 days on average; the exponential form
+gives 2.54 (`tests/testthat/test-run.R`).
+
+---
+
 ## D28 — MDA keeps its place and gains a coverage parameter · 2026-10-23 · Accepted
 **Context.** An early step map proposed withdrawing MDA from the pre-release. The strongest reason
 given was that it reused `P_RAD_SURVIVAL`, whose meaning changed in D20, so the two paths would

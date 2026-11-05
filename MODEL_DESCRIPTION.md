@@ -179,12 +179,14 @@ transmission-blocking immunity, and no age structure. This is a deliberate scope
 would confound the genetic signals the model exists to measure, and vivax immunity parameters are
 poorly identified. It is the single largest simplification in the model (§11, §14).
 
-**Blood-stage duration** is geometric (discrete-time exponential): each active lineage clears
-independently each day with probability
+**Blood-stage duration** is geometric: each active lineage clears independently each day with
+probability
 
 ```
-P_BLOOD_CLEAR = 1 - exp(-1 / MEAN_BLOOD_STAGE_DURATION)     # = 0.01653 at 60 days
+P_BLOOD_CLEAR = 1 / MEAN_BLOOD_STAGE_DURATION     # = 0.01667 at 60 days: mean duration 60 days
 ```
+
+This is White et al. (2014)'s clearance rate r = 1/60 per day, used as a daily probability.
 
 with a hard ceiling `MAX_BROOD_AGE` = 180 days. Clearance is **per-lineage**, so a polyclonal host
 loses lineages independently and MOI decays rather than collapsing at once.
@@ -207,7 +209,7 @@ Standard S_v → E_v → I_v, with:
   directly — a frequent source of confusion when comparing to the literature.
 - **Transmission probabilities:** `P_TRANS_VH` = 0.5 (`b`, bite infects human),
   `P_TRANS_HV` = 0.5 (`c`, mosquito infected by biting an infected human).
-- **Lifespan:** exponential, mean `MOSQ_LIFESPAN` = 10 days.
+- **Lifespan:** geometric, mean `MOSQ_LIFESPAN` = 10 days (daily death probability 1/10).
 - **EIP:** **fixed** at `EIP_DAYS` = 10 days — not temperature-dependent, not distributed.
 - **Carrying capacity:** `MAX_BROODS_PER_MOSQ` = 20 lineages; uptake is skipped above it. No
   fitness cost of burden (mortality and transmissibility do not decline with parasite load).
@@ -622,6 +624,10 @@ chloroquine or artesunate. The state is only material in a chloroquine-resistant
 
 ## 10. Parameters
 
+Time is in days (one tick is one day). A duration parameter D is the mean of a geometric
+duration: the event happens each day with probability 1/D. Rates (`BITING_RATE`,
+`ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a mosquito bites at
+most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers is capped at 1.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -637,11 +643,11 @@ derived and written to `params.tsv` for provenance.
 | `BITING_RATE` | 0.1 | per-**mosquito** daily biting probability |
 | `P_TRANS_VH` | 0.5 | `b` |
 | `P_TRANS_HV` | 0.5 | `c` |
-| `MOSQ_LIFESPAN` | 10 d | exponential |
+| `MOSQ_LIFESPAN` | 10 d | geometric (daily death probability 1/10) |
 | `EIP_DAYS` | 10 d | fixed |
 | `MAX_MOI` | 20 | superinfection gate (relapses bypass) |
 | `MAX_BROODS_PER_MOSQ` | 20 | mosquito lineage cap |
-| `MEAN_BLOOD_STAGE_DURATION` | 60 d | |
+| `MEAN_BLOOD_STAGE_DURATION` | 60 d | geometric (daily clearance probability 1/60; White et al. 2014) |
 | `MAX_BROOD_AGE` | 180 d | ceiling |
 
 ### Hypnozoite reservoir

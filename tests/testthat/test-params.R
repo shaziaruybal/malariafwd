@@ -111,3 +111,8 @@ test_that("run_sim() refuses a seed that is not a single whole number", {
   expect_error(run_sim(seed = 2.5, outdir = tempfile()), "`seed` must be a single whole number")
   expect_error(run_sim(seed = 2^31, outdir = tempfile()), "`seed` must be a single whole number")
 })
+
+test_that("a biting rate that would exceed one bite per mosquito per day warns", {
+  expect_warning(vivax_params(BITING_RATE = 0.8, SEASONAL_AMP = 0.5), "bites at most once a day")
+  expect_no_warning(vivax_params())
+})
