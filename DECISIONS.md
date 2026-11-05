@@ -19,6 +19,48 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D34 — Outcrossed oocysts undergo per-chromosome four-strand meiosis · 2026-11-05 · Accepted
+**Context.** `seedTetrad()` built the four products of an outcrossed oocyst as two reciprocal
+recombinants from one breakpoint draw plus two whole-genome copies of the parents. That applies a
+single chromosome's tetrad to the whole genome. Half the products saw no crossover and no
+independent assortment, the realised map averaged half the documented 17.9 M per product, a third
+of same-oocyst pairs shared nothing, and the parental copies carried their parents' lineage onward
+(review M1).
+**Decision.** Per-chromosome four-strand meiosis without chromatid interference, as checked against
+Walliker et al. (2005) and Camponovo et al. (2023). The zygote's two genomes replicate into four
+chromatids per chromosome. Chiasmata fall at the union of two gamete-rate breakpoint draws, a
+Poisson set with twice the per-product map length, within each chromosome; each joins a random
+chromatid of each parent at that locus. The four chromatids of each chromosome then go to the four
+products at random, independently across chromosomes. No obligate chiasma is imposed: neither
+source claims one, and its effect is negligible. A product with no switch at all, about one in
+2^13, is a copy of its starting parent and keeps that parent's lineage; every other product is a
+fresh lineage. Selfed oocysts are unchanged. The chromosome starts on D2's concatenated map are
+recorded as `CHROM_STARTS`.
+**Rationale.** This is Plasmodium meiosis. Every product carries the full map and assorts its 14
+chromosomes independently, two products carry each parent's allele at every locus, and any two
+products of one oocyst share about a third of the genome (sd about 0.08, 5-95% about 0.21-0.47),
+none sharing nothing. The ground truth that IBD and relatedness methods are scored against is then
+the biology rather than an artefact of the tetrad.
+**Supersedes.** D2's validation sentence that the same-oocyst distribution "tightens toward the
+centre (0.4-0.8)"; D2's concatenated map stands.
+**Alternatives rejected.** *Two independent reciprocal pairs* -- this restores the map length and
+removes the parental copies, but two of the six same-oocyst pairs still share nothing by
+construction. *An obligate chiasma per bivalent* -- no source supports it for P. vivax, and it
+would barely change the map.
+**Consequences.** Every run with an outcrossed oocyst changes, through the products and the random
+stream; runs in which every oocyst is selfed are unchanged. Same-oocyst IBD is unimodal around 1/3
+instead of split between 0 and about 1/2, and inoculated genotypes are no longer half parental
+copies, so counts of distinct lineages can rise. The README karyotype figure and the observed
+values in MODEL_DESCRIPTION section 13 come from the earlier tetrad and are regenerated with the
+release (M33).
+**How to verify.** `tests/testthat/test-model-invariants.R` runs the model's own `seedTetrad()` on
+the PvP01 map for 400 tetrads: two products carry each parent's allele at every probe locus, none
+is a whole-genome copy of a parent, no same-oocyst pair shares nothing, and the mean pair share is
+within 0.02 of 1/3. `inst/validation/audit_arg_junctions.R` shows the IBD state of sibling pairs
+uncorrelated across junctions and correlated within chromosomes.
+
+---
+
 ## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted
 **Context.** A search of the model's random draws, empty vectors, parameter edges and arithmetic
 found about seventeen ways for a run to stop part-way with an Eidos error, or never finish, on

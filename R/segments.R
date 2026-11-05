@@ -273,7 +273,7 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
 #' IBD by known true relationship, against the textbook rungs (0 unrelated, 1/4 half-sib,
 #' 1/3 the mean over a meiotic tetrad, 1/2 full-sib, 1 clonal). The model-validation view:
 #' clonal relationships should sit at 1, distinct founders at 0, and same-oocyst siblings
-#' should split between ~1/2 and 0 (reciprocal recombinants share nothing).
+#' around 1/3 (any two products of one meiosis; none shares nothing).
 #'
 #' @param pairs output of [ibd_truth_pairs()].
 #' @param style `"points"` plots every pair against the theoretical rungs; `"bars"` shows the
@@ -294,8 +294,7 @@ plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
     ## Most relationship classes are POINT MASSES (relapses are always IBD 1, distinct founders
     ## always 0), so a box or a crossbar collapses to a line and implies a spread that is not
     ## there. Binning into relatedness bands and showing composition is honest about that, and
-    ## shows the one genuinely interesting split -- same-oocyst sibs, which divide between high
-    ## sharing and the reciprocal products that share nothing.
+    ## shows where same-oocyst sibs fall, around a third.
     brk <- c(-Inf, 1e-9, 0.25, 0.40, 0.60, 1 - 1e-9, Inf)
     lab <- c("0 (unrelated)", "(0, 1/4]", "(1/4, 0.4]", "(0.4, 0.6]", "(0.6, 1)", "1 (clonal)")
     d <- data.table::copy(pairs)[, band := cut(ibd, brk, labels = lab, right = TRUE)]

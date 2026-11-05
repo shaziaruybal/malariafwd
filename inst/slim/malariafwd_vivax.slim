@@ -406,10 +406,11 @@ initialize() {
 	within_r = (RECOMB_RATE > 0) ? RECOMB_RATE else 7.4e-7;
 
 	// build the concatenated recombination map: within-chr rate + 0.5 at each junction
-	rec_ends = integer(0); rec_rates = float(0); gpos = 0;
+	rec_ends = integer(0); rec_rates = float(0); gpos = 0; chr_starts = integer(0);
 	for (i in seqAlong(chrlens))
 	{
 		L = chrlens[i];
+		chr_starts = c(chr_starts, gpos);
 		if (i > 0)  // 1-bp junction to the previous chromosome (independent assortment)
 		{
 			rec_ends = c(rec_ends, gpos);
@@ -420,6 +421,8 @@ initialize() {
 		gpos = gpos + L;
 	}
 	defineConstant("GENOME_LENGTH", gpos);
+	// first position of each chromosome on the concatenated map; seedTetrad() assorts at these
+	defineConstant("CHROM_STARTS", chr_starts);
 	defineConstant("N_CHROMOSOMES", size(chrlens));
 	defineConstant("RECOMB_WITHIN", within_r);
 
@@ -2413,37 +2416,85 @@ function (integer$) seedSelfedOocyst(o<Subpopulation>$ m, o<Individual>$ parent,
 	return lineage;
 }
 
-// OUTCROSSING oocyst - a full meiotic TETRAD of 4 haploid products sharing
-// one oocyst_id:
-//   R12, R21  reciprocal recombinants (SAME breakpoints) - fresh lineages
-//   P1c, P2c  parental clones - inherit each parent's lineage
-// With no crossover that meiosis (breaks empty) R12/R21 are just parental copies,
-// so they inherit the parent lineage too (keeps lineage_id == genome identity).
+// OUTCROSSING oocyst - a full meiotic TETRAD of 4 haploid products sharing one oocyst_id, by
+// per-chromosome four-strand meiosis (D34). The zygote's two genomes replicate into four
+// chromatids per chromosome (two from each parent). Chiasmata fall at a Poisson(2d) set of points
+// per bivalent, the union of two gamete-rate draws, so that each product keeps the map length d;
+// each chiasma joins a random chromatid of parent1 and a random chromatid of parent2 at that
+// locus. Then the four chromatids of each chromosome go to the four products at random,
+// independently of the other chromosomes. A product with no switch at all is a whole copy of its
+// starting parent and inherits that parent's lineage (keeps lineage_id == genome identity); every
+// other product is a fresh lineage.
 function (integer) seedTetrad(o<Subpopulation>$ m, o<Individual>$ parent1, o<Individual>$ parent2, s$ color, i$ oocyst, i$ brood)
 {
-	breaks = sim.chromosome.drawBreakpoints();
-	has_xover = (size(breaks) > 0);
-
-	r12 = m.addRecombinant(parent1.haplosomes, parent2.haplosomes, breaks, NULL, NULL, NULL, parent1=parent1, parent2=parent2, randomizeStrands=F);
-	r21 = m.addRecombinant(parent2.haplosomes, parent1.haplosomes, breaks, NULL, NULL, NULL, parent1=parent2, parent2=parent1, randomizeStrands=F);
-	p1c = m.addCloned(parent1);
-	p2c = m.addCloned(parent2);
-
-	r12_lin = has_xover ? r12.pedigreeID else parent1.getValue("lineage_id");
-	r21_lin = has_xover ? r21.pedigreeID else parent2.getValue("lineage_id");
-
-	tagMosqProduct(r12, r12_lin, oocyst, brood, color);
-	tagMosqProduct(r21, r21_lin, oocyst, brood, color);
-	tagMosqProduct(p1c, parent1.getValue("lineage_id"), oocyst, brood, "indianred3");
-	tagMosqProduct(p2c, parent2.getValue("lineage_id"), oocyst, brood, "indianred3");
-
-	return c(r12_lin, r21_lin, parent1.getValue("lineage_id"), parent2.getValue("lineage_id"));
+	n_chr = size(CHROM_STARTS);
+	chi = c(sim.chromosome.drawBreakpoints(), sim.chromosome.drawBreakpoints());
+	// within-chromosome chiasmata only (the junction draws are not chiasmata), once each
+	chi = sort(unique(chi[match(chi, CHROM_STARTS) < 0]));
+	chr_of = findInterval(chi, CHROM_STARTS);
+	breaks = Dictionary();
+	for (k in 0:3)
+		breaks.setValue(asString(k), integer(0));
+	start_parent = integer(4);   // 0: product k starts on parent1's genome, 1: on parent2's
+	last_parent = integer(4);    // the parent product k ends the previous chromosome on
+	for (ch in 0:(n_chr - 1))
+	{
+		// chromatids 0, 1 start on parent1 and 2, 3 on parent2; on_parent tracks each one's
+		// current parent as the chiasmata along this chromosome swap them
+		on_parent = c(0, 0, 1, 1);
+		swaps = Dictionary();
+		for (s in 0:3)
+			swaps.setValue(asString(s), integer(0));
+		for (x in chi[chr_of == ch])
+		{
+			a = sample(which(on_parent == 0), 1);
+			b = sample(which(on_parent == 1), 1);
+			swaps.setValue(asString(a), c(swaps.getValue(asString(a)), x));
+			swaps.setValue(asString(b), c(swaps.getValue(asString(b)), x));
+			on_parent[a] = 1;
+			on_parent[b] = 0;
+		}
+		to_product = sample(0:3, 4);   // chromatid to_product[k] goes to product k
+		for (k in 0:3)
+		{
+			s = to_product[k];
+			first = (s < 2) ? 0 else 1;
+			bk = breaks.getValue(asString(k));
+			if (ch == 0)
+				start_parent[k] = first;
+			else if (first != last_parent[k])
+				bk = c(bk, CHROM_STARTS[ch]);   // the product changes parent at the junction
+			bk = c(bk, swaps.getValue(asString(s)));
+			breaks.setValue(asString(k), bk);
+			last_parent[k] = integerMod(first + size(swaps.getValue(asString(s))), 2);
+		}
+	}
+	lineages = integer(0);
+	for (k in 0:3)
+	{
+		bk = breaks.getValue(asString(k));
+		if (start_parent[k] == 0)
+		{
+			prod = m.addRecombinant(parent1.haplosomes, parent2.haplosomes, bk, NULL, NULL, NULL, parent1=parent1, parent2=parent2, randomizeStrands=F);
+			copy_of = parent1;
+		}
+		else
+		{
+			prod = m.addRecombinant(parent2.haplosomes, parent1.haplosomes, bk, NULL, NULL, NULL, parent1=parent2, parent2=parent1, randomizeStrands=F);
+			copy_of = parent2;
+		}
+		is_copy = (size(bk) == 0);
+		lineage = is_copy ? copy_of.getValue("lineage_id") else prod.pedigreeID;
+		tagMosqProduct(prod, lineage, oocyst, brood, is_copy ? "indianred3" else color);
+		lineages = c(lineages, lineage);
+	}
+	return lineages;
 }
 
 // -------------------------------------------------------
 // MODEL STRUCTURE: 1 SLiM Individual = 1 parasite genome = 1 lineage member.
-//   - An outcrossing meiosis (one oocyst) yields a TETRAD of 4 products (2 reciprocal
-//     recombinants + 2 parental clones) sharing one oocyst_id (see seedTetrad()).
+//   - An outcrossing meiosis (one oocyst) yields a TETRAD of 4 products, each recombined by
+//     per-chromosome four-strand meiosis, sharing one oocyst_id (see seedTetrad()).
 //   - A selfing meiosis yields one clonal product (seedSelfedOocyst()).
 //   - lineage_id is the genetic identity (clonal group); COI counts distinct lineage_id.
 //   - oocyst_id groups tetrad sibs; brood_id groups co-hatching oocysts of one uptake.

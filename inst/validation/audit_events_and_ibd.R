@@ -175,8 +175,8 @@ audit_run <- function(tag, params, seed = 1) {
   }
 
   ## DISTINCT FOUNDER lineages are independent genome roots -> must be ~unrelated.
-  ## (A general cross-lineage test is not meaningful: reciprocal recombinants from one
-  ## tetrad get different lineage_ids but are genuinely ~50% related.)
+  ## (A general cross-lineage test is not meaningful: the products of one tetrad get
+  ## different lineage_ids but share about a third of the genome.)
   fnd <- ev[event_type == "vh_inoculation_seed", .(ped = pedigree_id[1]), by = lineage_id]
   fnd <- fnd[ped %in% idx$nm$pedigree_id]
   if (nrow(fnd) >= 3) {

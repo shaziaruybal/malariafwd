@@ -35,18 +35,15 @@ Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes p
 so 66% of blood-stage episodes are relapses**, and the gap widens through the run as the reservoir
 accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
 area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
-relationship classes are point masses, and the one informative split — same-oocyst siblings
-dividing 50/50 between high sharing and the reciprocal products that share nothing — is only
-legible this way. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
+relationship classes are point masses, while same-oocyst siblings spread around a third of the
+genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
 `plot_relapse_km()` the time-to-first-relapse curve.)
 
 ![IBD karyotype](man/figures/README-ibd-karyotype.png)
 
 Ground-truth IBD read from the ARG, painted along the 14 PvP01 chromosomes. A relapse is clonal to
-its originating hypnozoite (IBD 1.00); same-oocyst siblings share a **mosaic** with visible
-crossover breakpoints (0.76); the reciprocal recombinant of that same meiosis shares **nothing**
-(0.00), because reciprocal products are complementary by construction; distinct founders likewise
-share nothing.
+its originating hypnozoite (IBD 1.00); two products of one oocyst share a **mosaic** with visible
+crossover breakpoints, about a third of the genome on average; distinct founders share nothing.
 
 **Demonstrating the observation layer.** The same configuration rerun with
 `P_DETECT_PRIMARY = 0.60` and `P_DETECT_RELAPSE = 0.15` — relapses are often sub-patent, so a
@@ -355,8 +352,11 @@ two distinct lineages" did not.
 > `computeOutcrossingProb()` (Simpson) still exists but is **logged only**, as the `p_outcross`
 > column. It no longer drives anything.
 
-**Meiosis.** An outcrossed oocyst yields a full **tetrad**: two reciprocal recombinants (R12, R21,
-sharing breakpoints and therefore IBD 0 to each other) plus two parental clones. A selfed oocyst
+**Meiosis.** An outcrossed oocyst yields a full **tetrad** by per-chromosome four-strand meiosis
+(D34): the zygote's two genomes replicate into four chromatids per chromosome, chiasmata each join a
+random chromatid of each parent, and the four chromatids of each chromosome go to the four products
+at random, independently across chromosomes. Every product carries the full map of crossovers, and
+none is a copy of a parent. A selfed oocyst
 yields four identical products, stored as **one** object with `spz_weight = 4` — a storage
 optimisation that keeps object count from scaling with clonal output, corrected for at sampling.
 
@@ -415,10 +415,12 @@ is a strict superset. Use `uptake_moments(lambda, k)` to see what a setting prod
 
 ### 6.2 Tetrad genetics and the expected IBD ladder
 
-Every oocyst produces four meiotic products. For an **outcrossed** oocyst these are
-`{R12, R21, P1c, P2c}` — two reciprocal recombinants sharing the same breakpoints, plus clones of
-each parent. Reciprocity is the key structural fact: **R12 and R21 inherit complementary segments,
-so they share nothing.**
+Every oocyst produces four meiotic products. For an **outcrossed** oocyst each is a mosaic of the
+two parents. Chiasmata fall at Poisson points, twice the per-product map length per bivalent, and
+each joins a random chromatid of each parent at that locus. The four chromatids of each chromosome
+then go to the four products at random. So at every locus two of the four products carry each
+parent's allele (2:2 segregation), each chromosome assorts independently, and every product
+carries the documented 17.9 M of within-chromosome crossovers.
 
 Expected IBD, used throughout as a validation ladder:
 
@@ -426,16 +428,13 @@ Expected IBD, used throughout as a validation ladder:
 |---|---|---|
 | a lineage with itself / a clone | **1.000** | verified exact |
 | relapse vs its originating hypnozoite | **1.000** | `addCloned`; verified |
-| reciprocal recombinant pair (R12, R21) | **0** | complementary by construction |
-| recombinant vs parental clone, same oocyst | ~1/2 | |
-| **mean over same-oocyst pairs** | **~1/3** | measured 0.371 mean / 0.332 median on one chromosome |
+| any two products of one oocyst | **~1/3** | sd ~0.08 on the PvP01 map; no pair shares nothing |
 | full siblings (same two parents, different oocysts) | 1/2 | |
 | half siblings (one parent shared) | 1/4 | |
 | unrelated founders | 0 | independent roots |
 
-Under one chromosome the same-oocyst distribution is **bimodal** (near 0 or near 1); with all 14
-chromosomes and independent assortment it **tightens toward the centre** (0.4–0.8), which is the
-signature used to verify that assortment is working.
+With all 14 chromosomes the same-oocyst distribution is **unimodal around 1/3** (5–95%: about
+0.21–0.47), because each chromosome assorts independently; on a single chromosome it is far wider.
 
 ### 6.3 Recombination
 
@@ -904,7 +903,7 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | temperate latency delays first relapse | median **142 d** vs **46 d** tropical |
 | multi-oocyst uptake → more outcrossing | 7.6% vs 6.6% |
 | all three importation modes produce imports | 184 / 1,535 / 64 |
-| `MAX_MOI` caps COI | COI 1.91 at `MAX_MOI = 2` |
+| `MAX_MOI` gates superinfection (relapses bypass it) | COI 2.04 at `MAX_MOI = 2`, 5.05 without |
 | detection layer thins the observed list only | baseline 315/315 detected |
 | `GENOME_MODE = "core"` shortens the genome | 21.8 vs 24.2 Mb |
 | `CHROMOSOMES` subset | 3 chromosomes simulated |
@@ -920,15 +919,10 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | within-chromosome breakpoint position uniform | KS p > 0.05 | **D = 0.004, p = 0.289** |
 | junction behaves as `r = 0.5` (independent assortment) | φ ≈ 0 | **φ = −0.002** at 50.7% co-inheritance |
 | within-chromosome control (r = 0.148 over 200 kb) | φ high | **φ = 0.770** at 88.8% |
-| IBD segment length between same-oocyst sibs | mean ≈ 1/r = 1.35 Mb | mean 0.89 Mb, median 0.62 Mb |
 
 The junction-vs-control contrast (φ = −0.002 against 0.770) is the direct evidence that
 independent assortment is working — a junction transmits chromosomes independently while a
 within-chromosome control at 200 kb stays tightly linked.
-
-> The segment-length shortfall (0.89 vs 1.35 Mb expected) is an **expected censoring artefact**,
-> not a defect: segments are truncated at chromosome ends, which shortens the realised mean. Worth
-> re-checking if it ever drifts further.
 
 ### What is calibrated and what is not
 
@@ -1114,9 +1108,9 @@ has caught someone out:
 **Tetrad product lineages are recorded, despite the `NA` in the event row.** §16.1 notes that
 `hv_uptake_recombinant` logs `lineage_id = NA` because one row cannot name four products. Those
 four ids are nonetheless assigned by `seedTetrad()` and show up in `state.tsv` as soon as the
-mosquito carries them: a brood of `156|157|36|101` is two fresh recombinant lineages (156, 157)
-alongside the two parental ones (36, 101). So the per-product identities are observable — they
-are simply in `state.tsv` rather than at the moment of creation in `events.tsv`.
+mosquito carries them: a brood of `156|157|158|159` is four fresh recombinant lineages. So the
+per-product identities are observable — they are simply in `state.tsv` rather than at the moment
+of creation in `events.tsv`.
 
 ### 16.3 Derived metrics
 
@@ -1224,7 +1218,7 @@ than one segment.
 | **lineage** | a genetic identity / clonal group. Propagates through clonal, parental and selfed descent; recombinants mint a new one. **COI counts distinct lineages.** |
 | **brood** | one blood meal's co-hatching group of oocysts (≥ 1 oocyst) |
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
-| **tetrad** | the four products of one meiosis: 2 reciprocal recombinants + 2 parental clones |
+| **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
 | **episode** | one **patent** blood-stage infection event: primary, relapse or recrudescence. A clone suppressed below patency is not an episode while it is suppressed |
 | **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence. All three are represented (§9a) |

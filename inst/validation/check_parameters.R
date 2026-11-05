@@ -199,6 +199,7 @@ R2 <- rbindlist(lapply(names(cfg2 <- list(
   import_pulse  = list(IMPORT_TICK = 150L, N_IMPORTS = 20L),
   no_history    = list(RETAIN_FULL_HISTORY = FALSE),
   maxmoi_cap    = list(BITING_RATE = 0.25, MAX_MOI = 2L),
+  maxmoi_free   = list(BITING_RATE = 0.25),
   ## the realistic composite: leaky border + control programme + full case management
   china_like    = list(IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.08,
                        INTERVENTION_START = 120L, INTERVENTION_END = 300L,
@@ -249,7 +250,10 @@ ok("all three importation modes produce imports",
            h("imports_fixed","imported"), h("import_pulse","imported")))
 ok("RETAIN_FULL_HISTORY = FALSE still runs", h("no_history","cases") > 0,
    sprintf("%d cases (IBD-to-prior not guaranteed in this mode)", h("no_history","cases")))
-ok("MAX_MOI caps COI", h("maxmoi_cap","coi") <= 2.0, sprintf("COI %.2f with MAX_MOI = 2", h("maxmoi_cap","coi")))
+## MAX_MOI gates superinfection: a host at the cap takes no new inoculation, but relapses bypass
+## the gate, so COI is lowered rather than capped
+ok("MAX_MOI gates superinfection", h("maxmoi_cap","coi") < h("maxmoi_free","coi"),
+   sprintf("COI %.2f with MAX_MOI = 2 vs %.2f without", h("maxmoi_cap","coi"), h("maxmoi_free","coi")))
 ok("composite China-like scenario runs and exercises every lever",
    h("china_like","imported") > 0 && h("china_like","treated") > 0 && h("china_like","cases") > 0,
    sprintf("%d cases, %d imported, %d treated", h("china_like","cases"),

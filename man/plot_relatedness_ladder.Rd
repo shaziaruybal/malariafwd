@@ -21,7 +21,7 @@ a ggplot object.
 IBD by known true relationship, against the textbook rungs (0 unrelated, 1/4 half-sib,
 1/3 the mean over a meiotic tetrad, 1/2 full-sib, 1 clonal). The model-validation view:
 clonal relationships should sit at 1, distinct founders at 0, and same-oocyst siblings
-should split between ~1/2 and 0 (reciprocal recombinants share nothing).
+around 1/3 (any two products of one meiosis; none shares nothing).
 }
 \examples{
 \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}

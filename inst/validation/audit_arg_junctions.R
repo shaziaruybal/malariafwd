@@ -4,7 +4,7 @@
 ##      one breakpoint however many meioses crossed there. The real test is whether IBD state
 ##      DECORRELATES across a junction, while staying correlated over the same bp distance
 ##      within a chromosome.
-##  (2) WHY same-oocyst sibs are sometimes IBD = 0 -- the tetrad structure.
+##  (2) how much the products of one meiosis share: about a third, and never nothing.
 suppressMessages({
   library(malariafwd)
   library(data.table); library(ggplot2); library(patchwork); library(reticulate)
@@ -27,40 +27,39 @@ run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.14, SIM
 ev <- as.data.table(load_events(run))
 
 ## ---------- identify tetrad products among co-transmitted infections ----------
-## seedTetrad() makes 4 products per outcrossing meiosis: two RECIPROCAL recombinants
-## (fresh lineage ids) and two PARENTAL CLONES (they inherit the parents' lineage ids).
+## seedTetrad() makes 4 products per outcrossing meiosis by four-strand meiosis (D34): each is a
+## mosaic of the two parents, a fresh lineage, and any two of them share about a third.
 rec <- ev[event_type == "hv_uptake_recombinant",
-          .(oocyst_id, p1 = parent1_lineage_id, p2 = parent2_lineage_id)]
+          .(oocyst_id, p1 = as.character(parent1_lineage_id), p2 = as.character(parent2_lineage_id))]
+founders <- unique(as.character(ev[event_type == "vh_inoculation_seed", lineage_id]))
 inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
            .(ped = pedigree_id, oocyst_id, lineage_id = as.character(lineage_id))]
 tet <- merge(inoc, rec, by = "oocyst_id")
-tet[, kind := fifelse(lineage_id == as.character(p1) | lineage_id == as.character(p2),
-                      "parental clone", "recombinant")]
 prs <- tet[, if (.N > 1) as.data.table(t(combn(.N, 2)))[, .(
-  a = ped[V1], b = ped[V2], ka = kind[V1], kb = kind[V2],
-  la = lineage_id[V1], lb = lineage_id[V2])], by = oocyst_id]
+  a = ped[V1], b = ped[V2], la = lineage_id[V1], lb = lineage_id[V2])], by = oocyst_id]
 prs <- prs[la != lb]
-prs[, pair_type := fcase(
-  ka == "recombinant"    & kb == "recombinant",    "recombinant x recombinant\n(reciprocal halves)",
-  ka == "parental clone" & kb == "parental clone", "clone x clone\n(the two parents)",
-  default = "recombinant x parental clone")]
+## parents that are two distinct founders are unrelated, so their offspring test assortment alone;
+## offspring of related parents share IBD on both sides of a junction, which adds correlation
+prs <- merge(prs, rec[, .(oocyst_id, unrelated_parents = p1 %in% founders & p2 %in% founders)], by = "oocyst_id")
 
 ## ---------- IBD for those pairs ----------
 idx <- ibd_index(ibd_pairs(run, ids = unique(c(prs$a, prs$b))))
 inN <- function(x) x %in% idx$nm$pedigree_id
 prs <- prs[inN(a) & inN(b)][, ibd := idx$getibd(a, b)]
-cat("\n== same-oocyst sib pairs, split by which tetrad products they are ==\n")
+cat("\n== same-oocyst sib pairs (expected: mean about 1/3, none at 0) ==\n")
 print(prs[, .(n = .N, median_ibd = round(median(ibd), 3), mean_ibd = round(mean(ibd), 3),
-              pct_zero = round(100 * mean(ibd < 0.01), 1)), by = pair_type][order(-n)])
+              pct_zero = round(100 * mean(ibd < 0.01), 1))])
 
 ## ---------- independent assortment across junctions ----------
 ## For each pair, is it IBD at (x - D) and at (x + D)? Junction positions vs control
 ## positions the same distance apart inside a chromosome.
 ctrl <- sort(unique(pmin(pmax(round(c(bounds - PVP01) + PVP01 / 2), D + 1),
                          bounds - D - 1)))            # chromosome midpoints
-## Use pairs related by EXACTLY ONE meiosis (a recombinant vs one of its parental clones).
-## For those, an r = 0.5 junction must give P(same IBD state either side) = 0.5 exactly.
-one <- prs[pair_type == "recombinant x parental clone"][1:min(.N, 120)]
+## Use pairs of products of one meiosis whose parents are two distinct founders. Each chromosome
+## assorts independently, so the IBD state of such a pair must be uncorrelated across a junction
+## (phi ~ 0), while staying correlated 100 kb apart inside a chromosome.
+one <- prs[unrelated_parents == TRUE][1:min(.N, 120)]
+cat(sprintf("\npairs with two founder parents used for the junction test: %d\n", nrow(one)))
 py$pa2 <- as.integer(one$a); py$pb2 <- as.integer(one$b); py$trees <- trees_path(run)
 py$jx <- as.numeric(junctions); py$cx <- as.numeric(ctrl); py$dd <- as.numeric(D)
 py_run_string("
@@ -117,15 +116,11 @@ print(res)
 cat("  expected: junction r=0.5 -> phi ~ 0 (independent); within-chromosome r=7.4e-7*2e5=0.148 -> phi high\n")
 
 ## ---------------- figure ----------------
-pal2 <- c("recombinant x parental clone" = "#4393c3",
-          "recombinant x recombinant\n(reciprocal halves)" = "#c0392b",
-          "clone x clone\n(the two parents)" = "#e08a1e")
-pA <- ggplot(prs, aes(ibd, fill = pair_type)) +
-  geom_histogram(binwidth = .05, colour = NA) +
-  facet_wrap(~ pair_type, ncol = 1, scales = "free_y") +
-  scale_fill_manual(values = pal2, guide = "none") +
-  labs(title = "Why same-oocyst sibs are sometimes IBD = 0",
-       subtitle = "One outcrossing meiosis makes 4 products: 2 reciprocal recombinants + 2 parental clones.\nOnly recombinant-vs-clone pairs share ancestry; the other two combinations share none.",
+pA <- ggplot(prs, aes(ibd)) +
+  geom_histogram(binwidth = .05, colour = NA, fill = "#4393c3") +
+  geom_vline(xintercept = 1 / 3, colour = "grey30", linetype = 2) +
+  labs(title = "How much the products of one meiosis share",
+       subtitle = "Four-strand meiosis: each product is a mosaic of the two parents, two carrying each parent's\nallele at every locus, so any two share about a third (dashed line) and none shares nothing.",
        x = "IBD", y = "pairs") +
   theme_minimal(base_size = 11) + theme(plot.title = element_text(face = "bold"),
                                         strip.text = element_text(size = 9))
@@ -136,7 +131,7 @@ pB <- ggplot(res, aes(kind, phi, fill = kind)) +
                     guide = "none") +
   coord_cartesian(ylim = c(-0.1, 1.15)) +
   labs(title = sprintf("Independent assortment: IBD state %d kb either side", D / 1000),
-       subtitle = "Pairs related by exactly ONE meiosis (a recombinant vs its parental clone).\nr = 0.5 at a junction should give 50% same state (phi ~ 0); 100 kb inside a chromosome should stay correlated.",
+       subtitle = "Pairs of products of one meiosis, from two founder parents. Chromosomes assort independently, so\nphi ~ 0 across a junction; 100 kb inside a chromosome the IBD state should stay correlated.",
        x = NULL, y = "phi (correlation of IBD state across the position)") +
   theme_minimal(base_size = 11) + theme(plot.title = element_text(face = "bold"))
 ggsave(file.path(FIGS, "ARG_junctions_and_tetrads.png"), pA / pB + plot_layout(heights = c(1.3, 1)),
