@@ -185,11 +185,26 @@ one unit, which matches White et al., who also track latency per infection.
 **Rationale.** It is the model the documentation cites. P(relapse) becomes
 [delta(1 - mu)/(1 - (1 - delta)(1 - mu))]^k x alpha/(alpha + mu), close to
 (delta/(delta + mu))^k x alpha/(alpha + mu).
+**Supersedes.** D31's "Until hypnozoites can also die during latency, a temperate batch
+(`K_LATENCY > 0`) leaves latency only at rate `DELTA_LATENCY`", given there as the reason that
+`validate_params()` requires `DELTA_LATENCY` in (0, 1] when `K_LATENCY > 0`: a latent batch now
+also empties by death. The requirement stays, because at `DELTA_LATENCY = 0` a temperate batch
+would never leave latency, and so could never relapse.
 **Consequences.** Runs with `K_LATENCY > 0` change: fewer relapses and a smaller reservoir.
-Tropical runs (`K_LATENCY = 0`, the default) are byte-identical.
+Tropical runs (`K_LATENCY = 0`, the default) are byte-identical. Since survival favours the batches
+that move through quickly, a hypnozoite that comes through latency alive has been latent
+k/(1 - (1 - delta)(1 - mu)) days on average, 163 at k = 2 with the default `DELTA_LATENCY` and
+`MU_HYPNOZOITE`, not the k/delta = 200 of a batch without deaths (MODEL_DESCRIPTION §5.1; review of
+M4). The `hypnozoite_clearance` rows, latent deaths and the others, and the `human_clearance` rows
+carry their lineage's `is_imported`, as D20 intends and MODEL_DESCRIPTION §16.1 defines; all three
+wrote 0 (review of M4). In runs with imports only that column of those rows changes; the random
+stream is untouched.
 **How to verify.** `tests/testthat/test-run.R` imports 300 infections at `K_LATENCY = 2` with no
-onward transmission and runs to 1500 days. The share of resolved hypnozoites that activated must be
-within 0.05 of 0.480; it was 0.73 before.
+onward transmission, with `SIM_DAYS = 1500`, by which every batch has resolved: at the test's seed
+the run ends by extinction on tick 1142. The share of resolved hypnozoites that activated must be
+within 0.05 of 0.480 (0.47 at the test's seed); it was 0.73 before. Two runs seeded only by imports,
+one whose batches stay latent throughout and one without latency, carry `is_imported = 1` on every
+`hypnozoite_clearance` and `human_clearance` row.
 
 ---
 
@@ -382,7 +397,7 @@ geometric signature median 7 / sd 10.0 / P(<=7 d) 0.50 / P(<=28 d) 0.94.
 
 ---
 
-## D31 — No age cap on hypnozoite batches · 2026-11-05 · Accepted
+## D31 — No age cap on hypnozoite batches · 2026-11-05 · Accepted; partly superseded by D35
 **Context.** `MAX_HYPNOZOITE_AGE` (1,500 days) cleared a whole hypnozoite batch once it was older
 than the cap. It began at 300 days as a "maximum hypnozoite survival" with no source, and was
 raised to 1,500 when that truncated too many batches. At the defaults it binds for roughly one

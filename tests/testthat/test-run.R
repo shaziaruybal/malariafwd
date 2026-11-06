@@ -189,6 +189,26 @@ test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapse
   expect_equal(act / (act + died), stage^2 * a / (a + mu), tolerance = 0.05 / 0.48)
 })
 
+test_that("clearance rows carry the is_imported of their lineage", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## seeded only by imports, with no onward transmission, so every lineage traces to an import:
+  ## batches that stay latent through the run, so that every hypnozoite death is a latent one, then
+  ## batches without latency
+  for (lat in list(list(K_LATENCY = 2L, DELTA_LATENCY = 1e-4), list(K_LATENCY = 0L))) {
+    p <- do.call(vivax_params, c(list(N_HOSTS = 60, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 200,
+                                      N_FOUNDERS = 0, IMPORT_TICK = 2, N_IMPORTS = 60,
+                                      CHROMOSOMES = "1"), lat))
+    ev <- load_events(run_sim(p, seed = 2, outdir = tempfile("mfwd_imported_")))
+    expect_equal(ev[event_type == "vh_inoculation", .N], 0)
+    if (lat$K_LATENCY > 0) expect_equal(ev[event_type == "hypnozoite_activation", .N], 0)
+    for (type in c("hypnozoite_clearance", "human_clearance")) {
+      rows <- ev[event_type == type]
+      expect_gt(nrow(rows), 10, label = type)
+      expect_true(all(rows$is_imported == 1), label = type)
+    }
+  }
+})
+
 test_that("a run that goes extinct says so and records the tick", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   dies <- vivax_params(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.03, SIM_DAYS = 400, N_FOUNDERS = 6,

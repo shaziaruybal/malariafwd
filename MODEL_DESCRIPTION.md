@@ -117,6 +117,11 @@ for each tick t:
   reproduction():
     # --- relapse ---
     for each host h, for each dormant batch b in h:
+        if latency_stage(b) > 0:                                        # K_LATENCY > 0
+            batch_count(b) <- batch_count(b) - Binomial(batch_count(b), mu)   # latent death
+            if batch_count(b) == 0:  retire b
+            else if runif(1) < DELTA_LATENCY:  latency_stage(b) <- latency_stage(b) - 1
+            continue        # no activation while latent, nor on the day b leaves latency
         n_act ~ Binomial(batch_count(b), alpha_eff)                     # activation
         n_die ~ Binomial(batch_count(b) - n_act, mu / (1 - alpha_eff))  # competing death
         batch_count(b) <- batch_count(b) - n_act - n_die
@@ -342,12 +347,17 @@ White et al. also track latency per infection. A hypnozoite therefore survives e
 probability δ(1 − μ) / (1 − (1 − δ)(1 − μ)), close to δ / (δ + μ), and
 
 ```
-P(relapse) = [δ(1 − μ) / (1 − (1 − δ)(1 − μ))]^k × alpha / (alpha + mu)
+P(relapse) = [δ(1 − μ) / (1 − (1 − δ)(1 − μ))]^k × α / (α + μ)
 ```
 
 which is **0.480** at `K_LATENCY = 2`, `DELTA_LATENCY = 1/100` and the shipped α, μ, against 0.722
-without latency. The mean time a batch spends latent is k / δ (200 days at k = 2). `K_LATENCY = 0`
-(tropical) makes activation immediately eligible.
+without latency. Without deaths a batch would stay latent k / δ days on average (200 at k = 2).
+Because latent hypnozoites die, those that come through latency are mostly those of batches that
+moved through it quickly: a hypnozoite that leaves latency alive, as every relapse must, has been
+latent k / (1 − (1 − δ)(1 − μ)) days on average, **163** at k = 2, δ = 1/100 and the shipped μ. Its
+relapse follows 1 / (α + μ) days later on average, so about 286 days after the bite at k = 2. A
+batch does not activate on the day it leaves latency. `K_LATENCY = 0` (tropical) makes activation
+immediately eligible.
 
 **Resurgence boosts.** From `RESURGENCE_TRIGGER_TICK`, `alpha_eff = ALPHA_ACTIVATE ×
 ALPHA_ACTIVATE_BOOST` (clamped so `alpha_eff <= 1 - mu`) and `nu_eff = ν × NU_HYPNOZOITE_BATCH_BOOST`.

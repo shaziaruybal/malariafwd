@@ -551,7 +551,8 @@ reproduction()
 					logEvent("hypnozoite_clearance",
 						-1, // no inoc ID bc not V-H event
 						-1, h.id,
-						asString(hyp.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 1, 0,
+						asString(hyp.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 1,
+						asInteger(hyp.getValue("is_imported")),   // the batch's own origin, not a hard-coded 0
 						hyp.pedigreeID,
 						-1, -1,
 						n_dying
@@ -656,7 +657,8 @@ reproduction()
 				logEvent("hypnozoite_clearance",
 					-1, // no inoc ID bc not V-H event
 					-1, h.id,
-					asString(hyp.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 1, 0,
+					asString(hyp.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 1,
+					asInteger(hyp.getValue("is_imported")),   // the batch's own origin, not a hard-coded 0
 					hyp.pedigreeID,
 					-1, -1,
 					n_dying
@@ -1365,7 +1367,7 @@ early() {
 				for (lin in cleared_natural)
 					logEvent("human_clearance", -1, -1, h.id,
 						asString(lin.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
-						0, 0, lin.pedigreeID);
+						0, asInteger(lin.getValue("is_imported")), lin.pedigreeID);
 		}
 	}
 	
