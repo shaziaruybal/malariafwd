@@ -164,9 +164,9 @@ docs that a bite is gated only on a host with an infectious clone* -- two gates 
 documented as one rule about parasite burden.
 **Consequences.** A run changes once imports arrive while some host is infected: imports now
 land in infected hosts in proportion to prevalence, so mixed infections with an import, and
-treatment of imported cases, are more common. Runs without imports, and a founder-free pulse into
-a wholly susceptible population, are byte-identical; at `MAX_MOI = 0`, now refused, that pulse
-was refused outright. The bite gate changes only runs with `SUBPATENT_INFECTIVITY = 0` in which a
+treatment of imported cases, are more common. The random placement leaves runs without imports,
+and a founder-free pulse into a wholly susceptible population, byte-identical; at `MAX_MOI = 0`,
+now refused, that pulse was refused outright. The bite gate changes only runs with `SUBPATENT_INFECTIVITY = 0` in which a
 host whose clones are all subpatent reaches `MAX_MOI`: whenever `SUBPATENT_INFECTIVITY > 0` a host
 tagged susceptible carries no blood-stage clone, so the check never fires. The rate warning is
 R-side only.
@@ -215,8 +215,9 @@ documented rather than worked out from the rate.
 `SIM_DAYS` (a count whose day is left at the default included), or a window that closes before it
 opens, goes extinct when its parasites die out, once its import days inside the run, if any, have
 passed, instead of running on, empty, to `SIM_DAYS`; it loses only empty `state.tsv` rows. A
-founder-free set whose only import falls outside the run, a pulse on day 0 for instance, is refused
-before SLiM starts instead of stopping at the liveness check on tick 10. Every other run is
+founder-free set whose only import falls before day 1 (a pulse on day 0 or earlier, or a window
+that ends by day 1) is refused before SLiM starts instead of stopping at the liveness check on
+tick 10. Every other run is
 byte-identical.
 **How to verify.** `tests/testthat/test-run.R` runs a set that dies out: the message appears,
 `extinct_tick` is below `SIM_DAYS` and equals the last tick of `state.tsv`, `load_params()` has the
@@ -272,8 +273,8 @@ one unit, which matches White et al., who also track latency per infection.
 also empties by death. The requirement stays, because at `DELTA_LATENCY = 0` a temperate batch
 would never leave latency, and so could never relapse.
 **Consequences.** Runs with `K_LATENCY > 0` change: fewer relapses and a smaller reservoir.
-Tropical runs (`K_LATENCY = 0`, the default) are byte-identical. Since survival favours the batches
-that move through quickly, a hypnozoite that comes through latency alive has been latent
+The latent deaths leave tropical runs (`K_LATENCY = 0`, the default) byte-identical. Since
+survival favours the batches that move through quickly, a hypnozoite that comes through latency alive has been latent
 k/(1 - (1 - delta)(1 - mu)) days on average, 163 at k = 2 with the default `DELTA_LATENCY` and
 `MU_HYPNOZOITE`, not the k/delta = 200 of a batch without deaths (MODEL_DESCRIPTION §5.1; review of
 M4). The `hypnozoite_clearance` rows, latent deaths and the others, and the `human_clearance` rows

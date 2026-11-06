@@ -93,9 +93,9 @@ Time advances in **daily ticks**. Each tick runs in this order:
 | `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
 | `late()` | `state.tsv` logging; the tree sequence at the end of the run |
 
-A run ends at `SIM_DAYS`, or earlier if it goes extinct: on the first tick on which no parasite is
-left in any host or mosquito, hypnozoites included, and no importation is still to come, every
-further tick would be empty, so the run ends there. It writes the tree sequence; its `events.tsv`
+A run ends at `SIM_DAYS`, or earlier if it goes extinct: it goes extinct on the first tick on
+which no parasite is left in any host or mosquito, hypnozoites included, and no importation is
+still to come; every further tick would then be empty, so the run ends there. It writes the tree sequence; its `events.tsv`
 and `state.tsv` stop on that tick; and its `params.tsv` ends with the tick as `EXTINCT_TICK` (D37),
 also when the tick is `SIM_DAYS` itself. `run_sim()` then gives a message, and the run's
 `extinct_tick` holds the tick; it is `NA` for a run that did not go extinct. An importation is
@@ -161,8 +161,8 @@ for each tick t:
     # --- importation ---
     n_imp <- (N_IMPORTS if t == IMPORT_TICK)
              + (N_IMPORTS_PER_TICK + Poisson(import_rate_eff(t)) if IMPORT_START <= t < IMPORT_END)
-        # import_rate_eff(t): IMPORT_RATE_PER_TICK times the seasonal, intervention and
-        # IMPORT_RATE_BOOST factors that biting_rate_eff(t) applies to BITING_RATE
+        # import_rate_eff(t): IMPORT_RATE_PER_TICK times the seasonal and intervention factors
+        # that biting_rate_eff(t) applies to BITING_RATE, and IMPORT_RATE_BOOST from the trigger
     pick min(n_imp, N_HOSTS) distinct hosts uniformly at random      # at most one import per host
     a host already carrying MAX_MOI blood-stage lineages takes none  # vh_inoculation_import_no_take
     for each other host: roll primary and batch as a bite does, and if either takes, mint an
@@ -372,8 +372,8 @@ P(relapse) = [δ(1 − μ) / (1 − (1 − δ)(1 − μ))]^k × α / (α + μ)
 
 which is **0.480** at `K_LATENCY = 2`, `DELTA_LATENCY = 1/100` and the shipped α, μ, against 0.722
 without latency. Without deaths a batch would stay latent k / δ days on average (200 at k = 2).
-Because latent hypnozoites die, those that come through latency are mostly those of batches that
-moved through it quickly: a hypnozoite that leaves latency alive, as every relapse must, has been
+Because latent hypnozoites die, survival favours the batches that move through latency quickly: a
+hypnozoite that leaves latency alive, as every relapse must, has been
 latent k / (1 − (1 − δ)(1 − μ)) days on average, **163** at k = 2, δ = 1/100 and the shipped μ. Its
 relapse follows 1 / (α + μ) days later on average, so about 286 days after the bite at k = 2. A
 batch does not activate on the day it leaves latency. `K_LATENCY = 0` (tropical) makes activation

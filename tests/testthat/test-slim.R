@@ -60,6 +60,10 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
   r <- slim("-d", "N_FOUNDERS=0", "-d", "IMPORT_TICK=0", "-d", "N_IMPORTS=5")
   expect_true(r$status != 0)
   expect_match(paste(r$stdout, r$stderr), "nothing can start this run")
+  ## ... or whose only window of imports ends on day 1
+  r <- slim("-d", "N_FOUNDERS=0", "-d", "IMPORT_START=0", "-d", "IMPORT_END=1", "-d", "N_IMPORTS_PER_TICK=5")
+  expect_true(r$status != 0)
+  expect_match(paste(r$stdout, r$stderr), "nothing can start this run")
   ## the integer spelling that -d X=7 produces is accepted at the start...
   expect_equal(slim("-d", "TREATMENT_DELAY=7", "-d", "MEAN_RECRUD_DELAY=4")$status, 0L)
   ## ...and each recrudescence shape draws its delay from it
