@@ -74,10 +74,10 @@ crossovers against the map (mean and variance), and a junction switch probabilit
 ---
 
 ## D40 — A relapse into a patent clone of its own lineage is counted, and flagged · 2026-11-05 · Accepted
-**Context.** At the defaults about 85% of relapses start while a patent clone of the same lineage
+**Context.** At the defaults about 80% of relapses start while a patent clone of the same lineage
 is already in the host (70-82% in review M3's larger runs). Over four 3-year default runs that
-clone was the primary from the same bite for 43% of them, an earlier relapse of the same batch for
-45%, another batch's relapse for 10% and another inoculation of the lineage for 2%. Each such
+clone was the primary from the same bite for 45% of them, an earlier relapse of the same batch for
+46%, another batch's relapse for 8% and another inoculation of the lineage for 1%. Each such
 relapse is logged as a new episode and counted by `relapse_fraction()` and the other metrics,
 although a real observer could not see it as a recurrence. The model's own observation layer
 draws its detection like any other relapse's, so it can be reported and treated (at the default
@@ -101,7 +101,9 @@ byte-identical.
 `events.tsv` in a run with treatment failures, recrudescence and an MDA round, and the flag
 matches on every activation. It also matched on all 1,331 activations of eight other runs
 (defaults, treatment failures, MDA, temperate latency, imports with `MAX_MOI = 3`). At the
-defaults, 86% of 11,676 activations over eight 3-year runs are flagged.
+defaults, 81% of 12,219 activations over eight 3-year runs are flagged (76-95% by run). On a single
+chromosome the share is higher (86%), because an unrecombined product there keeps its parent's
+lineage.
 
 ---
 

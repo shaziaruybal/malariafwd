@@ -297,7 +297,7 @@ exactly 1. Relative to a host's *prior observed* infection it can be clonal, sib
 or unrelated — which is the whole point of the identifiability work.
 
 **A relapse can start while a patent clone of its own lineage is still in the host**, most often
-the primary from the same bite or an earlier relapse of the same batch: at the defaults about 85%
+the primary from the same bite or an earlier relapse of the same batch: at the defaults about 80%
 of relapses do. Such a relapse is logged and counted like any other, as a new episode and a new
 acquisition, and the lineage stays patent in the host until all its clones have cleared. It is
 drawn for detection like any other relapse, so the observation layer can report it, put it on the
