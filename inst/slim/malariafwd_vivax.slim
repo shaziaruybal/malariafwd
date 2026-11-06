@@ -339,17 +339,27 @@ initialize() {
 	if (N_FOUNDER_HOSTS > 0 & N_FOUNDER_LINEAGES < 1)
 		stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: " + N_FOUNDER_HOSTS +
 			" founder host(s) cannot share 0 distinct genomes.");
+	// The last day of the run on which an import can arrive, or 0 if none (D37). Imports arrive in
+	// early(), which first runs on day 1: the pulse counts when N_IMPORTS > 0 and IMPORT_TICK is a
+	// day from 1 to SIM_DAYS, and the window when it has a count or a rate and a day from
+	// max(1, IMPORT_START) to min(IMPORT_END - 1, SIM_DAYS), the last of which it contributes. The
+	// bootstrap check below and the liveness check at the end of early() both read it, so they
+	// cannot disagree about whether an import is still to come; has_import_path() in R uses the same
+	// days. Ternaries rather than min() and max(), which refuse a mix of integer and float.
+	pulse_day = ((N_IMPORTS > 0) & (IMPORT_TICK >= 1) & (IMPORT_TICK <= SIM_DAYS)) ? IMPORT_TICK else 0;
+	window_first = (IMPORT_START >= 1) ? IMPORT_START else 1;
+	window_last = (IMPORT_END - 1 <= SIM_DAYS) ? IMPORT_END - 1 else SIM_DAYS;
+	window_day = (((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0)) & (window_first <= window_last)) ?
+		window_last else 0;
+	defineConstant("LAST_IMPORT_DAY", (pulse_day >= window_day) ? pulse_day else window_day);
 	// A naive population is legitimate (D17: importation can seed an empty population), but
 	// only if an import path is actually open.
-	import_pulse  = (IMPORT_TICK <= SIM_DAYS) & (N_IMPORTS > 0);
-	import_window = (IMPORT_START <= SIM_DAYS) & (IMPORT_END > IMPORT_START) &
-		((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0));
-	defineConstant("HAS_IMPORT_PATH", import_pulse | import_window);
+	defineConstant("HAS_IMPORT_PATH", LAST_IMPORT_DAY > 0);
 	if (N_FOUNDER_HOSTS < 1 & !HAS_IMPORT_PATH)
 		stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is " +
-			"configured. Set N_FOUNDER_HOSTS >= 1, or open an import path (IMPORT_TICK + " +
-			"N_IMPORTS, or IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK or " +
-			"IMPORT_RATE_PER_TICK).");
+			"configured inside the run. Set N_FOUNDER_HOSTS >= 1, or open an import path on a day " +
+			"from 1 to SIM_DAYS (IMPORT_TICK + N_IMPORTS, or IMPORT_START/IMPORT_END with " +
+			"N_IMPORTS_PER_TICK or IMPORT_RATE_PER_TICK).");
 
 	setSeed(SEED);
 	
@@ -1555,24 +1565,27 @@ early() {
 	//                    come. Fade-out and elimination are legitimate RESULTS, not errors, so
 	//                    this is not fatal: the run ends cleanly here because every remaining
 	//                    tick is provably empty, and says so in the log.
+	// Every subpopulation counts, so a parasite still in a mosquito keeps the run going.
 	n_alive = sum(sim.subpopulations.individualCount);
 	if (n_alive > 0)
 		defineGlobal("EVER_LIVE", T);
 	else
 	{
 		// Both branches require that no importation is still to come. Without that, a run with
-		// a LATE import window (say IMPORT_START = 500) would be killed during the empty ticks
-		// before the window opens - which is a legitimate configuration, not a failure.
-		import_still_possible = ((IMPORT_TICK >= sim.cycle) & (N_IMPORTS > 0)) |
-			((IMPORT_END > sim.cycle) & ((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0)));
+		// a LATE import window (say IMPORT_START = 500 of 1000 days) would be killed during the
+		// empty ticks before the window opens - which is a legitimate configuration, not a
+		// failure. An import is still to come until the run passes LAST_IMPORT_DAY; one set for a
+		// day outside the run never comes. A window inside the run counts to its last day even
+		// while its rate is 0 (a closed border).
+		import_still_possible = (sim.cycle <= LAST_IMPORT_DAY);
 		if (!EVER_LIVE & sim.cycle >= LIVENESS_TICK & !import_still_possible)
 			stop("no parasite has existed by tick " + sim.cycle + ": this configuration cannot " +
 				"bootstrap, and would have produced an empty event log with exit status 0. " +
 				"Check N_FOUNDER_HOSTS / N_FOUNDER_LINEAGES and the importation settings.");
 		if (EVER_LIVE & !import_still_possible)
 		{
-			catn("🛑 EXTINCT on tick " + sim.cycle + ": no blood-stage parasites, no hypnozoites, " +
-				"and no importation remaining. Ending the run - every further tick is empty.");
+			catn("🛑 EXTINCT on tick " + sim.cycle + ": no parasite in any host or mosquito, no " +
+				"hypnozoite, and no importation still to come. Ending the run - every further tick is empty.");
 			// The TREE SEQUENCE has to be written here: it is only written by the final
 			// `SIM_DAYS late()` event, which is registered for a tick we will never reach, so
 			// without this the run ends with state.tsv and events.tsv but NO plasmo.trees,
@@ -1580,7 +1593,8 @@ early() {
 			// current tick finish, so this tick's late() still runs and writes it. Doing both
 			// duplicated every entity row on the final tick.
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
-			// recorded so that R can tell a run that ended early from a full one (D37)
+			// recorded so that R can tell a run that went extinct from one that did not (D37), also
+			// when this is the last day
 			writeFile(OUTDIR + "/params.tsv", "EXTINCT_TICK\t" + sim.cycle, append=T);
 			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
 			sim.simulationFinished();

@@ -10,16 +10,17 @@ load_run(outdir)
 \item{outdir}{a run output directory (or an existing \code{vivax_run}).}
 }
 \value{
-a \code{vivax_run} object: \code{outdir}, \code{params} (from \code{params.tsv}), \code{seed}, and
-\code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA} for a run that
-reached \code{SIM_DAYS}.
+a \code{vivax_run} object: \code{outdir}, \code{params} (from \code{params.tsv}, as \code{\link[=load_params]{load_params()}} gives
+them), \code{seed}, and \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA}
+for a run that did not go extinct.
 }
 \description{
 Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_path]{trees_path()}}
 and \code{\link[=load_params]{load_params()}} to access its contents.
 }
 \details{
-A run in which every parasite and hypnozoite is gone, with no importation still to come, ends
-on that tick rather than at \code{SIM_DAYS}: its \code{events.tsv} and \code{state.tsv} stop there, and
-\code{params.tsv} records the tick as \code{EXTINCT_TICK}.
+A run goes extinct on the first tick on which no parasite is left in any host or mosquito,
+hypnozoites included, and no importation is still to come. It ends on that tick: its
+\code{events.tsv} and \code{state.tsv} stop there, and its \code{params.tsv} ends with the tick as an
+\code{EXTINCT_TICK} row, also when the tick is the run's last day.
 }

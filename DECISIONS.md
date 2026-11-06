@@ -144,14 +144,42 @@ ended on that tick without telling R (review M7). Only run.log carried the EXTIN
 `run_sim()` returned as for a full run, and `run_grid()` reported the cell as ok. Metrics that take
 the run length from the last tick then used a truncated window.
 **Decision.** The extinction branch appends `EXTINCT_TICK` to `params.tsv`. `load_run()` reads it
-into the run's `extinct_tick` (`NA` for a run that reached `SIM_DAYS`), `print()` shows it,
+into the run's `extinct_tick` (`NA` for a run that did not go extinct), `print()` shows it,
 `run_sim()` gives a message, and `run_grid()` returns an `extinct_tick` column with one message
 for the grid. `state.tsv` is not padded to `SIM_DAYS`. The metrics' windows move to `SIM_DAYS`, with
-ticks after extinction counted as uninfected, in the R-side half of M7 (Phase B).
-**Consequences.** `params.tsv` of an extinct run gains one row; other runs are byte-identical.
+ticks after extinction counted as uninfected, in the R-side half of M7, still to come.
+
+The review of M7 found four gaps, closed as follows. A run that dies out on its last day records
+the tick too, so that `NA` means only that the run did not go extinct, which is what a grid counting
+extinctions needs; the messages say "went extinct", not "ended early". `EXTINCT_TICK` is an outcome
+rather than a parameter, so `load_params()` leaves it out of the list it returns, and every run's
+list has the same names. The documented condition names what the check counts: no parasite in any
+host or mosquito. And an import set for a day after `SIM_DAYS`, or a count left at its default day,
+counted as still to come, so a run whose parasites had died out ran on, empty, to `SIM_DAYS` with
+`extinct_tick` `NA`, while `has_import_path()` and the model's bootstrap check counted a pulse on
+day 0 or earlier, which never comes, as an import path. One constant in `initialize()`,
+`LAST_IMPORT_DAY`, the last day of the run on which an import can arrive (0 if none), now serves the
+bootstrap check and the extinction check alike, and `has_import_path()` and the import warning in
+`vivax_params()` share one R definition of the same days: a pulse counts when `N_IMPORTS > 0` and
+`IMPORT_TICK` is a day from 1 to `SIM_DAYS`, and a window when it has a count or a rate and a day
+from `max(1, IMPORT_START)` to `min(IMPORT_END - 1, SIM_DAYS)`. A window inside the run still counts
+to its last day while its rate is 0 (a border closed by `INTERVENTION_EFFICACY = 1` or
+`IMPORT_RATE_BOOST = 0`), so such a run goes extinct only once that day has passed; this is
+documented rather than worked out from the rate.
+**Consequences.** `params.tsv` of an extinct run gains one row. A run with an import set after
+`SIM_DAYS` (a count whose day is left at the default included), or a window that closes before it
+opens, goes extinct when its parasites die out, once its import days inside the run, if any, have
+passed, instead of running on, empty, to `SIM_DAYS`; it loses only empty `state.tsv` rows. A
+founder-free set whose only import falls outside the run, a pulse on day 0 for instance, is refused
+before SLiM starts instead of stopping at the liveness check on tick 10. Every other run is
+byte-identical.
 **How to verify.** `tests/testthat/test-run.R` runs a set that dies out: the message appears,
-`extinct_tick` is below `SIM_DAYS` and equals the last tick of `state.tsv`, and `run_grid()` reports
-it; a full run has `extinct_tick` `NA`.
+`extinct_tick` is below `SIM_DAYS` and equals the last tick of `state.tsv`, `load_params()` has the
+same names as for a full run, and `run_grid()` reports it; a full run has `extinct_tick` `NA`. The
+same set with a pulse after `SIM_DAYS`, a window after it, or a count left at the default day goes
+extinct on the same tick, and with `SIM_DAYS = 100000` the message gives the day as 100000.
+`tests/testthat/test-params.R` refuses a founder-free set whose pulse falls on day 0 or whose window
+ends on day 1, and `tests/testthat/test-slim.R` checks that the model refuses it when run directly.
 
 ---
 

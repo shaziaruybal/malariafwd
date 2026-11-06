@@ -299,10 +299,10 @@ validate_params <- function(p) {
   ## but only if an import path is actually open. No founders AND no imports is a run that
   ## can never contain a parasite.
   if (p$N_FOUNDER_HOSTS < 1 && !has_import_path(p))
-    stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is configured.\n",
-         "  Set N_FOUNDER_HOSTS >= 1, or open an import path (IMPORT_TICK + N_IMPORTS, or\n",
-         "  IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK or IMPORT_RATE_PER_TICK).",
-         call. = FALSE)
+    stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is configured\n",
+         "  inside the run. Set N_FOUNDER_HOSTS >= 1, or open an import path on a day from 1 to\n",
+         "  SIM_DAYS (IMPORT_TICK + N_IMPORTS, or IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK\n",
+         "  or IMPORT_RATE_PER_TICK).", call. = FALSE)
 
   ## A coverage set against a closed case-management window gives silently zero treatments.
   ## This is the shape of the bug D19 fixed, so it is worth refusing rather than repeating in
@@ -328,10 +328,11 @@ validate_params <- function(p) {
             call. = FALSE)
   ## Each host takes at most one import a day (D38), so the fixed counts above N_HOSTS lose the
   ## excess. A Poisson rate can draw above N_HOSTS too, but only by chance, so it is not warned.
-  first <- max(1, p$IMPORT_START); last <- min(p$IMPORT_END - 1, p$SIM_DAYS)
-  daily <- if (first <= last) p$N_IMPORTS_PER_TICK else 0
-  pulse <- if (p$N_IMPORTS > 0 && p$IMPORT_TICK >= 1 && p$IMPORT_TICK <= p$SIM_DAYS)
-    p$N_IMPORTS + (if (p$IMPORT_TICK >= first && p$IMPORT_TICK <= last) daily else 0) else 0
+  days <- .import_days(p)
+  daily <- if (!is.null(days$window)) p$N_IMPORTS_PER_TICK else 0
+  pulse <- if (!is.null(days$pulse))
+    p$N_IMPORTS + (if (!is.null(days$window) && days$pulse >= days$window[1] &&
+                       days$pulse <= days$window[2]) daily else 0) else 0
   if (max(daily, pulse) > p$N_HOSTS)
     warning(if (pulse < daily) paste0("N_IMPORTS_PER_TICK brings ", .slim_num(daily), " imports a day")
             else paste0(if (pulse > p$N_IMPORTS) "N_IMPORTS and N_IMPORTS_PER_TICK bring " else "N_IMPORTS brings ",
@@ -468,19 +469,31 @@ validate_params <- function(p) {
   if (anyDuplicated(idx)) bad("a chromosome is listed twice")
 }
 
+## The days of the run on which the parameters bring imports, as the model reads them: the pulse
+## day, when N_IMPORTS > 0 and IMPORT_TICK is a day from 1 to SIM_DAYS, and the first and last day
+## of the window inside the run, max(1, IMPORT_START) to min(IMPORT_END - 1, SIM_DAYS), when it has
+## any. Imports arrive in early(), which first runs on day 1. NULL for a pulse or window that brings
+## nothing; whether the window brings anything also depends on its count and rate, which the callers
+## check. The model's LAST_IMPORT_DAY uses the same days.
+.import_days <- function(p) {
+  first <- max(1, p$IMPORT_START); last <- min(p$IMPORT_END - 1, p$SIM_DAYS)
+  list(pulse = if (p$N_IMPORTS > 0 && p$IMPORT_TICK >= 1 && p$IMPORT_TICK <= p$SIM_DAYS) p$IMPORT_TICK,
+       window = if (first <= last) c(first, last))
+}
+
 #' Is any importation path open in this parameter set?
 #'
 #' Either the one-shot pulse (`IMPORT_TICK` + `N_IMPORTS`) or the windowed rate
-#' (`IMPORT_START`/`IMPORT_END` with `N_IMPORTS_PER_TICK` or `IMPORT_RATE_PER_TICK`);
-#' in both cases the window has to fall inside the run.
+#' (`IMPORT_START`/`IMPORT_END` with `N_IMPORTS_PER_TICK` or `IMPORT_RATE_PER_TICK`), on a day of
+#' the run: imports arrive from day 1, so the pulse needs `IMPORT_TICK` from 1 to `SIM_DAYS`, and
+#' the window needs a day from `max(1, IMPORT_START)` to `min(IMPORT_END - 1, SIM_DAYS)`.
 #' @param p a parameter list.
 #' @return `TRUE` if at least one importation can occur.
 #' @keywords internal
 has_import_path <- function(p) {
-  pulse <- p$IMPORT_TICK <= p$SIM_DAYS && p$N_IMPORTS > 0
-  windowed <- p$IMPORT_START <= p$SIM_DAYS && p$IMPORT_END > p$IMPORT_START &&
-    (p$N_IMPORTS_PER_TICK > 0 || p$IMPORT_RATE_PER_TICK > 0)
-  isTRUE(pulse) || isTRUE(windowed)
+  d <- .import_days(p)
+  !is.null(d$pulse) ||
+    (!is.null(d$window) && (p$N_IMPORTS_PER_TICK > 0 || p$IMPORT_RATE_PER_TICK > 0))
 }
 
 ## An Eidos single-quoted string literal: backslashes first, then quotes, so a Windows path

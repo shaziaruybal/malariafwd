@@ -93,10 +93,17 @@ Time advances in **daily ticks**. Each tick runs in this order:
 | `early()` | hypnozoite cleanup (retired batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
 | `late()` | `state.tsv` logging; the tree sequence at the end of the run |
 
-A run ends at `SIM_DAYS`, or earlier on the tick when no blood-stage parasite, no hypnozoite and no
-importation still to come is left: every further tick would be empty. It then writes the tree
-sequence, `events.tsv` and `state.tsv` stop on that tick, and `params.tsv` records it as
-`EXTINCT_TICK` (D37); `run_sim()` says so, and the run's `extinct_tick` holds it.
+A run ends at `SIM_DAYS`, or earlier if it goes extinct: on the first tick on which no parasite is
+left in any host or mosquito, hypnozoites included, and no importation is still to come, every
+further tick would be empty, so the run ends there. It writes the tree sequence; its `events.tsv`
+and `state.tsv` stop on that tick; and its `params.tsv` ends with the tick as `EXTINCT_TICK` (D37),
+also when the tick is `SIM_DAYS` itself. `run_sim()` then gives a message, and the run's
+`extinct_tick` holds the tick; it is `NA` for a run that did not go extinct. An importation is
+still to come until the run has passed the last day on which one can arrive, the pulse day or the
+import window's last day inside the run (§8); a pulse or window that falls outside the run brings
+nothing. A window inside the run counts to its last day even while its rate is 0, as under a
+border closed by `INTERVENTION_EFFICACY = 1` or `IMPORT_RATE_BOOST = 0`, so a run that dies out
+meanwhile goes extinct only once that day has passed.
 
 Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
 setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**
@@ -541,9 +548,12 @@ distinct truth category. They go to hosts chosen uniformly at random, as bites d
 can land in a host that already carries a clone (D38). A host already carrying `MAX_MOI`
 blood-stage lineages takes none, and the refusal is logged as `vh_inoculation_import_no_take`.
 Each host takes at most one import a day, so a day's imports beyond `N_HOSTS` are dropped;
-`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`. A pulse can
-fall on any day, the first included; a naive population seeded only by imports is
-`N_FOUNDER_HOSTS = 0` with an import path (D39).
+`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`. Imports arrive
+in `early()`, which first runs on day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a
+window brings imports on its days from `max(1, IMPORT_START)` to
+`min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run brings nothing. A naive
+population seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run
+(D39).
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
 source population, so imports are maximally distinguishable from local parasites (measured founder
@@ -1043,7 +1053,8 @@ Ordered by how much the answer is likely to move.
 **Files per run:** `events.tsv` (the event log — one row per transmission, activation, clearance,
 treatment event, with lineage/pedigree/oocyst ids, `is_dormant`, `is_imported`, `n_hypnozoites`,
 `detected`), `state.tsv` (per-tick host and vector state), `params.tsv` (**all resolved parameters
-plus `ACTUAL_SEED`** — full provenance), `plasmo.trees` (tskit tree sequence).
+plus `ACTUAL_SEED`** and the SLiM and package versions — full provenance; an extinct run's file
+ends with an `EXTINCT_TICK` row, §2), `plasmo.trees` (tskit tree sequence).
 
 **Identifier hierarchy** — worth internalising, these are not interchangeable:
 
@@ -1192,8 +1203,11 @@ of creation in `events.tsv`.
 
 ### 16.4 Reproducibility
 
-`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter and the
-derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`. Requires SLiM ≥ 5.2 on `PATH` and
+`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the
+derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
+(`SLIM_VERSION`, `MALARIAFWD_VERSION`). An extinct run's file ends with an `EXTINCT_TICK` row (§2),
+an outcome rather than a parameter: `load_params()` leaves it out, so every run's list has the same
+names, and `load_run()` reads it into the run's `extinct_tick`. Requires SLiM ≥ 5.2 on `PATH` and
 Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared
 infections — without it, relapse-to-prior comparisons silently lose ancestors.
 

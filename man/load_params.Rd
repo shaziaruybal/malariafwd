@@ -10,8 +10,11 @@ load_params(run)
 \item{run}{a \code{vivax_run} or a run directory path.}
 }
 \value{
-a named list of resolved parameter values.
+a named list of the resolved parameter values, with \code{ACTUAL_SEED}, \code{SLIM_VERSION},
+\code{MALARIAFWD_VERSION} and the derived \code{GENOME_LENGTH}, \code{N_CHROMOSOMES} and \code{RECOMB_WITHIN}.
 }
 \description{
-Resolved parameters of a run (from \code{params.tsv})
+An extinct run's \code{params.tsv} ends with an \code{EXTINCT_TICK} row (see \code{\link[=load_run]{load_run()}}). It is an
+outcome of the run rather than a parameter, so it is left out here, and every run's list has the
+same names; \code{\link[=load_run]{load_run()}} reads it into the run's \code{extinct_tick}.
 }

@@ -14,7 +14,8 @@ has_import_path(p)
 }
 \description{
 Either the one-shot pulse (\code{IMPORT_TICK} + \code{N_IMPORTS}) or the windowed rate
-(\code{IMPORT_START}/\code{IMPORT_END} with \code{N_IMPORTS_PER_TICK} or \code{IMPORT_RATE_PER_TICK});
-in both cases the window has to fall inside the run.
+(\code{IMPORT_START}/\code{IMPORT_END} with \code{N_IMPORTS_PER_TICK} or \code{IMPORT_RATE_PER_TICK}), on a day of
+the run: imports arrive from day 1, so the pulse needs \code{IMPORT_TICK} from 1 to \code{SIM_DAYS}, and
+the window needs a day from \code{max(1, IMPORT_START)} to \code{min(IMPORT_END - 1, SIM_DAYS)}.
 }
 \keyword{internal}

@@ -57,6 +57,17 @@ test_that("founder counts are checked against each other, with messages that nam
                "N_FOUNDER_HOSTS \\(200000\\) must be at most N_HOSTS \\(100000\\)")
 })
 
+test_that("an import path is open only on a day of the run", {
+  ## imports arrive from day 1, so a pulse on day 0 or a window that ends on day 1 never comes
+  expect_error(vivax_params(N_FOUNDERS = 0, IMPORT_TICK = 0, N_IMPORTS = 5), "nothing can start this run")
+  expect_error(vivax_params(N_FOUNDERS = 0, IMPORT_START = 0, IMPORT_END = 1, N_IMPORTS_PER_TICK = 5),
+               "nothing can start this run")
+  expect_error(vivax_params(N_FOUNDERS = 0, SIM_DAYS = 100, IMPORT_TICK = 101, N_IMPORTS = 5),
+               "nothing can start this run")
+  expect_no_error(vivax_params(N_FOUNDERS = 0, IMPORT_TICK = 1, N_IMPORTS = 5))
+  expect_no_error(vivax_params(N_FOUNDERS = 0, IMPORT_START = 0, IMPORT_END = 2, N_IMPORTS_PER_TICK = 5))
+})
+
 test_that("run_sim() checks a parameter set edited after it was built", {
   p <- vivax_params(SIM_DAYS = 10L)
   p$N_HOST <- 7L                                            # a misspelt name

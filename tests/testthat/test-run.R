@@ -211,17 +211,37 @@ test_that("clearance rows carry the is_imported of their lineage", {
 
 test_that("a run that goes extinct says so and records the tick", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  dies <- vivax_params(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.03, SIM_DAYS = 400, N_FOUNDERS = 6,
-                       NU_HYPNOZOITE_BATCH = 0, CHROMOSOMES = "1")
+  ## few bites and no hypnozoites: all of 60 seeds died out, by day 308 at the latest
+  base <- list(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.015, SIM_DAYS = 400, N_FOUNDERS = 6,
+               NU_HYPNOZOITE_BATCH = 0, CHROMOSOMES = "1")
+  dies <- do.call(vivax_params, base)
   expect_message(run <- run_sim(dies, seed = 1, outdir = tempfile("mfwd_extinct_")), "went extinct on tick")
   expect_lt(run$extinct_tick, 400)
   expect_equal(max(load_state(run)$tick), run$extinct_tick)
   expect_equal(load_run(run$outdir)$extinct_tick, run$extinct_tick)
   full <- run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 5), seed = 1, outdir = tempfile("mfwd_full_"))
   expect_true(is.na(full$extinct_tick))
+  ## EXTINCT_TICK is an outcome, not a parameter, so every run's parameters have the same names
+  expect_null(load_params(run)$EXTINCT_TICK)
+  expect_null(load_params(run$outdir)$EXTINCT_TICK)
+  expect_identical(names(load_params(run)), names(load_params(full)))
   expect_message(g <- run_grid(dies, seeds = 1:2, outdir_base = tempfile("mfwd_extinct_grid_")),
-                 "2 of 2 grid cell\\(s\\) went extinct")
+                 "^2 of 2 grid cell\\(s\\) went extinct; see the `extinct_tick` column")
   expect_true(all(g$extinct_tick < 400))
+  ## an import set outside the run never comes, so it does not keep a dead run going: a pulse after
+  ## SIM_DAYS, a window after it, and a count whose window is left at the default days
+  for (late in list(list(IMPORT_TICK = 500L, N_IMPORTS = 5L),
+                    list(IMPORT_START = 450L, IMPORT_END = 600L, IMPORT_RATE_PER_TICK = 0.5),
+                    list(N_IMPORTS_PER_TICK = 2L))) {
+    r <- suppressMessages(run_sim(do.call(vivax_params, c(base, late)), seed = 1,
+                                  outdir = tempfile("mfwd_extinct_late_")))
+    expect_equal(r$extinct_tick, run$extinct_tick, label = names(late)[1])
+  }
+  ## the message gives the run's length as params.tsv writes it
+  long <- c(utils::modifyList(base, list(SIM_DAYS = 1e5)),
+            stats::setNames(as.list(rep(2e5, length(malariafwd:::.never_params))), malariafwd:::.never_params))
+  expect_message(run_sim(do.call(vivax_params, long), seed = 1, outdir = tempfile("mfwd_extinct_long_")),
+                 paste0("went extinct on tick ", run$extinct_tick, " of 100000: "), fixed = TRUE)
 })
 
 test_that("imports go to random hosts, and a host at MAX_MOI takes none", {

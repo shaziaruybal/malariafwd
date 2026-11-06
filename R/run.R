@@ -21,7 +21,8 @@
 #' @param timeout seconds before the run is stopped, with an error saying so (`Inf` = no limit).
 #' @param echo if `TRUE`, stream SLiM output live to the console.
 #' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`; see
-#'   [load_run()]). A run that goes extinct before `SIM_DAYS` ends there, with a message.
+#'   [load_run()]). A run that goes extinct, with no parasite left and no importation still to
+#'   come, ends on that tick and gives a message.
 #' @examples
 #' \dontrun{
 #' run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1, outdir = "runs/demo")
@@ -83,8 +84,9 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
          ". Log: ", file.path(outdir, "run.log"), call. = FALSE)
   run <- load_run(outdir)  # resolved params from params.tsv is the authoritative record
   if (!is.na(run$extinct_tick))
-    message("The run went extinct on tick ", run$extinct_tick, " of ", params$SIM_DAYS,
-            ": no parasite, hypnozoite or importation was left, so its outputs end there.")
+    message("The run went extinct on tick ", run$extinct_tick, " of ", .slim_num(params$SIM_DAYS),
+            ": no parasite was left in any host or mosquito, hypnozoites included, and no ",
+            "importation was still to come, so its outputs end there.")
   invisible(run)
 }
 
@@ -105,16 +107,17 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #' @param ... passed to [run_sim()].
 #' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, `error` (the
 #'   failure message, or `NA` for a cell that ran), and `extinct_tick` (the tick on which a run
-#'   went extinct and ended, `NA` otherwise; see [load_run()]). A failed cell does not abort the
-#'   sweep -- one bad cell should not lose a grid -- but it warns, and the reason travels
-#'   with the result rather than being discarded. A warning given in the cells (such as a
-#'   parameter set's own warnings, which [run_sim()] repeats for each run) is given once, after
-#'   the FAILED summary, with the number of cells it came from. If the grid stops part-way with
-#'   an error, that error's message lists the warnings of the cells whose results had reached
-#'   this session; with workers, a cell's warnings travel with its chunk's result, so those of a
-#'   chunk lost with its worker are lost. Under `options(warn = 2)` a warning in a cell fails
-#'   that cell, in any plan and also inside `suppressWarnings()`, and the FAILED summary is then
-#'   an error, so nothing is returned; the cells that ran are on disk.
+#'   went extinct and ended, `NA` for a run that did not go extinct; see [load_run()]). The cells
+#'   that went extinct are counted in one message for the grid, in place of [run_sim()]'s message
+#'   for each. A failed cell does not abort the sweep -- one bad cell should not lose a grid --
+#'   but it warns, and the reason travels with the result rather than being discarded. A warning
+#'   given in the cells (such as a parameter set's own warnings, which [run_sim()] repeats for each
+#'   run) is given once, after the FAILED summary, with the number of cells it came from. If the
+#'   grid stops part-way with an error, that error's message lists the warnings of the cells whose
+#'   results had reached this session; with workers, a cell's warnings travel with its chunk's
+#'   result, so those of a chunk lost with its worker are lost. Under `options(warn = 2)` a warning
+#'   in a cell fails that cell, in any plan and also inside `suppressWarnings()`, and the FAILED
+#'   summary is then an error, so nothing is returned; the cells that ran are on disk.
 #' @export
 run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, ...) {
@@ -198,8 +201,8 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
   msgs <- held[[1]]; conds <- held[[2]]; counts <- held[[3]]
   give()
   if (any(!is.na(res$extinct_tick)))
-    message(sum(!is.na(res$extinct_tick)), " of ", nrow(res), " grid cell(s) went extinct and ended ",
-            "early; see the `extinct_tick` column.")
+    message(sum(!is.na(res$extinct_tick)), " of ", nrow(res), " grid cell(s) went extinct; see the ",
+            "`extinct_tick` column.")
   res
 }
 

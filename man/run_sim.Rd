@@ -34,7 +34,8 @@ so the outputs and the tree-sequence provenance both record it.}
 }
 \value{
 invisibly, a \code{vivax_run} object (\code{outdir}, \code{params}, \code{seed}, \code{extinct_tick}; see
-\code{\link[=load_run]{load_run()}}). A run that goes extinct before \code{SIM_DAYS} ends there, with a message.
+\code{\link[=load_run]{load_run()}}). A run that goes extinct, with no parasite left and no importation still to
+come, ends on that tick and gives a message.
 }
 \description{
 Launches SLiM with the given parameters and writes its outputs into \code{outdir}
