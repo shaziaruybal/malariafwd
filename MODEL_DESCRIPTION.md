@@ -562,8 +562,11 @@ intervention and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws mor
 imports on a day with probability above 0.01. Imports arrive in `early()`, which first runs on
 day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a window brings imports on its days
 from `max(1, IMPORT_START)` to `min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run
-brings nothing. A naive population seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import
-path on a day of the run (D39).
+brings nothing. A day-1 pulse lands alongside the founders, with one difference from other days:
+a founder host that carries a copy of another founder's genome
+(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`) receives its copy on day 2, so on day 1 it is still
+empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries both (D39). A naive population
+seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run.
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
 source population, so imports are maximally distinguishable from local parasites (measured founder

@@ -103,11 +103,19 @@ defaults, 86% of 11,676 activations over eight 3-year runs are flagged.
 naive population (review M5). With `N_IMPORTS = 0` the run then stopped at the liveness check with
 advice about `N_FOUNDER_HOSTS`. Since D17 a naive population is expressible directly.
 **Decision.** The special case is removed. A pulse on day 1 lands like a pulse on any other day,
-alongside the founders; a naive population, seeded only by imports, is `N_FOUNDER_HOSTS = 0` with an
-import path.
+alongside the founders, with one difference (review of M5): a founder host that carries a copy of
+another founder's genome (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`) receives the copy only on day 2,
+since `addCloned()` needs `reproduction()`, which first runs then. On day 1 such a host is still
+empty, so the `MAX_MOI` check does not refuse it a day-1 import, and from day 2 it carries both. With
+20 hosts, 12 of them founders sharing 2 genomes, and a day-1 pulse of 20 at `MAX_MOI = 1`, only the
+2 hosts of the founding genomes refused the import, and all 10 hosts carrying copies held two
+lineages on day 2 (seeds 1-3). On day 2 the copy is taken from the founding genome in its host that
+is not an import, since a day-1 import can sit beside it. A naive population, seeded only by imports,
+is `N_FOUNDER_HOSTS = 0` with an import path.
 **Consequences.** Runs with `IMPORT_TICK = 1` keep their founders, and so change. No analysis in
 either repository uses `IMPORT_TICK = 1`, and no saved `params.tsv` has it. Other runs are
-byte-identical.
+byte-identical. Picking the template by origin rather than as the host's first genome changes no
+run: an import is appended after the founder, so the first genome was the founder already.
 **How to verify.** `tests/testthat/test-run.R`: with `IMPORT_TICK = 1` the founders are seeded and
 the imports arrive on tick 1.
 

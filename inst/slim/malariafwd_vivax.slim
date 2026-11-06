@@ -1031,13 +1031,17 @@ reproduction()
 // reproduction() never fires (no individuals exist until 1 early() seeds them), so the clonal founder
 // HOSTS recorded during setup are copied here at tick 2 - the first tick individuals exist. Runs once,
 // then self-deactivates. Default N_FOUNDER_LINEAGES == N_FOUNDER_HOSTS => nothing pending => no-op.
+// A day-1 import pulse lands before this (D39): a clone host is still empty then, so MAX_MOI does not
+// refuse it an import and it holds both from tick 2, and an import can sit beside a template founder.
 2 reproduction()
 {
 	for (i in seqLen(size(PENDING_CLONE_HOSTS)))
 	{
 		tsub = sim.subpopulations[sim.subpopulations.id == PENDING_CLONE_HOSTS[i]];     // the empty founder host
 		tsp  = sim.subpopulations[sim.subpopulations.id == PENDING_CLONE_TEMPLATES[i]]; // its assigned founder-lineage subpop
-		tmpl = tsp.individuals[0];               // the single template founder genome (tick 2: only the founder is present)
+		// the template founder genome: the one genome in its host that is not an import. A day-1
+		// import can share the host; takeMigrants() appends it, so the founder is also the first.
+		tmpl = tsp.individuals[tsp.individuals.getValue("is_imported") == F][0];
 		clone = tsub.addCloned(tmpl);            // genetic clone -> IBD 1 to the template lineage in the tree
 
 		// founder flags/values, mirroring the human seed branch in 1 early()
