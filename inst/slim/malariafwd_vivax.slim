@@ -609,8 +609,11 @@ reproduction()
 			{
 				{
 					// Is a patent clone of the same lineage already in the host? Such a relapse is
-					// counted like any other, but no observer could see it as a recurrence, so the
-					// row says so (D40). A clone born this tick is not visible yet.
+					// counted, and drawn for detection, like any other, but a real observer would see
+					// only the infection already there, not a recurrence, so the row says so (D40).
+					// Only clones born on earlier days are seen (one that ends today still counts): a
+					// clone born this tick, from another batch of the lineage waking, a recrudescence
+					// or a bite, is not visible yet, so a relapse that starts with it is not flagged.
 					blood = h.individuals[h.individuals.getValue("is_dormant") == F];
 					into_patent = 0;
 					if (size(blood) > 0)
@@ -1671,7 +1674,7 @@ function (void) logEvent(
 	[i$ n_hypnozoites = 1],            // count represented by this event; 1 for non-batch events, actual batch/thinning count for hypnozoite batch establishment/activation/death/MDA events
 	[i$ oocyst_id = -1],               // meiosis id shared by a tetrad's products; -1 for founders/imports (no meiosis)
 	[i$ detected = -1],                // detection layer: 1 = detected/reported case, 0 = true-but-undetected episode, -1 = N/A (non-case event)
-	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage was already in the host (D40), 0 if not; -1 elsewhere
+	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage, born on an earlier day, was in the host (D40), 0 if not; -1 elsewhere
 {
 	defineGlobal("TICK_EVENT_ID", TICK_EVENT_ID + 1); // was LOCAL inside this function, so every event_id was <tick>_1
 	event_id = asString(sim.cycle) + "_" + asString(TICK_EVENT_ID);

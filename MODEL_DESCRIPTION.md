@@ -299,9 +299,15 @@ or unrelated — which is the whole point of the identifiability work.
 **A relapse can start while a patent clone of its own lineage is still in the host**, most often
 the primary from the same bite or an earlier relapse of the same batch: at the defaults about 85%
 of relapses do. Such a relapse is logged and counted like any other, as a new episode and a new
-acquisition, and the lineage stays patent in the host until all its clones have cleared. No
-observer could see it as a recurrence or as a new clone. Its `hypnozoite_activation` row has
-`into_patent_lineage = 1` (§16.1).
+acquisition, and the lineage stays patent in the host until all its clones have cleared. It is
+drawn for detection like any other relapse, so the observation layer can report it, put it on the
+observed line list and schedule a course for it; at the default `P_DETECT_RELAPSE = 1` every one is
+reported. A real observer would see only the infection already there, not a recurrence or a new
+clone. Its `hypnozoite_activation` row has `into_patent_lineage = 1` (§16.1), which is the filter
+for leaving it out. The flag looks only at clones born on earlier days: a relapse that starts on
+the same day as another clone of its lineage in the host (another batch waking, a recrudescence or
+a bite) is not flagged for that clone, so two batches of one lineage that wake together, with no
+earlier clone of it in the host, are both 0.
 
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
@@ -651,7 +657,8 @@ Pv3Rs / Taylor taxonomy. The third is the one a transmission model usually omits
 | **recrudescence** | a clone that survived a treatment course re-expands to patency | a **new** genome, clonal to the holder it came from |
 
 A relapse that starts while a patent clone of its own lineage is still in the host is a relapse
-too, but it cannot be observed as a recurrence (§5).
+too, and the observation layer can report it, but a real observer could not see it as a recurrence
+(§5).
 
 **The mechanism.** When a blood-stage course fails on a clone (w.p. `P_BLOODCURE_SURVIVAL`), that
 clone either carries on at full density, or — w.p. `P_RECRUD_GIVEN_FAIL` — is **suppressed below
@@ -1066,9 +1073,10 @@ Ordered by how much the answer is likely to move.
 
 **Files per run:** `events.tsv` (the event log — one row per transmission, activation, clearance,
 treatment event, with lineage/pedigree/oocyst ids, `is_dormant`, `is_imported`, `n_hypnozoites`,
-`detected`), `state.tsv` (per-tick host and vector state), `params.tsv` (**all resolved parameters
-plus `ACTUAL_SEED`** and the SLiM and package versions — full provenance; an extinct run's file
-ends with an `EXTINCT_TICK` row, §2), `plasmo.trees` (tskit tree sequence).
+`detected`, `into_patent_lineage`), `state.tsv` (per-tick host and vector state), `params.tsv`
+(**all resolved parameters plus `ACTUAL_SEED`** and the SLiM and package versions — full
+provenance; an extinct run's file ends with an `EXTINCT_TICK` row, §2), `plasmo.trees` (tskit tree
+sequence).
 
 **Identifier hierarchy** — worth internalising, these are not interchangeable:
 
@@ -1103,7 +1111,7 @@ One row per event. Columns:
 | `n_hypnozoites` | count this row represents (1 for non-batch events; the batch/thinning count otherwise) |
 | `oocyst_id` | the meiosis this product came from |
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
-| `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage was already in the host, 0 if not (§5); −1 on other rows |
+| `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage, born on an earlier day, was still in the host (one that ends that day counts), 0 if not (§5); −1 on other rows. Activations, recrudescences and bites of the lineage on the same day do not see one another, so two batches of one lineage that wake together, with no earlier clone of it in the host, are both 0 |
 
 **Event vocabulary** — **25 types**. `event_types()` is the authority and returns them as a data
 frame with `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than

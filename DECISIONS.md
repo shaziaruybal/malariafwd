@@ -79,12 +79,20 @@ is already in the host (70-82% in review M3's larger runs). Over four 3-year def
 clone was the primary from the same bite for 43% of them, an earlier relapse of the same batch for
 45%, another batch's relapse for 10% and another inoculation of the lineage for 2%. Each such
 relapse is logged as a new episode and counted by `relapse_fraction()` and the other metrics,
-although no observer could see it as a recurrence.
+although a real observer could not see it as a recurrence. The model's own observation layer
+draws its detection like any other relapse's, so it can be reported and treated (at the default
+`P_DETECT_RELAPSE = 1` every one is reported), while a study would see only the infection already
+there (review of M3).
 **Decision.** The model is kept: a new genome per activation, counted as other relapses are. Each
-`hypnozoite_activation` row gains `into_patent_lineage`: 1 if a patent clone of the same lineage
-was already in the host, 0 if not (-1 on other rows). In Phase B, `classify_cases()`,
-`relapse_fraction()` and `force_of_infection()` gain `exclude_masked = FALSE`, and the 0.55-0.85
-relapse band is compared with the acquisitions reading with these relapses left out.
+`hypnozoite_activation` row gains `into_patent_lineage`: 1 if a patent clone of the same lineage,
+born on an earlier day, was still in the host, 0 if not (-1 on other rows). The activation runs in
+`reproduction()`, which sees no clone born in it, so a relapse that starts on the same day as
+another clone of its lineage in the host (another batch waking, a recrudescence or a bite) is not
+flagged for that clone, and two batches of one lineage that wake together, with no earlier clone of
+it in the host, are both 0; this is rare at the defaults, and is documented rather than resolved
+here (review of M3). In a later change, `classify_cases()`, `relapse_fraction()` and
+`force_of_infection()` gain `exclude_masked = FALSE`, and the 0.55-0.85 relapse band is compared
+with the acquisitions reading with these relapses left out.
 **Alternatives rejected.** Merging such an activation into the ongoing clone. It would change
 every run, and the flag gives each analysis both readings.
 **Consequences.** `events.tsv` gains a last column; its other columns, and every other output, are
