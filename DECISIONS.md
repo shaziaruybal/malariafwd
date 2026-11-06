@@ -26,33 +26,40 @@ found that this drops meiosis I: the two chromatids attached to one centromere g
 so the two products of a pole carry the same parent at every chromosome's centromere. Under the
 random deal any two products of one oocyst share about a third of the genome (sd about 0.08,
 unimodal); under meiosis I the two pairs of meiosis II sisters share about 0.60 and the other four
-pairs about 0.20 (sd about 0.20). IBD and relatedness methods are scored against this ground
-truth, and the narrow distribution would flatter them. The author chose to model meiosis I
-(2026-11-05).
+pairs about 0.20 (overall sd about 0.20; about 0.06 within each group). IBD and relatedness
+methods are scored against this ground truth, and the narrow distribution would flatter them. The
+author chose to model meiosis I (2026-11-05).
 **Decision.** For each chromosome, meiosis I sends the two chromatids that carry the same parent at
 its centromere to one pole, products 0 and 1 or products 2 and 3, drawn independently for each
 chromosome; meiosis II gives one of them to each product of that pole, in random order. Chiasmata
 and crossovers are as in D34. The centromeres are the centres of the features PVP01_CEN01 to
 PVP01_CEN14 of the PvP01 annotation (Sanger/GeneDB, released with Auburn et al. 2016), held as
-fractions of each chromosome (`PVP01_CEN_FRAC`) so that `GENOME_MODE = "core"` keeps them. Each
-chiasma's two chromatids are recorded in two vectors, so a tetrad's work is linear in its
-chiasmata rather than quadratic (about 340 ms a tetrad at `RECOMB_RATE = 1e-3` before).
-**Rationale.** This is canonical meiosis, and we know of no evidence that Plasmodium departs from it. The
-split barely depends on where the centromeres sit: midpoints give 0.614 and 0.193, the annotated
-centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each chromosome about 0.605 and
-0.197.
+fractions of each chromosome (`PVP01_CEN_FRAC`) so that `GENOME_MODE = "core"` keeps them. A
+tetrad's work is linear in its chiasmata: they are de-duplicated without keeping their order
+(they are sorted next), and each chiasma's two chromatids are appended to two vectors. A tetrad
+takes about 24 ms at `RECOMB_RATE = 1e-3`, against about 320-440 ms before; the products and the
+random stream are unchanged.
+**Rationale.** This is canonical meiosis, and we know of no evidence that Plasmodium departs from
+it. The split barely depends on where the centromeres sit: midpoints give 0.614 and 0.193, the
+annotated centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each chromosome about
+0.605 and 0.197. No obligate chiasma is imposed (D34); one would move sisters to about 0.58 and
+the others to about 0.21, about twice the effect of the centromere positions.
 **Supersedes.** D34's assignment of chromatids to products, and the figures that follow from it
-(unimodal around 1/3, sd about 0.08, "this is Plasmodium meiosis").
+(unimodal around 1/3, sd about 0.08, "this is Plasmodium meiosis"); and D34's expectation that a
+sibling pair's IBD state is uncorrelated across junctions. Pooled over pairs it is about 0.09
+under meiosis I, since a pair that are sisters on one chromosome are sisters on all; a product's
+own parent stays uncorrelated across junctions.
 **Alternatives rejected.** *Keep the random deal* -- simpler and shared with Wong et al. (2018),
 but it makes every same-oocyst pair look alike. *Pair products without centromeres* (a deal fixed
 at each chromosome's start) -- gives sisters 0.50 and the others 0.25, so the centromere positions
 matter.
 **Consequences.** Every run with an outcrossed oocyst changes its tree sequence. On the full
-14-chromosome map `events.tsv` and `state.tsv` are unchanged: the genome is neutral, every product
-is a fresh lineage, and the new deal draws as many random numbers as the old (Eidos's sample()
-draws n - 1 numbers to order n items, so 3 either way). With a `CHROMOSOMES` subset an unrecombined
-product is a copy that keeps its parent's lineage, and the deal decides which product that is, so
-those runs' events change too. Each product's
+14-chromosome map at the default rate `events.tsv` and `state.tsv` are unchanged: the genome is
+neutral, every product is a fresh lineage, and the new deal draws as many random numbers as the
+old (Eidos's sample() draws n - 1 numbers to order n items, so 3 either way). With a `CHROMOSOMES`
+subset or a small `RECOMB_RATE` (every one of six seeds differed at 1e-8), an unrecombined product
+is a copy that keeps its parent's lineage, and the deal decides which product that is, so those
+runs' events change too. Each product's
 crossovers and assortment are unchanged (17.9 M; a junction switch with probability 1/2). Two
 products of one oocyst share a third of the genome on average for unrelated parents, sisters about
 0.60 and the others about 0.20 (5-95% about 0.12-0.67 over all pairs), and a pair's sharing is
@@ -199,7 +206,8 @@ chromatids per chromosome. Chiasmata fall at the union of two gamete-rate breakp
 Poisson set with twice the per-product map length, within each chromosome; each joins a random
 chromatid of each parent at that locus. The four chromatids of each chromosome then go to the four
 products at random, independently across chromosomes. No obligate chiasma is imposed: neither
-source claims one, and its effect is negligible. A product with no switch at all is a copy of its
+source claims one, and its effect on the map is negligible (on sibling sharing under meiosis I,
+see D41). A product with no switch at all is a copy of its
 starting parent and keeps that parent's lineage; every other product is a fresh lineage. That
 happens with probability 2^-(n-1) e^-d for n chromosomes of total map d: about 2e-12 on the full
 map, but often on a few chromosomes (about half of the products of chromosome 1 alone). Selfed oocysts are unchanged. The chromosome starts on D2's concatenated map are
@@ -226,8 +234,8 @@ release (M33).
 **How to verify.** `tests/testthat/test-model-invariants.R` runs the model's own `seedTetrad()` on
 the PvP01 map for 400 tetrads: two products carry each parent's allele at every probe locus, none
 is a whole-genome copy of a parent, no same-oocyst pair shares nothing, and the mean pair share is
-within 0.02 of 1/3. `inst/validation/audit_arg_junctions.R` shows the IBD state of sibling pairs
-uncorrelated across junctions and correlated within chromosomes.
+within 0.02 of 1/3. `inst/validation/audit_arg_junctions.R` shows each product's parent uncorrelated
+across junctions and correlated within chromosomes.
 
 ---
 

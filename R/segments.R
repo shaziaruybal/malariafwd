@@ -296,9 +296,10 @@ plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
     ## Most relationship classes are POINT MASSES (relapses are always IBD 1, distinct founders
     ## always 0), so a box or a crossbar collapses to a line and implies a spread that is not
     ## there. Binning into relatedness bands and showing composition is honest about that, and
-    ## shows where same-oocyst sibs fall, in two groups around 0.6 and 0.2.
-    brk <- c(-Inf, 1e-9, 0.25, 0.40, 0.60, 1 - 1e-9, Inf)
-    lab <- c("0 (unrelated)", "(0, 1/4]", "(1/4, 0.4]", "(0.4, 0.6]", "(0.6, 1)", "1 (clonal)")
+    ## shows where same-oocyst sibs fall: for unrelated parents, meiosis II sisters in (0.4, 0.8]
+    ## and the other pairs below 0.4.
+    brk <- c(-Inf, 1e-9, 0.25, 0.40, 0.80, 1 - 1e-9, Inf)
+    lab <- c("0 (unrelated)", "(0, 1/4]", "(1/4, 0.4]", "(0.4, 0.8]", "(0.8, 1)", "1 (clonal)")
     d <- data.table::copy(pairs)[, band := cut(ibd, brk, labels = lab, right = TRUE)]
     d <- d[, .(n = .N), by = .(cls, band)][, frac := n / sum(n), by = cls]
     pal2 <- stats::setNames(
@@ -328,7 +329,8 @@ plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
     ggplot2::geom_hline(data = rungs, ggplot2::aes(yintercept = y), linetype = 2,
                         colour = "grey70", linewidth = .3) +
     ggplot2::geom_jitter(width = .18, height = 0, alpha = .35, size = 1.1) +
-    ggplot2::stat_summary(fun = stats::median, geom = "crossbar", width = .5,
+    ## the mean, which for same-oocyst sibs is the tetrad mean (their two groups put the median low)
+    ggplot2::stat_summary(fun = mean, geom = "crossbar", width = .5,
                           linewidth = .5, colour = "grey15") +
     ggplot2::scale_colour_manual(values = pal, guide = "none") +
     ggplot2::scale_y_continuous("IBD (fraction of genome shared from a recent common ancestor)",

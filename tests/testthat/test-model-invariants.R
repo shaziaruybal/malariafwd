@@ -217,20 +217,30 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
   chr <- rep(1:14, each = 21)
   probes <- unlist(lapply(1:14, function(i) sort(c(starts[i] + round(lens[i] * (1:20) / 21), cens[i]))))
   at_cen <- match(cens, probes)
+  ## the map, CHROM_STARTS and CHROM_CENTROMERES come from the model's own GENOME code
+  genome <- src[grep('defineConstant("PVP01_FULL"', src, fixed = TRUE):grep('defineConstant("RECOMB_WITHIN"', src, fixed = TRUE)]
+  genome_init <- function(mode, chromosomes)
+    c(sprintf("  defineConstant('GENOME_MODE', '%s'); defineConstant('CHROMOSOMES', '%s');", mode, chromosomes),
+      "  defineConstant('RECOMB_RATE', -1.0);", genome,
+      "  initializeMutationType('m1', 0.5, 'f', 0.0); m1.convertToSubstitution = F;",
+      "  initializeChromosome(1, GENOME_LENGTH, 'H'); initializeGenomicElementType('g1', m1, 1.0);",
+      "  initializeGenomicElement(g1, 0, GENOME_LENGTH - 1); initializeMutationRate(0.0);",
+      "  initializeRecombinationRate(rec_rates, rec_ends);")
+  ## core mode and a subset place each centromere at the same fraction of its chromosome
+  chk <- tempfile(fileext = ".slim")
+  writeLines(c("initialize() {", "  initializeSLiMModelType('nonWF');", genome_init("core", "3,5-6"),
+               "  catn('CEN ' + paste(CHROM_CENTROMERES)); }", "1 early() { sim.simulationFinished(); }"), chk)
+  res <- processx::run(slim_path(), chk, error_on_status = FALSE)
+  expect_equal(res$status, 0L, info = res$stderr)
+  core <- round(lens[c(3, 5, 6)] * 0.9)
+  got <- as.numeric(strsplit(sub("^CEN ", "", grep("^CEN ", strsplit(res$stdout, "\n")[[1]], value = TRUE)), " ")[[1]])
+  expect_true(all(abs(got - (c(0, cumsum(core)[-3]) + round(frac[c(3, 5, 6)] * core))) <= 1))   # rounding
   script <- tempfile(fileext = ".slim")
   writeLines(c(fun("tagMosqProduct"), fun("seedTetrad"), "initialize() {",
     "  initializeSLiMModelType('nonWF'); initializeSLiMOptions(keepPedigrees=T); setSeed(11);",
-    sprintf("  lens = c(%s);", paste(lens, collapse = ", ")),
-    "  ends = integer(0); rates = float(0); gpos = 0; starts = integer(0);",
-    "  for (i in seqAlong(lens)) { starts = c(starts, gpos); if (i > 0) { ends = c(ends, gpos); rates = c(rates, 0.5); }",
-    sprintf("    ends = c(ends, gpos + lens[i] - 1); rates = c(rates, %s); gpos = gpos + lens[i]; }", r),
-    "  defineConstant('CHROM_STARTS', starts); defineConstant('GLEN', gpos); defineConstant('EIP_DAYS', 10);",
-    sprintf("  defineConstant('CHROM_CENTROMERES', c(%s));", paste(cens, collapse = ", ")),
-    sprintf("  defineConstant('PROBES', c(%s));", paste(probes, collapse = ", ")),
-    "  initializeMutationType('m1', 0.5, 'f', 0.0); m1.convertToSubstitution = F;",
-    "  initializeChromosome(1, GLEN, 'H'); initializeGenomicElementType('g1', m1, 1.0);",
-    "  initializeGenomicElement(g1, 0, GLEN - 1); initializeMutationRate(0.0);",
-    "  initializeRecombinationRate(rates, ends);", "}",
+    genome_init("full", "1-14"),
+    "  defineConstant('EIP_DAYS', 10);",
+    sprintf("  defineConstant('PROBES', c(%s));", paste(probes, collapse = ", ")), "}",
     "1 first() { sim.addSubpop('p1', 2); sim.addSubpop('p2', 0);",
     "  p1.individuals[0].haplosomes.addNewMutation(m1, 0.0, PROBES);",
     "  p1.individuals[0].setValue('lineage_id', -1); p1.individuals[1].setValue('lineage_id', -2); }",

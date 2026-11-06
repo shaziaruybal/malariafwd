@@ -826,7 +826,7 @@ Stated plainly, because several matter for interpretation.
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
 | 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled (malariasimulation Weibull curves); OpenMalaria makes the same simplification |
-| 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres; crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2 |
+| 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres; crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2. With no obligate chiasma, about a quarter of the bivalents of the shortest chromosomes have none; an obligate chiasma would move meiosis II sisters from about 0.60 to 0.58 and the other pairs from 0.20 to 0.21 |
 
 ---
 
@@ -969,12 +969,14 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | junction share of crossovers | 26.6% (6.5 junction vs 17.9 within per product) | consistent |
 | within-chromosome breakpoint density uniform across chromosomes | CV ≈ 0 | **CV = 0.013** (3,149–3,309 per Mb) |
 | within-chromosome breakpoint position uniform | KS p > 0.05 | **D = 0.004, p = 0.289** |
-| junction behaves as `r = 0.5` (independent assortment) | φ ≈ 0 | **φ = −0.002** at 50.7% co-inheritance |
-| within-chromosome control (r = 0.148 over 200 kb) | φ high | **φ = 0.770** at 88.8% |
+| a product's parent across a junction (independent assortment) | φ ≈ 0 | **φ = 0.08 ± 0.03** at 53.8% the same (−0.01 to 0.00 at three other seeds) |
+| a product's parent across 200 kb within a chromosome | φ = e^(−2r × 200 kb) = 0.744 | **φ = 0.724** at 86.2% the same |
 
-The junction-vs-control contrast (φ = −0.002 against 0.770) is the direct evidence that
-independent assortment is working — a junction transmits chromosomes independently while a
-within-chromosome control at 200 kb stays tightly linked.
+The junction-vs-control contrast, measured on each product against its parent (φ about 0 against
+0.72), is the direct evidence that independent assortment is working: a product's parent at the
+end of one chromosome says nothing about the start of the next, while within a chromosome it stays
+linked over 200 kb. Pooled over pairs of products of one oocyst the IBD state is correlated across
+junctions (φ about 0.09), because meiosis I pairs the products alike on every chromosome.
 
 ### What is calibrated and what is not
 

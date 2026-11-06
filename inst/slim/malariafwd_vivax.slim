@@ -2470,7 +2470,7 @@ function (integer) seedTetrad(o<Subpopulation>$ m, o<Individual>$ parent1, o<Ind
 	n_chr = size(CHROM_STARTS);
 	chi = c(sim.chromosome.drawBreakpoints(), sim.chromosome.drawBreakpoints());
 	// within-chromosome chiasmata only (the junction draws are not chiasmata), once each
-	chi = sort(unique(chi[match(chi, CHROM_STARTS) < 0]));
+	chi = sort(unique(chi[match(chi, CHROM_STARTS) < 0], preserveOrder=F));
 	chr_of = findInterval(chi, CHROM_STARTS);
 	breaks = Dictionary();
 	for (k in 0:3)
@@ -2486,16 +2486,18 @@ function (integer) seedTetrad(o<Subpopulation>$ m, o<Individual>$ parent1, o<Ind
 		n_x = size(xs);
 		on_parent = c(0, 0, 1, 1);
 		at_cen = NULL;
-		ca = integer(n_x);   // the parent1-side chromatid of each chiasma
-		cb = integer(n_x);   // and the parent2-side one
+		// the parent1-side and parent2-side chromatid of each chiasma; appended rather than
+		// assigned by index, which Eidos does in place (an indexed assignment copies the vector)
+		ca = integer(0);
+		cb = integer(0);
 		for (j in seqLen(n_x))
 		{
 			if (isNULL(at_cen) & xs[j] > CHROM_CENTROMERES[ch])
 				at_cen = on_parent;
 			a = sample(which(on_parent == 0), 1);
 			b = sample(which(on_parent == 1), 1);
-			ca[j] = a;
-			cb[j] = b;
+			ca = c(ca, a);
+			cb = c(cb, b);
 			on_parent[a] = 1;
 			on_parent[b] = 0;
 		}

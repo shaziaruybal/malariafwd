@@ -77,12 +77,12 @@ pal <- c("self (same genome)" = "#2166ac", "clonal copies" = "#4393c3",
 p2 <- ggplot(P, aes(cls, ibd, colour = cls)) +
   geom_hline(data = rungs, aes(yintercept = y), linetype = 2, colour = "grey70", linewidth = .3) +
   geom_jitter(width = .18, height = 0, alpha = .35, size = 1.1) +
-  stat_summary(fun = median, geom = "crossbar", width = .5, linewidth = .5, colour = "grey15") +
+  stat_summary(fun = mean, geom = "crossbar", width = .5, linewidth = .5, colour = "grey15") +
   scale_colour_manual(values = pal, guide = "none") +
   scale_y_continuous("IBD (fraction of genome shared from a recent common ancestor)",
                      breaks = rungs$y, labels = rungs$lab, limits = c(-0.02, 1.02)) +
   labs(title = "The relatedness ladder: IBD by known relationship",
-       subtitle = "each dot is one pair of parasite genomes; bar = median. Dashed lines are the textbook expectations.",
+       subtitle = "each dot is one pair of parasite genomes; bar = mean. Dashed lines are the textbook expectations.",
        x = NULL) +
   theme_minimal(base_size = 12) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1), panel.grid.minor = element_blank(),
@@ -90,7 +90,8 @@ p2 <- ggplot(P, aes(cls, ibd, colour = cls)) +
 ggsave(file.path(FIGS, "IBD_ladder.png"), p2, width = 10, height = 6, dpi = 140)
 
 ## ---------------- Fig 1: the shared segments themselves ----------------
-## one exemplar pair per class, with the actual IBD segments along the genome
+## one exemplar pair per class, with the actual IBD segments along the genome: the pair nearest
+## the class median, which for same-oocyst sibs is a typical pair that is not a meiosis II sister
 ex <- P[, .SD[which.min(abs(ibd - median(ibd)))], by = cls][order(cls)]
 ## NB ibd_pairs() simplifies the tree, which RENUMBERS nodes - its node_ids are not valid in a
 ## freshly loaded tree. So resolve pedigree_id -> node from the original tree's metadata here.
