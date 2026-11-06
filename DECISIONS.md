@@ -164,9 +164,17 @@ already skipped this.
 **Decision.** A course is scheduled only when the bite created a blood-stage primary (D20's
 "decided where a case arises"). The detection draw is unchanged, so the random stream upstream is
 the same.
-**Consequences.** Runs with `P_PRIMARY < 1` and case management on change: no phantom courses, and
-hypnozoite batches survive the bite that seeded them. With `P_PRIMARY = 1` (the default) every bite
-that establishes anything makes a primary, so those runs are byte-identical.
+**Consequences.** Runs with `P_PRIMARY < 1` change wherever a detected bite seeds only hypnozoites
+while the case-management window is open, as it is for the whole run by default, even at zero
+coverage: `decideTreatment()` draws the coverage (unless a course is already pending), at 0 too, so
+the call such a bite no longer makes shifts the random stream. With coverage, such a bite also gets
+no course: no phantom `bloodcure_given` or `radcure_given` row, no clearance of the host's other
+clones, and no radical cure of the batch it has just seeded. Measured at `P_PRIMARY = 0.5` and zero
+coverage over three 120-day runs (review of M2): each run differs from the model before, with no
+course in any of them, and each is byte-identical to it with the window moved past the run
+(`TREATMENT_START = 200`, `TREATMENT_END = 300`) or with `P_DETECT_PRIMARY = 0`. With
+`P_PRIMARY = 1` (the default) every bite that establishes anything makes a primary, so those runs
+are byte-identical.
 **How to verify.** `tests/testthat/test-treatment.R`: at `P_PRIMARY = 0`, full coverage and
 undetected relapses, no `bloodcure_given` or `radcure_given` row appears (there were 34 before).
 
