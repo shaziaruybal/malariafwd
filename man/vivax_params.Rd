@@ -36,7 +36,8 @@ and \verb{*_END} bounds) and the fixed delays \code{EIP_DAYS} and \code{GAMETOCY
 mean durations, rates and \code{SEASONAL_PHASE} need not be. Probabilities and coverages,
 \code{ALPHA_ACTIVATE} and \code{INTERVENTION_EFFICACY} lie in [0, 1], \code{MU_HYPNOZOITE} in (0, 1], and
 \code{DELTA_LATENCY} in (0, 1] when \code{K_LATENCY > 0}. \code{BITING_RATE} is positive (above 1 it only
-warns). Boosts, import rates, \verb{LAMBDA_*}, \code{SEASONAL_AMP} and counts are non-negative.
+warns). Boosts, import rates, \verb{LAMBDA_*}, \code{SEASONAL_AMP} and counts are non-negative, and
+\code{MAX_MOI} is at least 1 (1 means no superinfection).
 \code{RECOMB_RATE} is at most 0.5 per bp (any value <= 0 means the default map rate), and run time
 grows steeply with it.
 
@@ -48,8 +49,11 @@ trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_
 reaches day 99999, the day the defaults use for "never", must move those days past its end and
 cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
 a parasite is not refused here; the model's liveness check stops it. Each host takes at most one
-import a day, so \code{N_IMPORTS} or \code{N_IMPORTS_PER_TICK} above \code{N_HOSTS} warns: the excess never
-arrives.
+import a day, so a day's imports beyond \code{N_HOSTS} never arrive. This warns when a day's fixed
+imports inside the run exceed \code{N_HOSTS} (\code{N_IMPORTS} on \code{IMPORT_TICK}, \code{N_IMPORTS_PER_TICK} in
+the window, or both on the same day), and when \code{IMPORT_RATE_PER_TICK} at its peak over the
+window, with its seasonal, intervention and resurgence multipliers and with
+\code{N_IMPORTS_PER_TICK}, draws more than \code{N_HOSTS} imports on a day with probability above 0.01.
 
 A named number (such as \code{coef(fit)["k"]}), a value wrapped in \code{I()}, a whole number carrying
 floating-point noise (such as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given

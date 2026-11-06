@@ -179,13 +179,49 @@ test_that("a day's fixed imports above N_HOSTS warn, since a host takes one impo
   expect_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 5, N_IMPORTS = 20, IMPORT_START = 1,
                               IMPORT_END = 10, N_IMPORTS_PER_TICK = 20),
                  "N_IMPORTS and N_IMPORTS_PER_TICK bring 40 imports on day 5", fixed = TRUE)
-  ## exactly N_HOSTS, a pulse or a window after the run, a window before day 1, or a rate
+  ## a pulse and the window's count above N_HOSTS on different days are both named
+  expect_warning(vivax_params(N_HOSTS = 30, SIM_DAYS = 10, IMPORT_TICK = 1, N_IMPORTS = 40, IMPORT_START = 2,
+                              IMPORT_END = 11, N_IMPORTS_PER_TICK = 40),
+                 paste("N_IMPORTS brings 40 imports on day 1, and N_IMPORTS_PER_TICK brings 40 imports a day,",
+                       "but each host takes at most one import a day"), fixed = TRUE)
+  ## exactly N_HOSTS, a pulse or a window after the run, a window before day 1, or a rate well below
+  ## N_HOSTS (P(Poisson(5) > 30) is about 1e-13)
   expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 3, N_IMPORTS = 30))
   expect_no_warning(vivax_params(N_HOSTS = 30, SIM_DAYS = 100, IMPORT_TICK = 200, N_IMPORTS = 50))
   expect_no_warning(vivax_params(N_HOSTS = 30, SIM_DAYS = 100, IMPORT_START = 150, IMPORT_END = 300,
                                  N_IMPORTS_PER_TICK = 50))
   expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 0, IMPORT_END = 1, N_IMPORTS_PER_TICK = 50))
-  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 50))
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 5))
+})
+
+test_that("an import rate that often brings more than N_HOSTS imports a day warns", {
+  ## P(Poisson(50) > 30) = 0.998, so about 20 imports are lost almost every day
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 50),
+                 paste("IMPORT_RATE_PER_TICK with its seasonal, intervention and resurgence multipliers",
+                       "reaches 50 imports a day on day 1: that day draws more than N_HOSTS = 30 imports",
+                       "with probability 0.998, but each host takes at most one import a day"), fixed = TRUE)
+  ## the peak follows the model's timeline: the boost from its trigger, the season, the intervention
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 200, IMPORT_RATE_PER_TICK = 15,
+                              IMPORT_RATE_BOOST = 3, RESURGENCE_TRIGGER_TICK = 100L),
+                 "reaches 45 imports a day on day 100:", fixed = TRUE)
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 50, IMPORT_RATE_PER_TICK = 15,
+                                 IMPORT_RATE_BOOST = 3, RESURGENCE_TRIGGER_TICK = 100L))
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 300, IMPORT_RATE_PER_TICK = 15,
+                              SEASONAL_AMP = 1, SEASONAL_PHASE = 100), "reaches 30 imports a day on day 100:",
+                 fixed = TRUE)
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 100, IMPORT_RATE_PER_TICK = 40,
+                                 INTERVENTION_START = 1L, INTERVENTION_END = 100L, INTERVENTION_EFFICACY = 0.9))
+  ## the window's fixed count leaves less room for the rate
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 10,
+                              N_IMPORTS_PER_TICK = 20), "imports together with N_IMPORTS_PER_TICK = 20 with probability",
+                 fixed = TRUE)
+  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 10))
+})
+
+test_that("MAX_MOI is at least 1", {
+  expect_error(vivax_params(MAX_MOI = 0L), "MAX_MOI must be at least 1, got 0: .* so 1 means no superinfection")
+  expect_error(vivax_params(MAX_MOI = -2L), "MAX_MOI must be at least 1")
+  expect_no_error(vivax_params(MAX_MOI = 1L))
 })
 
 test_that("blood-stage infections have no age cap, and their mean duration is at least a day", {
@@ -376,10 +412,13 @@ test_that("uptake_moments() keeps its precision for a tiny lambda or a huge K", 
 })
 
 test_that("the import rate is capped where its draw would fail, not at the number of hosts", {
-  ## one host, a window that closes before the boost starts: the model runs it
-  expect_no_error(vivax_params(N_HOSTS = 1L, N_FOUNDERS = 1L, IMPORT_START = 1L, IMPORT_END = 50L,
-                               IMPORT_RATE_PER_TICK = 0.6, RESURGENCE_TRIGGER_TICK = 100L,
-                               IMPORT_RATE_BOOST = 2, SIM_DAYS = 200L))
+  ## one host, a window that closes before the boost starts: the model runs it, and since the one
+  ## host takes one import a day, the warning gives the days that draw more
+  expect_warning(vivax_params(N_HOSTS = 1L, N_FOUNDERS = 1L, IMPORT_START = 1L, IMPORT_END = 50L,
+                              IMPORT_RATE_PER_TICK = 0.6, RESURGENCE_TRIGGER_TICK = 100L,
+                              IMPORT_RATE_BOOST = 2, SIM_DAYS = 200L),
+                 "reaches 0.6 imports a day on day 1: that day draws more than N_HOSTS = 1 imports with probability 0.122",
+                 fixed = TRUE)
   expect_error(vivax_params(IMPORT_START = 5L, IMPORT_END = 300L, IMPORT_RATE_PER_TICK = 1e19),
                "at most 1e6 imports a day")
   expect_error(vivax_params(IMPORT_RATE_PER_TICK = 1e6 + 0.4), "reaches 1000000.4 imports a day")

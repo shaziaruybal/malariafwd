@@ -85,8 +85,8 @@ although no observer could see it as a recurrence.
 was already in the host, 0 if not (-1 on other rows). In Phase B, `classify_cases()`,
 `relapse_fraction()` and `force_of_infection()` gain `exclude_masked = FALSE`, and the 0.55-0.85
 relapse band is compared with the acquisitions reading with these relapses left out.
-**Rejected.** Merging such an activation into the ongoing clone. It would change every run, and
-the flag gives each analysis both readings.
+**Alternatives rejected.** Merging such an activation into the ongoing clone. It would change
+every run, and the flag gives each analysis both readings.
 **Consequences.** `events.tsv` gains a last column; its other columns, and every other output, are
 byte-identical.
 **How to verify.** `tests/testthat/test-run.R` rebuilds each host's patent clones from
@@ -124,17 +124,46 @@ before, so a day's imports beyond `N_HOSTS` are dropped. A host already carrying
 blood-stage lineages takes none, as a local bite does, and the refusal is logged as
 `vh_inoculation_import_no_take`. `vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK`
 exceeds `N_HOSTS`.
-**Rejected.** Placing every import, with replacement, as review M6 proposed. At D33's cap of 1e6
-imports a day each host would take about 25,000 imports a tick, and such a run never finishes;
-the check suite's `-d` rows at the cap caught it.
+
+The review of M6 found the two gates unequal. A bite was checked only on a host tagged infected,
+which needs an infectious clone, so at `SUBPATENT_INFECTIVITY = 0` a host whose clones were all
+subpatent took bites past the cap while it refused imports; and `MAX_MOI = 0`, which
+`vivax_params()` accepted, refused every import, an empty host's included, while bites still
+infected empty hosts. A bite on a host tagged susceptible is now checked the same way, before its
+`P_TRANS_VH` draw, so the gate is the same for every new inoculation: a host already carrying
+`MAX_MOI` blood-stage lineages, patent or subpatent, takes none. `MAX_MOI` must be at least 1, in
+`validate_params()` and in the model's `initialize()`; 1 means no superinfection, which is what 0
+gave a bite. The warning also covers the Poisson rate, whose draws are cut at `N_HOSTS` a day too:
+`IMPORT_RATE_PER_TICK` at its peak over the window's days inside the run, worked out as for the
+biting rate (seasonality floored at 0, the intervention factor inside its window,
+`IMPORT_RATE_BOOST` from `RESURGENCE_TRIGGER_TICK`), warns when, with `N_IMPORTS_PER_TICK`, a day
+draws more than `N_HOSTS` imports with probability above 0.01, and the warning names the day, the
+rate and the probability. A rate of 50 a day into 30 hosts loses about 20 imports on almost every
+day (P = 0.998), and the old comment's "only by chance" did not hold for it. When the pulse and the
+window's count each exceed `N_HOSTS`, on different days, the warning names both.
+**Alternatives rejected.** *Placing every import, with replacement*, as review M6 proposed. At
+D33's cap of 1e6 imports a day each host would take about 25,000 imports a tick at the default
+`N_HOSTS = 40`, and a run started directly with `-d` at that cap never finished. *Saying in the
+docs that a bite is gated only on a host with an infectious clone* -- two gates for what is
+documented as one rule about parasite burden.
 **Consequences.** A run changes once imports arrive while some host is infected: imports now
 land in infected hosts in proportion to prevalence, so mixed infections with an import, and
 treatment of imported cases, are more common. Runs without imports, and a founder-free pulse into
-a wholly susceptible population, are byte-identical.
+a wholly susceptible population, are byte-identical; at `MAX_MOI = 0`, now refused, that pulse
+was refused outright. The bite gate changes only runs with `SUBPATENT_INFECTIVITY = 0` in which a
+host whose clones are all subpatent reaches `MAX_MOI`: whenever `SUBPATENT_INFECTIVITY > 0` a host
+tagged susceptible carries no blood-stage clone, so the check never fires. The rate warning is
+R-side only.
 **How to verify.** `tests/testthat/test-run.R` imports 100 infections into 200 hosts, half of
 them founders: about half the imports land in founder hosts (none did before), and with
-`MAX_MOI = 1` those are refused and logged. A pulse of 50 into 30 hosts brings exactly 30, with
-the warning.
+`MAX_MOI = 1` none lands in a founder host that still carries its clone when the pulse arrives (a
+founder host whose clone cleared first rightly takes one), and the refusals are logged. A pulse of
+50 into 30 hosts brings exactly 30, with the warning. With `SUBPATENT_INFECTIVITY = 0`,
+`MAX_MOI = 1` and every course failing into subpatency, no bite reaches a host after its clone is
+suppressed (59 to 87 did over seeds 1-4 before). `tests/testthat/test-params.R` refuses
+`MAX_MOI = 0`, warns for a rate of 50 into 30 hosts and follows the boost, season and intervention
+timeline, and names both counts; `tests/testthat/test-slim.R` refuses `MAX_MOI = 0` in a run
+started directly.
 
 ---
 

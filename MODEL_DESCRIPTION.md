@@ -139,9 +139,9 @@ for each tick t:
     for each mosquito m:
         if runif(1) >= biting_rate_eff(t):  continue
         h <- a uniformly chosen host
-        if m infectious and runif(1) < P_TRANS_VH:
-            if NOT (h infected and active_lineages(h) >= MAX_MOI):
-                broods <- sampleTransmissibleMosqBroods(m)   # n ~ ZT(LAMBDA_SPOROZOITES)
+        broods <- sampleTransmissibleMosqBroods(m)       # n ~ ZT(LAMBDA_SPOROZOITES), past the EIP
+        if m infectious and blood_stage_lineages(h) < MAX_MOI:   # patent or subpatent
+            if runif(1) < P_TRANS_VH:
                 inoculateMosquitoToHuman(broods, h)          # ONE Geom(nu) batch, split over k
         if h infectious and runif(1) < P_TRANS_HV:
             if active_lineages(m) < MAX_BROODS_PER_MOSQ:
@@ -159,10 +159,15 @@ for each tick t:
     kill mosquitoes w.p. MU_MOSQ; replace each as susceptible
 
     # --- importation ---
-    n_imp <- N_IMPORTS_PER_TICK + Poisson(IMPORT_RATE_PER_TICK * IMPORT_RATE_BOOST)
-    mint n_imp unrelated founder genotypes and move them into hosts chosen uniformly at random,
-        at most one per host (a host already at MAX_MOI takes none)
-    queue a hypnozoite batch for each, to be cloned next tick
+    n_imp <- (N_IMPORTS if t == IMPORT_TICK)
+             + (N_IMPORTS_PER_TICK + Poisson(import_rate_eff(t)) if IMPORT_START <= t < IMPORT_END)
+        # import_rate_eff(t): IMPORT_RATE_PER_TICK times the seasonal, intervention and
+        # IMPORT_RATE_BOOST factors that biting_rate_eff(t) applies to BITING_RATE
+    pick min(n_imp, N_HOSTS) distinct hosts uniformly at random      # at most one import per host
+    a host already carrying MAX_MOI blood-stage lineages takes none  # vh_inoculation_import_no_take
+    for each other host: roll primary and batch as a bite does, and if either takes, mint an
+        unrelated founder genotype and move it in (vh_inoculation_import_no_take if neither)
+    queue the hypnozoite batch of each import that took both, to be cloned next tick
 
   late():
     write state.tsv                                       # and the tree sequence at the end
@@ -209,11 +214,13 @@ There is no age ceiling: every infection ends by this daily draw. Clearance is
 **per-lineage**, so a polyclonal host loses lineages independently and MOI decays rather than
 collapsing at once.
 
-**Superinfection** is allowed and gated by `MAX_MOI` = 20. The gate is checked for every new
-inoculation, a local bite on an infected host or an import: a host already carrying `MAX_MOI`
-blood-stage lineages has the **whole** inoculation skipped — primary *and* hypnozoite batch, so
-the reservoir also stops being topped up. **Relapses bypass the gate entirely**, so realised MOI
-can exceed it. At 20 it is a runaway guard that essentially never binds (COI is typically 1–3);
+**Superinfection** is allowed and gated by `MAX_MOI` = 20, which is at least 1 (1 means no
+superinfection). The gate is the same for every new inoculation, a local bite or an import: a host
+already carrying `MAX_MOI` blood-stage lineages, patent or subpatent, has the **whole** inoculation
+skipped — primary *and* hypnozoite batch, so the reservoir also stops being topped up — whether or
+not those lineages are infectious (at `SUBPATENT_INFECTIVITY = 0` subpatent clones are not). The
+check comes before the bite's `P_TRANS_VH` draw. **Relapses bypass the gate entirely**, so realised
+MOI can exceed it. At 20 it is a runaway guard that essentially never binds (COI is typically 1–3);
 set it low and you are measuring the cap, not the biology.
 
 ---
@@ -546,14 +553,17 @@ Imports use the **same bite outcomes** as local transmission (primary and/or bat
 labelled `is_imported`, which is **carried through to relapses** so an imported relapse is a
 distinct truth category. They go to hosts chosen uniformly at random, as bites do, so an import
 can land in a host that already carries a clone (D38). A host already carrying `MAX_MOI`
-blood-stage lineages takes none, and the refusal is logged as `vh_inoculation_import_no_take`.
-Each host takes at most one import a day, so a day's imports beyond `N_HOSTS` are dropped;
-`vivax_params()` warns when `N_IMPORTS` or `N_IMPORTS_PER_TICK` exceeds `N_HOSTS`. Imports arrive
-in `early()`, which first runs on day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a
-window brings imports on its days from `max(1, IMPORT_START)` to
-`min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run brings nothing. A naive
-population seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run
-(D39).
+blood-stage lineages, patent or subpatent, takes none, as for a local bite (§3), and the refusal is
+logged as `vh_inoculation_import_no_take`. Each host takes at most one import a day, so a day's
+imports beyond `N_HOSTS` are dropped. `vivax_params()` warns when a day's fixed imports inside the
+run exceed `N_HOSTS` (`N_IMPORTS` on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the window, or both on
+the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal,
+intervention and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS`
+imports on a day with probability above 0.01. Imports arrive in `early()`, which first runs on
+day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a window brings imports on its days
+from `max(1, IMPORT_START)` to `min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run
+brings nothing. A naive population seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import
+path on a day of the run (D39).
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
 source population, so imports are maximally distinguishable from local parasites (measured founder
@@ -715,7 +725,8 @@ characters. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
 mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
 `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1], `MU_HYPNOZOITE` in (0, 1], and
 `DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only
-warns); boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative. A few sizes
+warns); boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative, and `MAX_MOI`
+is at least 1. A few sizes
 are capped far above anything realistic: a mean of 1000 oocysts per
 successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; the
 hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at
@@ -741,7 +752,7 @@ derived and written to `params.tsv` for provenance.
 | `P_TRANS_HV` | 0.5 | `c` |
 | `MOSQ_LIFESPAN` | 10 d | geometric (daily death probability 1/10) |
 | `EIP_DAYS` | 10 d | fixed |
-| `MAX_MOI` | 20 | superinfection gate (relapses bypass) |
+| `MAX_MOI` | 20 | superinfection gate, at least 1; 1 means no superinfection (relapses bypass) |
 | `MAX_BROODS_PER_MOSQ` | 20 | mosquito lineage cap |
 | `MEAN_BLOOD_STAGE_DURATION` | 60 d | geometric (daily clearance probability 1/60; White et al. 2014) |
 
@@ -1109,7 +1120,9 @@ subset(event_types(), ends_episode)$event_type # ...and every way one can END
 | liver | `hypnozoite_clearance`, `radcure_given`, `radcure_failure`, `radcure_hypnozoite_clear`, `mda_radcure_given`, `mda_radcure_failure`, `mda_hypnozoite_clear` |
 | vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `hv_uptake_seed`, `mosq_death` |
 
-A `*_no_take` suffix is logged when an inoculation produces neither a primary nor a batch.
+A `*_no_take` suffix is logged when an inoculation produces neither a primary nor a batch, and when
+an import's host already carries `MAX_MOI` blood-stage lineages (`vh_inoculation_import_no_take`);
+a local bite refused at `MAX_MOI` leaves no row.
 Note `bloodcure_subpatent` **ends a patent episode** without ending the infection — the clone is
 suppressed, not cleared, and returns later as a `recrudescence` (§9a).
 

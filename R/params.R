@@ -77,7 +77,8 @@
 #' mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
 #' `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in \[0, 1\], `MU_HYPNOZOITE` in (0, 1\], and
 #' `DELTA_LATENCY` in (0, 1\] when `K_LATENCY > 0`. `BITING_RATE` is positive (above 1 it only
-#' warns). Boosts, import rates, `LAMBDA_*`, `SEASONAL_AMP` and counts are non-negative.
+#' warns). Boosts, import rates, `LAMBDA_*`, `SEASONAL_AMP` and counts are non-negative, and
+#' `MAX_MOI` is at least 1 (1 means no superinfection).
 #' `RECOMB_RATE` is at most 0.5 per bp (any value <= 0 means the default map rate), and run time
 #' grows steeply with it.
 #'
@@ -89,8 +90,11 @@
 #' reaches day 99999, the day the defaults use for "never", must move those days past its end and
 #' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
 #' a parasite is not refused here; the model's liveness check stops it. Each host takes at most one
-#' import a day, so `N_IMPORTS` or `N_IMPORTS_PER_TICK` above `N_HOSTS` warns: the excess never
-#' arrives.
+#' import a day, so a day's imports beyond `N_HOSTS` never arrive. This warns when a day's fixed
+#' imports inside the run exceed `N_HOSTS` (`N_IMPORTS` on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in
+#' the window, or both on the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the
+#' window, with its seasonal, intervention and resurgence multipliers and with
+#' `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day with probability above 0.01.
 #'
 #' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
 #' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given
@@ -184,18 +188,16 @@ vivax_params <- function(...) {
 ## The days that default to 99999, which the model reads as "never".
 .never_params <- names(.malariafwd_defaults)[vapply(.malariafwd_defaults, identical, logical(1), 99999L)]
 
-## The largest daily biting probability the parameters ask of a mosquito, worked out over the run
-## the way the model applies them: seasonality only when SEASONAL_AMP > 0 (floored at 0), the
-## intervention factor inside [INTERVENTION_START, INTERVENTION_END), the boost from
-## RESURGENCE_TRIGGER_TICK. Biting starts on tick 2, once the populations exist. The factors change
-## only on those days and the seasonal one repeats every 365 days, so a year from each change
-## covers every value the run can take.
-.peak_biting <- function(p) {
-  last <- max(2, p$SIM_DAYS)
-  starts <- c(2, p$INTERVENTION_START, p$INTERVENTION_END, p$RESURGENCE_TRIGGER_TICK)
-  starts <- starts[starts >= 2 & starts <= last]
+## The largest daily value of a rate over days first..last, worked out the way the model applies
+## its factors to the biting and import rates: seasonality only when SEASONAL_AMP > 0 (floored at
+## 0), the intervention factor inside [INTERVENTION_START, INTERVENTION_END), the boost from
+## RESURGENCE_TRIGGER_TICK. The factors change only on those days and the seasonal one repeats every
+## 365 days, so a year from each change covers every value the rate can take.
+.peak_rate <- function(p, rate, boost, first, last) {
+  starts <- c(first, p$INTERVENTION_START, p$INTERVENTION_END, p$RESURGENCE_TRIGGER_TICK)
+  starts <- starts[starts >= first & starts <= last]
   t <- sort(unique(unlist(lapply(starts, function(a) seq(a, min(last, a + 364))))))
-  r <- rep(p$BITING_RATE, length(t))
+  r <- rep(rate, length(t))
   if (p$SEASONAL_AMP > 0) {
     angle <- 2 * pi * (t - p$SEASONAL_PHASE) / 365
     if (!all(is.finite(angle))) return(c(rate = NaN, day = NA))
@@ -204,9 +206,13 @@ vivax_params <- function(...) {
   inside <- t >= p$INTERVENTION_START & t < p$INTERVENTION_END
   r[inside] <- r[inside] * (1 - p$INTERVENTION_EFFICACY)
   boosted <- t >= p$RESURGENCE_TRIGGER_TICK
-  r[boosted] <- r[boosted] * p$BITING_RATE_BOOST
+  r[boosted] <- r[boosted] * boost
   c(rate = max(r), day = t[which.max(r)])
 }
+
+## The largest daily biting probability the parameters ask of a mosquito. Biting starts on tick 2,
+## once the populations exist.
+.peak_biting <- function(p) .peak_rate(p, p$BITING_RATE, p$BITING_RATE_BOOST, 2, max(2, p$SIM_DAYS))
 
 #' @keywords internal
 validate_params <- function(p) {
@@ -234,8 +240,13 @@ validate_params <- function(p) {
                "ALPHA_ACTIVATE_BOOST", "NU_HYPNOZOITE_BATCH_BOOST", "BITING_RATE_BOOST",
                "IMPORT_RATE_PER_TICK", "IMPORT_RATE_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
                "N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
-               "GAMETOCYTE_DELAY", "MAX_MOI", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
+               "GAMETOCYTE_DELAY", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
+  ## at 0 the gate would refuse every inoculation, an empty host's included (D38)
+  if (p$MAX_MOI < 1)
+    stop("MAX_MOI must be at least 1, got ", .slim_num(p$MAX_MOI), ": a host takes a new inoculation ",
+         "only while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.",
+         call. = FALSE)
   ## N_FOUNDERS itself is only the default of N_FOUNDER_HOSTS, so it is not checked
   if (p$N_FOUNDER_HOSTS > p$N_HOSTS)
     stop("N_FOUNDER_HOSTS (", .slim_num(p$N_FOUNDER_HOSTS), ") must be at most N_HOSTS (",
@@ -326,19 +337,35 @@ validate_params <- function(p) {
             signif(peak[["rate"]], 3), " on day ", peak[["day"]], ", but a mosquito bites at most ",
             "once a day, so the realised biting rate is capped below what the parameters imply.",
             call. = FALSE)
-  ## Each host takes at most one import a day (D38), so the fixed counts above N_HOSTS lose the
-  ## excess. A Poisson rate can draw above N_HOSTS too, but only by chance, so it is not warned.
-  days <- .import_days(p)
-  daily <- if (!is.null(days$window)) p$N_IMPORTS_PER_TICK else 0
-  pulse <- if (!is.null(days$pulse))
-    p$N_IMPORTS + (if (!is.null(days$window) && days$pulse >= days$window[1] &&
-                       days$pulse <= days$window[2]) daily else 0) else 0
-  if (max(daily, pulse) > p$N_HOSTS)
-    warning(if (pulse < daily) paste0("N_IMPORTS_PER_TICK brings ", .slim_num(daily), " imports a day")
-            else paste0(if (pulse > p$N_IMPORTS) "N_IMPORTS and N_IMPORTS_PER_TICK bring " else "N_IMPORTS brings ",
-                        .slim_num(pulse), " imports on day ", .slim_num(p$IMPORT_TICK)),
-            ", but each host takes at most one import a day, so at most N_HOSTS = ",
-            .slim_num(p$N_HOSTS), " of them arrive.", call. = FALSE)
+  ## Each host takes at most one import a day (D38), so a day's imports beyond N_HOSTS never
+  ## arrive. The fixed counts of the run's days are checked: the pulse day (with the window's count
+  ## when it falls in the window) and the window's other days, each named when it is over. A
+  ## Poisson rate draws above N_HOSTS by chance, rarely while it is well below N_HOSTS but most days
+  ## near or above it, so its peak over the window, with the window's count, is checked too.
+  days <- .import_days(p); win <- days$window
+  daily <- if (!is.null(win)) p$N_IMPORTS_PER_TICK else 0
+  in_win <- !is.null(days$pulse) && !is.null(win) && days$pulse >= win[1] && days$pulse <= win[2]
+  pulse <- if (!is.null(days$pulse)) p$N_IMPORTS + (if (in_win) daily else 0) else 0
+  over <- c(if (pulse > p$N_HOSTS)
+              paste0(if (pulse > p$N_IMPORTS) "N_IMPORTS and N_IMPORTS_PER_TICK bring " else "N_IMPORTS brings ",
+                     .slim_num(pulse), " imports on day ", .slim_num(p$IMPORT_TICK)),
+            if (daily > p$N_HOSTS && win[2] - win[1] + 1 > in_win)
+              paste0("N_IMPORTS_PER_TICK brings ", .slim_num(daily), " imports a day"))
+  if (length(over))
+    warning(paste(over, collapse = ", and "), ", but each host takes at most one import a day, so ",
+            "at most N_HOSTS = ", .slim_num(p$N_HOSTS), " of them arrive.", call. = FALSE)
+  room <- p$N_HOSTS - daily
+  if (!is.null(win) && p$IMPORT_RATE_PER_TICK > 0 && room >= 0) {
+    peak <- .peak_rate(p, p$IMPORT_RATE_PER_TICK, p$IMPORT_RATE_BOOST, win[1], win[2])
+    lost <- if (isTRUE(peak[["rate"]] > 0)) stats::ppois(room, peak[["rate"]], lower.tail = FALSE) else 0
+    if (lost > 0.01)
+      warning("IMPORT_RATE_PER_TICK with its seasonal, intervention and resurgence multipliers reaches ",
+              signif(peak[["rate"]], 3), " imports a day on day ", .slim_num(peak[["day"]]),
+              ": that day draws more than N_HOSTS = ", .slim_num(p$N_HOSTS), " imports",
+              if (daily > 0) paste0(" together with N_IMPORTS_PER_TICK = ", .slim_num(daily)),
+              " with probability ", signif(lost, 3), ", but each host takes at most one import a ",
+              "day, so the excess never arrives.", call. = FALSE)
+  }
   if (p$P_RECRUD_GIVEN_FAIL > 0 && p$P_BLOODCURE_SURVIVAL <= 0)
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)

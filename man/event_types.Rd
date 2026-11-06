@@ -14,7 +14,9 @@ end a patent blood-stage episode?), \code{is_onset} (does it begin one?) and \co
 Every row in a run's \code{events.tsv} carries an \code{event_type}. This returns a tidy table
 of the event types the model emits and what each means, so you can navigate an event
 log. An inoculation that establishes neither a blood-stage infection nor a hypnozoite
-batch is logged with a \verb{_no_take} suffix (e.g. \code{vh_inoculation_no_take}).
+batch is logged with a \verb{_no_take} suffix (e.g. \code{vh_inoculation_no_take}), and so is an
+import whose host already carries \code{MAX_MOI} blood-stage lineages
+(\code{vh_inoculation_import_no_take}); a local bite refused at \code{MAX_MOI} leaves no row.
 }
 \details{
 \strong{Derive filters from this table rather than restating event names.} \code{ends_episode}

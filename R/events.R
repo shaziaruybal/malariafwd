@@ -20,7 +20,9 @@
 #' Every row in a run's `events.tsv` carries an `event_type`. This returns a tidy table
 #' of the event types the model emits and what each means, so you can navigate an event
 #' log. An inoculation that establishes neither a blood-stage infection nor a hypnozoite
-#' batch is logged with a `_no_take` suffix (e.g. `vh_inoculation_no_take`).
+#' batch is logged with a `_no_take` suffix (e.g. `vh_inoculation_no_take`), and so is an
+#' import whose host already carries `MAX_MOI` blood-stage lineages
+#' (`vh_inoculation_import_no_take`); a local bite refused at `MAX_MOI` leaves no row.
 #'
 #' **Derive filters from this table rather than restating event names.** `ends_episode`
 #' marks every way a patent blood-stage episode can end and `is_onset` every way one can

@@ -254,14 +254,18 @@ test_that("imports go to random hosts, and a host at MAX_MOI takes none", {
                    outdir = tempfile("mfwd_import_"))
     ev <- load_events(run)
     founders <- unique(ev[event_type == "vh_inoculation_seed", human_id])
+    ## the founder hosts that still carry their clone when the pulse lands: clearance runs in
+    ## early() before importation, and nothing else changes a founder host's clones here
+    holding <- setdiff(founders, ev[event_type == "human_clearance" & tick <= 3, human_id])
     imp <- ev[event_type == "vh_inoculation_import" & is_dormant == 0]
-    c(into_founders = sum(imp$human_id %in% founders), refused = ev[event_type == "vh_inoculation_import_no_take", .N])
+    c(into_founders = sum(imp$human_id %in% founders), into_holding = sum(imp$human_id %in% holding),
+      refused = ev[event_type == "vh_inoculation_import_no_take", .N])
   }
   open <- counts()
   expect_gt(open[["into_founders"]], 30)
   expect_lt(open[["into_founders"]], 70)
   capped <- counts(MAX_MOI = 1L)
-  expect_equal(capped[["into_founders"]], 0)
+  expect_equal(capped[["into_holding"]], 0)
   expect_gt(capped[["refused"]], 30)
   ## a pulse larger than the population brings one import to each host, and warns
   expect_warning(over <- vivax_params(N_HOSTS = 30, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 4,
@@ -272,6 +276,22 @@ test_that("imports go to random hosts, and a host at MAX_MOI takes none", {
   imp <- ev[event_type == "vh_inoculation_import" & is_dormant == 0]
   expect_equal(nrow(imp), 30)
   expect_equal(length(unique(imp$human_id)), 30)
+})
+
+test_that("a bite on a host at MAX_MOI is refused whether or not the host is infectious", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## every course fails into subpatency, and the suppressed clone stays for the rest of the run;
+  ## at SUBPATENT_INFECTIVITY = 0 such a host is not infectious, but its clone still counts
+  p <- vivax_params(N_HOSTS = 60, N_MOSQ = 200, BITING_RATE = 0.2, SIM_DAYS = 200, MAX_MOI = 1L,
+                    SUBPATENT_INFECTIVITY = 0, BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 1,
+                    P_RECRUD_GIVEN_FAIL = 1, RECRUD_DELAY_DIST = "fixed", MEAN_RECRUD_DELAY = 1e5,
+                    NU_HYPNOZOITE_BATCH = 0, CHROMOSOMES = "1")
+  ev <- load_events(run_sim(p, seed = 1, outdir = tempfile("mfwd_moi_subpatent_")))
+  suppressed <- ev[event_type == "bloodcure_subpatent", .(since = min(tick)), by = human_id]
+  bites <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_no_take")]
+  expect_gt(nrow(suppressed), 20)
+  expect_gt(nrow(bites), 20)
+  expect_equal(merge(bites, suppressed, by = "human_id")[tick > since, .N], 0)
 })
 
 test_that("a pulse of imports on the first day keeps the founders", {

@@ -19,7 +19,7 @@ initialize() {
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked for every new inoculation, a local bite on an infected host or an import (D38): a host already carrying MAX_MOI blood-stage lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 5 with MAX_MOI=2 in check_parameters.R's maxmoi_cap configuration). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D38): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 5 with MAX_MOI=2 in check_parameters.R's maxmoi_cap configuration). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
 	defineDefault("MAX_BROODS_PER_MOSQ",     20); // capping the max brood carrying capacity per mosquito - TODO later make mosq mortality and transmissibility decline with increasing broods (ie high burden = lower fitness)
 	
 	// parasite
@@ -319,6 +319,10 @@ initialize() {
 	if (!(MEAN_RECRUD_DELAY >= 1 & MEAN_RECRUD_DELAY <= 1e6))
 		stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days, at most 1e6), got " + MEAN_RECRUD_DELAY +
 			": it is the mean delay from suppression to recrudescence, which is at least one day.");
+	// At 0 the gate would refuse every inoculation, an empty host's included (D38).
+	if (!(MAX_MOI >= 1))
+		stop("MAX_MOI must be at least 1, got " + MAX_MOI + ": a host takes a new inoculation only " +
+			"while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.");
 
 	// ---- configurations that cannot produce a single parasite ----------------------------
 	// Mirrored in validate_params() on the R side; repeated here because the model can be run
@@ -864,6 +868,13 @@ reproduction()
 			if (mosq_MOI == 0)
 			{
 				vcat("note: Iv-Sh: 🦟 mosquito " + m.id + " tagged infected but has no broods; skipping");
+			}
+			// The same capacity check as Event 4, before the P_TRANS_VH draw (D38). A host tagged
+			// susceptible can still carry blood-stage clones: at SUBPATENT_INFECTIVITY = 0 its
+			// subpatent clones are not infectious, but they count toward MAX_MOI.
+			else if (getBloodStageLineageCount(h) >= MAX_MOI)
+			{
+				vcat("Iv-Sh event: human 👤" + h.id + " at max MOI (" + MAX_MOI + "); mosquito-to-human transmission skipped");
 			}
 			else if (size(transmissible_mosq_broods) == 0)
 			{
