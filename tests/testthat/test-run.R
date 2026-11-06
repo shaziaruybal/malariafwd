@@ -345,3 +345,21 @@ test_that("run_sim() says when it stops a run at its timeout", {
   expect_error(run_sim(vivax_params(), outdir = tempfile("mfwd_timeout_"), timeout = 1),
                "SLiM run timed out after 1 s and was stopped")
 })
+
+test_that("a founder-free run whose imports never take ends cleanly as never started", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## an import rate so low that no import arrives in the window
+  p <- vivax_params(N_HOSTS = 20, N_MOSQ = 20, SIM_DAYS = 60, N_FOUNDER_HOSTS = 0, IMPORT_START = 1,
+                    IMPORT_END = 20, IMPORT_RATE_PER_TICK = 1e-6, CHROMOSOMES = "1")
+  expect_message(run <- run_sim(p, seed = 1, outdir = tempfile("mfwd_nostart_")),
+                 "The run never started: no import established a parasite")
+  expect_true(run$never_started)
+  expect_true(is.na(run$extinct_tick))
+  expect_null(load_params(run)$NEVER_STARTED)
+  expect_true(file.exists(trees_path(run)))
+  expect_lt(max(load_state(run)$tick), 60)
+  expect_message(g <- run_grid(p, seeds = 1:2, outdir_base = tempfile("mfwd_nostart_grid_")),
+                 "2 of 2 grid cell\\(s\\) never started")
+  expect_identical(g$never_started, c(TRUE, TRUE))
+  expect_true(all(is.na(g$extinct_tick)))
+})

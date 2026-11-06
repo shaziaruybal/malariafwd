@@ -20,9 +20,10 @@
 #'   `NULL` (default) leaves the param as set (quiet).
 #' @param timeout seconds before the run is stopped, with an error saying so (`Inf` = no limit).
 #' @param echo if `TRUE`, stream SLiM output live to the console.
-#' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`; see
-#'   [load_run()]). A run that goes extinct, with no parasite left and no importation still to
-#'   come, ends on that tick and gives a message.
+#' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`,
+#'   `never_started`; see [load_run()]). A run that goes extinct, with no parasite left and no
+#'   importation still to come, ends on that tick and gives a message; so does a founder-free run
+#'   whose imports never established a parasite.
 #' @examples
 #' \dontrun{
 #' run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1, outdir = "runs/demo")
@@ -87,6 +88,10 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
     message("The run went extinct on tick ", run$extinct_tick, " of ", .slim_num(params$SIM_DAYS),
             ": no parasite was left in any host or mosquito, hypnozoites included, and no ",
             "importation was still to come, so its outputs end there.")
+  if (isTRUE(run$never_started))
+    message("The run never started: no import established a parasite and none was still to come, ",
+            "so it ended on tick ", read_params_tsv(file.path(outdir, "params.tsv"))[["NEVER_STARTED"]],
+            " of ", .slim_num(params$SIM_DAYS), " with empty outputs.")
   invisible(run)
 }
 
@@ -106,10 +111,11 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #' @param verbose passed to [run_sim()].
 #' @param ... passed to [run_sim()].
 #' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, `error` (the
-#'   failure message, or `NA` for a cell that ran), and `extinct_tick` (the tick on which a run
-#'   went extinct and ended, `NA` for a run that did not go extinct; see [load_run()]). The cells
-#'   that went extinct are counted in one message for the grid, in place of [run_sim()]'s message
-#'   for each. A failed cell does not abort the sweep -- one bad cell should not lose a grid --
+#'   failure message, or `NA` for a cell that ran), `extinct_tick` (the tick on which a run
+#'   went extinct and ended, `NA` for a run that did not go extinct) and `never_started` (`TRUE`
+#'   for a founder-free run whose imports never established a parasite; see [load_run()]). The
+#'   cells that went extinct, and those that never started, are counted in one message each for
+#'   the grid, in place of [run_sim()]'s message for each. A failed cell does not abort the sweep -- one bad cell should not lose a grid --
 #'   but it warns, and the reason travels with the result rather than being discarded. A warning
 #'   given in the cells (such as a parameter set's own warnings, which [run_sim()] repeats for each
 #'   run) is given once, after the FAILED summary, with the number of cells it came from. If the
@@ -165,18 +171,18 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
       ## SLiM is not on PATH and one that failed on a bad parameter are indistinguishable, and
       ## a failed cell leaves no directory and no log to read afterwards. The sweep still does
       ## not abort - one bad cell should not lose a grid - but the reason now travels with it.
-      err <- NA_character_; extinct <- NA_integer_
+      err <- NA_character_; extinct <- NA_integer_; never <- NA
       run <- function() run_sim(param_sets[[set]], seed = seed, outdir = outdir, model = model,
                                 verbose = verbose, ...)
       ok <- tryCatch({
         ## the extinction message is summed up once for the grid, below
         r <- suppressMessages(if (warn_level < 2) run() else withCallingHandlers(run(), warning =
           function(w) stop("(converted from warning) ", conditionMessage(w), call. = FALSE)))
-        extinct <- r$extinct_tick
+        extinct <- r$extinct_tick; never <- isTRUE(r$never_started)
         TRUE
       }, error = function(e) { err <<- conditionMessage(e); FALSE })
       data.frame(set = set, seed = seed, outdir = outdir, ok = ok, error = err,
-                 extinct_tick = extinct, stringsAsFactors = FALSE)
+                 extinct_tick = extinct, never_started = never, stringsAsFactors = FALSE)
     },
     .options = furrr::furrr_options(seed = TRUE)
   ), warning = keep), error = function(e) {
@@ -203,6 +209,9 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
   if (any(!is.na(res$extinct_tick)))
     message(sum(!is.na(res$extinct_tick)), " of ", nrow(res), " grid cell(s) went extinct; see the ",
             "`extinct_tick` column.")
+  if (any(res$never_started %in% TRUE))
+    message(sum(res$never_started %in% TRUE), " of ", nrow(res), " grid cell(s) never started: no ",
+            "import established a parasite; see the `never_started` column.")
   res
 }
 
@@ -211,5 +220,7 @@ print.vivax_run <- function(x, ...) {
   cat("<vivax_run> seed", x$seed, "\n  outdir:", x$outdir, "\n")
   if (!is.null(x$extinct_tick) && !is.na(x$extinct_tick))
     cat("  went extinct on tick", x$extinct_tick, "of", x$params$SIM_DAYS %||% NA, "\n")
+  if (isTRUE(x$never_started))
+    cat("  never started: no import established a parasite\n")
   invisible(x)
 }

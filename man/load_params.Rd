@@ -14,7 +14,8 @@ a named list of the resolved parameter values, with \code{ACTUAL_SEED}, \code{SL
 \code{MALARIAFWD_VERSION} and the derived \code{GENOME_LENGTH}, \code{N_CHROMOSOMES} and \code{RECOMB_WITHIN}.
 }
 \description{
-An extinct run's \code{params.tsv} ends with an \code{EXTINCT_TICK} row (see \code{\link[=load_run]{load_run()}}). It is an
-outcome of the run rather than a parameter, so it is left out here, and every run's list has the
-same names; \code{\link[=load_run]{load_run()}} reads it into the run's \code{extinct_tick}.
+An extinct run's \code{params.tsv} ends with an \code{EXTINCT_TICK} row, and one that never started with a
+\code{NEVER_STARTED} row (see \code{\link[=load_run]{load_run()}}). They are outcomes of the run rather than parameters, so
+they are left out here, and every run's list has the same names; \code{\link[=load_run]{load_run()}} reads them into
+the run's \code{extinct_tick} and \code{never_started}.
 }

@@ -1576,11 +1576,13 @@ early() {
 	// Placed last in early(), after seeding and importation, so it sees the tick's final state.
 	// Two different situations, deliberately treated differently:
 	//
-	//   NEVER STARTED  - no parasite has existed at any point by LIVENESS_TICK. The run can
-	//                    only produce an empty event log, which in a sweep is indistinguishable
-	//                    from a cell that simply saw no transmission. This is a configuration
-	//                    error and stops the run. (validate_params() and the initialize() fence
-	//                    should already have caught it; this is the backstop.)
+	//   NEVER STARTED  - no parasite has existed at any point, by LIVENESS_TICK and with no
+	//                    importation still to come. Only a founder-free run can get here, and
+	//                    only by chance: validate_params() and the initialize() fence refuse a run
+	//                    that has no import path inside it, so its imports were all there but
+	//                    none established a parasite (a Poisson rate that drew none, imports that
+	//                    took in neither compartment, a window closed throughout). That is a
+	//                    result, as fade-out is, so the run ends cleanly, on its own record (D43).
 	//   DIED OUT       - parasites existed and are now all gone, with no importation still to
 	//                    come. Fade-out and elimination are legitimate RESULTS, not errors, so
 	//                    this is not fatal: the run ends cleanly here because every remaining
@@ -1599,9 +1601,15 @@ early() {
 		// while its rate is 0 (a closed border).
 		import_still_possible = (sim.cycle <= LAST_IMPORT_DAY);
 		if (!EVER_LIVE & sim.cycle >= LIVENESS_TICK & !import_still_possible)
-			stop("no parasite has existed by tick " + sim.cycle + ": this configuration cannot " +
-				"bootstrap, and would have produced an empty event log with exit status 0. " +
-				"Check N_FOUNDER_HOSTS / N_FOUNDER_LINEAGES and the importation settings.");
+		{
+			catn("🛑 NEVER STARTED on tick " + sim.cycle + ": no import established a parasite, and " +
+				"none is still to come. Ending the run - every further tick is empty.");
+			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
+			// recorded so that R can tell a run that never started from one that went extinct (D43)
+			writeFile(OUTDIR + "/params.tsv", "NEVER_STARTED\t" + sim.cycle, append=T);
+			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
+			sim.simulationFinished();
+		}
 		if (EVER_LIVE & !import_still_possible)
 		{
 			catn("🛑 EXTINCT on tick " + sim.cycle + ": no parasite in any host or mosquito, no " +

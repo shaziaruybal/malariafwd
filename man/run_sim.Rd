@@ -33,9 +33,10 @@ so the outputs and the tree-sequence provenance both record it.}
 \item{echo}{if \code{TRUE}, stream SLiM output live to the console.}
 }
 \value{
-invisibly, a \code{vivax_run} object (\code{outdir}, \code{params}, \code{seed}, \code{extinct_tick}; see
-\code{\link[=load_run]{load_run()}}). A run that goes extinct, with no parasite left and no importation still to
-come, ends on that tick and gives a message.
+invisibly, a \code{vivax_run} object (\code{outdir}, \code{params}, \code{seed}, \code{extinct_tick},
+\code{never_started}; see \code{\link[=load_run]{load_run()}}). A run that goes extinct, with no parasite left and no
+importation still to come, ends on that tick and gives a message; so does a founder-free run
+whose imports never established a parasite.
 }
 \description{
 Launches SLiM with the given parameters and writes its outputs into \code{outdir}

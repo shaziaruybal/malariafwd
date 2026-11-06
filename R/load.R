@@ -21,10 +21,14 @@ read_params_tsv <- function(path) {
 #' hypnozoites included, and no importation is still to come. It ends on that tick: its
 #' `events.tsv` and `state.tsv` stop there, and its `params.tsv` ends with the tick as an
 #' `EXTINCT_TICK` row, also when the tick is the run's last day.
+#'
+#' A founder-free run whose imports, by chance, all fail to establish a parasite never starts. Once
+#' its last import day has passed (and not before tick 10) it ends the same way, and its
+#' `params.tsv` ends with a `NEVER_STARTED` row.
 #' @param outdir a run output directory (or an existing `vivax_run`).
 #' @return a `vivax_run` object: `outdir`, `params` (from `params.tsv`, as [load_params()] gives
-#'   them), `seed`, and `extinct_tick`, the tick on which the run went extinct and ended, or `NA`
-#'   for a run that did not go extinct.
+#'   them), `seed`, `extinct_tick`, the tick on which the run went extinct and ended, or `NA`
+#'   for a run that did not go extinct, and `never_started`, `TRUE` for a run that never started.
 #' @export
 load_run <- function(outdir) {
   outdir <- .run_dir(outdir)
@@ -32,8 +36,11 @@ load_run <- function(outdir) {
   p <- read_params_tsv(file.path(outdir, "params.tsv"))
   seed <- suppressWarnings(as.integer(p[["ACTUAL_SEED"]] %||% p[["SEED"]] %||% NA))
   extinct <- suppressWarnings(as.integer(p[["EXTINCT_TICK"]] %||% NA))
-  p[["EXTINCT_TICK"]] <- NULL   # an outcome, not a parameter: see load_params()
-  structure(list(outdir = outdir, params = p, seed = seed, extinct_tick = extinct), class = "vivax_run")
+  never <- !is.null(p[["NEVER_STARTED"]])
+  p[["EXTINCT_TICK"]] <- NULL   # outcomes, not parameters: see load_params()
+  p[["NEVER_STARTED"]] <- NULL
+  structure(list(outdir = outdir, params = p, seed = seed, extinct_tick = extinct,
+                 never_started = never), class = "vivax_run")
 }
 
 #' Load the event log of a run
@@ -69,9 +76,10 @@ trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
 #' Resolved parameters of a run (from `params.tsv`)
 #'
-#' An extinct run's `params.tsv` ends with an `EXTINCT_TICK` row (see [load_run()]). It is an
-#' outcome of the run rather than a parameter, so it is left out here, and every run's list has the
-#' same names; [load_run()] reads it into the run's `extinct_tick`.
+#' An extinct run's `params.tsv` ends with an `EXTINCT_TICK` row, and one that never started with a
+#' `NEVER_STARTED` row (see [load_run()]). They are outcomes of the run rather than parameters, so
+#' they are left out here, and every run's list has the same names; [load_run()] reads them into
+#' the run's `extinct_tick` and `never_started`.
 #' @param run a `vivax_run` or a run directory path.
 #' @return a named list of the resolved parameter values, with `ACTUAL_SEED`, `SLIM_VERSION`,
 #'   `MALARIAFWD_VERSION` and the derived `GENOME_LENGTH`, `N_CHROMOSOMES` and `RECOMB_WITHIN`.
@@ -80,6 +88,7 @@ load_params <- function(run) {
   p <- if (inherits(run, "vivax_run")) run$params
        else read_params_tsv(file.path(.run_dir(run), "params.tsv"))
   p[["EXTINCT_TICK"]] <- NULL
+  p[["NEVER_STARTED"]] <- NULL
   p
 }
 

@@ -95,8 +95,8 @@ Time advances in **daily ticks**. Each tick runs in this order:
 
 A run ends at `SIM_DAYS`, or earlier if it goes extinct: it goes extinct on the first tick on
 which no parasite is left in any host or mosquito, hypnozoites included, and no importation is
-still to come; every further tick would then be empty, so the run ends there. It writes the tree sequence; its `events.tsv`
-and `state.tsv` stop on that tick; and its `params.tsv` ends with the tick as `EXTINCT_TICK` (D37),
+still to come; every further tick would then be empty, so the run ends there. It writes the tree
+sequence; its `events.tsv` and `state.tsv` stop on that tick; and its `params.tsv` ends with the tick as `EXTINCT_TICK` (D37),
 also when the tick is `SIM_DAYS` itself. `run_sim()` then gives a message, and the run's
 `extinct_tick` holds the tick; it is `NA` for a run that did not go extinct. An importation is
 still to come until the run has passed the last day on which one can arrive, the pulse day or the
@@ -104,6 +104,13 @@ import window's last day inside the run (§8); a pulse or window that falls outs
 nothing. A window inside the run counts to its last day even while its rate is 0, as under a
 border closed by `INTERVENTION_EFFICACY = 1` or `IMPORT_RATE_BOOST = 0`, so a run that dies out
 meanwhile goes extinct only once that day has passed.
+
+A founder-free run (`N_FOUNDER_HOSTS = 0`) starts only from its imports, and by chance they can all
+fail to establish a parasite: a Poisson rate that draws none, imports that take in neither
+compartment, a window closed throughout. Such a run **never starts**. Once its last import day has
+passed, and not before tick 10, it ends the same way, with a `NEVER_STARTED` row in `params.tsv`;
+`run_sim()` says so, and the run's `never_started` is `TRUE` (D43). A founder-free run with no import
+path inside it at all is refused before SLiM starts.
 
 Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
 setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**
@@ -746,8 +753,8 @@ hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger f
 most 10⁶ imports a day; and
 `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most 10⁹, SLiM's last
 tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
-past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports
-never establish a parasite is not refused; the model's liveness check stops it.
+past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports,
+by chance, never establish a parasite is not refused; it ends early as never started (§2).
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -1079,7 +1086,8 @@ Ordered by how much the answer is likely to move.
 treatment event, with lineage/pedigree/oocyst ids, `is_dormant`, `is_imported`, `n_hypnozoites`,
 `detected`, `into_patent_lineage`), `state.tsv` (per-tick host and vector state), `params.tsv`
 (**all resolved parameters plus `ACTUAL_SEED`** and the SLiM and package versions — full
-provenance; an extinct run's file ends with an `EXTINCT_TICK` row, §2), `plasmo.trees` (tskit tree
+provenance; an extinct run's file ends with an `EXTINCT_TICK` row, and one that never started with
+a `NEVER_STARTED` row, §2), `plasmo.trees` (tskit tree
 sequence).
 
 **Identifier hierarchy** — worth internalising, these are not interchangeable:
@@ -1233,9 +1241,10 @@ of creation in `events.tsv`.
 
 `SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the
 derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
-(`SLIM_VERSION`, `MALARIAFWD_VERSION`). An extinct run's file ends with an `EXTINCT_TICK` row (§2),
-an outcome rather than a parameter: `load_params()` leaves it out, so every run's list has the same
-names, and `load_run()` reads it into the run's `extinct_tick`. Requires SLiM ≥ 5.2 on `PATH` and
+(`SLIM_VERSION`, `MALARIAFWD_VERSION`). An extinct run's file ends with an `EXTINCT_TICK` row, and a
+run that never started with a `NEVER_STARTED` row (§2). These are outcomes rather than parameters:
+`load_params()` leaves them out, so every run's list has the same names, and `load_run()` reads them
+into the run's `extinct_tick` and `never_started`. Requires SLiM ≥ 5.2 on `PATH` and
 Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared
 infections — without it, relapse-to-prior comparisons silently lose ancestors.
 

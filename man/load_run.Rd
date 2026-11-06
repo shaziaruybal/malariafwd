@@ -11,8 +11,8 @@ load_run(outdir)
 }
 \value{
 a \code{vivax_run} object: \code{outdir}, \code{params} (from \code{params.tsv}, as \code{\link[=load_params]{load_params()}} gives
-them), \code{seed}, and \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA}
-for a run that did not go extinct.
+them), \code{seed}, \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA}
+for a run that did not go extinct, and \code{never_started}, \code{TRUE} for a run that never started.
 }
 \description{
 Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_path]{trees_path()}}
@@ -23,4 +23,8 @@ A run goes extinct on the first tick on which no parasite is left in any host or
 hypnozoites included, and no importation is still to come. It ends on that tick: its
 \code{events.tsv} and \code{state.tsv} stop there, and its \code{params.tsv} ends with the tick as an
 \code{EXTINCT_TICK} row, also when the tick is the run's last day.
+
+A founder-free run whose imports, by chance, all fail to establish a parasite never starts. Once
+its last import day has passed (and not before tick 10) it ends the same way, and its
+\code{params.tsv} ends with a \code{NEVER_STARTED} row.
 }

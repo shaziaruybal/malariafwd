@@ -19,6 +19,33 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D43 — A founder-free run whose imports never take ends cleanly, as never started · 2026-11-06 · Accepted
+**Context.** A founder-free run starts only from its imports. When every import fails to establish
+a parasite by chance (a Poisson rate that draws none, imports that take in neither compartment, a
+window closed throughout), the model's liveness check stopped the run with "this configuration
+cannot bootstrap": `run_sim()` raised an error and the `run_grid()` cell was lost. The check dates
+from a bug in which imports into an empty population were never seeded, so such runs had finished
+silently with an empty event log. D33 left this case open.
+**Decision.** Such a run ends cleanly once its last import day has passed (and not before tick
+10): it writes its tree sequence, its `params.tsv` ends with a `NEVER_STARTED` row, `run_sim()` says
+so, `load_run()` gives `never_started = TRUE`, and `run_grid()` adds a `never_started` column and
+counts these cells in a message of their own. A founder-free run with no import path inside it at
+all is still refused before SLiM starts (R and the model's `initialize()`). The author chose this
+(2026-11-06).
+**Rationale.** A chance failure of importation is a result, as fade-out is: how often imports
+fail to seed an outbreak is itself worth counting, and a sweep should not lose the cell. A
+regression of the old bug would now show as never-started cells, which the grid's message and
+column make visible rather than silent.
+**Alternatives rejected.** *Keep the error* -- it loses sweep cells to chance. *Record it as an
+extinction* -- a run that never started and one that died out mean different things.
+**Consequences.** Only founder-free runs whose imports all fail change: they end with exit status
+0 instead of an error. Every other run is byte-identical.
+**How to verify.** `tests/testthat/test-run.R` runs a founder-free set whose import rate draws no
+import: `run_sim()` gives the message, `never_started` is `TRUE`, `extinct_tick` is `NA`,
+`load_params()` has no `NEVER_STARTED`, and `run_grid()` counts both cells.
+
+---
+
 ## D42 — MEAN_RECRUD_DELAY = 10.5 d is a literature assumption, pending parameterisation · 2026-11-06 · Accepted
 **Context.** D26 chose 10.5 d as "the reciprocal of Taylor's posterior median", replacing an
 uncited 21 d. Taylor et al. (2019) fix the recrudescence rate with a strongly informative
