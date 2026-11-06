@@ -92,7 +92,7 @@ sets <- list(
   high = vivax_params(BITING_RATE = 0.12)
 )
 res <- run_grid(sets, seeds = 1:10, outdir_base = "runs/sweep", workers = 8)
-res   # one row per run: set, seed, outdir, ok
+res   # one row per run: set, seed, outdir, ok, error, extinct_tick, never_started
 ```
 
 ## Plots

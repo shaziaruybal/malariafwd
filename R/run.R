@@ -89,9 +89,10 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
             ": no parasite was left in any host or mosquito, hypnozoites included, and no ",
             "importation was still to come, so its outputs end there.")
   if (isTRUE(run$never_started))
-    message("The run never started: no import established a parasite and none was still to come, ",
-            "so it ended on tick ", read_params_tsv(file.path(outdir, "params.tsv"))[["NEVER_STARTED"]],
-            " of ", .slim_num(params$SIM_DAYS), " with empty outputs.")
+    message("The run never started and ended on tick ",
+            read_params_tsv(file.path(outdir, "params.tsv"))[["NEVER_STARTED"]], " of ",
+            .slim_num(params$SIM_DAYS), ": no import established a parasite and none was still to ",
+            "come, so its outputs hold no parasite.")
   invisible(run)
 }
 
@@ -113,12 +114,16 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
 #' @return a data.frame with one row per run: `set`, `seed`, `outdir`, `ok`, `error` (the
 #'   failure message, or `NA` for a cell that ran), `extinct_tick` (the tick on which a run
 #'   went extinct and ended, `NA` for a run that did not go extinct) and `never_started` (`TRUE`
-#'   for a founder-free run whose imports never established a parasite; see [load_run()]). The
-#'   cells that went extinct, and those that never started, are counted in one message each for
-#'   the grid, in place of [run_sim()]'s message for each. A failed cell does not abort the sweep -- one bad cell should not lose a grid --
-#'   but it warns, and the reason travels with the result rather than being discarded. A warning
-#'   given in the cells (such as a parameter set's own warnings, which [run_sim()] repeats for each
-#'   run) is given once, after the FAILED summary, with the number of cells it came from. If the
+#'   for a founder-free run whose imports never established a parasite, `FALSE` for a run that
+#'   started; see [load_run()]). Both outcome columns are `NA` for a failed cell. A cell that never
+#'   started is `ok`, but its run holds no parasite, and several readers, such as [arg_summary()]
+#'   and [moi_vs_relapse()], stop on it: keep the cells with `ok & !never_started` before
+#'   analysing them. The cells that went extinct, and those that never started, are counted in one
+#'   message each for the grid, in place of [run_sim()]'s message for each. A failed cell does not
+#'   abort the sweep -- one bad cell should not lose a grid -- but it warns, and the reason
+#'   travels with the result rather than being discarded. A warning given in the cells (such as a
+#'   parameter set's own warnings, which [run_sim()] repeats for each run) is given once, after
+#'   the FAILED summary, with the number of cells it came from. If the
 #'   grid stops part-way with an error, that error's message lists the warnings of the cells whose
 #'   results had reached this session; with workers, a cell's warnings travel with its chunk's
 #'   result, so those of a chunk lost with its worker are lost. Under `options(warn = 2)` a warning

@@ -24,7 +24,11 @@ hypnozoites included, and no importation is still to come. It ends on that tick:
 \code{events.tsv} and \code{state.tsv} stop there, and its \code{params.tsv} ends with the tick as an
 \code{EXTINCT_TICK} row, also when the tick is the run's last day.
 
-A founder-free run whose imports, by chance, all fail to establish a parasite never starts. Once
-its last import day has passed (and not before tick 10) it ends the same way, and its
-\code{params.tsv} ends with a \code{NEVER_STARTED} row.
+A founder-free run whose imports all fail to establish a parasite never starts, whether by chance
+or because its settings let no import take (\code{P_PRIMARY = 0} with a hypnozoite batch mean of 0,
+or an import window closed throughout, as by \code{INTERVENTION_EFFICACY = 1}). It ends on the first
+tick after its last import day, but not before tick 10, or on its last day if that comes first,
+and its \code{params.tsv} ends with a \code{NEVER_STARTED} row. It holds no parasite: its tree sequence
+has no nodes and its events are at most imports that did not take, and several readers, such as
+\code{\link[=arg_summary]{arg_summary()}} and \code{\link[=moi_vs_relapse]{moi_vs_relapse()}}, stop on it.
 }

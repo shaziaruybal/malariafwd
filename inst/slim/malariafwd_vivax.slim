@@ -493,8 +493,9 @@ initialize() {
 	// Individual references: touching a killed reference is a hard error.
 	defineGlobal("RECRUD_RETIRE", integer(0));
 	// liveness: has a parasite existed at any point? See the guard at the end of early().
-	// LIVENESS_TICK is late enough for founder seeding (tick 1-2) and a first-tick import
-	// pulse to have happened, early enough to fail a mis-specified sweep cell quickly.
+	// A run that never started ends no earlier than LIVENESS_TICK, unless its last day comes
+	// first: a margin of a few days after a first-day import pulse. Before D43 the guard stopped
+	// such a run with an error, and the tick was set to fail a mis-specified sweep cell quickly.
 	defineGlobal("EVER_LIVE", F);
 	defineConstant("LIVENESS_TICK", 10);
 }
@@ -1576,13 +1577,17 @@ early() {
 	// Placed last in early(), after seeding and importation, so it sees the tick's final state.
 	// Two different situations, deliberately treated differently:
 	//
-	//   NEVER STARTED  - no parasite has existed at any point, by LIVENESS_TICK and with no
-	//                    importation still to come. Only a founder-free run can get here, and
-	//                    only by chance: validate_params() and the initialize() fence refuse a run
-	//                    that has no import path inside it, so its imports were all there but
-	//                    none established a parasite (a Poisson rate that drew none, imports that
-	//                    took in neither compartment, a window closed throughout). That is a
-	//                    result, as fade-out is, so the run ends cleanly, on its own record (D43).
+	//   NEVER STARTED  - no parasite has existed at any point, and none can still come: the run is
+	//                    past its last import day and at LIVENESS_TICK or later, or on its last
+	//                    day. Only a founder-free run can get here: validate_params() and the
+	//                    initialize() fence refuse one with no import path inside it, so its
+	//                    imports were all there but none established a parasite, by chance (a
+	//                    Poisson rate that drew none, imports that took in neither compartment)
+	//                    or because its settings let none take (P_PRIMARY = 0 with a hypnozoite
+	//                    batch mean of 0, a window whose rate is 0 throughout). That is a result,
+	//                    as fade-out is, so the run ends cleanly, on its own record (D43). Unlike
+	//                    extinction it is also decided on the last day whatever the import
+	//                    schedule, so that every run that never had a parasite is marked.
 	//   DIED OUT       - parasites existed and are now all gone, with no importation still to
 	//                    come. Fade-out and elimination are legitimate RESULTS, not errors, so
 	//                    this is not fatal: the run ends cleanly here because every remaining
@@ -1600,7 +1605,7 @@ early() {
 		// day outside the run never comes. A window inside the run counts to its last day even
 		// while its rate is 0 (a closed border).
 		import_still_possible = (sim.cycle <= LAST_IMPORT_DAY);
-		if (!EVER_LIVE & sim.cycle >= LIVENESS_TICK & !import_still_possible)
+		if (!EVER_LIVE & (sim.cycle == SIM_DAYS | (sim.cycle >= LIVENESS_TICK & !import_still_possible)))
 		{
 			catn("🛑 NEVER STARTED on tick " + sim.cycle + ": no import established a parasite, and " +
 				"none is still to come. Ending the run - every further tick is empty.");

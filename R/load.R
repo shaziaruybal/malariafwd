@@ -22,9 +22,13 @@ read_params_tsv <- function(path) {
 #' `events.tsv` and `state.tsv` stop there, and its `params.tsv` ends with the tick as an
 #' `EXTINCT_TICK` row, also when the tick is the run's last day.
 #'
-#' A founder-free run whose imports, by chance, all fail to establish a parasite never starts. Once
-#' its last import day has passed (and not before tick 10) it ends the same way, and its
-#' `params.tsv` ends with a `NEVER_STARTED` row.
+#' A founder-free run whose imports all fail to establish a parasite never starts, whether by chance
+#' or because its settings let no import take (`P_PRIMARY = 0` with a hypnozoite batch mean of 0,
+#' or an import window closed throughout, as by `INTERVENTION_EFFICACY = 1`). It ends on the first
+#' tick after its last import day, but not before tick 10, or on its last day if that comes first,
+#' and its `params.tsv` ends with a `NEVER_STARTED` row. It holds no parasite: its tree sequence
+#' has no nodes and its events are at most imports that did not take, and several readers, such as
+#' [arg_summary()] and [moi_vs_relapse()], stop on it.
 #' @param outdir a run output directory (or an existing `vivax_run`).
 #' @return a `vivax_run` object: `outdir`, `params` (from `params.tsv`, as [load_params()] gives
 #'   them), `seed`, `extinct_tick`, the tick on which the run went extinct and ended, or `NA`

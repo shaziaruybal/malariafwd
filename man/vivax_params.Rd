@@ -47,11 +47,11 @@ uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYS
 trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_DELAY} and
 \code{MEAN_RECRUD_DELAY} at 1e6 days. \code{SIM_DAYS} is at most 1e9, SLiM's last tick, and a run that
 reaches day 99999, the day the defaults use for "never", must move those days past its end and
-cannot schedule anything on day 99999 itself. A founder-free run whose imports, by chance, never
-establish a parasite is not refused here; it ends early as never started (see \code{\link[=load_run]{load_run()}}).
-Imports arrive on days 1 to
-\code{SIM_DAYS}: a pulse or an import window set outside the run brings nothing, without a warning,
-which is how imports are switched off in one arm of a grid. Each host takes at most one
+cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
+a parasite, by chance or because its settings let none take, is not refused here; it ends as
+never started (see \code{\link[=load_run]{load_run()}}). Imports arrive on days 1 to \code{SIM_DAYS}: a pulse or an import
+window set outside the run brings nothing, without a warning, which is how imports are switched
+off in one arm of a grid. Each host takes at most one
 import a day, so a day's imports beyond \code{N_HOSTS} never arrive. This warns when a day's fixed
 imports inside the run exceed \code{N_HOSTS} (\code{N_IMPORTS} on \code{IMPORT_TICK}, \code{N_IMPORTS_PER_TICK} in
 the window, or both on the same day), and when \code{IMPORT_RATE_PER_TICK} at its peak over the

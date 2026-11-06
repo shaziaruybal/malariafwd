@@ -20,29 +20,44 @@ refer to paths from the prototype that preceded it.
 ---
 
 ## D43 — A founder-free run whose imports never take ends cleanly, as never started · 2026-11-06 · Accepted
-**Context.** A founder-free run starts only from its imports. When every import fails to establish
-a parasite by chance (a Poisson rate that draws none, imports that take in neither compartment, a
-window closed throughout), the model's liveness check stopped the run with "this configuration
-cannot bootstrap": `run_sim()` raised an error and the `run_grid()` cell was lost. The check dates
-from a bug in which imports into an empty population were never seeded, so such runs had finished
-silently with an empty event log. D33 left this case open.
-**Decision.** Such a run ends cleanly once its last import day has passed (and not before tick
-10): it writes its tree sequence, its `params.tsv` ends with a `NEVER_STARTED` row, `run_sim()` says
-so, `load_run()` gives `never_started = TRUE`, and `run_grid()` adds a `never_started` column and
-counts these cells in a message of their own. A founder-free run with no import path inside it at
-all is still refused before SLiM starts (R and the model's `initialize()`). The author chose this
-(2026-11-06).
-**Rationale.** A chance failure of importation is a result, as fade-out is: how often imports
-fail to seed an outbreak is itself worth counting, and a sweep should not lose the cell. A
-regression of the old bug would now show as never-started cells, which the grid's message and
-column make visible rather than silent.
+**Context.** A founder-free run starts only from its imports. When every import failed to establish
+a parasite, by chance (a Poisson rate that draws none, imports that take in neither compartment)
+or because the settings let none take (`P_PRIMARY = 0` with a hypnozoite batch mean of 0, a window
+closed throughout), the model's liveness check stopped the run with "this configuration cannot
+bootstrap": `run_sim()` raised an error and the `run_grid()` cell was lost. The check dates from a
+bug in which imports into an empty population were never seeded, so such runs had finished
+silently with an empty event log. It fired only once the last import day had passed, so a run
+whose import path lasted to its last day (the default `IMPORT_END`), or that was shorter than 10
+days, still ran to the end without a word. D33 left this case open.
+**Decision.** Such a run ends cleanly on the first tick after its last import day, but not before
+tick 10, or on its last day if that comes first: it writes its tree sequence, its `params.tsv`
+ends with a `NEVER_STARTED` row, `run_sim()` says so, `load_run()` gives `never_started = TRUE`,
+and `run_grid()` adds a `never_started` column and counts these cells in a message of their own.
+Unlike extinction (D37), it is decided on the last day whatever the import schedule, so every
+founder-free run that never had a parasite is marked. Settings that let no import take are not
+refused. A founder-free run with no import path inside it at all is still refused before SLiM
+starts (R and the model's `initialize()`). The author chose this (2026-11-06).
+**Rationale.** A failure of importation is a result, as fade-out is: how often imports fail to seed
+an outbreak is itself worth counting, and a sweep should not lose the cell. A regression of the
+old bug would now show as never-started cells, which the grid's message and column make visible
+rather than silent.
 **Alternatives rejected.** *Keep the error* -- it loses sweep cells to chance. *Record it as an
-extinction* -- a run that never started and one that died out mean different things.
-**Consequences.** Only founder-free runs whose imports all fail change: they end with exit status
-0 instead of an error. Every other run is byte-identical.
+extinction* -- a run that never started and one that died out mean different things. *Refuse a
+founder-free set with `P_PRIMARY = 0` and a batch mean of 0* -- like a closed border (D33), it is a
+legitimate null arm of a grid, and never started is its honest outcome.
+**Consequences.** Only founder-free runs whose imports all fail change. Those the liveness check
+stopped end with exit status 0 instead of an error; those that ran to their last day gain the
+`NEVER_STARTED` row, with their events and state unchanged. Every other run is byte-identical. A
+run that never started holds no parasite (a tree sequence with no nodes, and at most no-take rows
+in its events), and several readers stop on it (`arg_summary()`, `arg_diversity()`,
+`ibd_truth_pairs()`, `moi_vs_relapse()`); `?run_grid` says to keep `ok & !never_started`, and
+making those readers handle such a run is still to do.
 **How to verify.** `tests/testthat/test-run.R` runs a founder-free set whose import rate draws no
 import: `run_sim()` gives the message, `never_started` is `TRUE`, `extinct_tick` is `NA`,
-`load_params()` has no `NEVER_STARTED`, and `run_grid()` counts both cells.
+`load_params()` has no `NEVER_STARTED`, and `run_grid()` counts both cells. A second test checks
+the tick such a run ends on (10 for a day-1 pulse that cannot take, 16 for one on day 15, and the
+last day for a window to the end, a pulse on the last day and an 8-day run), and that a
+founder-free run whose import took as hypnozoites only, and died, went extinct.
 
 ---
 
@@ -382,7 +397,7 @@ across junctions and correlated within chromosomes.
 
 ---
 
-## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted
+## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted; partly superseded by D43 (founder-free runs whose imports never take)
 **Context.** A search of the model's random draws, empty vectors, parameter edges and arithmetic
 found about seventeen ways for a run to stop part-way with an Eidos error, or never finish, on
 values `validate_params()` accepted. Some of those values are legitimate and the model mishandled

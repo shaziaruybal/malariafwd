@@ -352,14 +352,47 @@ test_that("a founder-free run whose imports never take ends cleanly as never sta
   p <- vivax_params(N_HOSTS = 20, N_MOSQ = 20, SIM_DAYS = 60, N_FOUNDER_HOSTS = 0, IMPORT_START = 1,
                     IMPORT_END = 20, IMPORT_RATE_PER_TICK = 1e-6, CHROMOSOMES = "1")
   expect_message(run <- run_sim(p, seed = 1, outdir = tempfile("mfwd_nostart_")),
-                 "The run never started: no import established a parasite")
+                 "The run never started and ended on tick 20 of 60: no import established a parasite")
   expect_true(run$never_started)
   expect_true(is.na(run$extinct_tick))
   expect_null(load_params(run)$NEVER_STARTED)
   expect_true(file.exists(trees_path(run)))
-  expect_lt(max(load_state(run)$tick), 60)
+  expect_equal(max(load_state(run)$tick), 20)
+  expect_output(print(run), "never started: no import established a parasite")
   expect_message(g <- run_grid(p, seeds = 1:2, outdir_base = tempfile("mfwd_nostart_grid_")),
                  "2 of 2 grid cell\\(s\\) never started")
   expect_identical(g$never_started, c(TRUE, TRUE))
   expect_true(all(is.na(g$extinct_tick)))
+})
+
+test_that("a founder-free run is marked never started whatever its import schedule, once it ends", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## the tick a run ended on, from state.tsv, and its two outcomes
+  outcome <- function(...) {
+    p <- vivax_params(N_HOSTS = 20, N_MOSQ = 20, N_FOUNDER_HOSTS = 0, CHROMOSOMES = "1", ...)
+    run <- suppressMessages(run_sim(p, seed = 1, outdir = tempfile("mfwd_nostart_")))
+    list(end = max(load_state(run)$tick), never_started = run$never_started,
+         extinct_tick = run$extinct_tick, events = load_events(run))
+  }
+  ## imports that can take in neither compartment
+  no_take <- list(P_PRIMARY = 0, NU_HYPNOZOITE_BATCH = 0)
+  ## a pulse on day 1 waits for tick 10; one on day 15 ends on the day after
+  o <- do.call(outcome, c(no_take, SIM_DAYS = 60, IMPORT_TICK = 1, N_IMPORTS = 3))
+  expect_identical(o[1:3], list(end = 10L, never_started = TRUE, extinct_tick = NA_integer_))
+  expect_identical(o$events$event_type, rep("vh_inoculation_import_no_take", 3))
+  o <- do.call(outcome, c(no_take, SIM_DAYS = 60, IMPORT_TICK = 15, N_IMPORTS = 3))
+  expect_identical(o[1:2], list(end = 16L, never_started = TRUE))
+  ## an import path that lasts to the run's last day, or a run shorter than 10 days, is marked
+  ## on its last day
+  o <- outcome(SIM_DAYS = 40, IMPORT_START = 1, IMPORT_RATE_PER_TICK = 1e-6)
+  expect_identical(o[1:3], list(end = 40L, never_started = TRUE, extinct_tick = NA_integer_))
+  o <- do.call(outcome, c(no_take, SIM_DAYS = 30, IMPORT_TICK = 30, N_IMPORTS = 1))
+  expect_identical(o[1:2], list(end = 30L, never_started = TRUE))
+  o <- do.call(outcome, c(no_take, SIM_DAYS = 8, IMPORT_TICK = 1, N_IMPORTS = 2))
+  expect_identical(o[1:2], list(end = 8L, never_started = TRUE))
+  ## an import that took, as hypnozoites only, and died before activating: the run started, and
+  ## went extinct
+  o <- outcome(SIM_DAYS = 60, IMPORT_TICK = 1, N_IMPORTS = 1, P_PRIMARY = 0,
+               NU_HYPNOZOITE_BATCH = 50, MU_HYPNOZOITE = 1, ALPHA_ACTIVATE = 0)
+  expect_identical(o[1:3], list(end = 2L, never_started = FALSE, extinct_tick = 2L))
 })
