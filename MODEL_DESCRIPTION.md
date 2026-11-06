@@ -673,9 +673,12 @@ directly onto a WHO therapeutic-efficacy failure rate.
 **The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d and at least one day (each day
 after the suppression the clone re-expands with probability 1/10.5), selectable via
 `RECRUD_DELAY_DIST` (`"geometric"`, `"poisson"`, `"fixed"`). Geometric is the discrete analogue of
-the Exponential that Taylor et al. (2019) fit — their own simulator draws `round(rexp(1, 1/10))` —
-and 10.5 is the reciprocal of their posterior median. Median gap 7 d, ~94% within day 28. See D26
-and D32; none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents
+the Exponential that Taylor et al. (2019) fit — their own simulator draws `round(rexp(1, 1/10))`.
+The mean of 10.5 d is a **literature assumption, pending parameterisation**: it is the reciprocal
+of Taylor et al.'s posterior median (0.095 a day), but they fix the rate with a strongly informative
+Gamma(100, 1000) prior (mean 0.1 a day) for identifiability, and the posterior barely moves from it,
+so it is not an estimate from data. Vary it in sensitivity analyses (§14). At 10.5 d the median gap
+is 7 d, and ~94% fall within day 28. See D26, D32 and D42; none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents
 recrudescence at all, so they cannot arbitrate this.
 
 **A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
@@ -830,7 +833,7 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | parameter | default | note |
 |---|---|---|
 | `P_RECRUD_GIVEN_FAIL` | **0.0** | P(a surviving clone is suppressed below patency rather than persisting). At 0 the third state is inert — which matches Taylor et al. 2019: recrudescence is 0.2–0.3% of recurrences after chloroquine or artesunate |
-| `MEAN_RECRUD_DELAY` | 10.5 d | mean delay from suppression to recrudescence, at least one day; reciprocal of Taylor's posterior median. Geometric: median gap 7 d, ~94% within day 28 (D26, D32) |
+| `MEAN_RECRUD_DELAY` | 10.5 d | mean delay from suppression to recrudescence, at least one day; a literature assumption pending parameterisation (close to the prior of Taylor et al. 2019, §9a). Geometric: median gap 7 d, ~94% within day 28 (D26, D32, D42) |
 | `RECRUD_DELAY_DIST` | `"geometric"` | the discrete analogue of Taylor's fitted Exponential. `"poisson"` (1 + Poisson(D − 1), mean D) is a tight-window sensitivity arm; `"fixed"` is round(D) days, halves rounded up (11 d at the default 10.5). Every shape is at least one day |
 | `SUBPATENT_INFECTIVITY` | 0.15 | infectiousness of a suppressed clone relative to a patent one. 0.035–0.10 White 2018 IBM, 0.10–0.20 empirically (Koepfli 2021). Neither 0 nor 1 is defensible |
 
@@ -1050,6 +1053,7 @@ Ordered by how much the answer is likely to move.
 | S8 | **`MAX_MOI`** | a runaway guard that becomes the measured quantity if set low | confirm it never binds in published runs |
 | S9 | **`MEAN_BLOOD_STAGE_DURATION`** | sets episode overlap and therefore polyclonality and outcrossing | sweep |
 | S10 | **Scale (`N_HOSTS`, `N_MOSQ`)** | prevalence and COI are scale-dependent; a rate fitted at preview scale does not transfer | always calibrate at publication scale |
+| S11 | **`MEAN_RECRUD_DELAY`** | 10.5 d is a literature assumption: the one published fit fixes the rate with an informative prior, so no estimate from data exists; the delay sets how many recrudescences a 28-day follow-up sees | **pending parameterisation**; sweep (matters only with `P_RECRUD_GIVEN_FAIL > 0`) |
 
 ---
 

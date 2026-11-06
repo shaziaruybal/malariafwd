@@ -152,7 +152,9 @@ initialize() {
 	// course simply leaves the infection where it is -- so they cannot arbitrate this, and we
 	// follow Taylor.
 	//
-	// 10.5 d is the reciprocal of Taylor's posterior median. It keeps recrudescences inside a
+	// 10.5 d is a literature assumption, pending parameterisation (D42): the reciprocal of
+	// Taylor's posterior median, which sits on their strongly informative Gamma(100, 1000) prior
+	// (mean 0.1/day), so it is not an estimate from data. It keeps recrudescences inside a
 	// standard 28-day WHO therapeutic-efficacy window, where a real study can see them: the
 	// median gap is 7 d and ~94% land inside day 28.
 	//

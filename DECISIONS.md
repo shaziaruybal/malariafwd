@@ -19,6 +19,23 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D42 — MEAN_RECRUD_DELAY = 10.5 d is a literature assumption, pending parameterisation · 2026-11-06 · Accepted
+**Context.** D26 chose 10.5 d as "the reciprocal of Taylor's posterior median", replacing an
+uncited 21 d. Taylor et al. (2019) fix the recrudescence rate with a strongly informative
+Gamma(100, 1000) prior (mean 0.1 a day) for identifiability, and their posterior median, 0.095 a
+day, barely moves from it (checked in the paper and their Stan code). So 10.5 d is close to their
+prior, not an estimate from data.
+**Decision.** Keep 10.5 d as the default and call it what it is: a literature assumption, pending
+parameterisation. MODEL_DESCRIPTION 9a and 10 and the model comment say so, and section 14 lists
+it for sensitivity analysis (S11). The author agreed (2026-11-06).
+**Supersedes.** D26's description of 10.5 d as a fitted value; its choice of a geometric delay,
+with selectable shapes, stands.
+**Consequences.** No run changes. Analyses that report recrudescence should vary the delay.
+**How to verify.** MODEL_DESCRIPTION 9a, 10 and 14 (S11), and the comment on `MEAN_RECRUD_DELAY` in
+the model's `initialize()`.
+
+---
+
 ## D41 — Meiosis I keeps sister chromatids together · 2026-11-05 · Accepted
 **Context.** D34 dealt each chromosome's four chromatids to the four products at random,
 independently per chromosome, as the simulator of Wong et al. (2018) does. A review of that change
@@ -632,7 +649,7 @@ whose only import establishment was dormant. Suites: `test_dir()` 97/0,
 
 ---
 
-## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted; partly superseded by D32
+## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted; partly superseded by D32 and D42
 **Context.** Step 4 shipped the suppression-to-recrudescence delay as a geometric at mean 21 d.
 Two things needed settling: the plan (`TREATMENT_IMPLEMENTATION.md:32, :361`) specified
 `1 + Poisson(MEAN_RECRUD_DELAY - 1)` instead, and the 21 d default was uncited. A literature and
