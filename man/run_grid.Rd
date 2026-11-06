@@ -31,24 +31,25 @@ run_grid(
 \item{...}{passed to \code{\link[=run_sim]{run_sim()}}.}
 }
 \value{
-a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code{ok}, \code{error} (the
-failure message, or \code{NA} for a cell that ran), \code{extinct_tick} (the tick on which a run
-went extinct and ended, \code{NA} for a run that did not go extinct) and \code{never_started} (\code{TRUE}
-for a founder-free run whose imports never established a parasite, \code{FALSE} for a run that
-started; see \code{\link[=load_run]{load_run()}}). Both outcome columns are \code{NA} for a failed cell. A cell that never
-started is \code{ok}, but its run holds no parasite, and several readers, such as \code{\link[=arg_summary]{arg_summary()}}
-and \code{\link[=moi_vs_relapse]{moi_vs_relapse()}}, stop on it: keep the cells with \code{ok & !never_started} before
-analysing them. The cells that went extinct, and those that never started, are counted in one
-message each for the grid, in place of \code{\link[=run_sim]{run_sim()}}'s message for each. A failed cell does not
-abort the sweep -- one bad cell should not lose a grid -- but it warns, and the reason
-travels with the result rather than being discarded. A warning given in the cells (such as a
-parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, after
-the FAILED summary, with the number of cells it came from. If the
-grid stops part-way with an error, that error's message lists the warnings of the cells whose
-results had reached this session; with workers, a cell's warnings travel with its chunk's
-result, so those of a chunk lost with its worker are lost. Under \code{options(warn = 2)} a warning
-in a cell fails that cell, in any plan and also inside \code{suppressWarnings()}, and the FAILED
-summary is then an error, so nothing is returned; the cells that ran are on disk.
+a data.frame with one row per run: \code{set}, \code{seed}, \code{outdir}, \code{ok}, \code{error} (the failure
+message, or \code{NA} for a cell that ran), \code{extinct_tick} (the tick on which a run went extinct
+and ended, \code{NA} for a run that did not go extinct) and \code{never_started} (\code{TRUE} for a
+founder-free run whose imports never established a parasite, \code{FALSE} for a run that started;
+see \code{\link[=load_run]{load_run()}}). Both outcome columns are \code{NA} for a failed cell. A cell that never started
+is \code{ok}: not starting is an outcome of the grid, which \code{never_started} records. Its run holds
+no parasite, though, so give only the cells with \code{ok & !never_started} to the readers that
+need one, such as \code{\link[=arg_summary]{arg_summary()}} and \code{\link[=arg_diversity]{arg_diversity()}}. The cells that went extinct, and
+those that never started, are counted in one message each for the grid, in place of
+\code{\link[=run_sim]{run_sim()}}'s message for each. A failed cell does not abort the sweep -- one bad cell should
+not lose a grid -- but it warns, and the reason travels with the result rather than being
+discarded. A warning given in the cells (such as a parameter set's own warnings, which
+\code{\link[=run_sim]{run_sim()}} repeats for each run) is given once, after the FAILED summary, with the number of
+cells it came from. If the grid stops part-way with an error, that error's message lists the
+warnings of the cells whose results had reached this session; with workers, a cell's warnings
+travel with its chunk's result, so those of a chunk lost with its worker are lost. Under
+\code{options(warn = 2)} a warning in a cell fails that cell, in any plan and also inside
+\code{suppressWarnings()}, and the FAILED summary is then an error, so nothing is returned; the
+cells that ran are on disk.
 }
 \description{
 Runs every \verb{(parameter set, seed)} combination, each in its own output directory,

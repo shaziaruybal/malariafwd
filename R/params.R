@@ -88,16 +88,16 @@
 #' trigger falls inside the run; the import rate at 1e6 a day; and `TREATMENT_DELAY` and
 #' `MEAN_RECRUD_DELAY` at 1e6 days. `SIM_DAYS` is at most 1e9, SLiM's last tick, and a run that
 #' reaches day 99999, the day the defaults use for "never", must move those days past its end and
-#' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish
-#' a parasite, by chance or because its settings let none take, is not refused here; it ends as
-#' never started (see [load_run()]). Imports arrive on days 1 to `SIM_DAYS`: a pulse or an import
-#' window set outside the run brings nothing, without a warning, which is how imports are switched
-#' off in one arm of a grid. Each host takes at most one
-#' import a day, so a day's imports beyond `N_HOSTS` never arrive. This warns when a day's fixed
-#' imports inside the run exceed `N_HOSTS` (`N_IMPORTS` on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in
-#' the window, or both on the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the
-#' window, with its seasonal, intervention and resurgence multipliers and with
-#' `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day with probability above 0.01.
+#' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish a
+#' parasite, by chance or because its settings let none take, is not refused here; it ends as never
+#' started (see [load_run()]). Imports arrive on days 1 to `SIM_DAYS`: a pulse or an import window
+#' set outside the run brings nothing, without a warning, which is how imports are switched off in
+#' one arm of a grid. Each host takes at most one import a day, so a day's imports beyond `N_HOSTS`
+#' never arrive. This warns when a day's fixed imports inside the run exceed `N_HOSTS` (`N_IMPORTS`
+#' on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the window, or both on the same day), and when
+#' `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal, intervention and
+#' resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day
+#' with probability above 0.01.
 #'
 #' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
 #' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given

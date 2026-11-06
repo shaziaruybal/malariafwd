@@ -391,8 +391,10 @@ test_that("a founder-free run is marked never started whatever its import schedu
   o <- do.call(outcome, c(no_take, SIM_DAYS = 8, IMPORT_TICK = 1, N_IMPORTS = 2))
   expect_identical(o[1:2], list(end = 8L, never_started = TRUE))
   ## an import that took, as hypnozoites only, and died before activating: the run started, and
-  ## went extinct
+  ## went extinct (at a batch mean of 1e6 an empty batch, which would not take, is all but
+  ## impossible)
   o <- outcome(SIM_DAYS = 60, IMPORT_TICK = 1, N_IMPORTS = 1, P_PRIMARY = 0,
-               NU_HYPNOZOITE_BATCH = 50, MU_HYPNOZOITE = 1, ALPHA_ACTIVATE = 0)
+               NU_HYPNOZOITE_BATCH = 1e6, MU_HYPNOZOITE = 1, ALPHA_ACTIVATE = 0)
+  expect_true("vh_inoculation_import" %in% o$events$event_type)
   expect_identical(o[1:3], list(end = 2L, never_started = FALSE, extinct_tick = 2L))
 })

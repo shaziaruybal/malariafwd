@@ -1598,12 +1598,13 @@ early() {
 		defineGlobal("EVER_LIVE", T);
 	else
 	{
-		// Both branches require that no importation is still to come. Without that, a run with
-		// a LATE import window (say IMPORT_START = 500 of 1000 days) would be killed during the
-		// empty ticks before the window opens - which is a legitimate configuration, not a
-		// failure. An import is still to come until the run passes LAST_IMPORT_DAY; one set for a
-		// day outside the run never comes. A window inside the run counts to its last day even
-		// while its rate is 0 (a closed border).
+		// Both branches require that no importation is still to come, except that a run that
+		// never started is also marked on its last day. Without that, a run with a LATE import
+		// window (say IMPORT_START = 500 of 1000 days) would be killed during the empty ticks
+		// before the window opens - which is a legitimate configuration, not a failure. An import
+		// is still to come until the run passes LAST_IMPORT_DAY; one set for a day outside the run
+		// never comes. A window inside the run counts to its last day even while its rate is 0 (a
+		// closed border).
 		import_still_possible = (sim.cycle <= LAST_IMPORT_DAY);
 		if (!EVER_LIVE & (sim.cycle == SIM_DAYS | (sim.cycle >= LIVENESS_TICK & !import_still_possible)))
 		{

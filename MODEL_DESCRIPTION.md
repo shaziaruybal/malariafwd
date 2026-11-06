@@ -96,27 +96,27 @@ Time advances in **daily ticks**. Each tick runs in this order:
 A run ends at `SIM_DAYS`, or earlier if it goes extinct or never starts. It goes extinct on the
 first tick on which no parasite is left in any host or mosquito, hypnozoites included, and no
 importation is still to come; every further tick would then be empty, so the run ends there. It
-writes the tree sequence; its `events.tsv` and `state.tsv` stop on that tick; and its
-`params.tsv` ends with the tick as `EXTINCT_TICK` (D37), also when the tick is `SIM_DAYS` itself.
-`run_sim()` then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` for a
-run that did not go extinct. An importation is
-still to come until the run has passed the last day on which one can arrive, the pulse day or the
-import window's last day inside the run (§8); a pulse or window that falls outside the run brings
-nothing. A window inside the run counts to its last day even while its rate is 0, as under a
-border closed by `INTERVENTION_EFFICACY = 1` or `IMPORT_RATE_BOOST = 0`, so a run that dies out
-meanwhile goes extinct only once that day has passed.
+writes the tree sequence; its `events.tsv` and `state.tsv` stop on that tick; and its `params.tsv`
+ends with the tick as `EXTINCT_TICK` (D37), also when the tick is `SIM_DAYS` itself. `run_sim()`
+then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` for a run that did
+not go extinct. An importation is still to come until the run has passed the last day on which one
+can arrive, the pulse day or the import window's last day inside the run (§8); a pulse or window
+that falls outside the run brings nothing. A window inside the run counts to its last day even
+while its rate is 0, as under a border closed by `INTERVENTION_EFFICACY = 1` or
+`IMPORT_RATE_BOOST = 0`, so a run that dies out meanwhile goes extinct only once that day has
+passed.
 
 A founder-free run (`N_FOUNDER_HOSTS = 0`) starts only from its imports, and they can all fail to
 establish a parasite: by chance, through a Poisson rate that draws none or imports that take in
 neither compartment, or because the settings let none take, as with `P_PRIMARY = 0` and a
-hypnozoite batch mean of 0, or a window closed throughout. Such a run **never starts**. It ends as
-an extinct run does, on the first tick after its last import day but not before tick 10, or on
-its last day if that comes first. Unlike extinction, this is decided on the last day whatever the
-import schedule, so every run that never had a parasite is marked: its `params.tsv` ends with a
-`NEVER_STARTED` row, `run_sim()` says so, and the run's `never_started` is `TRUE` (D43). Such a
-run holds no parasite: its tree sequence has no nodes, and its events are at most imports that
-did not take. A founder-free run with no import path inside it at all is refused before SLiM
-starts.
+hypnozoite batch mean of 0, or an import rate that is 0 throughout its window. Such a run **never
+starts**. It ends on the first tick after its last import day, but not before tick 10, or on its
+last day if that comes first, and writes its outputs as an extinct run does. Unlike extinction,
+this is decided on the last day whatever the import schedule, so every run that never had a
+parasite is marked: its `params.tsv` ends with a `NEVER_STARTED` row, `run_sim()` says so, and the
+run's `never_started` is `TRUE` (D43). Such a run holds no parasite: its tree sequence has no
+nodes, and its events are at most imports that did not take. A founder-free run with no import
+path inside it at all is refused before SLiM starts.
 
 Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
 setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**

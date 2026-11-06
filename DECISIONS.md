@@ -21,14 +21,14 @@ refer to paths from the prototype that preceded it.
 
 ## D43 — A founder-free run whose imports never take ends cleanly, as never started · 2026-11-06 · Accepted
 **Context.** A founder-free run starts only from its imports. When every import failed to establish
-a parasite, by chance (a Poisson rate that draws none, imports that take in neither compartment)
-or because the settings let none take (`P_PRIMARY = 0` with a hypnozoite batch mean of 0, a window
-closed throughout), the model's liveness check stopped the run with "this configuration cannot
-bootstrap": `run_sim()` raised an error and the `run_grid()` cell was lost. The check dates from a
-bug in which imports into an empty population were never seeded, so such runs had finished
-silently with an empty event log. It fired only once the last import day had passed, so a run
-whose import path lasted to its last day (the default `IMPORT_END`), or that was shorter than 10
-days, still ran to the end without a word. D33 left this case open.
+a parasite, by chance (a Poisson rate that draws none, imports that take in neither compartment) or
+because the settings let none take (`P_PRIMARY = 0` with a hypnozoite batch mean of 0, an import
+rate of 0 throughout its window), the model's liveness check stopped the run with "this
+configuration cannot bootstrap": `run_sim()` raised an error and the `run_grid()` cell was lost.
+The check dates from a bug in which imports into an empty population were never seeded, so such
+runs had finished silently with an empty event log. It fired only once the last import day had
+passed, so a run whose import path lasted to its last day (the default `IMPORT_END`), or that was
+shorter than 10 days, still ran to the end without a word. D33 left this case open.
 **Decision.** Such a run ends cleanly on the first tick after its last import day, but not before
 tick 10, or on its last day if that comes first: it writes its tree sequence, its `params.tsv`
 ends with a `NEVER_STARTED` row, `run_sim()` says so, `load_run()` gives `never_started = TRUE`,
@@ -49,9 +49,11 @@ legitimate null arm of a grid, and never started is its honest outcome.
 stopped end with exit status 0 instead of an error; those that ran to their last day gain the
 `NEVER_STARTED` row, with their events and state unchanged. Every other run is byte-identical. A
 run that never started holds no parasite (a tree sequence with no nodes, and at most no-take rows
-in its events), and several readers stop on it (`arg_summary()`, `arg_diversity()`,
-`ibd_truth_pairs()`, `moi_vs_relapse()`); `?run_grid` says to keep `ok & !never_started`, and
-making those readers handle such a run is still to do.
+in its events). The readers that need a parasite stop on it (`arg_summary()`, `arg_diversity()`,
+`ibd_truth_pairs()`, and `moi_vs_relapse()` when no import arrived), and `summarise_run()`,
+`relapses_per_person_year()` and `plot_diagnostics()` warn on it. `?run_grid` says to give such
+readers only the `ok & !never_started` cells, while the cells that never started still count as
+outcomes; making the readers handle such a run is still to do.
 **How to verify.** `tests/testthat/test-run.R` runs a founder-free set whose import rate draws no
 import: `run_sim()` gives the message, `never_started` is `TRUE`, `extinct_tick` is `NA`,
 `load_params()` has no `NEVER_STARTED`, and `run_grid()` counts both cells. A second test checks
