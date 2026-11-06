@@ -195,28 +195,37 @@ test_that("the oocyst count is drawn exactly where a positive count is rare", {
   }
 })
 
-test_that("an outcrossed oocyst makes four products by per-chromosome four-strand meiosis", {
+test_that("an outcrossed oocyst makes four products by four-strand meiosis with meiosis I pairing", {
   skip_if_no_slim()
   ## The model's own seedTetrad() and tagMosqProduct(), run on the PvP01 map against two parents
-  ## told apart by a marker at every probe locus: 20 probes per chromosome, 400 tetrads.
+  ## told apart by a marker at every probe locus: 20 probes per chromosome and one at each
+  ## centromere, 400 tetrads.
   src <- readLines(slim_model(), warn = FALSE)
   fun <- function(name) {
     i <- grep(paste0("^function \\(.*\\) ", name, "\\("), src)
     src[i:(i + which(src[(i + 1):length(src)] == "}")[1])]
   }
   def <- paste(src, collapse = " ")
-  lens <- as.numeric(strsplit(gsub("[^0-9,]", "", sub(".*defineConstant\\(\"PVP01_FULL\", c\\(([^)]*)\\).*", "\\1", def)), ",")[[1]])
+  constant <- function(name)
+    as.numeric(strsplit(gsub("[^0-9.,]", "", sub(paste0(".*defineConstant\\(\"", name, "\", c\\(([^)]*)\\).*"), "\\1", def)), ",")[[1]])
+  lens <- constant("PVP01_FULL"); frac <- constant("PVP01_CEN_FRAC")
   expect_length(lens, 14)
+  expect_length(frac, 14)
+  r <- 7.4e-7
   starts <- c(0, cumsum(lens)[-14])
-  probes <- as.vector(sapply(seq_along(lens), function(i) starts[i] + round(lens[i] * (1:20) / 21)))
+  cens <- starts + round(frac * lens)
+  chr <- rep(1:14, each = 21)
+  probes <- unlist(lapply(1:14, function(i) sort(c(starts[i] + round(lens[i] * (1:20) / 21), cens[i]))))
+  at_cen <- match(cens, probes)
   script <- tempfile(fileext = ".slim")
   writeLines(c(fun("tagMosqProduct"), fun("seedTetrad"), "initialize() {",
     "  initializeSLiMModelType('nonWF'); initializeSLiMOptions(keepPedigrees=T); setSeed(11);",
     sprintf("  lens = c(%s);", paste(lens, collapse = ", ")),
     "  ends = integer(0); rates = float(0); gpos = 0; starts = integer(0);",
     "  for (i in seqAlong(lens)) { starts = c(starts, gpos); if (i > 0) { ends = c(ends, gpos); rates = c(rates, 0.5); }",
-    "    ends = c(ends, gpos + lens[i] - 1); rates = c(rates, 7.4e-7); gpos = gpos + lens[i]; }",
+    sprintf("    ends = c(ends, gpos + lens[i] - 1); rates = c(rates, %s); gpos = gpos + lens[i]; }", r),
     "  defineConstant('CHROM_STARTS', starts); defineConstant('GLEN', gpos); defineConstant('EIP_DAYS', 10);",
+    sprintf("  defineConstant('CHROM_CENTROMERES', c(%s));", paste(cens, collapse = ", ")),
     sprintf("  defineConstant('PROBES', c(%s));", paste(probes, collapse = ", ")),
     "  initializeMutationType('m1', 0.5, 'f', 0.0); m1.convertToSubstitution = F;",
     "  initializeChromosome(1, GLEN, 'H'); initializeGenomicElementType('g1', m1, 1.0);",
@@ -228,33 +237,53 @@ test_that("an outcrossed oocyst makes four products by per-chromosome four-stran
     "reproduction(p1) { if (individual.index == 0) for (t in seqLen(400)) seedTetrad(p2, p1.individuals[0], p1.individuals[1], 'x', t, t); }",
     "1 late() { for (ind in p2.individuals) catn('P ' + ind.getValue('oocyst_id') + ' ' + ind.getValue('lineage_id') + ' ' +",
     "  paste(asInteger(match(PROBES, ind.haplosomes.mutations.position) >= 0), sep = '')); sim.simulationFinished(); }"), script)
-  r <- processx::run(slim_path(), script, error_on_status = FALSE)
-  expect_equal(r$status, 0L, info = r$stderr)
-  L <- grep("^P ", strsplit(r$stdout, "\n")[[1]], value = TRUE)
+  res <- processx::run(slim_path(), script, error_on_status = FALSE)
+  expect_equal(res$status, 0L, info = res$stderr)
+  L <- grep("^P ", strsplit(res$stdout, "\n")[[1]], value = TRUE)
   x <- do.call(rbind, strsplit(L, " "))
   oocyst <- as.integer(x[, 2]); lineage <- as.integer(x[, 3])
   g <- do.call(rbind, lapply(strsplit(x[, 4], ""), as.integer))     # 1 = parent1's allele
   expect_equal(nrow(g), 1600)
   expect_equal(ncol(g), length(probes))
+  tetrads <- split(seq_len(nrow(g)), oocyst)
   ## at every locus two of the four products carry each parent's allele
-  per_locus <- t(sapply(split(seq_len(nrow(g)), oocyst), function(i) colSums(g[i, , drop = FALSE])))
-  expect_true(all(per_locus == 2))
+  expect_true(all(sapply(tetrads, function(i) colSums(g[i, , drop = FALSE])) == 2))
   ## no product is a whole-genome copy of a parent, and only a copy would keep a parent's lineage
   whole <- rowSums(g) %in% c(0, ncol(g))
   expect_equal(sum(whole), 0)
   expect_true(all(lineage[!whole] > 0))
-  ## any two products of one oocyst share about a third of the genome, and never nothing
-  share <- unlist(lapply(split(seq_len(nrow(g)), oocyst), function(i)
-    combn(i, 2, function(ab) mean(g[ab[1], ] == g[ab[2], ]))))
-  expect_gt(min(share), 0)
-  expect_equal(mean(share), 1 / 3, tolerance = 0.02 / (1 / 3))
-  ## chromosomes assort independently: a pair's IBD state is uncorrelated from the last probe of
-  ## one chromosome to the first of the next, and correlated between neighbouring probes within one
-  pr <- do.call(rbind, lapply(split(seq_len(nrow(g)), oocyst), function(i) t(combn(i, 2))))
-  ibd <- g[pr[, 1], ] == g[pr[, 2], ]
-  phi <- function(a, b) stats::cor(as.numeric(ibd[, a]), as.numeric(ibd[, b]))
-  across <- sapply(1:13, function(ch) phi(20 * ch, 20 * ch + 1))
-  within <- sapply(1:14, function(ch) phi(20 * (ch - 1) + 10, 20 * (ch - 1) + 11))
-  expect_lt(abs(mean(across)), 0.05)
-  expect_gt(mean(within), 0.5)
+  ## meiosis I: in each oocyst the products form two sister pairs, each pair carrying the same
+  ## parent at all 14 centromeres, the two pairs opposite
+  key <- apply(g[, at_cen], 1, paste, collapse = "")
+  expect_true(all(vapply(tetrads, function(i) identical(sort(as.vector(table(key[i]))), c(2L, 2L)), logical(1))))
+  sisters <- lapply(tetrads, function(i) split(i, key[i]))
+  ## any two products share a third of the genome on average and never nothing; sisters share
+  ## more and the others less, as P(same parent) = 1/3 + 2/3 e^(-3rt) or 1/3 - 1/3 e^(-3rt) at a
+  ## map distance rt from the centromere, averaged over the probes off the centromeres
+  off <- setdiff(seq_along(probes), at_cen)
+  share <- function(a, b) mean(g[a, off] == g[b, off])
+  pairs <- do.call(rbind, lapply(tetrads, function(i) t(utils::combn(i, 2))))
+  sib <- apply(pairs, 1, function(ab) share(ab[1], ab[2]))
+  is_sister <- apply(pairs, 1, function(ab) any(vapply(sisters[[as.character(oocyst[ab[1]])]], setequal, logical(1), ab)))
+  expect_gt(min(sib), 0)
+  expect_equal(mean(sib), 1 / 3, tolerance = 1e-9)
+  e <- exp(-3 * r * abs(probes[off] - cens[chr[off]]))
+  expect_equal(sum(is_sister), 800)
+  expect_equal(mean(sib[is_sister]), mean(1 / 3 + 2 / 3 * e), tolerance = 0.03)
+  expect_equal(mean(sib[!is_sister]), mean(1 / 3 - 1 / 3 * e), tolerance = 0.03)
+  ## each product crosses over at the gamete rate, a Poisson process: switches between
+  ## neighbouring probes of one chromosome have the Haldane mean over the probe intervals, and a
+  ## variance about the mean
+  within <- which(diff(chr) == 0)
+  sw <- rowSums(g[, within] != g[, within + 1])
+  expect_equal(mean(sw), sum((1 - exp(-2 * r * diff(probes)[within])) / 2), tolerance = 0.04)
+  expect_gt(var(sw) / mean(sw), 0.8)
+  expect_lt(var(sw) / mean(sw), 1.1)
+  ## chromosomes assort independently: a product changes parent at a junction with probability
+  ## 1/2, while neighbouring probes within a chromosome are linked
+  junction <- which(diff(chr) == 1)
+  expect_equal(mean(g[, junction] != g[, junction + 1]), 1 / 2, tolerance = 0.06)
+  ibd <- g[pairs[, 1], ] == g[pairs[, 2], ]
+  within_phi <- sapply(1:14, function(ch) { k <- which(chr == ch)[10]; stats::cor(as.numeric(ibd[, k]), as.numeric(ibd[, k + 1])) })
+  expect_gt(mean(within_phi), 0.5)
 })

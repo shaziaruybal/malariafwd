@@ -19,6 +19,53 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D41 — Meiosis I keeps sister chromatids together · 2026-11-05 · Accepted
+**Context.** D34 dealt each chromosome's four chromatids to the four products at random,
+independently per chromosome, as the simulator of Wong et al. (2018) does. A review of that change
+found that this drops meiosis I: the two chromatids attached to one centromere go to the same pole,
+so the two products of a pole carry the same parent at every chromosome's centromere. Under the
+random deal any two products of one oocyst share about a third of the genome (sd about 0.08,
+unimodal); under meiosis I the two pairs of meiosis II sisters share about 0.60 and the other four
+pairs about 0.20 (sd about 0.20). IBD and relatedness methods are scored against this ground
+truth, and the narrow distribution would flatter them. The author chose to model meiosis I
+(2026-11-05).
+**Decision.** For each chromosome, meiosis I sends the two chromatids that carry the same parent at
+its centromere to one pole, products 0 and 1 or products 2 and 3, drawn independently for each
+chromosome; meiosis II gives one of them to each product of that pole, in random order. Chiasmata
+and crossovers are as in D34. The centromeres are the centres of the features PVP01_CEN01 to
+PVP01_CEN14 of the PvP01 annotation (Sanger/GeneDB, released with Auburn et al. 2016), held as
+fractions of each chromosome (`PVP01_CEN_FRAC`) so that `GENOME_MODE = "core"` keeps them. Each
+chiasma's two chromatids are recorded in two vectors, so a tetrad's work is linear in its
+chiasmata rather than quadratic (about 340 ms a tetrad at `RECOMB_RATE = 1e-3` before).
+**Rationale.** This is canonical meiosis, and we know of no evidence that Plasmodium departs from it. The
+split barely depends on where the centromeres sit: midpoints give 0.614 and 0.193, the annotated
+centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each chromosome about 0.605 and
+0.197.
+**Supersedes.** D34's assignment of chromatids to products, and the figures that follow from it
+(unimodal around 1/3, sd about 0.08, "this is Plasmodium meiosis").
+**Alternatives rejected.** *Keep the random deal* -- simpler and shared with Wong et al. (2018),
+but it makes every same-oocyst pair look alike. *Pair products without centromeres* (a deal fixed
+at each chromosome's start) -- gives sisters 0.50 and the others 0.25, so the centromere positions
+matter.
+**Consequences.** Every run with an outcrossed oocyst changes its tree sequence. On the full
+14-chromosome map `events.tsv` and `state.tsv` are unchanged: the genome is neutral, every product
+is a fresh lineage, and the new deal draws as many random numbers as the old (Eidos's sample()
+draws n - 1 numbers to order n items, so 3 either way). With a `CHROMOSOMES` subset an unrecombined
+product is a copy that keeps its parent's lineage, and the deal decides which product that is, so
+those runs' events change too. Each product's
+crossovers and assortment are unchanged (17.9 M; a junction switch with probability 1/2). Two
+products of one oocyst share a third of the genome on average for unrelated parents, sisters about
+0.60 and the others about 0.20 (5-95% about 0.12-0.67 over all pairs), and a pair's sharing is
+correlated across chromosomes. The README figures (karyotype, representative run) and the observed
+values in MODEL_DESCRIPTION section 13 are regenerated with the release (M33).
+**How to verify.** `tests/testthat/test-model-invariants.R` runs the model's own `seedTetrad()` for
+400 tetrads with a probe at every centromere: 2:2 segregation at every probe, two sister pairs per
+oocyst carrying the same parent at all 14 centromeres, sister and other pairs' sharing against
+1/3 + 2/3 e^(-3rt) and 1/3 - 1/3 e^(-3rt) at map distance rt from the centromere, each product's
+crossovers against the map (mean and variance), and a junction switch probability of 1/2.
+
+---
+
 ## D40 — A relapse into a patent clone of its own lineage is counted, and flagged · 2026-11-05 · Accepted
 **Context.** At the defaults about 85% of relapses start while a patent clone of the same lineage
 is already in the host (70-82% in review M3's larger runs). Over four 3-year default runs that
@@ -139,7 +186,7 @@ within 0.05 of 0.480; it was 0.73 before.
 
 ---
 
-## D34 — Outcrossed oocysts undergo per-chromosome four-strand meiosis · 2026-11-05 · Accepted
+## D34 — Outcrossed oocysts undergo per-chromosome four-strand meiosis · 2026-11-05 · Accepted; partly superseded by D41 (how chromatids reach the products)
 **Context.** `seedTetrad()` built the four products of an outcrossed oocyst as two reciprocal
 recombinants from one breakpoint draw plus two whole-genome copies of the parents. That applies a
 single chromosome's tetrad to the whole genome. Half the products saw no crossover and no
@@ -152,17 +199,20 @@ chromatids per chromosome. Chiasmata fall at the union of two gamete-rate breakp
 Poisson set with twice the per-product map length, within each chromosome; each joins a random
 chromatid of each parent at that locus. The four chromatids of each chromosome then go to the four
 products at random, independently across chromosomes. No obligate chiasma is imposed: neither
-source claims one, and its effect is negligible. A product with no switch at all, about one in
-2^13, is a copy of its starting parent and keeps that parent's lineage; every other product is a
-fresh lineage. Selfed oocysts are unchanged. The chromosome starts on D2's concatenated map are
+source claims one, and its effect is negligible. A product with no switch at all is a copy of its
+starting parent and keeps that parent's lineage; every other product is a fresh lineage. That
+happens with probability 2^-(n-1) e^-d for n chromosomes of total map d: about 2e-12 on the full
+map, but often on a few chromosomes (about half of the products of chromosome 1 alone). Selfed oocysts are unchanged. The chromosome starts on D2's concatenated map are
 recorded as `CHROM_STARTS`.
 **Rationale.** This is Plasmodium meiosis. Every product carries the full map and assorts its 14
 chromosomes independently, two products carry each parent's allele at every locus, and any two
 products of one oocyst share about a third of the genome (sd about 0.08, 5-95% about 0.21-0.47),
 none sharing nothing. The ground truth that IBD and relatedness methods are scored against is then
 the biology rather than an artefact of the tetrad.
-**Supersedes.** D2's validation sentence that the same-oocyst distribution "tightens toward the
-centre (0.4-0.8)"; D2's concatenated map stands.
+**Supersedes.** D2's mechanism of assortment, the r = 0.5 junction breakpoints passed through the
+earlier `seedTetrad()` (the junction draws are now discarded, and the tetrad assorts the
+chromosomes itself), and D2's validation sentence that the same-oocyst distribution "tightens
+toward the center under 14 chromosomes"; D2's concatenated map stands.
 **Alternatives rejected.** *Two independent reciprocal pairs* -- this restores the map length and
 removes the parental copies, but two of the six same-oocyst pairs still share nothing by
 construction. *An obligate chiasma per bivalent* -- no source supports it for P. vivax, and it
@@ -1215,7 +1265,7 @@ is the honest, complete representation; `core` is only for deliberately mimickin
 **Supersedes.** The initial `core` default (never released).
 **Consequences.** Runs cover the full 24.2 Mb (~9 s at prototype scale — negligible cost).
 
-## D2 — 14 chromosomes as ONE concatenated linkage group (Option B) · 2026-08-05 · Accepted
+## D2 — 14 chromosomes as ONE concatenated linkage group (Option B) · 2026-08-05 · Accepted; partly superseded by D34 (the concatenated map stands)
 **Context.** Extend the single 100 kb chromosome to all 14 PvP01 chromosomes. SLiM 5.2 supports
 explicit multiple chromosomes.
 **Decision.** Model the genome as ONE concatenated chromosome with recombination rate 0.5 at each of

@@ -35,15 +35,16 @@ Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes p
 so 66% of blood-stage episodes are relapses**, and the gap widens through the run as the reservoir
 accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
 area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
-relationship classes are point masses, while same-oocyst siblings spread around a third of the
-genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
+relationship classes are point masses, while same-oocyst siblings spread out, in two groups around
+0.6 and 0.2 of the genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
 `plot_relapse_km()` the time-to-first-relapse curve.)
 
 ![IBD karyotype](man/figures/README-ibd-karyotype.png)
 
 Ground-truth IBD read from the ARG, painted along the 14 PvP01 chromosomes. A relapse is clonal to
 its originating hypnozoite (IBD 1.00); two products of one oocyst share a **mosaic** with visible
-crossover breakpoints, about a third of the genome on average; distinct founders share nothing.
+crossover breakpoints, a third of the genome on average for unrelated parents; distinct founders
+share nothing.
 
 **Demonstrating the observation layer.** The same configuration rerun with
 `P_DETECT_PRIMARY = 0.60` and `P_DETECT_RELAPSE = 0.15` — relapses are often sub-patent, so a
@@ -377,10 +378,14 @@ two distinct lineages" did not.
 > column. It no longer drives anything.
 
 **Meiosis.** An outcrossed oocyst yields a full **tetrad** by per-chromosome four-strand meiosis
-(D34): the zygote's two genomes replicate into four chromatids per chromosome, chiasmata each join a
-random chromatid of each parent, and the four chromatids of each chromosome go to the four products
-at random, independently across chromosomes. Every product carries the full map of crossovers, and
-none is a copy of a parent. A selfed oocyst
+(D34, D41): the zygote's two genomes replicate into four chromatids per chromosome, and each chiasma
+joins a chromatid carrying one parent's sequence with one carrying the other's, both chosen at
+random. Meiosis I sends the two chromatids that carry the same parent at a chromosome's centromere
+to the same pole, drawn independently for each chromosome, and meiosis II gives one to each product
+of that pole; so the four products form two pairs of meiosis II sisters, the same pairs on every
+chromosome. Every product carries the full map of crossovers. On the full 14-chromosome map none
+is a copy of a parent; with a `CHROMOSOMES` subset or a small `RECOMB_RATE`, a product with no
+switch is a copy of its parent and keeps that parent's lineage. A selfed oocyst
 yields four identical products, stored as **one** object with `spz_weight = 4` — a storage
 optimisation that keeps object count from scaling with clonal output, corrected for at sampling.
 
@@ -441,10 +446,13 @@ is a strict superset. Use `uptake_moments(lambda, k)` to see what a setting prod
 
 Every oocyst produces four meiotic products. For an **outcrossed** oocyst each is a mosaic of the
 two parents. Chiasmata fall at Poisson points, twice the per-product map length per bivalent, and
-each joins a random chromatid of each parent at that locus. The four chromatids of each chromosome
-then go to the four products at random. So at every locus two of the four products carry each
-parent's allele (2:2 segregation), each chromosome assorts independently, and every product
-carries the documented 17.9 M of within-chromosome crossovers.
+each joins a random chromatid of each parent at that locus; every crossover is reciprocal, the two
+chromatids exchanging everything beyond it. Meiosis I then keeps together the two chromatids that
+carry the same parent at the chromosome's centromere, and meiosis II separates them. The
+centromeres are those of the PvP01 annotation (`PVP01_CEN01`–`PVP01_CEN14`, Sanger/GeneDB, released
+with Auburn et al. 2016). So at every locus two of the four products carry each parent's allele
+(2:2 segregation), each chromosome assorts independently, every product carries the documented
+17.9 M of within-chromosome crossovers, and the products form two pairs of meiosis II sisters.
 
 Expected IBD, used throughout as a validation ladder:
 
@@ -452,13 +460,19 @@ Expected IBD, used throughout as a validation ladder:
 |---|---|---|
 | a lineage with itself / a clone | **1.000** | verified exact |
 | relapse vs its originating hypnozoite | **1.000** | `addCloned`; verified |
-| any two products of one oocyst | **~1/3** | sd ~0.08 on the PvP01 map; no pair shares nothing |
+| any two products of one oocyst | **1/3** on average | for unrelated parents; 1/3 + 2f/3 when the parents share a fraction f |
+| meiosis II sisters (2 of the 6 pairs) | **~0.60** | the same parent at every centromere |
+| the other pairs of one oocyst (4 of 6) | **~0.20** | opposite parents at every centromere |
 | full siblings (same two parents, different oocysts) | 1/2 | |
 | half siblings (one parent shared) | 1/4 | |
 | unrelated founders | 0 | independent roots |
 
-With all 14 chromosomes the same-oocyst distribution is **unimodal around 1/3** (5–95%: about
-0.21–0.47), because each chromosome assorts independently; on a single chromosome it is far wider.
+With all 14 chromosomes and unrelated parents the same-oocyst distribution is **bimodal**: sisters
+around 0.60 and the other pairs around 0.20 (overall sd about 0.20, 5–95% about 0.12–0.67). Meiosis I
+pairs the products alike on every chromosome, so a pair's sharing is correlated across chromosomes;
+a random deal of chromatids per chromosome, as in Wong et al. (2018), would make every pair look
+alike, around 1/3 (sd about 0.08). On the full map no pair shares nothing; on a single chromosome
+the distribution is far wider.
 
 ### 6.3 Recombination
 
@@ -467,9 +481,11 @@ within-chromosome crossover rate:  7.4e-7 per bp   (13.5 kb/cM; euchromatic core
 at each of the 13 chromosome junctions:  r = 0.5   (independent assortment)
 ```
 
-The 14 chromosomes are concatenated into **one linkage group** with `r = 0.5` inserted at the
-junctions. This is genetically equivalent to explicit multi-chromosome simulation for all IBD
-metrics, and keeps a single `.trees` file — explicit SLiM multi-chromosome writes a *directory* of
+The 14 chromosomes are concatenated into **one linkage group**, with `r = 0.5` in SLiM's map at
+each junction. `seedTetrad()` discards the junction draws and assorts the chromosomes itself, by
+meiosis I at each centromere, which gives every product exactly `r = 0.5` across each junction.
+This is genetically equivalent to explicit multi-chromosome simulation for all IBD metrics, and
+keeps a single `.trees` file — explicit SLiM multi-chromosome writes a *directory* of
 per-chromosome tree sequences, which would require rewriting the entire IBD pipeline.
 
 ---
@@ -477,10 +493,10 @@ per-chromosome tree sequences, which would require rewriting the entire IBD pipe
 ## 7. Genome and genetics
 
 - **PvP01 reference** (Auburn et al. 2016; GCA_900093555), 14 nuclear chromosomes.
-- Implemented as **one concatenated linkage group** with recombination rate **0.5 at each of the 13
-  junctions** (independent assortment) and **7.4 × 10⁻⁷ /bp within chromosomes** (13.5 kb/cM,
-  euchromatic core rate, Jiang 2011). Genetically equivalent to explicit multi-chromosome for all
-  IBD metrics, and keeps a single `.trees` file.
+- Implemented as **one concatenated linkage group** with **7.4 × 10⁻⁷ /bp within chromosomes**
+  (13.5 kb/cM, euchromatic core rate, Jiang 2011); the chromosomes assort independently at meiosis
+  (§6.3). Genetically equivalent to explicit multi-chromosome for all IBD metrics, and keeps a
+  single `.trees` file.
 - `GENOME_MODE` is a pure **coordinate** switch: `"full"` (24.2 Mb, default) or `"core"`
   (subtelomere-masked, ~21.8 Mb). Both use the same recombination rate.
 - **`initializeMutationRate(0.0)` — the genome carries no mutation at all.** It is a neutral
@@ -810,6 +826,7 @@ Stated plainly, because several matter for interpretation.
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
 | 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled (malariasimulation Weibull curves); OpenMalaria makes the same simplification |
+| 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres; crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2 |
 
 ---
 
@@ -949,7 +966,7 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | property | expectation | observed |
 |---|---|---|
 | all 13 chromosome junctions used | yes | **yes** |
-| junction share of crossovers | 26.6% (6.5 junction vs 17.9 within per meiosis) | consistent |
+| junction share of crossovers | 26.6% (6.5 junction vs 17.9 within per product) | consistent |
 | within-chromosome breakpoint density uniform across chromosomes | CV ≈ 0 | **CV = 0.013** (3,149–3,309 per Mb) |
 | within-chromosome breakpoint position uniform | KS p > 0.05 | **D = 0.004, p = 0.289** |
 | junction behaves as `r = 0.5` (independent assortment) | φ ≈ 0 | **φ = −0.002** at 50.7% co-inheritance |
@@ -1021,7 +1038,7 @@ plus `ACTUAL_SEED`** — full provenance), `plasmo.trees` (tskit tree sequence).
 | id | meaning |
 |---|---|
 | `pedigree_id` | one SLiM individual = one genome; many per lineage |
-| `lineage_id` | genetic identity / clonal group; propagates through clonal, parental and selfed descent; recombinants mint a fresh one. **COI counts distinct `lineage_id`** |
+| `lineage_id` | genetic identity / clonal group; propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a fresh one. **COI counts distinct `lineage_id`** |
 | `oocyst_id` | one meiosis / tetrad, ≤ 4 lineages |
 | `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst |
 | `inoculation_id` | one bite (unreliable in pre-release output; see §13) |
@@ -1251,10 +1268,10 @@ than one segment.
 
 | term | meaning |
 |---|---|
-| **lineage** | a genetic identity / clonal group. Propagates through clonal, parental and selfed descent; recombinants mint a new one. **COI counts distinct lineages.** |
+| **lineage** | a genetic identity / clonal group. Propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a new one. **COI counts distinct lineages.** |
 | **brood** | one blood meal's co-hatching group of oocysts (≥ 1 oocyst) |
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
-| **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus |
+| **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus, in two pairs of meiosis II sisters |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
 | **episode** | one **patent** blood-stage infection event: primary, relapse or recrudescence. A clone suppressed below patency is not an episode while it is suppressed |
 | **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence. All three are represented (§9a) |

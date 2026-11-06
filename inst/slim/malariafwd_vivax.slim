@@ -19,7 +19,7 @@ initialize() {
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked for every new inoculation, a local bite on an infected host or an import (D38): a host already carrying MAX_MOI blood-stage lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 4 observed with MAX_MOI=2). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked for every new inoculation, a local bite on an infected host or an import (D38): a host already carrying MAX_MOI blood-stage lineages has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 5 with MAX_MOI=2 in check_parameters.R's maxmoi_cap configuration). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
 	defineDefault("MAX_BROODS_PER_MOSQ",     20); // capping the max brood carrying capacity per mosquito - TODO later make mosq mortality and transmissibility decline with increasing broods (ie high burden = lower fitness)
 	
 	// parasite
@@ -361,15 +361,14 @@ initialize() {
 	initializeTreeSeq();
 	
 	// ── GENOME: PvP01 (Auburn et al. 2016; GCA_900093555) 14 nuclear chromosomes ──
-	// Modelled as ONE concatenated linkage group with recombination rate 0.5 at each
-	// of the 13 chromosome junctions (=> independent assortment) and the within-chr
-	// crossover rate elsewhere. Genetically equivalent to explicit multi-chromosome
-	// meiosis for every relatedness/IBD metric (a shared IBD segment cannot cross an
-	// r=0.5 junction), while keeping ONE tree-sequence file and leaving the tetrad
-	// meiosis (seedTetrad) and the tskit IBD pipeline untouched. [To switch to SLiM's
-	// explicit multi-chromosome mode later, call initializeChromosome() per chromosome;
-	// that emits <name>/chromosome_N.trees per chromosome, so the R/tskit IBD code must
-	// then aggregate across the 14 files.]
+	// Modelled as ONE concatenated linkage group, with the within-chr crossover rate along each
+	// chromosome and 0.5 at each of the 13 junctions. seedTetrad() discards the junction draws and
+	// assorts the chromosomes itself, by meiosis I at each chromosome's centromere, so every
+	// product changes parent at a junction with probability 1/2. One concatenated group keeps ONE
+	// tree-sequence file for the tskit IBD pipeline. [To switch to SLiM's explicit
+	// multi-chromosome mode later, call initializeChromosome() per chromosome; that emits
+	// <name>/chromosome_N.trees per chromosome, so the R/tskit IBD code must then aggregate across
+	// the 14 files.]
 	initializeMutationType("m1", 0.5, "f", 0.0);
 	m1.convertToSubstitution = T;
 
@@ -382,6 +381,13 @@ initialize() {
 	// ~21.8 Mb core of the 24.2 Mb assembly). TODO: replace with the exact Pv4
 	// core-region coordinates (regions BED) when available - a one-line data swap.
 	defineConstant("PVP01_CORE", asInteger(round(PVP01_FULL * 0.90)));
+	// Where each chromosome's centromere sits, as a fraction of its length, chr 1..14: the centres
+	// of the centromere features PVP01_CEN01..PVP01_CEN14 of the PvP01 annotation (Sanger/GeneDB,
+	// released with Auburn et al. 2016). Meiosis I in seedTetrad() sends the two chromatids
+	// carrying the same parent there to the same pair of products; "core" mode uses the same
+	// fractions of its shortened chromosomes.
+	defineConstant("PVP01_CEN_FRAC", c(0.6645, 0.1707, 0.7043, 0.5592, 0.5543, 0.3228, 0.7610,
+	                                   0.6434, 0.4373, 0.6536, 0.7529, 0.3297, 0.4711, 0.6800));
 
 	// which PvP01 chromosomes to simulate (default all 14); accepts "1-14","1,3,5","5-8"
 	chr_idx = integer(0);
@@ -415,7 +421,7 @@ initialize() {
 	{
 		L = chrlens[i];
 		chr_starts = c(chr_starts, gpos);
-		if (i > 0)  // 1-bp junction to the previous chromosome (independent assortment)
+		if (i > 0)  // 1-bp junction to the previous chromosome; seedTetrad() discards its draws
 		{
 			rec_ends = c(rec_ends, gpos);
 			rec_rates = c(rec_rates, 0.5);
@@ -425,8 +431,9 @@ initialize() {
 		gpos = gpos + L;
 	}
 	defineConstant("GENOME_LENGTH", gpos);
-	// first position of each chromosome on the concatenated map; seedTetrad() assorts at these
+	// first position of each chromosome on the concatenated map, and its centromere's position
 	defineConstant("CHROM_STARTS", chr_starts);
+	defineConstant("CHROM_CENTROMERES", chr_starts + asInteger(round(PVP01_CEN_FRAC[chr_idx - 1] * chrlens)));
 	defineConstant("N_CHROMOSOMES", size(chrlens));
 	defineConstant("RECOMB_WITHIN", within_r);
 
@@ -2447,14 +2454,17 @@ function (integer$) seedSelfedOocyst(o<Subpopulation>$ m, o<Individual>$ parent,
 }
 
 // OUTCROSSING oocyst - a full meiotic TETRAD of 4 haploid products sharing one oocyst_id, by
-// per-chromosome four-strand meiosis (D34). The zygote's two genomes replicate into four
+// per-chromosome four-strand meiosis (D34, D41). The zygote's two genomes replicate into four
 // chromatids per chromosome (two from each parent). Chiasmata fall at a Poisson(2d) set of points
 // per bivalent, the union of two gamete-rate draws, so that each product keeps the map length d;
-// each chiasma joins a random chromatid of parent1 and a random chromatid of parent2 at that
-// locus. Then the four chromatids of each chromosome go to the four products at random,
-// independently of the other chromosomes. A product with no switch at all is a whole copy of its
-// starting parent and inherits that parent's lineage (keeps lineage_id == genome identity); every
-// other product is a fresh lineage.
+// each chiasma joins a chromatid carrying parent1's sequence there and one carrying parent2's,
+// each chosen at random (no chromatid interference). Meiosis I then sends the two chromatids that
+// carry the same parent at the chromosome's centromere to the same pole, products 0 and 1 or
+// products 2 and 3, the pole drawn independently for each chromosome; meiosis II gives one to
+// each product of that pole. So products 0 and 1, and 2 and 3, are meiosis II sisters on every
+// chromosome. A product with no switch at all is a whole copy of its starting parent and inherits
+// that parent's lineage (keeps lineage_id == genome identity); every other product is a fresh
+// lineage.
 function (integer) seedTetrad(o<Subpopulation>$ m, o<Individual>$ parent1, o<Individual>$ parent2, s$ color, i$ oocyst, i$ brood)
 {
 	n_chr = size(CHROM_STARTS);
@@ -2470,33 +2480,45 @@ function (integer) seedTetrad(o<Subpopulation>$ m, o<Individual>$ parent1, o<Ind
 	for (ch in 0:(n_chr - 1))
 	{
 		// chromatids 0, 1 start on parent1 and 2, 3 on parent2; on_parent tracks each one's
-		// current parent as the chiasmata along this chromosome swap them
+		// current parent as the chiasmata along this chromosome swap them, and at_cen keeps its
+		// parent at the centromere (a chiasma at the centromere's own base counts before it)
+		xs = chi[chr_of == ch];
+		n_x = size(xs);
 		on_parent = c(0, 0, 1, 1);
-		swaps = Dictionary();
-		for (s in 0:3)
-			swaps.setValue(asString(s), integer(0));
-		for (x in chi[chr_of == ch])
+		at_cen = NULL;
+		ca = integer(n_x);   // the parent1-side chromatid of each chiasma
+		cb = integer(n_x);   // and the parent2-side one
+		for (j in seqLen(n_x))
 		{
+			if (isNULL(at_cen) & xs[j] > CHROM_CENTROMERES[ch])
+				at_cen = on_parent;
 			a = sample(which(on_parent == 0), 1);
 			b = sample(which(on_parent == 1), 1);
-			swaps.setValue(asString(a), c(swaps.getValue(asString(a)), x));
-			swaps.setValue(asString(b), c(swaps.getValue(asString(b)), x));
+			ca[j] = a;
+			cb[j] = b;
 			on_parent[a] = 1;
 			on_parent[b] = 0;
 		}
-		to_product = sample(0:3, 4);   // chromatid to_product[k] goes to product k
+		if (isNULL(at_cen))
+			at_cen = on_parent;
+		// meiosis I: the pair on parent1 at the centromere goes to products 0, 1 or to 2, 3;
+		// meiosis II: each pair in random order. Chromatid to_product[k] goes to product k.
+		on1 = sample(which(at_cen == 0), 2);
+		on2 = sample(which(at_cen == 1), 2);
+		to_product = (sample(0:1, 1) == 0) ? c(on1, on2) else c(on2, on1);
 		for (k in 0:3)
 		{
 			s = to_product[k];
+			sw = xs[ca == s | cb == s];   // where chromatid s changes parent
 			first = (s < 2) ? 0 else 1;
 			bk = breaks.getValue(asString(k));
 			if (ch == 0)
 				start_parent[k] = first;
 			else if (first != last_parent[k])
 				bk = c(bk, CHROM_STARTS[ch]);   // the product changes parent at the junction
-			bk = c(bk, swaps.getValue(asString(s)));
+			bk = c(bk, sw);
 			breaks.setValue(asString(k), bk);
-			last_parent[k] = integerMod(first + size(swaps.getValue(asString(s))), 2);
+			last_parent[k] = integerMod(first + size(sw), 2);
 		}
 	}
 	lineages = integer(0);

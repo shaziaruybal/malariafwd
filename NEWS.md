@@ -119,7 +119,7 @@ Three suites ship with the package and run against a live model:
   the downstream ARG/IBD: event-type coverage, id uniqueness, hypnozoite and blood-stage
   conservation against `state.tsv`, oocyst and tetrad structure, tree retention, and the IBD
   ladder from clonal pairs down to unrelated founders.
-* `inst/validation/check_parameters.R` — 40 checks over 33 configurations: structural
+* `inst/validation/check_parameters.R` — 40 checks over 34 configurations: structural
   invariants, directional parameter response, and seed reproducibility.
 * `audit_arg_recombination.R` and `audit_arg_junctions.R` verify that recombination breakpoints
   follow the map and that the 13 chromosome junctions assort independently.
