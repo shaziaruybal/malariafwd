@@ -19,6 +19,37 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D57 — The tree-sequence functions reach Python through one check · 2026-11-07 · Accepted
+**Context.** Three copies of the Python check (in `ibd_pairs()`, `ibd_segments()` and the ARG
+functions) declared different modules (tskit with pandas; tskit with numpy), hid reticulate's
+failures inside `try()`, suggested a `py_require()` that does nothing once Python has started, and
+checked no version, so a tskit below 1.0 failed later with a Python traceback (review m45, m64,
+M17). The author chose the hybrid: use the Python reticulate is bound to when it has the modules,
+and let reticulate set up its own when none was chosen (Q21).
+**Decision.** One check (`R/python.R`) declares tskit (>= 1.0), pandas and numpy with `py_require()`
+before Python starts, which reticulate acts on only when no Python was chosen; it then starts Python
+and reads each module's version, adding the modules to reticulate's own environment where they are
+missing there. Every function that runs Python calls it, naming itself and the modules it uses, and
+stops with class `malariafwd_no_python` and one paragraph: which Python, how it was chosen, what is
+missing and what to do. A check that finds everything holds for the session. `tskit_available()`
+answers without a condition, and `check_setup()` reports SLiM, the model and the Python side.
+**Rationale.** Declaring changes nothing for a Python the user chose and is what reticulate needs to
+build its own; one module set and one message replace three that disagreed.
+**Alternatives rejected.** *Declaring in `.onLoad()`* -- it would add tskit to reticulate's
+environment for a user who never calls an IBD function. *A bare `py_module_available()`* -- it is
+FALSE before Python has started. *One Python module in `inst/python`* -- deferred to v0.2 with the
+answer.
+**Consequences.** Which Python is used does not change. A tskit below 1.0, or a missing numpy, is
+refused with the message instead of failing later, and the error texts change (code matching the old
+text should match the class). The validation scripts and `quickstart.R` use `tskit_available()`.
+**How to verify.** `tests/testthat/test-python.R`: each branch mocked (no reticulate, an old one, a
+Python that does not start, missing modules, an old tskit, reticulate's own environment, warnings
+while starting, a function that needs only some modules, every Python-backed export stopping with
+its name), `check_setup()` with a missing or old SLiM, and on a machine that has them, the real SLiM
+and Python.
+
+---
+
 ## D56 — The event vocabulary has no seed uptake, and mosq_death counts genomes · 2026-11-07 · Accepted
 **Context.** `event_types()` listed `hv_uptake_seed`, a mosquito's founder genotype, but every
 mosquito starts uninfected, so the type could never occur, and the model's mosquito-seeding branches

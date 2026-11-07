@@ -46,14 +46,24 @@ from markers. Shared segments for pairs of known relationship:
 
 ## Requirements
 
-- **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`). Check with `slim_available()`.
-- For IBD: **Python 3 with `tskit` + `pandas`** (via the `reticulate` package).
+- **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`).
+- For the IBD and ARG functions: **Python with `tskit` (≥ 1.0), `pandas` and `numpy`**, through
+  the `reticulate` package. Either route works. *Automatic*: with no Python chosen, reticulate
+  sets up its own environment with these modules the first time an IBD function runs; this needs
+  internet once and a few hundred MB in the user cache. *Your own Python*: set
+  `RETICULATE_PYTHON=/path/to/python` (in `~/.Renviron` to keep it) before the first IBD call of a
+  session.
+- On a cluster whose compute nodes have no internet, run `check_setup()` once on a node that has
+  it; later sessions that share the same user cache may then reuse the environment. If that does
+  not work, use your own Python.
+
+`check_setup()` reports what is found.
 
 ## Install
 
 ```r
 # install.packages("remotes")
-remotes::install_github("shaziaruybal/malariafwd")
+remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE)
 ```
 
 ## Check it works
@@ -70,7 +80,7 @@ Rscript quickstart.R --github        # install from GitHub instead
 
 ```r
 library(malariafwd)
-slim_version()                                    # e.g. "5.2"
+check_setup()                                     # SLiM, the model, and Python with tskit
 
 # one run
 p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # validated params; full genome by default

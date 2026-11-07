@@ -20,13 +20,16 @@ Python `tskit`); run them locally after checking your setup.
 
 ## Setup
 
-The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess, and uses Python
-`tskit` (via `reticulate`) for IBD. Check both:
+The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess. The IBD and ARG
+functions also need Python with `tskit` (≥ 1.0), `pandas` and `numpy`, through `reticulate`:
+with no Python chosen, reticulate sets up its own environment with them the first time one of
+these functions runs (this needs internet once), or set `RETICULATE_PYTHON` to a Python that has
+them. Nothing below runs without SLiM; without Python only the IBD and ARG sections stop. Check
+both:
 
 ```{r}
 library(malariafwd)
-slim_available()   # TRUE if `slim` is on PATH (or set env var MALARIAFWD_SLIM)
-slim_version()
+check_setup()
 ```
 
 ## One simulation

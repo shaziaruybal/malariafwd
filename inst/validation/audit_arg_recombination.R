@@ -10,7 +10,10 @@ suppressMessages({
   library(malariafwd)
   library(data.table); library(ggplot2); library(patchwork); library(reticulate)
 })
-py_require(c("tskit", "pandas")); invisible(py_run_string("import tskit"))
+if (!malariafwd::tskit_available())
+  stop("these checks need Python with tskit (>= 1.0), pandas and numpy; see malariafwd::check_setup()",
+       call. = FALSE)
+invisible(py_run_string("import tskit"))
 FIGS <- Sys.getenv("MALARIAFWD_FIGS", file.path(tempdir(), "malariafwd-figs"))
 dir.create(FIGS, recursive = TRUE, showWarnings = FALSE)
 OUT  <- file.path(tempdir(), "mfw_arg")

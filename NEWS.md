@@ -163,5 +163,5 @@ validation status; `DECISIONS.md` records why each modelling choice was made.
 
 ## Requirements
 
-SLiM (≥ 5.2) on `PATH`; Python 3 with `tskit` and `pandas` (via `reticulate`) for IBD and ARG
-summaries. Everything else is R.
+SLiM (≥ 5.2) on `PATH`; for the IBD and ARG functions, Python with `tskit` (≥ 1.0), `pandas` and
+`numpy`, through `reticulate`. `check_setup()` reports both. Everything else is R.

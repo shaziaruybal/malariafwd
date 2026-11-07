@@ -53,15 +53,11 @@ chrom_map <- function(run) {
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 #' ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
 #' }
+#' @inheritSection tskit_available Python
 #' @export
 ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
   stopifnot(length(ids_a) == length(ids_b))
-  if (!requireNamespace("reticulate", quietly = TRUE))
-    stop("ibd_segments() needs the 'reticulate' package.", call. = FALSE)
-  if ("py_require" %in% getNamespaceExports("reticulate"))
-    try(reticulate::py_require(c("tskit", "pandas")), silent = TRUE)
-  ok <- tryCatch({ reticulate::py_run_string("import tskit, pandas"); TRUE }, error = function(e) FALSE)
-  if (!ok) stop("ibd_segments() needs Python with 'tskit' + 'pandas'.", call. = FALSE)
+  .require_python("ibd_segments()")
   pymain <- reticulate::py
   pymain$`_trees` <- trees_path(run)
   pymain$`_a` <- as.integer(ids_a); pymain$`_b` <- as.integer(ids_b)
@@ -153,11 +149,13 @@ _seg = pd.DataFrame(rows, columns=["pair","a","b","gstart","gend"])
 #' @return a ggplot object.
 #' @examples
 #' \dontrun{plot_ibd_pair(run, c(id1, id3), c(id2, id4), labels = c("relapse", "unrelated"))}
+#' @inheritSection tskit_available Python
 #' @export
 plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
                           layout = c("chromosome", "concatenated"), fill = "#2166ac") {
   .need_ggplot()
   layout <- match.arg(layout)
+  .require_python("plot_ibd_pair()")
   seg <- ibd_segments(run, ids_a, ids_b, min_span = min_span)
   cm <- chrom_map(run); L <- max(cm$end)
   if (is.null(labels)) labels <- sprintf("%s vs %s", ids_a, ids_b)
@@ -224,8 +222,10 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
 #' @return a data.table of `cls`, `a`, `b`, `ibd`.
 #' @examples
 #' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
+#' @inheritSection tskit_available Python
 #' @export
 ibd_truth_pairs <- function(run, max_per_class = 60) {
+  .require_python("ibd_truth_pairs()")
   ev <- data.table::as.data.table(load_events(run))
   cs <- classify_cases(ev)
   seeds <- ev[event_type == "vh_inoculation_seed"]

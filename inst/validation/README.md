@@ -11,7 +11,8 @@ protect the *science*. Run them after any change to the SLiM model, and before a
 | `audit_arg_junctions.R` | chromosomes assort independently across the 13 junctions; how much the products of one meiosis share: about a third for unrelated parents, more for related ones, and on the full map never nothing |
 | `explain_ibd.R` | renders the IBD segment and relatedness-ladder figures |
 
-They need SLiM on `PATH` and Python with `tskit`. Run from anywhere:
+They need SLiM on `PATH` and Python with `tskit` (>= 1.0), `pandas` and `numpy`;
+`malariafwd::check_setup()` reports both. Run from anywhere:
 
 ```sh
 Rscript -e 'source(system.file("validation", "check_parameters.R", package = "malariafwd"))'

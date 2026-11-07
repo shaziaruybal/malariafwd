@@ -22,6 +22,17 @@ diagnostic for a forward run -- how many ROOTS each local tree has. A fully coal
 genealogy has one root; this model seeds independent founder lineages, so the expected
 result is a forest with roughly one root per surviving founder lineage.
 }
+\section{Python}{
+
+The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
+reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
+sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
+Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
+session. A function that cannot reach them stops with an error of class
+\code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
+}
+
 \examples{
 \dontrun{arg_summary(run)}
 }

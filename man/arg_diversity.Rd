@@ -22,6 +22,17 @@ reported with \code{tajimas_d} and branch-mode \code{segregating_sites}. Because
 forest (see \code{\link[=arg_summary]{arg_summary()}}), these are diluted by pairs that never coalesce -- use
 \code{\link[=arg_divergence]{arg_divergence()}} if you need the coalescing fraction made explicit.
 }
+\section{Python}{
+
+The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
+reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
+sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
+Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
+session. A function that cannot reach them stops with an error of class
+\code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
+}
+
 \examples{
 \dontrun{arg_diversity(run, ids = classify_cases(load_events(run))$pedigree_id)}
 }

@@ -14,7 +14,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 A single `malariafwd` run writes a handful of files into its output directory. This
 vignette tours them — what each output means and how to explore it. As with the
 *Getting started* vignette, the chunks are not evaluated at build time (they need SLiM and
-Python `tskit`); run them locally after checking your setup with `slim_available()`.
+Python `tskit`); run them locally after checking your setup with `check_setup()`.
 
 ## Run one simulation
 

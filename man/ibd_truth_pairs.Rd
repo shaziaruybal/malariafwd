@@ -21,6 +21,17 @@ lineage in two hosts, siblings co-transmitted from one oocyst, and distinct foun
 lineages -- and attaches the ground-truth IBD of each. Feed it to
 \code{\link[=plot_relatedness_ladder]{plot_relatedness_ladder()}} to check the genealogy against the textbook values.
 }
+\section{Python}{
+
+The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
+reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
+sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
+Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
+session. A function that cannot reach them stops with an error of class
+\code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
+}
+
 \examples{
 \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
 }

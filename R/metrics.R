@@ -485,6 +485,7 @@ ibd_relapse_origin <- function(events, idx) {
 #' @param seed seed for the subsample when the pool exceeds `cap`, so repeat calls on the same
 #'   run agree. The caller's RNG stream is left untouched.
 #' @return a one-row data.table of `n`, `mean_ibd`, `clonal_frac`, `n_lineages`.
+#' @inheritSection tskit_available Python
 #' @export
 new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
   ev <- load_events(run)
@@ -502,6 +503,7 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   peds <- .sample_fixed(peds, cap, seed)
+  .require_python("new_infection_diversity()")
   idx <- ibd_index(ibd_pairs(run, ids = peds))
   vp <- idx$nm$pedigree_id
   cb <- combn(length(vp), 2); di <- idx$getibd(vp[cb[1,]], vp[cb[2,]])

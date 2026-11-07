@@ -23,6 +23,17 @@ The stretches of genome over which two parasites are identical by descent -- the
 behind the single IBD number from \code{\link[=ibd_pairs]{ibd_pairs()}}. Segments are split at chromosome
 boundaries and reported in both concatenated and within-chromosome coordinates.
 }
+\section{Python}{
+
+The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
+reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
+sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
+Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
+session. A function that cannot reach them stops with an error of class
+\code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
+}
+
 \examples{
 \dontrun{
 rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]

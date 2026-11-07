@@ -1309,7 +1309,8 @@ never started with a `NEVER_STARTED` row (§2). `load_params()` reads the parame
 non-zero floats lies between 1e-130 and 1e15 in magnitude. The seed, the versions, the derived
 genome and the outcome rows are on the `load_run()` object (`seed`, `slim_version`,
 `malariafwd_version`, `genome_length`, `n_chromosomes`, `recomb_within`, `extinct_tick`,
-`never_started`). Requires SLiM ≥ 5.2 on `PATH` and Python with `tskit` for IBD.
+`never_started`). Requires SLiM ≥ 5.2 on `PATH` and, for IBD and the ARG functions, Python with
+`tskit` (≥ 1.0), `pandas` and `numpy` through reticulate; `check_setup()` reports both.
 `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it,
 relapse-to-prior comparisons silently lose ancestors.
 

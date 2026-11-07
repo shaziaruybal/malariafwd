@@ -9,8 +9,9 @@
 #   Rscript quickstart.R --github        # install from GitHub instead
 #   Rscript quickstart.R --outdir path   # where to put the run and the figures
 #
-# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps additionally need Python with
-# tskit (reticulate fetches it on first use). Everything else degrades gracefully.
+# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps also need Python with tskit (>= 1.0),
+# pandas and numpy, through reticulate (with no Python chosen, reticulate sets one up on first
+# use). check_setup() reports what is found. Everything else degrades gracefully.
 # ---------------------------------------------------------------------------------------
 
 args    <- commandArgs(trailingOnly = TRUE)
@@ -27,25 +28,25 @@ hr  <- function() cat(strrep("-", 78), "\n")
 say("1. Installing malariafwd")
 if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = "https://cloud.r-project.org")
 if (use_gh) {
-  remotes::install_github("shaziaruybal/malariafwd", upgrade = "never")
+  remotes::install_github("shaziaruybal/malariafwd", upgrade = "never", dependencies = TRUE)
 } else {
   here <- tryCatch(dirname(normalizePath(sub("^--file=", "",
             grep("^--file=", commandArgs(FALSE), value = TRUE)[1]))), error = function(e) ".")
   if (!file.exists(file.path(here, "DESCRIPTION")))
     stop("no DESCRIPTION next to this script - run it from a clone, or pass --github", call. = FALSE)
-  remotes::install_local(here, force = TRUE, upgrade = "never")
+  remotes::install_local(here, force = TRUE, upgrade = "never", dependencies = TRUE)
 }
 suppressPackageStartupMessages(library(malariafwd))
 cat("   installed version:", as.character(utils::packageVersion("malariafwd")), "\n")
 
 # -- 2. check the toolchain ---------------------------------------------------------------
 say("2. Checking the toolchain")
+print(check_setup())
 if (!slim_available())
   stop("SLiM is not on your PATH. Install SLiM >= 5.2, or set MALARIAFWD_SLIM to the binary.",
        call. = FALSE)
-cat("   SLiM:", slim_version(), "\n   model:", basename(slim_model()), "\n")
-has_py <- requireNamespace("reticulate", quietly = TRUE)
-cat("   reticulate:", has_py, if (!has_py) " (IBD/ARG steps will be skipped)" else "", "\n")
+has_py <- tskit_available()
+if (!has_py) cat("   the IBD and ARG steps will be skipped (no Python with tskit: see above)\n")
 
 # -- 3. run one simulation ----------------------------------------------------------------
 say("3. Running a simulation")
@@ -110,7 +111,7 @@ if (has_py) {
 
   cat("\nARG structure:\n"); print(arg_summary(run, cs$pedigree_id))
 } else {
-  cat("   skipped the IBD and ARG steps (reticulate not installed)\n")
+  cat("   skipped the IBD and ARG steps (no Python with tskit: see check_setup())\n")
 }
 
 say("Done. Run: ", rundir, "   Figures: ", figs)

@@ -1,5 +1,6 @@
 ## ibd.R -- ground-truth identity-by-descent from the tree sequence (tskit via reticulate).
-## The tskit dependency is a Suggests: these functions error helpfully if it is missing.
+## reticulate is a Suggests, and Python with tskit, pandas and numpy a system requirement; each
+## function checks them through .require_python() (R/python.R), which says what is missing.
 
 .trees_of <- function(run) {
   if (inherits(run, "vivax_run")) return(trees_path(run))
@@ -8,17 +9,6 @@
     return(run)  # assume a .trees path
   }
   stop("`run` must be a vivax_run, a run directory, or a .trees path.", call. = FALSE)
-}
-
-.require_reticulate <- function() {
-  if (!requireNamespace("reticulate", quietly = TRUE))
-    stop("IBD needs the 'reticulate' package: install.packages('reticulate').", call. = FALSE)
-  if ("py_require" %in% getNamespaceExports("reticulate"))
-    try(reticulate::py_require(c("tskit", "pandas")), silent = TRUE)
-  ok <- tryCatch({ reticulate::py_run_string("import tskit, pandas"); TRUE }, error = function(e) FALSE)
-  if (!ok) stop("IBD needs Python with 'tskit' + 'pandas' (e.g. reticulate::py_require(c('tskit','pandas'))).",
-                call. = FALSE)
-  invisible(TRUE)
 }
 
 #' Ground-truth IBD from a run's tree sequence
@@ -48,9 +38,10 @@
 #' `mrca_time - max(t_a, t_b)`, where `t_a`/`t_b` are the two samples' own node times. A
 #' recency filter must be written against that difference: filtering on `mrca_time` alone
 #' scores a pair by when its lineage last branched, not by how related the two genomes are.
+#' @inheritSection tskit_available Python
 #' @export
 ibd_pairs <- function(run, ids = NULL, min_span = 1000, segments = FALSE) {
-  .require_reticulate()
+  .require_python("ibd_pairs()")
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
   out <- tempfile(fileext = ".csv"); nmap <- tempfile(fileext = ".csv")

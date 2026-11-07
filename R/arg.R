@@ -69,14 +69,8 @@ def _coalesced_frac(sts, A, B=None):
     return acc / tot if tot else float("nan")
 '
 
-.arg_load <- function(run, ids = NULL) {
-  if (!requireNamespace("reticulate", quietly = TRUE))
-    stop("ARG summaries need the 'reticulate' package.", call. = FALSE)
-  if ("py_require" %in% getNamespaceExports("reticulate"))
-    try(reticulate::py_require(c("tskit", "numpy")), silent = TRUE)
-  ok <- tryCatch({ reticulate::py_run_string("import tskit, numpy"); TRUE }, error = function(e) FALSE)
-  if (!ok) stop("ARG summaries need Python with 'tskit' + 'numpy' ",
-                "(e.g. reticulate::py_require(c('tskit','numpy'))).", call. = FALSE)
+.arg_load <- function(run, ids = NULL, what) {
+  .require_python(what, c("tskit", "numpy"))
   reticulate::py_run_string(.arg_prelude)
   ## NB bind the python main module locally: `reticulate::py$x <- v` cannot assign into a
   ## namespace-qualified object.
@@ -113,9 +107,10 @@ if sts is not None:
 #'   `max_root_time` (ticks before the end of the run).
 #' @examples
 #' \dontrun{arg_summary(run)}
+#' @inheritSection tskit_available Python
 #' @export
 arg_summary <- function(run, ids = NULL) {
-  .arg_load(run, ids)
+  .arg_load(run, ids, "arg_summary()")
   reticulate::py_run_string('
 nr = np.array([t.num_roots for t in sts.trees()])
 _out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
@@ -142,9 +137,10 @@ _out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
 #'   and `coalesced` (the fraction of sample pairs that share an ancestor at all).
 #' @examples
 #' \dontrun{arg_diversity(run, ids = classify_cases(load_events(run))$pedigree_id)}
+#' @inheritSection tskit_available Python
 #' @export
 arg_diversity <- function(run, ids = NULL) {
-  .arg_load(run, ids)
+  .arg_load(run, ids, "arg_diversity()")
   reticulate::py_run_string('
 S = list(sts.samples())
 _out = dict(n_samples=int(sts.num_samples),
@@ -171,9 +167,10 @@ _out = dict(n_samples=int(sts.num_samples),
 #'   `coalesced` (0-1, the span-weighted fraction of A-B pairs sharing an ancestor).
 #' @examples
 #' \dontrun{arg_divergence(run, imported_ids, local_ids)}
+#' @inheritSection tskit_available Python
 #' @export
 arg_divergence <- function(run, ids_a, ids_b) {
-  .arg_load(run, unique(c(ids_a, ids_b)))
+  .arg_load(run, unique(c(ids_a, ids_b)), "arg_divergence()")
   pymain <- reticulate::py
   pymain$`_a` <- as.integer(unique(ids_a)); pymain$`_b` <- as.integer(unique(ids_b))
   reticulate::py_run_string('
@@ -218,10 +215,11 @@ else:
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
 #' arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # relapse vs its origin
 #' }
+#' @inheritSection tskit_available Python
 #' @export
 arg_tmrca <- function(run, ids_a, ids_b) {
   stopifnot(length(ids_a) == length(ids_b))
-  .arg_load(run, unique(c(ids_a, ids_b)))
+  .arg_load(run, unique(c(ids_a, ids_b)), "arg_tmrca()")
   pymain <- reticulate::py
   pymain$`_a` <- as.integer(ids_a); pymain$`_b` <- as.integer(ids_b)
   reticulate::py_run_string('
