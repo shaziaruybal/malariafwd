@@ -326,3 +326,21 @@ test_that("MAX_MOI holds within a day, counting the clones a host gained earlier
   expect_gt(sum(st$moi_active > 1), 100)
   expect_lte(max(st$moi_active + st$moi_subpatent), 2L)
 })
+
+test_that("ibd_truth_pairs() gives typed rows, or none, whatever pairs a run holds", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  founders <- function(k) suppressMessages(run_sim(
+    vivax_params(N_HOSTS = 20, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 10, N_FOUNDER_HOSTS = k,
+                 N_FOUNDER_LINEAGES = k, CHROMOSOMES = "1"), seed = 1, outdir = tempfile("mfwd_founders_")))
+  types <- function(d) vapply(d, function(x) class(x)[1], "")
+  want <- c(cls = "factor", a = "integer", b = "integer", ibd = "numeric")
+  z <- ibd_truth_pairs(founders(3))
+  expect_identical(nrow(z), 0L)
+  expect_identical(types(z), want)
+  six <- ibd_truth_pairs(founders(6))
+  expect_identical(types(six), want)
+  expect_identical(as.character(unique(six$cls)), "distinct founders")
+  expect_identical(nrow(six), 15L)
+  expect_true(all(six$ibd == 0))
+  expect_no_error(ibd_truth_pairs(w_run(2)))
+})

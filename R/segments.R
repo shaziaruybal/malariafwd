@@ -219,7 +219,9 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
 #'
 #' @param run a run directory or `vivax_run`.
 #' @param max_per_class cap on pairs sampled per relationship class.
-#' @return a data.table of `cls`, `a`, `b`, `ibd`.
+#' @return a data.table of `cls` (a factor of the six classes), `a` and `b` (integer pedigree ids)
+#'   and `ibd` (double), one row per pair. A class with no pair in the run has no rows, and a run
+#'   with none, such as one that never started, gives a table with no rows.
 #' @examples
 #' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
 #' @inheritSection tskit_available Python
@@ -240,27 +242,27 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
   rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   add(.LADDER[3], utils::head(rel$pedigree_id, max_per_class),
                   utils::head(rel$parent1_pedigree_id, max_per_class))
-  ## acquisitions only: `!= "relapse"` would admit recrudescences, which share an oocyst
-  ## with their own origin by inheritance rather than by co-transmission.
+  ## acquisitions only: `!= "relapse"` would admit recrudescences, which inherit their holder's
+  ## lineage_id and are not transmissions.
   ct <- cs[origin %in% c("imported", "local reinfection"), .(ped = pedigree_id, human_id, lineage_id)]
-  ctp <- ct[, if (data.table::uniqueN(human_id) > 1)
-    .(a = ped[1], b = ped[which(human_id != human_id[1])[1]]), by = lineage_id][!is.na(b)]
+  ## Each pair's second member is the first genome of another host (or lineage), NA when there is
+  ## none. The expression is unconditional, so a and b are there, typed, also when no group has a
+  ## pair: one that returned nothing for such a group left them out, and filtering on b failed.
+  ctp <- ct[, .(a = ped[1], b = ped[which(human_id != human_id[1])[1]]), by = lineage_id][!is.na(b)]
   add(.LADDER[4], utils::head(ctp$a, max_per_class), utils::head(ctp$b, max_per_class))
   oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,
            .(ped = pedigree_id, oocyst_id, lineage_id)]
-  sib <- oo[, if (.N > 1 && data.table::uniqueN(lineage_id) > 1) {
-    i <- which(lineage_id != lineage_id[1])[1]; .(a = ped[1], b = ped[i]) },
-    by = oocyst_id]
-  ## A grouped expression that matches NO group returns a 0-row table carrying only the `by`
-  ## column, so filtering on `b` errors rather than returning nothing. This happens whenever a
-  ## run has no outcrossed oocyst that produced two distinct lineages - e.g. any run where
-  ## treatment suppresses transmission hard enough.
-  sib <- if (nrow(sib) && "b" %in% names(sib)) sib[!is.na(b)] else sib[0]
+  sib <- oo[, .(a = ped[1], b = ped[which(lineage_id != lineage_id[1])[1]]), by = oocyst_id][!is.na(b)]
   add(.LADDER[5], utils::head(sib$a, max_per_class), utils::head(sib$b, max_per_class))
   fl <- unique(seeds, by = "lineage_id")$pedigree_id
   if (length(fl) >= 4) { cb <- utils::combn(length(fl), 2)
     add(.LADDER[6], fl[cb[1, ]], fl[cb[2, ]]) }
 
+  ## a run with no pair, such as one that never started, gives the empty table at once: ids of NULL
+  ## would ask ibd_pairs() for every genome
+  if (!length(P))
+    return(data.table::data.table(cls = factor(character(), .LADDER), a = integer(), b = integer(),
+                                  ibd = numeric()))
   out <- data.table::rbindlist(P)
   idx <- ibd_index(ibd_pairs(run, ids = unique(c(out$a, out$b))))
   out <- out[a %in% idx$nm$pedigree_id & b %in% idx$nm$pedigree_id]

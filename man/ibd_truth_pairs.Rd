@@ -12,7 +12,9 @@ ibd_truth_pairs(run, max_per_class = 60)
 \item{max_per_class}{cap on pairs sampled per relationship class.}
 }
 \value{
-a data.table of \code{cls}, \code{a}, \code{b}, \code{ibd}.
+a data.table of \code{cls} (a factor of the six classes), \code{a} and \code{b} (integer pedigree ids)
+and \code{ibd} (double), one row per pair. A class with no pair in the run has no rows, and a run
+with none, such as one that never started, gives a table with no rows.
 }
 \description{
 Assembles pairs whose relationship is known from the event log -- a genome with itself,
