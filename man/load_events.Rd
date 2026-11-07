@@ -10,10 +10,11 @@ load_events(run)
 \item{run}{a \code{vivax_run} or a run directory path.}
 }
 \value{
-a \code{data.table} of events.
+a \code{data.table} with one row per event, in the order they were logged.
 }
 \description{
-Reads \code{events.tsv}. A schema shim standardises the older \code{brood_id} column to
-\code{lineage_id} and back-fills \code{oocyst_id}/\code{detected} so downstream code is
-generation-agnostic.
+Reads \code{events.tsv}. Every run gives the same 21 columns, in the order and classes the model
+writes them (MODEL_DESCRIPTION section 16.1), whatever the run holds: a run with no event gives
+a table with no rows. A column the file lacks is \code{NA}, a column it adds follows the 21, and a
+value that does not fit its column stops with the column named.
 }

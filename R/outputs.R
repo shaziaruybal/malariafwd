@@ -1,0 +1,66 @@
+## outputs.R -- the columns of the tables a run writes, and the reader that gives every run them.
+
+## events.tsv and state.tsv, in the order the model writes them (logEvent() and
+## writeStateSnapshot()), each column with its class.
+.EVENTS_SCHEMA <- c(tick = "integer", event_id = "character", event_type = "character",
+  inoculation_id = "integer", mosq_id = "integer", human_id = "integer", lineage_id = "integer",
+  parent1_lineage_id = "integer", parent2_lineage_id = "integer", is_recombinant = "integer",
+  p_outcross = "double", recipient = "character", is_dormant = "integer", is_imported = "integer",
+  pedigree_id = "integer", parent1_pedigree_id = "integer", parent2_pedigree_id = "integer",
+  n_hypnozoites = "integer", oocyst_id = "integer", detected = "integer",
+  into_patent_lineage = "integer")
+
+.STATE_SCHEMA <- c(tick = "integer", entity_type = "character", entity_id = "integer",
+  tag = "integer", moi_active = "integer", moi_subpatent = "integer", moi_dormant = "integer",
+  hyp_reservoir_size = "integer", lineage_ids = "character", n_transmissible = "integer",
+  mosq_age_days = "integer", infectious_bites = "integer")
+
+## older runs wrote lineage_ids under the name brood_ids
+.OUTPUT_RENAMES <- list(events = character(), state = c(brood_ids = "lineage_ids"))
+
+.na_of <- function(cls) switch(cls, integer = NA_integer_, double = NA_real_, character = NA_character_)
+
+## One of a run's tables with the schema's columns, in its order and classes, whatever the run
+## holds: fread() guesses a class from the values, so an empty file, or a column that happens to
+## hold only NA, would otherwise come back logical. A column the file lacks is added as NA; one the
+## schema lacks is kept after the schema's.
+.read_output <- function(run, file, schema, renames = character()) {
+  dir <- .run_dir(run)
+  path <- file.path(dir, file)
+  if (!file.exists(path))
+    stop("no ", file, " in ", dir, ": it is not a malariafwd run directory, or the run did not finish.",
+         call. = FALSE)
+  if (file.size(path) == 0)
+    stop(file, " in ", dir, " is empty: the run did not finish writing it.", call. = FALSE)
+  hdr <- names(data.table::fread(path, sep = "\t", nrows = 0, showProgress = FALSE))
+  now <- hdr
+  for (old in names(renames))
+    if (old %in% hdr && !renames[[old]] %in% hdr) now[hdr == old] <- renames[[old]]
+  want <- schema[intersect(now, names(schema))]
+  cls <- stats::setNames(c(integer = "integer", double = "numeric", character = "character")[want],
+                         hdr[match(names(want), now)])
+  w <- character()
+  d <- withCallingHandlers(
+    data.table::fread(path, sep = "\t", header = TRUE, quote = "", na.strings = "NA",
+                      colClasses = split(names(cls), unname(cls)), showProgress = FALSE),
+    warning = function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
+  data.table::setnames(d, hdr, now)
+  for (nm in names(want)) {
+    got <- class(d[[nm]])[1]
+    ok <- switch(want[[nm]], integer = got == "integer", double = got == "numeric",
+                 character = got == "character")
+    if (!ok) {
+      bad <- if (is.character(d[[nm]]))
+        which(is.na(suppressWarnings(as.numeric(d[[nm]]))) & d[[nm]] != "NA")[1] else NA
+      stop(file, " in ", dir, ": column ", nm, " holds values that are not ",
+           if (want[[nm]] == "double") "numbers" else paste0(want[[nm]], "s"),
+           if (got %in% c("integer64", "numeric") && want[[nm]] == "integer")
+             " (beyond the 32-bit integer range)"
+           else if (!is.na(bad)) paste0(" (line ", bad + 1, ": \"", d[[nm]][bad], "\")"), call. = FALSE)
+    }
+  }
+  for (nm in setdiff(names(schema), now)) data.table::set(d, j = nm, value = .na_of(schema[[nm]]))
+  data.table::setcolorder(d, c(names(schema), setdiff(names(d), names(schema))))
+  if (length(w)) warning(file, " in ", dir, ": ", paste(unique(w), collapse = "; "), call. = FALSE)
+  d[]
+}

@@ -3,7 +3,12 @@
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || is.na(a[1])) b else a
 
 # Accept either a `vivax_run` object or a bare directory path.
-.run_dir <- function(x) if (inherits(x, "vivax_run")) x$outdir else as.character(x)
+.run_dir <- function(x) {
+  if (inherits(x, "vivax_run")) return(x$outdir)
+  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) return(x)
+  stop("`run` must be a vivax_run (from run_sim() or load_run()) or the path of a run directory, ",
+       "got an object of class ", class(x)[1], ".", call. = FALSE)
+}
 
 #' @keywords internal
 read_params_tsv <- function(path) {
@@ -50,28 +55,24 @@ load_run <- function(outdir) {
 
 #' Load the event log of a run
 #'
-#' Reads `events.tsv`. A schema shim standardises the older `brood_id` column to
-#' `lineage_id` and back-fills `oocyst_id`/`detected` so downstream code is
-#' generation-agnostic.
+#' Reads `events.tsv`. Every run gives the same 21 columns, in the order and classes the model
+#' writes them (MODEL_DESCRIPTION section 16.1), whatever the run holds: a run with no event gives
+#' a table with no rows. A column the file lacks is `NA`, a column it adds follows the 21, and a
+#' value that does not fit its column stops with the column named.
 #' @param run a `vivax_run` or a run directory path.
-#' @return a `data.table` of events.
+#' @return a `data.table` with one row per event, in the order they were logged.
 #' @export
-load_events <- function(run) {
-  ev <- data.table::fread(file.path(.run_dir(run), "events.tsv"), sep = "\t", showProgress = FALSE)
-  if (!"lineage_id" %in% names(ev) && "brood_id" %in% names(ev))
-    data.table::setnames(ev, "brood_id", "lineage_id")
-  if (!"oocyst_id" %in% names(ev)) ev[, oocyst_id := NA_integer_]
-  if (!"detected" %in% names(ev)) ev[, detected := 1L]
-  ev[]
-}
+load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OUTPUT_RENAMES$events)
 
 #' Load the per-tick state table of a run
+#'
+#' Reads `state.tsv`. Every run gives the same 12 columns, in the order and classes the model writes
+#' them (MODEL_DESCRIPTION section 16.2), whatever the run holds; a column the file lacks is `NA`.
 #' @param run a `vivax_run` or a run directory path.
-#' @return a `data.table` of state records.
+#' @return a `data.table` with one row per host and per mosquito per day, from day 1 to the run's
+#'   last day.
 #' @export
-load_state <- function(run) {
-  data.table::fread(file.path(.run_dir(run), "state.tsv"), sep = "\t", showProgress = FALSE)[]
-}
+load_state <- function(run) .read_output(run, "state.tsv", .STATE_SCHEMA, .OUTPUT_RENAMES$state)
 
 #' Path to a run's tree-sequence file
 #' @param run a `vivax_run` or a run directory path.

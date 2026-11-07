@@ -10,8 +10,10 @@ load_state(run)
 \item{run}{a \code{vivax_run} or a run directory path.}
 }
 \value{
-a \code{data.table} of state records.
+a \code{data.table} with one row per host and per mosquito per day, from day 1 to the run's
+last day.
 }
 \description{
-Load the per-tick state table of a run
+Reads \code{state.tsv}. Every run gives the same 12 columns, in the order and classes the model writes
+them (MODEL_DESCRIPTION section 16.2), whatever the run holds; a column the file lacks is \code{NA}.
 }

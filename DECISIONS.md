@@ -19,6 +19,32 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D50 — The loaders give every run the same columns, in the same classes · 2026-11-07 · Accepted
+**Context.** `load_events()` and `load_state()` let `fread()` guess each column's class from the
+values, so the classes drifted with what a run held: a header-only `events.tsv` (a run with no
+event) loaded as 21 logical columns, a run of only no-take rows had its lineage columns logical,
+and `lineage_ids` was integer in an extinct run and character in others. Code that joined or
+compared these columns failed on some runs only, `moi_vs_relapse()` among them (review M15).
+**Decision.** Both loaders read their file with the columns and classes the model writes, held in
+one schema per file (`R/outputs.R`): a column the file lacks is added as `NA` of its class, a
+column the schema lacks follows in the file's class, and a value that does not fit stops with the
+file, the column and the line named. The `lineage_ids` column of older state files, named
+`brood_ids`, is read under its present name. A missing or empty file, or an argument that is not a
+run, is named in the error.
+**Rationale.** A table's columns are part of its contract; a reader should not have to test classes
+before using them.
+**Alternatives rejected.** *Convert the -1 sentinels to NA* -- analyses test `!= -1`, and the
+sentinel means 'not applicable', not 'missing'. *Refuse a file that lacks a schema column* -- every
+saved run before 2026-11 lacks one of them.
+**Consequences.** Runs and outputs are unchanged. A run with no parasite loads, and
+`moi_vs_relapse()` gives an empty table for it. Saved runs gain `NA` columns for what they did not
+record (`into_patent_lineage`, `moi_subpatent`, `infectious_bites`).
+**How to verify.** `tests/testthat/test-load.R`: an empty log, content-independent classes, missing
+and extra columns, a value that does not fit, a missing or empty file, and normal, extinct and
+never-started runs with identical classes.
+
+---
+
 ## D49 — params.tsv records floats to 15 significant digits, and a parameter set holds what SLiM is given · 2026-11-07 · Accepted
 **Context.** `run_sim()` passes each double to SLiM with 15 significant digits, but the model wrote
 `params.tsv` with Eidos's default 6, so `load_params()` read `ALPHA_ACTIVATE = 1/170` back as
