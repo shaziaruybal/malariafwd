@@ -1478,7 +1478,10 @@ early() {
 		// MDA is the same course as case management, given to everyone rather than to detected
 		// cases: blood-stage drugs plus radical cure, through applyTreatment() so the two paths
 		// cannot diverge. It used to carry its own copy of the hypnozoite thinning, which would
-		// now disagree with RADCURE_MODE.
+		// now disagree with RADCURE_MODE. Because it waits for no symptoms, it also reaches
+		// subpatent clones and clones that became patent today, which a case course does not (D44).
+		// Only hosts carrying parasites are drawn, so the mda_*_given counts are courses to such
+		// hosts; the draw does not depend on infection, so the coverage is that of everyone.
 		humans_mda = sim.subpopulations[HUMANS];
 		vcat("💊 MDA administered on tick " + sim.cycle);
 		n_reached = 0;
@@ -2037,32 +2040,52 @@ function (void) applyRadicalCure(o<Subpopulation>$ h, s$ src)
 	}
 }
 
-// The course itself: every patent blood-stage clone in the host, then the reservoir.
+// The course itself: every patent blood-stage clone in the host, then the reservoir. An MDA
+// course also reaches the host's subpatent clones and the clones that became patent today (D44).
 function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 {
 	logHostEvent((src == "mda") ? "mda_bloodcure_given" else "bloodcure_given", h);
 	if (h.individualCount > 0)
 	{
-		// Already-suppressed clones are left alone: a holder is below patency, so a course
-		// given for a different case does not re-roll it. Without this a holder is re-drawn
+		// A case course leaves already-suppressed clones alone: a holder is below patency, so a
+		// course given for a different case does not re-roll it. Without this a holder is re-drawn
 		// by every later course, emitting a second episode-ending event for a pedigree_id
 		// that already has one and tripping the "no blood-stage infection clears twice"
-		// audit (measured 8 of 193 suppressions in prototype).
-		act = h.individuals[h.individuals.getValue("is_dormant") == F &
-		                    h.individuals.getValue("is_subpatent") == F];
+		// audit (measured 8 of 193 suppressions in prototype). MDA treats everyone it reaches,
+		// symptoms or not, so it reaches holders too; see below.
+		is_mda = (src == "mda");
+		if (is_mda)
+			act = h.individuals[h.individuals.getValue("is_dormant") == F];
+		else
+			act = h.individuals[h.individuals.getValue("is_dormant") == F &
+			                    h.individuals.getValue("is_subpatent") == F];
 		cleared = c();
+		held_cleared = c();
 		for (lin in act)
 		{
 			// A clone that became patent THIS tick cannot yet have caused symptoms, prompted
-			// care-seeking or been diagnosed, so a course cannot reach it: a course landing today
-			// treats only the clones that were already patent (D24). Natural clearance in early()
-			// follows the same rule ("Cannot be cleared on same tick as inoculation").
+			// care-seeking or been diagnosed, so a case course cannot reach it: a course landing
+			// today treats only the clones that were already patent (D24). Natural clearance in
+			// early() follows the same rule ("Cannot be cleared on same tick as inoculation"). MDA
+			// waits for no symptoms, so it reaches these clones as well (D44).
 			// Nested ifs, not `&`: Eidos does not short-circuit, and getValue() on a missing
 			// key returns NULL, which cannot be compared.
-			bs = lin.getValue("bloodstage_start_tick");
-			if (!isNULL(bs))
-				if (bs >= sim.cycle)
-					next;
+			if (!is_mda)
+			{
+				bs = lin.getValue("bloodstage_start_tick");
+				if (!isNULL(bs))
+					if (bs >= sim.cycle)
+						next;
+			}
+			// MDA reaching a holder (D44): the drugs clear it as they would a patent clone, and its
+			// recrudescence goes with it. A holder that survives keeps its schedule: it is not
+			// suppressed again, and no event is logged for it.
+			if (lin.getValue("is_subpatent"))
+			{
+				if (runif(1) >= P_BLOODCURE_SURVIVAL)
+					held_cleared = c(held_cleared, lin);
+				next;
+			}
 			if (runif(1) >= P_BLOODCURE_SURVIVAL)
 				cleared = c(cleared, lin);
 			else
@@ -2104,6 +2127,14 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 					h, lin);
 			sim.treeSeqRememberIndividuals(cleared, permanent=RETAIN_FULL_HISTORY);
 			sim.killIndividuals(cleared);
+		}
+		// not an episode end: a holder's patent episode ended when it was suppressed
+		if (size(held_cleared) > 0)
+		{
+			for (lin in held_cleared)
+				logLineageEvent("mda_subpatent_clear", h, lin);
+			sim.treeSeqRememberIndividuals(held_cleared, permanent=RETAIN_FULL_HISTORY);
+			sim.killIndividuals(held_cleared);
 		}
 	}
 	if (give_liver)

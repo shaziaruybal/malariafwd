@@ -154,7 +154,6 @@ Work in progress for the next release:
 * a **structured source population** for imported infections, so that imports carry real
   ancestry and can be related to one another (they currently enter as unrelated founders);
 * **post-treatment prophylaxis**, following the malariasimulation protection curves;
-* **partial MDA coverage** — a round is currently all-or-nothing;
 * **more extensive calibration of the treatment and recurrence machinery**, including a
   chloroquine-resistant setting in which recrudescence is material rather than negligible.
 

@@ -9,9 +9,8 @@
 > **Pre-release (0.1.0).** The package is under active development and both the interface and
 > the model may change before 1.0.0. Work in progress includes a structured source population
 > for imported infections (imports currently enter as unrelated founders, which makes them
-> maximally distinguishable), post-treatment prophylaxis, partial MDA coverage (a round is
-> currently all-or-nothing), and more extensive calibration of the treatment and recurrence
-> machinery.
+> maximally distinguishable), post-treatment prophylaxis, and more extensive calibration of the
+> treatment and recurrence machinery.
 >
 > If you are interested in using malariafwd or in contributing, please get in touch by opening
 > an [issue](https://github.com/shaziaruybal/malariafwd/issues) or contacting

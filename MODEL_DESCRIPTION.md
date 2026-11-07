@@ -633,10 +633,16 @@ overlap 0.03). A structured source pool is planned (§15).
   (malariasimulation Weibull protection curves, with a blocked relapse still consuming its
   hypnozoites, bites still seeding batches, and imports and recrudescences bypassing
   protection) and implementation is planned for the next release.
-- **MDA** (`MDA_TICK`) gives every host the same course as case management — blood-stage drugs
-  plus radical cure — through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can
-  suppress clones subpatent. Unlike case-based treatment it is **not** gated on
-  `TREATMENT_START` / `TREATMENT_END`.
+- **MDA** (`MDA_TICK`) is one round of the case-management course — blood-stage drugs plus radical
+  cure — given through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can suppress
+  clones subpatent. The round reaches each host with probability `MDA_COVERAGE` (D28). The draw is
+  made only for hosts carrying parasites, but does not depend on infection, so the coverage is
+  that of the whole population; `mda_bloodcure_given` and `mda_radcure_given` count the courses to
+  hosts carrying parasites. Because MDA waits for no symptoms, it reaches two kinds of clone a
+  case course does not: a clone that became patent that day, and a **subpatent** clone, which it
+  clears with probability 1 − `P_BLOODCURE_SURVIVAL`, cancelling its recrudescence
+  (`mda_subpatent_clear`); a subpatent clone that survives keeps its schedule (D44). Unlike
+  case-based treatment it is **not** gated on `TREATMENT_START` / `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
   (`NU_HYPNOZOITE_BATCH_BOOST`) and imports (`IMPORT_RATE_BOOST`) — so one scenario can run a quiet
@@ -676,12 +682,13 @@ too, and the observation layer can report it, but a real observer could not see 
 **The mechanism.** When a blood-stage course fails on a clone (w.p. `P_BLOODCURE_SURVIVAL`), that
 clone either carries on at full density, or — w.p. `P_RECRUD_GIVEN_FAIL` — is **suppressed below
 patency**. A suppressed clone is still present but is not an episode: it does not count toward
-`moi_active`, it cannot be detected, and it is not re-treated by a later course. After a delay it
-re-expands, logged as `recrudescence`.
+`moi_active`, it cannot be detected, and a later case course does not reach it; an MDA round does
+(§9). After a delay it re-expands, logged as `recrudescence`.
 
 Natural clearance while subpatent is **off** by design, so every suppressed clone eventually
-recrudesces and `P_RECRUD_GIVEN_FAIL` is exactly P(recrudescence | the course failed) — which maps
-directly onto a WHO therapeutic-efficacy failure rate.
+recrudesces unless an MDA round clears it first, and `P_RECRUD_GIVEN_FAIL` is exactly
+P(recrudescence | the course failed) — which maps directly onto a WHO therapeutic-efficacy failure
+rate.
 
 **The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d and at least one day (each day
 after the suppression the clone re-expands with probability 1/10.5), selectable via
@@ -840,7 +847,8 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
 | `P_RAD_SURVIVAL` | **0.29** | P(the patient's whole reservoir survives), ≈71% cure (White 2018 / malariasimulation). Per **person**, not per hypnozoite — the same number would mean 95% efficacy under the old per-hypnozoite reading (D20) |
 | `RADCURE_MODE` | `"person"` | `"hypnozoite"` restores per-hypnozoite thinning — the only mode that can partially clear a reservoir |
-| `MDA_TICK` | 99999 | one round, 100% coverage, through the same `applyTreatment()`; **not** gated on the treatment window |
+| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent that day (D44); **not** gated on the treatment window |
+| `MDA_COVERAGE` | 1.0 | P(the round reaches a host), drawn per host (D28) |
 
 ### Recurrence: the third state (§9a)
 
@@ -1146,7 +1154,7 @@ subset(event_types(), ends_episode)$event_type # ...and every way one can END
 |---|---|
 | blood, onset | `vh_inoculation`, `vh_inoculation_import`, `vh_inoculation_seed`, `hypnozoite_activation`, `recrudescence` |
 | blood, ends an episode | `human_clearance`, `case_bloodstage_clear`, `mda_bloodstage_clear`, `bloodcure_subpatent` |
-| blood, other | `vh_inoculation_no_take`, `vh_inoculation_import_no_take`, `bloodcure_given`, `bloodcure_persist`, `mda_bloodcure_given` |
+| blood, other | `vh_inoculation_no_take`, `vh_inoculation_import_no_take`, `bloodcure_given`, `bloodcure_persist`, `mda_bloodcure_given`, `mda_subpatent_clear` |
 | liver | `hypnozoite_clearance`, `radcure_given`, `radcure_failure`, `radcure_hypnozoite_clear`, `mda_radcure_given`, `mda_radcure_failure`, `mda_hypnozoite_clear` |
 | vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `hv_uptake_seed`, `mosq_death` |
 
@@ -1346,8 +1354,8 @@ than one segment.
 | **episode** | one **patent** blood-stage infection event: primary, relapse or recrudescence. A clone suppressed below patency is not an episode while it is suppressed |
 | **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence. All three are represented (§9a) |
 | **recrudescence** | re-expansion to patency of a clone that survived a treatment course. Mints a new genome clonal to the holder it came from. A **case** but not an **acquisition**: no new parasite entered the host |
-| **subpatent** | present in the blood but below the detection threshold — not counted in `moi_active`, not detectable, not re-treated, but still transmissible at `SUBPATENT_INFECTIVITY` |
-| **holder** | the suppressed clone a recrudescence comes from; it is retired when its replacement is minted, which keeps the pair MOI-neutral |
+| **subpatent** | present in the blood but below the detection threshold — not counted in `moi_active`, not detectable, not reached by a case course (an MDA round reaches it), but still transmissible at `SUBPATENT_INFECTIVITY` |
+| **holder** | the suppressed clone a recrudescence comes from; it is retired when its replacement is minted, which keeps the pair MOI-neutral, or cleared by an MDA round (`mda_subpatent_clear`), which cancels the recrudescence |
 | **acquisition** | an episode in which a new parasite genome entered the host — imported, local reinfection, or relapse. **Not** recrudescence. Force-of-infection rates count acquisitions; case counts count episodes |
 | **homologous / heterologous relapse** | relapse genetically identical to / different from the acute infection |
 | **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone) |

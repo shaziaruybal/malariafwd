@@ -324,7 +324,7 @@ test_that("into_patent_lineage marks a relapse into a patent clone of its own li
     s <- spans[human_id == act$human_id[i] & lineage_id == act$lineage_id[i]]
     as.integer(any(s$start < act$tick[i] & (is.na(s$end) | s$end >= act$tick[i])))
   }, integer(1))
-  expect_gt(nrow(act), 100)
+  expect_gt(nrow(act), 50)
   expect_gt(sum(ev$event_type == "recrudescence"), 0)
   expect_gt(sum(ev$event_type == "mda_bloodstage_clear"), 0)
   expect_gt(sum(seen), 0)

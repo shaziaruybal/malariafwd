@@ -19,6 +19,45 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D44 — MDA reaches subpatent clones and clones that became patent that day · 2026-11-07 · Accepted
+**Context.** MDA goes through `applyTreatment()`, the case-management course (D20, D28), so it
+inherited two filters meant for case courses: a course skips subpatent clones (a holder is below
+patency, and re-rolling it emitted a second episode end), and it skips clones that became patent on
+its own day, which cannot yet have caused symptoms (D24). So every suppressed clone survived a
+round and later recrudesced (8 of 8 holders in a test run), although clearing undetected carriage
+is what MDA is for. D25 had left open what MDA does to a holder (review m1).
+**Decision.** An MDA course bypasses both filters. Every clone in a reached host, holders and
+clones patent that day included, is cleared with probability 1 − `P_BLOODCURE_SURVIVAL`. A cleared
+holder is logged as `mda_subpatent_clear`, which ends no episode (its patent episode ended at
+`bloodcure_subpatent`), and its pending recrudescence goes with it; a holder that survives keeps
+its schedule and logs nothing, since it is not suppressed again. A clone cleared on its first
+patent day is logged as `mda_bloodstage_clear`, like any MDA clearance. Case courses keep both
+filters. Coverage keeps its per-host draw among hosts carrying parasites (D28): the draw does not
+depend on infection, so the coverage is that of the whole population, and `mda_bloodcure_given` and
+`mda_radcure_given` count courses to hosts carrying parasites. The author chose this (Q9,
+2026-11-05).
+**Rationale.** MDA is given to everyone, symptoms or not, so neither filter's reason applies to it:
+the D24 floor stands for the delay from patency to symptoms and care, and the holder filter for a
+course given for some other case. Drugs taken on the day a clone reaches the blood act on it too.
+**Alternatives rejected.** *Keep MDA blind to holders and document it* -- a round would leave the
+very reservoir it exists to clear. *Draw a surviving holder's suppression again* -- it would reset
+the holder's schedule and log a second episode end.
+**Supersedes.** D24's floor for MDA courses (case courses keep it), D28's statement that MDA
+inherits that floor, and D25's open question of what MDA does to a holder.
+**Consequences.** A run with an MDA round changes from the round's day whenever a reached host
+carries a holder or a clone that became patent that day, since those clones now take a draw and
+shift the random stream. Episodes that end on their first patent day exist again, on the MDA day
+only. Runs without MDA are byte-identical. In a 50-host run in which every failed course suppresses
+(seed 11, `P_BLOODCURE_SURVIVAL = 0.5`), the round met 11 holders and cleared 4; with every course
+curing, no blood-stage clone is left after a full round, where the 4 clones that became patent that
+day used to survive it.
+**How to verify.** `tests/testthat/test-treatment.R` checks that holders at the round are either
+cleared (`mda_subpatent_clear`, and never recrudesce) or left without a new draw, that nothing
+clears twice, and that with `P_BLOODCURE_SURVIVAL = 0` no blood-stage clone survives a full round,
+including the clones that became patent that day.
+
+---
+
 ## D43 — A founder-free run whose imports never take ends cleanly, as never started · 2026-11-06 · Accepted
 **Context.** A founder-free run starts only from its imports. When every import failed to establish
 a parasite, by chance (a Poisson rate that draws none, imports that take in neither compartment) or
@@ -621,7 +660,7 @@ gives 2.54 (`tests/testthat/test-run.R`).
 
 ---
 
-## D28 — MDA keeps its place and gains a coverage parameter · 2026-10-23 · Accepted
+## D28 — MDA keeps its place and gains a coverage parameter · 2026-10-23 · Accepted; partly superseded by D44 (MDA reaches holders and clones patent that day)
 **Context.** An early step map proposed withdrawing MDA from the pre-release. The strongest reason
 given was that it reused `P_RAD_SURVIVAL`, whose meaning changed in D20, so the two paths would
 silently disagree -- and that reason died when D20 routed MDA through `applyTreatment(h, T, "mda")`.
@@ -738,7 +777,7 @@ invalid value must be refused on both the R and SLiM sides.
 
 ---
 
-## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted; partly superseded by D32
+## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted; partly superseded by D32 and D44 (MDA courses)
 **Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
 A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default
 of 7**, and 100% at 0 -- so the course landed in the same tick's `early()`. `reproduction()` runs
@@ -785,7 +824,7 @@ which is the check failing to reach the network in this sandbox).
 
 ---
 
-## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted (design; implementation pending)
+## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted (design; implementation pending); open item on MDA settled by D44
 **Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
 reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
 suppressed below patency and later re-expand. A scratch prototype
