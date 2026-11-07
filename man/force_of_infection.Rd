@@ -15,9 +15,11 @@ force_of_infection(run, bin = 30, split_imported = TRUE)
 gives five origin levels, \code{FALSE} gives four.}
 }
 \value{
-a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers within the
-run, which is \code{SIM_DAYS} days long whether or not it went extinct: less than \code{bin} for a
-trailing window when the run length is not a multiple of \code{bin}),
+a data.table with one row for every window of the run and every origin, by window:
+\code{win} (the window's first day, an integer: 0, \code{bin}, \code{2 * bin}, ...), \code{origin}, \code{n} (the
+cases, 0 where there are none), \code{days} (the days the window covers within the run, which is
+\code{SIM_DAYS} days long whether or not it went extinct: \code{bin - 1} for the first window, which
+starts on day 1, and fewer for the last when the run ends inside it),
 \code{rate} (per host-year, scaled by \code{days}) and \code{is_acquisition}. Sum only the
 \code{is_acquisition} rows for FOI or molFOB: a recrudescence is returned as its own row so
 incidence stays complete, but it is not a newly acquired clone.
@@ -45,4 +47,7 @@ undetectable at the previous visit; the gap between the two sums here estimates 
 Koepfli C, et al. (2013) A high force of \emph{Plasmodium vivax} blood-stage
 infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl
 Trop Dis 7(9):e2403.
+}
+\seealso{
+\code{\link[=plot_force_of_infection]{plot_force_of_infection()}}
 }

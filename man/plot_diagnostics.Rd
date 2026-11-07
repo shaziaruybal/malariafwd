@@ -11,7 +11,8 @@ plot_diagnostics(run, bin = 30, burn_frac = 0.5)
 
 \item{bin}{window width in days.
 The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop to zero and stay
-there to the end of the run, and the subtitle says on which day it went extinct.}
+there to the end of the run, and the subtitle says on which day it went extinct. A window with no
+case is drawn as zero.}
 
 \item{burn_frac}{the fraction of \code{SIM_DAYS} marked as burn-in (a display and summary choice).}
 }

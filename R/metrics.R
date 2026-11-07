@@ -190,17 +190,21 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @param bin window width in days.
 #' @param split_imported split relapses by the provenance of the genotype. `TRUE` (default)
 #'   gives five origin levels, `FALSE` gives four.
-#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers within the
-#'   run, which is `SIM_DAYS` days long whether or not it went extinct: less than `bin` for a
-#'   trailing window when the run length is not a multiple of `bin`),
+#' @return a data.table with one row for every window of the run and every origin, by window:
+#'   `win` (the window's first day, an integer: 0, `bin`, `2 * bin`, ...), `origin`, `n` (the
+#'   cases, 0 where there are none), `days` (the days the window covers within the run, which is
+#'   `SIM_DAYS` days long whether or not it went extinct: `bin - 1` for the first window, which
+#'   starts on day 1, and fewer for the last when the run ends inside it),
 #'   `rate` (per host-year, scaled by `days`) and `is_acquisition`. Sum only the
 #'   `is_acquisition` rows for FOI or molFOB: a recrudescence is returned as its own row so
 #'   incidence stays complete, but it is not a newly acquired clone.
 #' @references Koepfli C, et al. (2013) A high force of *Plasmodium vivax* blood-stage
 #'   infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl
 #'   Trop Dis 7(9):e2403.
+#' @seealso [plot_force_of_infection()]
 #' @export
 force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
+  bin <- .check_bin(bin)
   nh <- as.numeric(.params_of(run)$N_HOSTS)
   cs <- classify_cases(load_events(run))
   ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
@@ -210,17 +214,19 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
   lv <- if (isTRUE(split_imported)) .ORIGINS_SPLIT else .ORIGINS
   if (isTRUE(split_imported))
     cs[origin == "relapse", origin := fifelse(imported, "relapse (imported)", "relapse (local)")]
-  cs[, win := (tick %/% bin) * bin]
-  ## Divide each window by the days it actually covers, not by `bin`. Unless the run length is
-  ## a multiple of `bin` the trailing window is short - 10 days of a 30-day bin on a 400-day
-  ## run - and dividing it by a full bin understated the final point 3x, so every series ended
-  ## in a crash that was pure binning artefact, right where a reader looks to judge whether
-  ## transmission stopped. The run end is SIM_DAYS rather than the last case or the last day of
-  ## state.tsv, so a run that ends with no transmission, or goes extinct, still reports its true
-  ## trailing zero. Full windows are unchanged, because there days == bin.
-  endt <- .sim_days(run, "force_of_infection")
-  fo <- cs[, .(n = .N), by = .(win, origin)]
-  fo[, days := pmin(bin, endt - win + 1)]
+  stopifnot(all(cs$origin %in% lv))   # an origin outside `lv` would be lost from the grid
+  cs[, win := as.integer((tick %/% bin) * bin)]
+  ## Every window of the run, for every origin, with n = 0 where there is none: a window with no
+  ## case is a zero of the series, not a gap a line or an area would interpolate across. Each
+  ## window is divided by the days it covers within the run, which ends at SIM_DAYS whether or not
+  ## it went extinct: the first window holds days 1 to bin - 1 and the last ends at SIM_DAYS, so a
+  ## series neither starts nor ends in a dip that is pure binning artefact. Full windows are
+  ## unchanged, because there days == bin.
+  grid <- .window_grid(.sim_days(run, "force_of_infection"), bin)
+  fo <- merge(data.table::CJ(win = grid$win, origin = lv), cs[, .(n = .N), by = .(win, origin)],
+              by = c("win", "origin"), all.x = TRUE)
+  fo[is.na(n), n := 0L]
+  fo <- merge(fo, grid, by = "win")
   fo[, rate := n / nh / (days / 365)]
   ## A recrudescence is a new EPISODE but not a new CLONE, so it must not enter a
   ## force-of-infection rate: molFOB (Koepfli et al. 2013) counts clone acquisitions. It is returned
@@ -228,10 +234,24 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
   ## rows it means. Note a REAL molFOB, measured by comparing genotypes between visits, would
   ## often count a recrudescence as a new clone - the gap between the two sums here is an
   ## estimate of that bias.
-  fo[, is_acquisition := sub(" \\(.*", "", as.character(origin)) %in% .ACQUISITIONS]
+  fo[, is_acquisition := sub(" \\(.*", "", origin) %in% .ACQUISITIONS]
   fo[, origin := factor(origin, levels = lv)]
-  stopifnot(!anyNA(fo$origin))   # an origin outside `lv` would silently become NA
-  fo[order(win, origin)]
+  fo[order(win, origin), .(win, origin, n, days, rate, is_acquisition)]
+}
+
+## The windows, `bin` days wide, of a run of `sim_days` days that cover days `from` to `to`: each
+## window's first day (0, bin, 2 bin, ...; day t falls in window (t %/% bin) * bin) and the days of
+## [from, to] it covers. The run's first window holds days 1 to bin - 1.
+.window_grid <- function(sim_days, bin, from = 1L, to = sim_days) {
+  win <- seq((from %/% bin) * bin, (to %/% bin) * bin, by = bin)
+  data.table::data.table(win = as.integer(win), days = as.integer(pmin(win + bin - 1, to) - pmax(win, from) + 1))
+}
+
+.check_bin <- function(bin) {
+  if (!is.numeric(bin) || length(bin) != 1L || is.na(bin) || !is.finite(bin) || bin < 1 || bin != round(bin))
+    stop("`bin` must be a whole number of days, at least 1, got ", paste(format(bin), collapse = ", "), ".",
+         call. = FALSE)
+  as.integer(bin)
 }
 
 #' Mean pairwise IBD among cases active in each time window (relatedness trajectory)

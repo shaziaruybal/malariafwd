@@ -19,6 +19,29 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D62 — Windowed series have a row for every window of the run · 2026-11-08 · Accepted
+**Context.** `force_of_infection()` had rows only for the (window, origin) cells with a case, and
+the dashboard and `plot_force_of_infection()` zero-filled only over windows that already had a row,
+so a window with no case vanished and the lines and areas were drawn straight across it: the
+artefact D21 set out to remove, at the scale of whole windows. A run with no case gave no rows, and
+its plot failed. The first window, which holds days 1 to `bin - 1`, was divided as `bin` days
+(review M15, n6).
+**Decision.** `force_of_infection()` gives one row per window of the run, to the window holding
+`SIM_DAYS` (D61), and per origin, with `n = 0` where there is none; `win` and `days` are integers,
+and `days` is what the window covers within the run, `bin - 1` for the first. `bin` must be a whole
+number of days, at least 1. `plot_force_of_infection()` draws both series in every window.
+`incidence_by_origin()` is left as it is, to be merged into `force_of_infection()`.
+**Rationale.** A window without a case is a measurement of zero, and a series should say so rather
+than leave it out.
+**Alternatives rejected.** *Zero-filling only in the plots* -- every other reader of the table would
+meet the gaps again.
+**Consequences.** Runs are unchanged. The table gains the zero rows; the first window's rate rises
+by `bin / (bin - 1)`; full windows are unchanged.
+**How to verify.** `tests/testthat/test-windows.R` (every window and origin, the days of the first
+and last windows, a run with no case, the plot of one, an extinct run's zeros).
+
+---
+
 ## D61 — Run-length windows use SIM_DAYS, and days after an extinction count as days with no parasite · 2026-11-08 · Accepted
 **Context.** D37 ended an extinct run on its extinction tick, and the R functions that summarise a
 window of a run took its end from the last day of `state.tsv` or the last event (D21), so a run that
@@ -1570,7 +1593,7 @@ range 43-391) and `tmrca` must never be negative. Both are now regression tests 
 
 ---
 
-## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted; partly superseded by D61 (the run end is SIM_DAYS)
+## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted; partly superseded by D61 (the run end is SIM_DAYS) and D62 (every window; the first holds bin - 1 days)
 **Context.** The downstream sweep found four defects in the summary plots and in
 `force_of_infection()`, all of them "the function is internally correct but silently disagrees
 with the event log". Measured before the change, on the audit run set: `plot_diagnostics()`

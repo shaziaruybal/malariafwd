@@ -23,8 +23,12 @@ episodes with new transmission.
 }
 \details{
 Naming follows Koepfli et al. (2013): molFOB counts blood-stage infections however they arise,
-FOI counts mosquito-borne infections only.
+FOI counts mosquito-borne infections only. Both series are drawn in every window of the run, as
+zero where there was no case.
 }
 \examples{
 \dontrun{plot_force_of_infection(force_of_infection(run))}
+}
+\seealso{
+\code{\link[=force_of_infection]{force_of_infection()}}
 }

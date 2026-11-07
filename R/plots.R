@@ -135,7 +135,8 @@ plot_host_trajectory <- function(state, events, host_id,
 #' @param run a run directory or `vivax_run`.
 #' @param bin window width in days.
 #' The panels run to `SIM_DAYS`: a run that goes extinct shows lines that drop to zero and stay
-#' there to the end of the run, and the subtitle says on which day it went extinct.
+#' there to the end of the run, and the subtitle says on which day it went extinct. A window with no
+#' case is drawn as zero.
 #' @param burn_frac the fraction of `SIM_DAYS` marked as burn-in (a display and summary choice).
 #' @return a patchwork object (combined ggplot).
 #' @references Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
@@ -284,22 +285,24 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #' episodes with new transmission.
 #'
 #' Naming follows Koepfli et al. (2013): molFOB counts blood-stage infections however they arise,
-#' FOI counts mosquito-borne infections only.
+#' FOI counts mosquito-borne infections only. Both series are drawn in every window of the run, as
+#' zero where there was no case.
 #'
 #' @param foi output of [force_of_infection()].
 #' @param smooth span for a loess trend through each series; `NA` draws the raw series.
 #' @return a ggplot object.
 #' @examples
 #' \dontrun{plot_force_of_infection(force_of_infection(run))}
+#' @seealso [force_of_infection()]
 #' @export
 plot_force_of_infection <- function(foi, smooth = 0.4) {
   .need_ggplot()
   d <- as.data.table(foi)
   ## POSITIVE lists, not negations. Two things have to be excluded for different reasons and
-  ## a negation gets one of them wrong: force_of_infection(split_imported = "auto") relabels
-  ## relapses as "relapse (local)" / "relapse (imported)" (so an exact setdiff removes
-  ## nothing and FOI equals molFOB), while recrudescence is a new episode but not a new clone
-  ## and belongs in neither series. `is_acquisition` is computed by force_of_infection()
+  ## a negation gets one of them wrong: force_of_infection() relabels relapses as
+  ## "relapse (local)" / "relapse (imported)" by default (split_imported = TRUE), so an exact
+  ## setdiff removes nothing and FOI equals molFOB, while recrudescence is a new episode but not
+  ## a new clone and belongs in neither series. `is_acquisition` is computed by force_of_infection()
   ## after any relabelling, so it survives both.
   acq  <- d[is_acquisition == TRUE]
   mosq <- grep("^relapse", unique(acq$origin), value = TRUE, invert = TRUE)
@@ -309,8 +312,9 @@ plot_force_of_infection <- function(foi, smooth = 0.4) {
   w <- rbind(
     acq[, .(rate = sum(rate), series = lv[1]), by = win],
     acq[origin %in% mosq, .(rate = sum(rate), series = lv[2]), by = win])
-  ## carry zeros so a series does not break where a window has no episodes of one kind
-  w <- merge(data.table::CJ(win = unique(d$win), series = unique(w$series)), w,
+  ## carry zeros, for both series in every window, so a series neither breaks where a window has
+  ## no episodes of one kind nor vanishes from a run with no acquisition
+  w <- merge(data.table::CJ(win = unique(d$win), series = lv), w,
              by = c("win", "series"), all.x = TRUE)[is.na(rate), rate := 0]
 
   w[, series := factor(series, lv)]

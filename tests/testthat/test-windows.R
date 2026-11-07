@@ -18,8 +18,8 @@ test_that("force_of_infection() gives each window its days within SIM_DAYS", {
   for (s in 1:6) {
     r <- w_run(s)
     fo <- force_of_infection(r)[win > 0]
-    expect_identical(fo$days, as.numeric(pmin(30L, 400L - fo$win + 1L)), label = paste("seed", s))
-    hit <- hit || any(fo$win == (r$extinct_tick %/% 30) * 30)
+    expect_identical(fo$days, pmin(30L, 400L - fo$win + 1L), label = paste("seed", s))
+    hit <- hit || any(fo$win == (r$extinct_tick %/% 30) * 30 & fo$n > 0)
   }
   expect_true(hit)
 })
@@ -55,4 +55,44 @@ test_that(".sim_days() reads SIM_DAYS, and refuses an events table", {
   r <- fake_run(drop = "SIM_DAYS", extra = "SIM_DAYS\t400.0")
   expect_identical(malariafwd:::.sim_days(r), 400L)
   expect_error(malariafwd:::.sim_days(load_events(r), "summarise_run"), "summarise_run\\(\\) needs the run for its length")
+})
+
+## a case row of events.tsv: a local inoculation of host `h` on day `t`
+case_row <- function(t, h, ped) paste(t, paste0(t, "_", h), "vh_inoculation", 1, 3, h, ped, ped, ped, 0, "0.0", "human", 0, 0,
+                                     ped, -1, -1, 0, 2, 1, -1, sep = "\t")
+
+test_that("force_of_infection() has a row for every window and origin, each over the days it covers", {
+  r <- fake_run(params = list(N_HOSTS = 10, SIM_DAYS = 200, N_FOUNDER_HOSTS = 1),
+                ev_rows = c(case_row(5, 1, 11), case_row(6, 2, 12), case_row(95, 3, 13)))
+  fo <- force_of_infection(r)
+  expect_identical(nrow(fo), 35L)
+  expect_identical(vapply(fo, function(x) class(x)[1], ""),
+                   c(win = "integer", origin = "factor", n = "integer", days = "integer", rate = "numeric",
+                     is_acquisition = "logical"))
+  expect_identical(unique(fo$win), seq(0L, 180L, by = 30L))
+  expect_identical(fo[, sum(n), by = win]$V1, c(2L, 0L, 0L, 1L, 0L, 0L, 0L))
+  expect_identical(fo[origin == "imported", days], c(29L, 30L, 30L, 30L, 30L, 30L, 21L))
+  expect_identical(fo[, sum(days), by = origin]$V1, rep(200L, 5))
+  expect_equal(fo$rate, fo$n / 10 / (fo$days / 365))
+  ## a run with no case: every window, at zero
+  z <- force_of_infection(fake_run(params = list(N_HOSTS = 10, SIM_DAYS = 200, N_FOUNDER_HOSTS = 1)))
+  expect_identical(nrow(z), 35L)
+  expect_true(all(z$n == 0L))
+  expect_identical(levels(z$origin), levels(fo$origin))
+  for (b in list(0, 2.5, c(30, 60), NA, "30")) expect_error(force_of_infection(r, bin = b), "`bin` must be a whole number")
+})
+
+test_that("plot_force_of_infection() draws both series for a run with no acquisition", {
+  skip_if_not_installed("ggplot2")
+  z <- force_of_infection(fake_run(params = list(N_HOSTS = 10, SIM_DAYS = 200, N_FOUNDER_HOSTS = 1)))
+  expect_no_warning(b <- ggplot2::ggplot_build(plot_force_of_infection(z, smooth = NA)))
+  expect_identical(nrow(b$data[[1]]), 14L)
+})
+
+test_that("an extinct run's windows after its extinction are zeros", {
+  skip_if_no_slim()
+  r <- w_run(2)
+  fo <- force_of_infection(r)
+  expect_identical(nrow(fo), (400L %/% 30L + 1L) * 5L)
+  expect_true(all(fo[win > r$extinct_tick]$n == 0L))
 })
