@@ -6,7 +6,7 @@ template:
 reference:
 - title: Running simulations
   desc: Build a parameter set, run the model, sweep in parallel.
-  contents: [vivax_params, as_slim_args, run_sim, run_grid, load_grid, check_setup, tskit_available,
+  contents: [vivax_params, param_info, as_slim_args, run_sim, run_grid, load_grid, check_setup, tskit_available,
              slim_available, slim_version, slim_path, slim_model]
 
 - title: Loading a run

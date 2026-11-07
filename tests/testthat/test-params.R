@@ -1,34 +1,33 @@
+## The model's defineDefault() values, each evaluated in order as Eidos would, so that a default
+## written as an expression (1/170.0, or another parameter) is compared too.
+model_defaults <- function(src) {
+  env <- new.env()
+  for (l in grep('^\\s*defineDefault\\("[A-Z_]+"', src, value = TRUE)) {
+    nm <- sub('.*defineDefault\\("([A-Z_]+)".*', "\\1", l)
+    raw <- trimws(sub('.*defineDefault\\("[A-Z_]+",\\s*(.*?)\\);.*$', "\\1", l, perl = TRUE))
+    assign(nm, if (raw %in% c("T", "F")) raw == "T" else eval(parse(text = raw), env), envir = env)
+  }
+  as.list(env)
+}
+
+## The parameters whose names or values differ between R's defaults and the model's.
+default_mismatches <- function(src) {
+  m <- model_defaults(src); d <- malariafwd:::.malariafwd_defaults
+  nms <- setdiff(names(m), c("SEED", "OUTDIR"))
+  same <- function(nm) if (is.numeric(d[[nm]])) isTRUE(all.equal(as.numeric(m[[nm]]), as.numeric(d[[nm]]), tolerance = 1e-12))
+                       else identical(m[[nm]], d[[nm]])
+  sort(c(setdiff(nms, names(d)), setdiff(names(d), nms), Filter(function(nm) nm %in% names(d) && !same(nm), nms)))
+}
+
 test_that("vivax_params defaults stay in sync with the SLiM model", {
   model <- slim_model()
   skip_if(!nzchar(model) || !file.exists(model), "model template not found")
   src <- readLines(model, warn = FALSE)
-  model_names <- unique(sub('.*defineDefault\\("([A-Z_]+)".*', "\\1",
-                            grep('defineDefault\\("[A-Z_]+"', src, value = TRUE)))
-  r_names <- names(malariafwd:::.malariafwd_defaults)
-  # SEED and OUTDIR are run-level (set by run_sim), not part of vivax_params().
-  expect_setequal(setdiff(model_names, c("SEED", "OUTDIR")), r_names)
-
-  ## ...and the VALUES, not just the names. Comparing names alone let the two drift apart
-  ## silently: the check passed with P_RAD_SURVIVAL perturbed 0.29 -> 0.05 on one side, which
-  ## is exactly the divergence D20 was written to prevent (the same number means 77% efficacy
-  ## per hypnozoite but 95% per person).
-  dflt <- malariafwd:::.malariafwd_defaults
-  num <- function(x) suppressWarnings(as.numeric(x))
-  for (nm in setdiff(model_names, c("SEED", "OUTDIR"))) {
-    line <- grep(paste0('defineDefault\\("', nm, '"'), src, value = TRUE)[1]
-    raw  <- trimws(sub('.*defineDefault\\("[A-Z_]+",\\s*([^)]*)\\).*', "\\1", line))
-    rval <- dflt[[nm]]
-    sval <- if (raw %in% c("T", "F")) raw == "T"
-            else if (grepl("^'.*'$|^\".*\"$", raw)) gsub("^['\"]|['\"]$", "", raw)
-            else num(raw)
-    if (is.na(sval[1]) && !is.logical(sval)) next          # expression, not a literal
-    if (is.logical(rval) || is.character(rval))
-      expect_identical(as.character(sval), as.character(rval),
-                       info = paste(nm, "differs between the SLiM model and R"))
-    else
-      expect_equal(num(sval), num(rval), tolerance = 1e-9,
-                   info = paste(nm, "differs between the SLiM model and R"))
-  }
+  expect_identical(default_mismatches(src), character())
+  ## the comparison covers expressions: a different activation rate is found
+  bad <- sub('(defineDefault\\("ALPHA_ACTIVATE",\\s*)1/170\\.0', "\\11/344.0", src)
+  expect_false(identical(bad, src))
+  expect_identical(default_mismatches(bad), "ALPHA_ACTIVATE")
 })
 
 test_that("validation catches bad input", {

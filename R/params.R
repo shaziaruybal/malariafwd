@@ -1,57 +1,11 @@
-## params.R -- the user-facing parameter surface. Defaults MIRROR the SLiM model's
-## defineDefault() values (inst/slim/malariafwd_vivax.slim is the source of truth); the
-## test in tests/testthat/ checks they stay in sync.
+## params.R -- the user-facing parameter surface. The defaults come from the parameter dictionary
+## (R/param-dictionary.R) and MIRROR the SLiM model's defineDefault() values
+## (inst/slim/malariafwd_vivax.slim is the source of truth); a test checks they stay in sync.
 
-# All model defaults, grouped. Values match the SLiM defineDefault() calls exactly.
-.malariafwd_defaults <- list(
-  # run / meta
-  SIM_ID = "default", SIM_DAYS = 365L, VERBOSE = FALSE, RETAIN_FULL_HISTORY = TRUE,
-  # population
-  N_HOSTS = 40L, N_FOUNDER_HOSTS = 12L, N_FOUNDER_LINEAGES = 12L, N_MOSQ = 100L,
-  # transmission (Ross-Macdonald)
-  BITING_RATE = 0.1, P_TRANS_VH = 0.5, P_TRANS_HV = 0.5, MOSQ_LIFESPAN = 10.0,
-  EIP_DAYS = 10L, MAX_MOI = 20L, MAX_BROODS_PER_MOSQ = 20L,
-  # parasite / infection
-  MEAN_BLOOD_STAGE_DURATION = 60,
-  # mosquito uptake / inoculation sampling . lambda = 0 (default) -> exactly 1
-  # oocyst per uptake and 1 genotype per bite. K_OOCYSTS > 0 makes the oocyst count
-  # negative-binomial (var = lambda + lambda^2/K); 0 = Poisson.
-  LAMBDA_OOCYSTS = 0.0, LAMBDA_SPOROZOITES = 0.0, K_OOCYSTS = 0.0,
-  GAMETOCYTE_DELAY = 0L, P_GAMETOCYTE = 1.0, P_PRIMARY = 1.0,
-  # hypnozoite reservoir
-  NU_HYPNOZOITE_BATCH = 3.0, ALPHA_ACTIVATE = 1/170, MU_HYPNOZOITE = 1/442,
-  K_LATENCY = 0L, DELTA_LATENCY = 1/100,
-  # genome (see DECISIONS D2/D3/D13): pure coordinate switch; both modes rate 7.4e-7
-  GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
-  # vector control: biting rate only, never importation or case management
-  INTERVENTION_START = 99999L, INTERVENTION_END = 99999L, INTERVENTION_EFFICACY = 0.0,
-  ## case management has its own window (D19); INTERVENTION_* is vector control only
-  TREATMENT_START = 0L, TREATMENT_END = 99999L,
-  # case management: radical cure is NESTED inside blood-stage treatment, so
-  # RADCURE_COVERAGE is P(radical cure | treated). P_RAD_SURVIVAL is per PERSON by
-  # default - see RADCURE_MODE.
-  MDA_TICK = 99999L, P_RAD_SURVIVAL = 0.29, RADCURE_MODE = "person",
-  RADCURE_COVERAGE = 0.0, BLOODCURE_COVERAGE = 0.0, P_BLOODCURE_SURVIVAL = 0.0,
-  MDA_COVERAGE = 1.0,
-  P_RECRUD_GIVEN_FAIL = 0.0, MEAN_RECRUD_DELAY = 10.5, RECRUD_DELAY_DIST = "geometric",
-  P_DETECT_RECRUD = 0.5,
-  SUBPATENT_INFECTIVITY = 0.15,
-  TREATMENT_DELAY = 7.0,
-  # detection / observation
-  P_DETECT_PRIMARY = 1.0, P_DETECT_RELAPSE = 1.0,
-  # seasonality
-  SEASONAL_AMP = 0.0, SEASONAL_PHASE = 0.0,
-  # resurgence triggers
-  RESURGENCE_TRIGGER_TICK = 99999L, BITING_RATE_BOOST = 1.0,
-  ALPHA_ACTIVATE_BOOST = 1.0, NU_HYPNOZOITE_BATCH_BOOST = 1.0,
-  # importation
-  IMPORT_START = 99999L, IMPORT_END = 99999L, N_IMPORTS_PER_TICK = 0L,
-  IMPORT_RATE_PER_TICK = 0.0, IMPORT_RATE_BOOST = 1.0, IMPORT_TICK = 99999L, N_IMPORTS = 0L
-)
+.malariafwd_defaults <- lapply(.param_dict, `[[`, "default")
 
 # Params that are Eidos STRINGS (must be quoted when passed to SLiM -d).
-.malariafwd_string_params <- c("SIM_ID", "GENOME_MODE", "CHROMOSOMES", "RADCURE_MODE",
-                               "RECRUD_DELAY_DIST", "OUTDIR")
+.malariafwd_string_params <- c(names(Filter(is.character, .malariafwd_defaults)), "OUTDIR")
 
 #' Build a validated parameter set for the vivax model
 #'
@@ -77,18 +31,11 @@
 #' a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence
 #' multipliers is capped at 1.
 #'
-#' Values the model cannot run are refused here, before SLiM starts. Each value is a number,
-#' `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and strings are UTF-8 text
-#' without control characters. Counts, `SIM_DAYS`,
-#' the scheduling days (`MDA_TICK`, `IMPORT_TICK`, `RESURGENCE_TRIGGER_TICK` and the `*_START`
-#' and `*_END` bounds) and the fixed delays `EIP_DAYS` and `GAMETOCYTE_DELAY` are whole numbers;
-#' mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
-#' `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in \[0, 1\], `MU_HYPNOZOITE` in (0, 1\], and
-#' `DELTA_LATENCY` in (0, 1\] when `K_LATENCY > 0`. `BITING_RATE` is positive (above 1 it only
-#' warns). Boosts, import rates, `LAMBDA_*`, `SEASONAL_AMP` and counts are non-negative, and
-#' `MAX_MOI` is at least 1 (1 means no superinfection).
-#' `RECOMB_RATE` is at most 0.5 per bp (any value <= 0 means the default map rate), and run time
-#' grows steeply with it.
+#' Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
+#' *Parameters* section below gives what each may be, and [param_info()] the same as a table. Each
+#' value is a number, `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and
+#' strings are UTF-8 text without control characters. The tables are also in MODEL_DESCRIPTION
+#' section 10, on the package website (<https://shaziaruybal.github.io/malariafwd/>).
 #'
 #' A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
 #' uptake (see [uptake_moments()]), with `K_OOCYSTS` either 0 or at least 0.001;
@@ -119,11 +66,23 @@
 #' (a double beyond the integer range), and a double as the 15 significant digits [run_sim()]
 #' passes, so `1 + 2e-16` is 1 and a set rebuilt from a run's `params.tsv` is the set it used.
 #'
+#' **Editing a set.** A set edited with `$<-`, `[[<-` or [modifyList()] keeps its class and is not
+#' checked at the edit. It is checked in full when it is used: [run_sim()] and [run_grid()] build
+#' every set again through `vivax_params()`, and `p <- do.call(vivax_params, p)` checks it at once.
+#' A default taken from another parameter is set only when a set is built, so editing
+#' `N_FOUNDER_HOSTS` leaves `N_FOUNDER_LINEAGES` as it was.
+#'
+#' @evalRd .param_rd()
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
-#' @return An object of class `vivax_params`: a named list of every parameter, each stored as
-#'   above.
+#' @return a named list of every model parameter (class `vivax_params`): the defaults with your
+#'   overrides, checked. `print()` shows the values that differ from the defaults, and
+#'   `as.data.frame()` gives the table: `name`, `value` (as SLiM is given it), `default`,
+#'   `changed`, `group`, `unit` and `meaning`.
+#' @seealso [param_info()], [run_sim()], [load_params()], [uptake_calibrate()]
 #' @examples
 #' vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
+#' p <- vivax_params(N_HOSTS = 300)
+#' subset(as.data.frame(p), changed)
 #' @export
 vivax_params <- function(...) {
   over <- list(...)
@@ -678,11 +637,37 @@ print.vivax_params <- function(x, ...) {
   invisible(x)
 }
 
+## Is `value` parameter `name`'s default? Numbers are compared by value, so 40 and 40L agree.
+.is_default <- function(name, value) {
+  d <- .malariafwd_defaults[[name]]
+  if (is.null(d) || length(value) != 1L) return(FALSE)
+  if (is.numeric(d) && is.numeric(value) && !is.object(value)) return(isTRUE(value == d))
+  identical(value, d)
+}
+
 ## The parameters of a set that differ from their defaults, one a line.
 .print_non_default <- function(x) {
-  nd <- x[!vapply(names(x), function(n) identical(x[[n]], .malariafwd_defaults[[n]]), logical(1))]
+  nd <- x[!vapply(names(x), function(n) .is_default(n, x[[n]]), logical(1))]
   if (length(nd)) {
     cat("  non-default:\n")
     for (n in names(nd)) cat(sprintf("    %-24s = %s\n", n, format(nd[[n]])))
   } else cat("  (all defaults)\n")
+}
+
+#' @rdname vivax_params
+#' @param x a `vivax_params` object.
+#' @param row.names,optional,... ignored.
+#' @export
+as.data.frame.vivax_params <- function(x, row.names = NULL, optional = FALSE, ...) {
+  v <- tryCatch(.slim_values(x), error = function(e) NULL)
+  val <- vapply(names(x), function(nm)
+    if (!is.null(v) && nm %in% names(v)) v[[nm]] else paste(format(x[[nm]]), collapse = " "), "")
+  def <- .slim_values(.malariafwd_defaults)
+  data.frame(name = names(x), value = unname(val),
+             default = unname(ifelse(names(x) %in% names(def), def[names(x)], NA_character_)),
+             changed = !vapply(names(x), function(nm) .is_default(nm, x[[nm]]), logical(1)),
+             group = vapply(names(x), function(nm) { g <- .param_group_of(nm); if (length(g)) g else NA_character_ }, ""),
+             unit = vapply(names(x), function(nm) if (is.null(.param_dict[[nm]])) NA_character_ else .param_dict[[nm]]$unit, ""),
+             meaning = vapply(names(x), function(nm) if (is.null(.param_dict[[nm]])) NA_character_ else .param_dict[[nm]]$meaning, ""),
+             row.names = NULL, stringsAsFactors = FALSE)
 }

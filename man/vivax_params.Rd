@@ -2,16 +2,25 @@
 % Please edit documentation in R/params.R
 \name{vivax_params}
 \alias{vivax_params}
+\alias{as.data.frame.vivax_params}
 \title{Build a validated parameter set for the vivax model}
 \usage{
 vivax_params(...)
+
+\method{as.data.frame}{vivax_params}(x, row.names = NULL, optional = FALSE, ...)
 }
 \arguments{
 \item{...}{named parameter overrides, e.g. \verb{N_HOSTS = 300, BITING_RATE = 0.09}.}
+
+\item{x}{a \code{vivax_params} object.}
+
+\item{row.names, optional, ...}{ignored.}
 }
 \value{
-An object of class \code{vivax_params}: a named list of every parameter, each stored as
-above.
+a named list of every model parameter (class \code{vivax_params}): the defaults with your
+overrides, checked. \code{print()} shows the values that differ from the defaults, and
+\code{as.data.frame()} gives the table: \code{name}, \code{value} (as SLiM is given it), \code{default},
+\code{changed}, \code{group}, \code{unit} and \code{meaning}.
 }
 \description{
 Returns a named list of all model parameters, starting from the defaults (which
@@ -37,18 +46,11 @@ so they are at least one day; \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are fi
 a mosquito bites at most once a day, so \code{BITING_RATE} times its seasonal and resurgence
 multipliers is capped at 1.
 
-Values the model cannot run are refused here, before SLiM starts. Each value is a number,
-\code{TRUE}/\code{FALSE} or a string, as its default is; numbers are finite, and strings are UTF-8 text
-without control characters. Counts, \code{SIM_DAYS},
-the scheduling days (\code{MDA_TICK}, \code{IMPORT_TICK}, \code{RESURGENCE_TRIGGER_TICK} and the \verb{*_START}
-and \verb{*_END} bounds) and the fixed delays \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are whole numbers;
-mean durations, rates and \code{SEASONAL_PHASE} need not be. Probabilities and coverages,
-\code{ALPHA_ACTIVATE} and \code{INTERVENTION_EFFICACY} lie in [0, 1], \code{MU_HYPNOZOITE} in (0, 1], and
-\code{DELTA_LATENCY} in (0, 1] when \code{K_LATENCY > 0}. \code{BITING_RATE} is positive (above 1 it only
-warns). Boosts, import rates, \verb{LAMBDA_*}, \code{SEASONAL_AMP} and counts are non-negative, and
-\code{MAX_MOI} is at least 1 (1 means no superinfection).
-\code{RECOMB_RATE} is at most 0.5 per bp (any value <= 0 means the default map rate), and run time
-grows steeply with it.
+Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
+\emph{Parameters} section below gives what each may be, and \code{\link[=param_info]{param_info()}} the same as a table. Each
+value is a number, \code{TRUE}/\code{FALSE} or a string, as its default is; numbers are finite, and
+strings are UTF-8 text without control characters. The tables are also in MODEL_DESCRIPTION
+section 10, on the package website (\url{https://shaziaruybal.github.io/malariafwd/}).
 
 A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
 uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYSTS} either 0 or at least 0.001;
@@ -78,7 +80,136 @@ a \code{bit64::integer64}, is refused: give the number itself.
 Each value is stored as its default's type and as SLiM is given it: a whole number as an integer
 (a double beyond the integer range), and a double as the 15 significant digits \code{\link[=run_sim]{run_sim()}}
 passes, so \code{1 + 2e-16} is 1 and a set rebuilt from a run's \code{params.tsv} is the set it used.
+
+\strong{Editing a set.} A set edited with \verb{$<-}, \verb{[[<-} or \code{\link[=modifyList]{modifyList()}} keeps its class and is not
+checked at the edit. It is checked in full when it is used: \code{\link[=run_sim]{run_sim()}} and \code{\link[=run_grid]{run_grid()}} build
+every set again through \code{vivax_params()}, and \code{p <- do.call(vivax_params, p)} checks it at once.
+A default taken from another parameter is set only when a set is built, so editing
+\code{N_FOUNDER_HOSTS} leaves \code{N_FOUNDER_LINEAGES} as it was.
 }
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
+p <- vivax_params(N_HOSTS = 300)
+subset(as.data.frame(p), changed)
+}
+\seealso{
+\code{\link[=param_info]{param_info()}}, \code{\link[=run_sim]{run_sim()}}, \code{\link[=load_params]{load_params()}}, \code{\link[=uptake_calibrate]{uptake_calibrate()}}
+}
+\section{Parameters}{
+Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package website for the same tables.
+
+\subsection{Run}{Length, label and what is recorded.
+\describe{
+\item{\code{SIM_DAYS}}{Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. Unit: days. Default 365; whole number in [2, 1e9]; a run that reaches day 99999 must move the days that default to 99999 past its end.}
+\item{\code{SIM_ID}}{A label for the run, written into params.tsv. Default "default"; text; UTF-8, without control characters.}
+\item{\code{VERBOSE}}{Narrate every event in run.log. The outputs are the same either way. Default FALSE; TRUE or FALSE.}
+\item{\code{RETAIN_FULL_HISTORY}}{Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_index() warns that the ids it was asked about are absent. Default TRUE; TRUE or FALSE.}
+}}
+
+\subsection{Population}{Hosts, mosquitoes and the founding infections.
+\describe{
+\item{\code{N_HOSTS}}{Humans; the number is constant. Unit: hosts. Default 40; whole number >= 1.}
+\item{\code{N_MOSQ}}{Mosquitoes; the number is constant, and every one starts uninfected. Unit: mosquitoes. Default 100; whole number >= 1.}
+\item{\code{N_FOUNDER_HOSTS}}{Hosts infected at the start: establishment, whether the epidemic sustains itself. Unit: hosts. Default 12; whole number >= 0; at most N_HOSTS; 0 needs an import path inside the run.}
+\item{\code{N_FOUNDER_LINEAGES}}{Distinct founding genomes among the founder hosts; the others carry clonal copies, seeded on day 2. The genealogical diversity knob: fewer lineages give higher background relatedness at the same establishment. Unit: genomes. Default N_FOUNDER_HOSTS; whole number >= 0; at most N_FOUNDER_HOSTS, and at least 1 when there are founder hosts.}
+}}
+
+\subsection{Transmission}{Bites, infection and the mosquito's incubation.
+\describe{
+\item{\code{BITING_RATE}}{Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. Unit: per mosquito per day. Default 0.1; number > 0; a mosquito bites at most once a day, so above 1 with its seasonal and resurgence multipliers it warns.}
+\item{\code{P_TRANS_VH}}{b: an infectious bite infects the human. Unit: probability. Default 0.5; number in [0, 1].}
+\item{\code{P_TRANS_HV}}{c: a mosquito that bites an infectious human takes up parasites. Unit: probability. Default 0.5; number in [0, 1].}
+\item{\code{MOSQ_LIFESPAN}}{Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. Unit: days. Default 10; number >= 1.}
+\item{\code{EIP_DAYS}}{Extrinsic incubation period: days from uptake until a mosquito's products can be transmitted (fixed). Unit: days. Default 10; whole number >= 0.}
+\item{\code{MAX_MOI}}{A host already carrying this many blood-stage lineages, patent or subpatent, takes no new inoculation, counting the clones it gained earlier that day. Relapses bypass it, and a bite that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a guard that seldom binds. Unit: lineages. Default 20; whole number >= 1.}
+\item{\code{MAX_BROODS_PER_MOSQ}}{A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. Unit: lineages. Default 20; whole number >= 0.}
+}}
+
+\subsection{Blood stage}{A clone's duration and its infectiousness to mosquitoes.
+\describe{
+\item{\code{MEAN_BLOOD_STAGE_DURATION}}{Mean duration of a blood-stage clone: it clears each day with probability 1/MEAN_BLOOD_STAGE_DURATION. Unit: days. Default 60; number >= 1. Source: White et al. (2014).}
+\item{\code{P_PRIMARY}}{A transmitted genotype causes a blood-stage primary; its hypnozoite batch is drawn either way. Unit: probability. Default 1; number in [0, 1]. Source: White et al. (2014), base model.}
+\item{\code{P_GAMETOCYTE}}{An infection carries gametocytes, drawn once per infection. Vivax: about 0.9. Unit: probability. Default 1; number in [0, 1].}
+\item{\code{GAMETOCYTE_DELAY}}{Days from blood-stage onset until a clone can infect mosquitoes (fixed). 0 acts as 1: a clone is first taken up the day after it appears. Vivax: about 2 to 3 days. Unit: days. Default 0; whole number >= 0.}
+}}
+
+\subsection{Mosquito uptake and co-transmission}{How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates, and 0 for both gives one oocyst per uptake and one genotype per bite.
+\describe{
+\item{\code{LAMBDA_OOCYSTS}}{Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Unit: oocysts. Default 0; number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000. Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut.}
+\item{\code{K_OOCYSTS}}{Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. Default 0; number >= 0; 0, or at least 0.001.}
+\item{\code{LAMBDA_SPOROZOITES}}{Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. Unit: products per bite. Default 0; number in [0, 1000].}
+}}
+
+\subsection{Hypnozoite reservoir}{The liver-stage batches a bite seeds, and their activation and death.
+\describe{
+\item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
+\item{\code{ALPHA_ACTIVATE}}{Daily probability that a hypnozoite activates: a relapse. Unit: per hypnozoite per day. Default 1/170; number in [0, 1]. Source: Mehra et al.; White et al. (2014) use 1/344.}
+\item{\code{MU_HYPNOZOITE}}{Daily probability that a hypnozoite dies, also while latent. Unit: per hypnozoite per day. Default 1/442; number in (0, 1]. Source: White et al. (2014).}
+\item{\code{K_LATENCY}}{Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Unit: stages. Default 0; whole number >= 0. Source: White et al. (2014).}
+\item{\code{DELTA_LATENCY}}{Daily probability that a latent batch moves on one stage. Unit: per day. Default 1/100; number in (0, 1]; checked only when K_LATENCY > 0.}
+}}
+
+\subsection{Genome}{The neutral PvP01 genome the model simulates; the mutation rate is 0.
+\describe{
+\item{\code{GENOME_MODE}}{"full": the 14 PvP01 chromosomes at full length (24.2 Mb); "core": each at 90\% of its length, a placeholder for the core genome. Default "full"; "full" or "core".}
+\item{\code{CHROMOSOMES}}{Which PvP01 chromosomes to simulate, such as "1-14" or "1-3,5". Default "1-14"; text; chromosome numbers 1 to 14, each once, separated by commas, with low-high ranges.}
+\item{\code{RECOMB_RATE}}{Crossover rate within a chromosome; chromosomes assort independently. Run time grows steeply with it. Unit: per bp. Default -1; number <= 0.5; 0 or below means the default map rate, 7.4e-7. Source: Jiang et al. (2011).}
+}}
+
+\subsection{Seasonality and vector control}{Factors on the biting rate; seasonality also acts on the Poisson import rate.
+\describe{
+\item{\code{SEASONAL_AMP}}{Amplitude A of the seasonal factor 1 + A cos(2 pi (t - SEASONAL_PHASE) / 365), floored at 0, on biting and on the Poisson import rate; 0 means no seasonality. Default 0; number >= 0.}
+\item{\code{SEASONAL_PHASE}}{Day of the year of the seasonal peak. Unit: day of the year. Default 0; number.}
+\item{\code{INTERVENTION_START}}{First day of vector control. Unit: day. Default 99999 (never); whole number.}
+\item{\code{INTERVENTION_END}}{Vector control acts on days INTERVENTION_START to INTERVENTION_END - 1. Unit: day. Default 99999 (never); whole number.}
+\item{\code{INTERVENTION_EFFICACY}}{Biting is multiplied by 1 - INTERVENTION_EFFICACY inside the window; importation and treatment are not affected. Unit: fraction. Default 0; number in [0, 1].}
+}}
+
+\subsection{Detection and case management}{A case is detected, decided where it arises and treated later, on the host; radical cure is nested in a blood-stage course. Off by default.
+\describe{
+\item{\code{P_DETECT_PRIMARY}}{A primary infection or an import is detected, drawn once per episode. Unit: probability. Default 1; number in [0, 1].}
+\item{\code{P_DETECT_RELAPSE}}{A relapse is detected, drawn once per episode. Relapses are often subpatent, so a realistic value is lower. Unit: probability. Default 1; number in [0, 1].}
+\item{\code{BLOODCURE_COVERAGE}}{A detected case is treated: a course clears each patent clone the host carries, unless the clone survives. 0 turns the whole treatment path off. Unit: probability. Default 0; number in [0, 1].}
+\item{\code{P_BLOODCURE_SURVIVAL}}{A clone survives a course: a patent one, or under MDA a subpatent one too. Unit: probability. Default 0; number in [0, 1]. Source: about 0.10 in the literature.}
+\item{\code{RADCURE_COVERAGE}}{A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. Unit: probability. Default 0; number in [0, 1].}
+\item{\code{P_RAD_SURVIVAL}}{Radical cure fails: the patient's whole reservoir survives (RADCURE_MODE "person"), about 71\% cure; or each hypnozoite survives ("hypnozoite"), where the same number would mean 95\% efficacy. Unit: probability. Default 0.29; number in [0, 1]. Source: White et al. (2018); malariasimulation.}
+\item{\code{RADCURE_MODE}}{The unit of radical-cure failure: "person", or "hypnozoite", which thins the reservoir hypnozoite by hypnozoite and is the only mode that can clear part of it. Default "person"; "person" or "hypnozoite".}
+\item{\code{TREATMENT_DELAY}}{Mean days from a case to its course: geometric, at least one day, so a course never lands on the day the case arises. Unit: days. Default 7; number in [1, 1e6].}
+\item{\code{TREATMENT_START}}{First day on which a detected case can be prescribed a course; case management has its own window, separate from vector control. Unit: day. Default 0; whole number.}
+\item{\code{TREATMENT_END}}{Cases detected on days TREATMENT_START to TREATMENT_END - 1 are treated. The window gates the decision, not the delivery: a course prescribed before the end still arrives. Unit: day. Default 99999 (never); whole number.}
+}}
+
+\subsection{Mass drug administration}{One round, through the same course as case management.
+\describe{
+\item{\code{MDA_TICK}}{Day of one MDA round, through the same course as case management: blood-stage drugs, and radical cure as RADCURE_COVERAGE gives it, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. Unit: day. Default 99999 (never); whole number; not 1 when a founder host carries a copy of another founder's genome.}
+\item{\code{MDA_COVERAGE}}{The round reaches a host, drawn for each host. Unit: probability. Default 1; number in [0, 1].}
+}}
+
+\subsection{Recrudescence}{A clone that survives a course can be suppressed below patency and return. Off by default.
+\describe{
+\item{\code{P_RECRUD_GIVEN_FAIL}}{A clone that survives a course is suppressed below patency, to recrudesce later, rather than persisting. At 0 the third recurrence state is inert, which matches recrudescence being 0.2 to 0.3\% of recurrences after chloroquine or artesunate. Unit: probability. Default 0; number in [0, 1]. Source: Taylor et al. (2019).}
+\item{\code{MEAN_RECRUD_DELAY}}{Mean days from suppression to recrudescence, at least one; a literature assumption pending parameterisation. Geometric at the default: a median of 7 days, about 94\% within 28 days. Unit: days. Default 10.5; number in [1, 1e6]. Source: close to the prior of Taylor et al. (2019).}
+\item{\code{RECRUD_DELAY_DIST}}{Shape of that delay: "geometric", the discrete form of an exponential delay; "poisson", 1 + Poisson(D - 1) with mean D, a tight-window sensitivity arm; or "fixed", round(D) days with halves rounded up (11 days at 10.5). Every shape is at least one day. Default "geometric"; "geometric" or "poisson" or "fixed".}
+\item{\code{P_DETECT_RECRUD}}{A recrudescence is detected; it should usually sit well below P_DETECT_PRIMARY. Unit: probability. Default 0.5; number in [0, 1]. Source: Ross et al. (2025) put recurrence detectability at 0.13 to 0.49 of a primary's.}
+\item{\code{SUBPATENT_INFECTIVITY}}{Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Unit: relative. Default 0.15; number in [0, 1]. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 measured (Koepfli et al. 2021).}
+}}
+
+\subsection{Resurgence}{Multipliers that switch on from one day, to start a resurgence.
+\describe{
+\item{\code{RESURGENCE_TRIGGER_TICK}}{Day from which the four boosts apply. Unit: day. Default 99999 (never); whole number.}
+\item{\code{BITING_RATE_BOOST}}{Multiplies BITING_RATE from the trigger. Unit: multiplier. Default 1; number >= 0.}
+\item{\code{ALPHA_ACTIVATE_BOOST}}{Multiplies ALPHA_ACTIVATE from the trigger, capped so that activation and death stay within one day's probability. Unit: multiplier. Default 1; number >= 0.}
+\item{\code{NU_HYPNOZOITE_BATCH_BOOST}}{Multiplies NU_HYPNOZOITE_BATCH from the trigger. Unit: multiplier. Default 1; number >= 0.}
+}}
+
+\subsection{Importation}{Three routes, which add up: a pulse, and a fixed daily count and a Poisson rate in a window. Each host takes at most one import a day, and a host at MAX_MOI takes none.
+\describe{
+\item{\code{IMPORT_TICK}}{Day of one pulse of N_IMPORTS imports. Unit: day. Default 99999 (never); whole number.}
+\item{\code{N_IMPORTS}}{Size of the pulse. Unit: imports. Default 0; whole number >= 0; warns above N_HOSTS.}
+\item{\code{IMPORT_START}}{First day of the import window. Unit: day. Default 99999 (never); whole number.}
+\item{\code{IMPORT_END}}{Imports in the window arrive on days max(1, IMPORT_START) to min(IMPORT_END - 1, SIM_DAYS). Unit: day. Default 99999 (never); whole number.}
+\item{\code{N_IMPORTS_PER_TICK}}{A fixed number of imports on each day of the window. Unit: imports a day. Default 0; whole number >= 0; warns when a day's fixed imports exceed N_HOSTS.}
+\item{\code{IMPORT_RATE_PER_TICK}}{Mean of a Poisson number of imports on each day of the window; it follows the season. Unit: imports a day. Default 0; number in [0, 1e6]; at its seasonal and boosted peak, at most 1e6 a day.}
+\item{\code{IMPORT_RATE_BOOST}}{Multiplies IMPORT_RATE_PER_TICK from RESURGENCE_TRIGGER_TICK. Unit: multiplier. Default 1; number >= 0.}
+}}
 }

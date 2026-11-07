@@ -41,6 +41,7 @@ not replaced unless you pass `overwrite = TRUE`.
 
 ```{r}
 p   <- vivax_params(N_HOSTS = 300, N_MOSQ = 600, BITING_RATE = 0.09)
+param_info(c("N_HOSTS", "BITING_RATE"))   # every parameter: ?vivax_params or param_info()
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 
 ev <- load_events(run)      # tidy event log (data.table)

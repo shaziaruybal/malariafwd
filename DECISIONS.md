@@ -19,6 +19,39 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D60 — Parameters are documented from one dictionary; an edited set is checked when it is used · 2026-11-08 · Accepted
+**Context.** `?vivax_params` documented no parameter, and MODEL_DESCRIPTION section 10 missed ten of
+them, with no link between the two (review M21). The facts about each parameter (its unit, the
+values it may take, its source) were spread over prose, comments and hand tables that disagreed in
+places; a parameter set had no table form (m55); the defaults' sync test skipped every default
+written as an expression (m73). The review's export table asked for a set edited with `$<-` to be
+checked at the edit, while M26 had settled on checking it when it is used.
+**Decision.** One dictionary (`R/param-dictionary.R`) holds a record per parameter: the typed
+default, unit, meaning, the single-value bounds, a joint rule in words and the source. The defaults
+are taken from it, and it generates the Parameters section of `?vivax_params` and the tables of
+MODEL_DESCRIPTION section 10 (`dev/update-param-tables.R`); `param_info()` gives it as a table, and
+`as.data.frame()` gives a parameter set's. `validate_params()` stays the one check, and a test holds
+every documented bound to it. An edited set is checked when it is used (`run_sim()`, `run_grid()`,
+or `do.call(vivax_params, p)`), and `?vivax_params` says so; there is no `$<-` method. The sync test
+evaluates each model default in order.
+**Rationale.** A parameter's facts should be written once, where the code reads them, so the help,
+the model description and the checks cannot disagree.
+**Alternatives rejected.** *Generating `validate_params()` from the dictionary* -- its messages and
+their order are pinned by the tests and the fuzz, and the joint rules are not single-value bounds.
+*A `$<-` method that checks each edit* -- every caller that adds `SEED` or `OUTDIR` to a set, and
+every test that builds a refused set on purpose, would have to strip the class first, for a check
+that use already makes. *A TSV in `inst/extdata`* -- one more file to keep in step, for no reader
+that R code is not. *Pointing section 10 at the help page* -- the model description is read on its
+own. *A markdown table in the Rd* -- the console help does not wrap it.
+**Consequences.** Runs are unchanged. `?vivax_params` documents every parameter, by group; section
+10's tables are generated, so they change only with the dictionary. `param_info()` is a new export.
+**How to verify.** `tests/testthat/test-param-dictionary.R` (a record and one group for each
+parameter; the types are the model's; the bounds are the ones enforced, each refusal naming the
+parameter; the help and section 10 hold the current tables; printing by value and the table of a
+set) and the sync test in `tests/testthat/test-params.R`.
+
+---
+
 ## D59 — A grid resumes from what is on disk, and grid.tsv records it · 2026-11-08 · Accepted
 **Context.** `run_grid()` renamed every set `setNN` unless all were named, ran a set whose name
 repeated into the directory of the first and reported both as ok, ran seed 2.5 as 2 and `c(1, 1)`

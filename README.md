@@ -84,6 +84,7 @@ check_setup()                                     # SLiM, the model, and Python 
 
 # one run
 p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # validated params; full genome by default
+# every parameter, its unit and the values it may take: ?vivax_params or param_info()
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 # the run's directory appears when the run has finished; a second run into it is refused
 # unless overwrite = TRUE (or skip_existing = TRUE, which returns the same run)

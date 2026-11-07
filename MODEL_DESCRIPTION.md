@@ -795,97 +795,171 @@ in messages that do not name it (D45).
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
-### Population and epidemiology
+Every parameter, by group, with its default, unit, the values it may take and what it means,
+generated from the package's parameter dictionary; in R, `param_info()` gives the same as a table,
+and `?vivax_params` lists them too. Vector control scales biting only (D46) and does not gate
+treatment, which has its own window (D19); treatment is decided where a case arises and applied to
+the host, and radical-cure failure is per person (D20); a course lands at least a day after its case
+(D24, D32); an MDA round is drawn per host (D28) and reaches subpatent clones (D44); and the
+recrudescence delay is a literature assumption (D26, D32, D42).
 
-| parameter | default | meaning / source |
-|---|---|---|
-| `N_HOSTS` | 40 | humans |
-| `N_MOSQ` | 100 | mosquitoes (constant) |
-| `N_FOUNDER_HOSTS` | 12 | infected hosts at t = 0 (**establishment**) |
-| `N_FOUNDER_LINEAGES` | `N_FOUNDER_HOSTS` | distinct founding genomes (**diversity** knob — the clean genealogical axis) |
-| `BITING_RATE` | 0.1 | per-**mosquito** daily biting probability |
-| `P_TRANS_VH` | 0.5 | `b` |
-| `P_TRANS_HV` | 0.5 | `c` |
-| `MOSQ_LIFESPAN` | 10 d | geometric (daily death probability 1/10) |
-| `EIP_DAYS` | 10 d | fixed |
-| `MAX_MOI` | 20 | superinfection gate, at least 1; 1 means no superinfection (relapses bypass) |
-| `MAX_BROODS_PER_MOSQ` | 20 | mosquito lineage cap |
-| `MEAN_BLOOD_STAGE_DURATION` | 60 d | geometric (daily clearance probability 1/60; White et al. 2014) |
+<!-- BEGIN parameter tables: generated from R/param-dictionary.R by dev/update-param-tables.R; edit the dictionary, not this block -->
+
+### Run
+
+Length, label and what is recorded.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `SIM_DAYS` | 365 | days | whole number in [2, 1e9]; a run that reaches day 99999 must move the days that default to 99999 past its end | Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. |
+| `SIM_ID` | "default" | - | text; UTF-8, without control characters | A label for the run, written into params.tsv. |
+| `VERBOSE` | FALSE | - | TRUE or FALSE | Narrate every event in run.log. The outputs are the same either way. |
+| `RETAIN_FULL_HISTORY` | TRUE | - | TRUE or FALSE | Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_index() warns that the ids it was asked about are absent. |
+
+### Population
+
+Hosts, mosquitoes and the founding infections.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `N_HOSTS` | 40 | hosts | whole number >= 1 | Humans; the number is constant. |
+| `N_MOSQ` | 100 | mosquitoes | whole number >= 1 | Mosquitoes; the number is constant, and every one starts uninfected. |
+| `N_FOUNDER_HOSTS` | 12 | hosts | whole number >= 0; at most N_HOSTS; 0 needs an import path inside the run | Hosts infected at the start: establishment, whether the epidemic sustains itself. |
+| `N_FOUNDER_LINEAGES` | N_FOUNDER_HOSTS | genomes | whole number >= 0; at most N_FOUNDER_HOSTS, and at least 1 when there are founder hosts | Distinct founding genomes among the founder hosts; the others carry clonal copies, seeded on day 2. The genealogical diversity knob: fewer lineages give higher background relatedness at the same establishment. |
+
+### Transmission
+
+Bites, infection and the mosquito's incubation.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `BITING_RATE` | 0.1 | per mosquito per day | number > 0; a mosquito bites at most once a day, so above 1 with its seasonal and resurgence multipliers it warns | Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. |
+| `P_TRANS_VH` | 0.5 | probability | number in [0, 1] | b: an infectious bite infects the human. |
+| `P_TRANS_HV` | 0.5 | probability | number in [0, 1] | c: a mosquito that bites an infectious human takes up parasites. |
+| `MOSQ_LIFESPAN` | 10 | days | number >= 1 | Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. |
+| `EIP_DAYS` | 10 | days | whole number >= 0 | Extrinsic incubation period: days from uptake until a mosquito's products can be transmitted (fixed). |
+| `MAX_MOI` | 20 | lineages | whole number >= 1 | A host already carrying this many blood-stage lineages, patent or subpatent, takes no new inoculation, counting the clones it gained earlier that day. Relapses bypass it, and a bite that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a guard that seldom binds. |
+| `MAX_BROODS_PER_MOSQ` | 20 | lineages | whole number >= 0 | A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. |
+
+### Blood stage
+
+A clone's duration and its infectiousness to mosquitoes.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `MEAN_BLOOD_STAGE_DURATION` | 60 | days | number >= 1 | Mean duration of a blood-stage clone: it clears each day with probability 1/MEAN_BLOOD_STAGE_DURATION. Source: White et al. (2014). |
+| `P_PRIMARY` | 1 | probability | number in [0, 1] | A transmitted genotype causes a blood-stage primary; its hypnozoite batch is drawn either way. Source: White et al. (2014), base model. |
+| `P_GAMETOCYTE` | 1 | probability | number in [0, 1] | An infection carries gametocytes, drawn once per infection. Vivax: about 0.9. |
+| `GAMETOCYTE_DELAY` | 0 | days | whole number >= 0 | Days from blood-stage onset until a clone can infect mosquitoes (fixed). 0 acts as 1: a clone is first taken up the day after it appears. Vivax: about 2 to 3 days. |
+
+### Mosquito uptake and co-transmission
+
+How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates, and 0 for both gives one oocyst per uptake and one genotype per bite.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `LAMBDA_OOCYSTS` | 0 | oocysts | number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000 | Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut. |
+| `K_OOCYSTS` | 0 | - | number >= 0; 0, or at least 0.001 | Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. |
+| `LAMBDA_SPOROZOITES` | 0 | products per bite | number in [0, 1000] | Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. |
 
 ### Hypnozoite reservoir
 
-| parameter | default | source |
-|---|---|---|
-| `P_PRIMARY` | 1.0 | White 2014 base model |
-| `NU_HYPNOZOITE_BATCH` | 3.0 | White 2014 §2, geometric; fitted to the published vivax bands at moderate transmission (§13). Re-fit it per setting |
-| `ALPHA_ACTIVATE` | 1/170 /d | Mehra (White 2014 = 1/344) |
-| `MU_HYPNOZOITE` | 1/442 /d | White 2014 |
-| `K_LATENCY` | 0 | 0 tropical, 2 temperate |
-| `DELTA_LATENCY` | 1/100 | used only if `K_LATENCY > 0` |
+The liver-stage batches a bite seeds, and their activation and death.
 
-### Mosquito-stage genetics
-
-| parameter | default | note |
-|---|---|---|
-| `LAMBDA_OOCYSTS` | 0.0 | → exactly 1 oocyst. Field vivax DMFA median is **7.2/midgut** (wild *An. arabiensis*, Ethiopia) |
-| `K_OOCYSTS` | 0.0 | 0 = Poisson; > 0 = NB. Vivax DMFA counts are overdispersed |
-| `LAMBDA_SPOROZOITES` | 0.0 | → exactly 1 genotype per bite. **Co-transmission impossible at the default** |
-| `GAMETOCYTE_DELAY` | 0 | fixed; vivax realistic ≈ 2–3 d |
-| `P_GAMETOCYTE` | 1.0 | vivax realistic ≈ 0.9 |
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Source: White et al. (2014), section 2. |
+| `ALPHA_ACTIVATE` | 1/170 | per hypnozoite per day | number in [0, 1] | Daily probability that a hypnozoite activates: a relapse. Source: Mehra et al.; White et al. (2014) use 1/344. |
+| `MU_HYPNOZOITE` | 1/442 | per hypnozoite per day | number in (0, 1] | Daily probability that a hypnozoite dies, also while latent. Source: White et al. (2014). |
+| `K_LATENCY` | 0 | stages | whole number >= 0 | Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Source: White et al. (2014). |
+| `DELTA_LATENCY` | 1/100 | per day | number in (0, 1]; checked only when K_LATENCY > 0 | Daily probability that a latent batch moves on one stage. |
 
 ### Genome
 
-| parameter | default |
-|---|---|
-| `GENOME_MODE` | `"full"` (24.2 Mb) |
-| `CHROMOSOMES` | `"1-14"` |
-| `RECOMB_RATE` | −1 (any value ≤ 0 means the default, 7.4e-7/bp; at most 0.5, and run time grows steeply with it) |
-| mutation rate | **0** (hard-coded) |
+The neutral PvP01 genome the model simulates; the mutation rate is 0.
 
-### Interventions, observation, importation
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `GENOME_MODE` | "full" | - | "full" or "core" | "full": the 14 PvP01 chromosomes at full length (24.2 Mb); "core": each at 90% of its length, a placeholder for the core genome. |
+| `CHROMOSOMES` | "1-14" | - | text; chromosome numbers 1 to 14, each once, separated by commas, with low-high ranges | Which PvP01 chromosomes to simulate, such as "1-14" or "1-3,5". |
+| `RECOMB_RATE` | -1 | per bp | number <= 0.5; 0 or below means the default map rate, 7.4e-7 | Crossover rate within a chromosome; chromosomes assort independently. Run time grows steeply with it. Source: Jiang et al. (2011). |
 
-| parameter | default |
-|---|---|
-| `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 — vector control: scales biting, not importation (D46); it does **not** gate treatment (D19) |
-| `SEASONAL_AMP` / `SEASONAL_PHASE` | 0 / 0 — `SEASONAL_AMP` ≥ 0, and 0 means no seasonality; `SEASONAL_PHASE` is the day of the peak |
-| `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD` | 1.0 / 1.0 / 0.5 — drawn once per episode |
-| `RESURGENCE_TRIGGER_TICK` + 4 boosts | 99999, all 1.0 |
-| `IMPORT_*` | off |
-| `RETAIN_FULL_HISTORY` | `T` — needed for IBD to already-cleared infections. Under `F` most historical genomes leave the tree, and `ibd_index()` will warn that ids it was asked about are absent |
-| `VERBOSE` | `F` |
+### Seasonality and vector control
 
-### Case management
+Factors on the biting rate; seasonality also acts on the Poisson import rate.
 
-Treatment is decided where a case arises and applied to the **host** (D20); radical cure is
-nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOODCURE_COVERAGE > 0`.
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `SEASONAL_AMP` | 0 | - | number >= 0 | Amplitude A of the seasonal factor 1 + A cos(2 pi (t - SEASONAL_PHASE) / 365), floored at 0, on biting and on the Poisson import rate; 0 means no seasonality. |
+| `SEASONAL_PHASE` | 0 | day of the year | number | Day of the year of the seasonal peak. |
+| `INTERVENTION_START` | 99999 (never) | day | whole number | First day of vector control. |
+| `INTERVENTION_END` | 99999 (never) | day | whole number | Vector control acts on days INTERVENTION_START to INTERVENTION_END - 1. |
+| `INTERVENTION_EFFICACY` | 0 | fraction | number in [0, 1] | Biting is multiplied by 1 - INTERVENTION_EFFICACY inside the window; importation and treatment are not affected. |
 
-| parameter | default | note |
-|---|---|---|
-| `TREATMENT_START` / `TREATMENT_END` | 0 / 99999 | case management has its own window, separate from `INTERVENTION_*` (D19). It gates the **decision**, not delivery |
-| `TREATMENT_DELAY` | 7.0 d | geometric, mean 7, **at least one day**: a course can never land on the tick the case arises, so the minimum, `1`, means the next day (D24, D32) |
-| `BLOODCURE_COVERAGE` | 0 | P(a detected case is treated). The whole treatment path is off at the default |
-| `P_BLOODCURE_SURVIVAL` | 0 | P(a given clone survives a course: a patent one, or under MDA a subpatent one too). Literature ≈ 0.10 |
-| `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
-| `P_RAD_SURVIVAL` | **0.29** | P(the patient's whole reservoir survives), ≈71% cure (White 2018 / malariasimulation). Per **person**, not per hypnozoite — the same number would mean 95% efficacy under the old per-hypnozoite reading (D20) |
-| `RADCURE_MODE` | `"person"` | `"hypnozoite"` restores per-hypnozoite thinning — the only mode that can partially clear a reservoir |
-| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent earlier that day (D44); day 2 or later when a founder host carries a copy of another founder's genome; **not** gated on the treatment window |
-| `MDA_COVERAGE` | 1.0 | P(the round reaches a host), drawn per host (D28) |
+### Detection and case management
 
-### Recurrence: the third state (§9a)
+A case is detected, decided where it arises and treated later, on the host; radical cure is nested in a blood-stage course. Off by default.
 
-| parameter | default | note |
-|---|---|---|
-| `P_RECRUD_GIVEN_FAIL` | **0.0** | P(a surviving clone is suppressed below patency rather than persisting). At 0 the third state is inert — which matches Taylor et al. 2019: recrudescence is 0.2–0.3% of recurrences after chloroquine or artesunate |
-| `MEAN_RECRUD_DELAY` | 10.5 d | mean delay from suppression to recrudescence, at least one day; a literature assumption pending parameterisation (close to the prior of Taylor et al. 2019, §9a). Geometric: median gap 7 d, ~94% within day 28 (D26, D32, D42) |
-| `RECRUD_DELAY_DIST` | `"geometric"` | the discrete analogue of Taylor's fitted Exponential. `"poisson"` (1 + Poisson(D − 1), mean D) is a tight-window sensitivity arm; `"fixed"` is round(D) days, halves rounded up (11 d at the default 10.5). Every shape is at least one day |
-| `SUBPATENT_INFECTIVITY` | 0.15 | infectiousness of a suppressed clone relative to a patent one. 0.035–0.10 White 2018 IBM, 0.10–0.20 empirically (Koepfli 2021). Neither 0 nor 1 is defensible |
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `P_DETECT_PRIMARY` | 1 | probability | number in [0, 1] | A primary infection or an import is detected, drawn once per episode. |
+| `P_DETECT_RELAPSE` | 1 | probability | number in [0, 1] | A relapse is detected, drawn once per episode. Relapses are often subpatent, so a realistic value is lower. |
+| `BLOODCURE_COVERAGE` | 0 | probability | number in [0, 1] | A detected case is treated: a course clears each patent clone the host carries, unless the clone survives. 0 turns the whole treatment path off. |
+| `P_BLOODCURE_SURVIVAL` | 0 | probability | number in [0, 1] | A clone survives a course: a patent one, or under MDA a subpatent one too. Source: about 0.10 in the literature. |
+| `RADCURE_COVERAGE` | 0 | probability | number in [0, 1] | A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. |
+| `P_RAD_SURVIVAL` | 0.29 | probability | number in [0, 1] | Radical cure fails: the patient's whole reservoir survives (RADCURE_MODE "person"), about 71% cure; or each hypnozoite survives ("hypnozoite"), where the same number would mean 95% efficacy. Source: White et al. (2018); malariasimulation. |
+| `RADCURE_MODE` | "person" | - | "person" or "hypnozoite" | The unit of radical-cure failure: "person", or "hypnozoite", which thins the reservoir hypnozoite by hypnozoite and is the only mode that can clear part of it. |
+| `TREATMENT_DELAY` | 7 | days | number in [1, 1e6] | Mean days from a case to its course: geometric, at least one day, so a course never lands on the day the case arises. |
+| `TREATMENT_START` | 0 | day | whole number | First day on which a detected case can be prescribed a course; case management has its own window, separate from vector control. |
+| `TREATMENT_END` | 99999 (never) | day | whole number | Cases detected on days TREATMENT_START to TREATMENT_END - 1 are treated. The window gates the decision, not the delivery: a course prescribed before the end still arrives. |
 
-### Run metadata
+### Mass drug administration
 
-| parameter | default |
-|---|---|
-| `SIM_ID` | `"default"` — written into `params.tsv` for provenance |
-| `SIM_DAYS` | 365 |
+One round, through the same course as case management.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `MDA_TICK` | 99999 (never) | day | whole number; not 1 when a founder host carries a copy of another founder's genome | Day of one MDA round, through the same course as case management: blood-stage drugs, and radical cure as RADCURE_COVERAGE gives it, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. |
+| `MDA_COVERAGE` | 1 | probability | number in [0, 1] | The round reaches a host, drawn for each host. |
+
+### Recrudescence
+
+A clone that survives a course can be suppressed below patency and return. Off by default.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `P_RECRUD_GIVEN_FAIL` | 0 | probability | number in [0, 1] | A clone that survives a course is suppressed below patency, to recrudesce later, rather than persisting. At 0 the third recurrence state is inert, which matches recrudescence being 0.2 to 0.3% of recurrences after chloroquine or artesunate. Source: Taylor et al. (2019). |
+| `MEAN_RECRUD_DELAY` | 10.5 | days | number in [1, 1e6] | Mean days from suppression to recrudescence, at least one; a literature assumption pending parameterisation. Geometric at the default: a median of 7 days, about 94% within 28 days. Source: close to the prior of Taylor et al. (2019). |
+| `RECRUD_DELAY_DIST` | "geometric" | - | "geometric" or "poisson" or "fixed" | Shape of that delay: "geometric", the discrete form of an exponential delay; "poisson", 1 + Poisson(D - 1) with mean D, a tight-window sensitivity arm; or "fixed", round(D) days with halves rounded up (11 days at 10.5). Every shape is at least one day. |
+| `P_DETECT_RECRUD` | 0.5 | probability | number in [0, 1] | A recrudescence is detected; it should usually sit well below P_DETECT_PRIMARY. Source: Ross et al. (2025) put recurrence detectability at 0.13 to 0.49 of a primary's. |
+| `SUBPATENT_INFECTIVITY` | 0.15 | relative | number in [0, 1] | Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 measured (Koepfli et al. 2021). |
+
+### Resurgence
+
+Multipliers that switch on from one day, to start a resurgence.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `RESURGENCE_TRIGGER_TICK` | 99999 (never) | day | whole number | Day from which the four boosts apply. |
+| `BITING_RATE_BOOST` | 1 | multiplier | number >= 0 | Multiplies BITING_RATE from the trigger. |
+| `ALPHA_ACTIVATE_BOOST` | 1 | multiplier | number >= 0 | Multiplies ALPHA_ACTIVATE from the trigger, capped so that activation and death stay within one day's probability. |
+| `NU_HYPNOZOITE_BATCH_BOOST` | 1 | multiplier | number >= 0 | Multiplies NU_HYPNOZOITE_BATCH from the trigger. |
+
+### Importation
+
+Three routes, which add up: a pulse, and a fixed daily count and a Poisson rate in a window. Each host takes at most one import a day, and a host at MAX_MOI takes none.
+
+| parameter | default | unit | allowed | meaning |
+|---|---|---|---|---|
+| `IMPORT_TICK` | 99999 (never) | day | whole number | Day of one pulse of N_IMPORTS imports. |
+| `N_IMPORTS` | 0 | imports | whole number >= 0; warns above N_HOSTS | Size of the pulse. |
+| `IMPORT_START` | 99999 (never) | day | whole number | First day of the import window. |
+| `IMPORT_END` | 99999 (never) | day | whole number | Imports in the window arrive on days max(1, IMPORT_START) to min(IMPORT_END - 1, SIM_DAYS). |
+| `N_IMPORTS_PER_TICK` | 0 | imports a day | whole number >= 0; warns when a day's fixed imports exceed N_HOSTS | A fixed number of imports on each day of the window. |
+| `IMPORT_RATE_PER_TICK` | 0 | imports a day | number in [0, 1e6]; at its seasonal and boosted peak, at most 1e6 a day | Mean of a Poisson number of imports on each day of the window; it follows the season. |
+| `IMPORT_RATE_BOOST` | 1 | multiplier | number >= 0 | Multiplies IMPORT_RATE_PER_TICK from RESURGENCE_TRIGGER_TICK. |
+
+<!-- END parameter tables -->
 
 ---
 
