@@ -399,3 +399,42 @@ test_that("a founder-free run is marked never started whatever its import schedu
   expect_true("vh_inoculation_import" %in% o$events$event_type)
   expect_identical(o[1:3], list(end = 2L, never_started = FALSE, extinct_tick = 2L))
 })
+
+## A set whose floats need all 15 digits, a probability R stores as SLiM is given it, whole numbers
+## beyond the integer range, and a UTF-8 SIM_ID with an apostrophe.
+record_set <- function() vivax_params(N_HOSTS = 30, N_MOSQ = 60, SIM_DAYS = 60, ALPHA_ACTIVATE = 1/170,
+  BITING_RATE = 0.1 + 0.02, SEASONAL_AMP = 1/3, SEASONAL_PHASE = 100/7, P_TRANS_VH = 1 + 2e-16,
+  LAMBDA_SPOROZOITES = 2/3, LAMBDA_OOCYSTS = exp(1), K_OOCYSTS = 0.003, RECOMB_RATE = 1e-7/3,
+  INTERVENTION_START = 3e9, INTERVENTION_END = 3e9, MDA_TICK = 30, MDA_COVERAGE = 0.123456789012345678,
+  SIM_ID = intToUtf8(c(0x43, 0xf4, 0x74, 0x65, 0x27, 0x73)), GENOME_MODE = "core")
+
+test_that("load_params() gives the set a run was made from, and run_sim() of it repeats the run", {
+  skip_if_no_slim()
+  p <- record_set()
+  r1 <- suppressMessages(run_sim(p, seed = 7, outdir = tempfile("mfwd_rec1_")))
+  expect_identical(load_params(r1), p)
+  expect_identical(load_params(r1$outdir), p)
+  r2 <- suppressMessages(run_sim(load_params(r1), seed = r1$seed, outdir = tempfile("mfwd_rec2_")))
+  files <- c("events.tsv", "state.tsv", "params.tsv")
+  expect_identical(unname(tools::md5sum(file.path(r2$outdir, files))),
+                   unname(tools::md5sum(file.path(r1$outdir, files))))
+})
+
+test_that("load_run() carries the run's record, typed", {
+  skip_if_no_slim()
+  r <- suppressMessages(run_sim(record_set(), seed = 7, outdir = tempfile("mfwd_rec3_")))
+  expect_identical(r$seed, 7L)
+  expect_identical(r$slim_version, slim_version())
+  expect_identical(r$malariafwd_version, as.character(utils::packageVersion("malariafwd")))
+  expect_identical(r$n_chromosomes, 14L)
+  expect_identical(r$genome_length, as.integer(sum(chrom_map(r)$length)))
+  expect_identical(r$recomb_within, 3.33333333333333e-08)
+  expect_identical(r$extinct_tick, NA_integer_)
+  expect_false(r$never_started)
+  expect_identical(load_run(r), r)
+  expect_output(print(r), "60 days, 30 hosts, 60 mosquitoes")
+  expect_output(print(r), "SLiM [0-9.]+, malariafwd")
+  ## the test helper writes params.tsv as the model does
+  rec <- malariafwd:::.read_params_tsv(file.path(r$outdir, "params.tsv"))$record
+  expect_setequal(params_tsv_lines(load_params(r), rec), readLines(file.path(r$outdir, "params.tsv"), encoding = "UTF-8"))
+})

@@ -64,3 +64,49 @@
   if (length(w)) warning(file, " in ", dir, ": ", paste(unique(w), collapse = "; "), call. = FALSE)
   d[]
 }
+
+## The rows of params.tsv that record the run rather than set it, each with its class: the seed SLiM
+## ran with (beyond the 32-bit range it is kept as a double), the versions, the genome the model
+## derived, and the outcome rows a run that went extinct or never started ends with.
+.RECORD_ROWS <- c(ACTUAL_SEED = "integer", SEED = "integer", SLIM_VERSION = "character",
+  MALARIAFWD_VERSION = "character", GENOME_LENGTH = "integer", N_CHROMOSOMES = "integer",
+  RECOMB_WITHIN = "double", EXTINCT_TICK = "integer", NEVER_STARTED = "integer")
+
+## A run's params.tsv, read as the parameter set it was made from: `params`, every parameter in
+## the defaults' order and types (one the file lacks takes its default, the founder counts
+## following one another as in vivax_params()); `record`, the record rows it has, typed; and
+## `missing` and `dropped`, the parameters it lacks and the rows that are neither. Each line is
+## split at its first tab, so a value keeps any tab or space it holds.
+.read_params_tsv <- function(path) {
+  dir <- dirname(path)
+  where <- paste("params.tsv in", dir)
+  if (!file.exists(path))
+    stop("no params.tsv in ", dir, ": it is not a malariafwd run directory, or the run did not finish.",
+         call. = FALSE)
+  l <- sub("\r$", "", readLines(path, encoding = "UTF-8", warn = FALSE))
+  if (!length(l) || l[1] != "param\tvalue")
+    stop(where, " does not start with the line param<TAB>value.", call. = FALSE)
+  l <- l[-1]
+  tab <- regexpr("\t", l, fixed = TRUE)
+  bad <- which(nzchar(l) & tab < 0)
+  if (length(bad)) stop(where, ": line ", bad[1] + 1, " has no tab.", call. = FALSE)
+  keep <- nzchar(l)
+  l <- l[keep]; tab <- tab[keep]
+  nm <- substr(l, 1, tab - 1)
+  txt <- stats::setNames(substring(l, tab + 1), nm)
+  if (anyDuplicated(nm)) stop(where, ": ", nm[duplicated(nm)][1], " is given twice.", call. = FALSE)
+  d <- .malariafwd_defaults
+  p <- utils::modifyList(d, .type_params(txt, where))
+  if (!"N_FOUNDER_HOSTS"    %in% nm) p$N_FOUNDER_HOSTS    <- p$N_FOUNDERS
+  if (!"N_FOUNDER_LINEAGES" %in% nm) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
+  rec <- list()
+  for (k in intersect(names(.RECORD_ROWS), nm)) {
+    if (.RECORD_ROWS[[k]] == "character") { rec[[k]] <- txt[[k]]; next }
+    v <- suppressWarnings(as.numeric(txt[[k]]))
+    if (is.na(v)) stop(where, ": ", k, " is \"", txt[[k]], "\", not a number.", call. = FALSE)
+    rec[[k]] <- if (.RECORD_ROWS[[k]] == "integer" && v == round(v) && abs(v) <= .Machine$integer.max)
+      as.integer(v) else v
+  }
+  list(params = structure(p, class = "vivax_params"), record = rec,
+       missing = setdiff(names(d), nm), dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS))))
+}

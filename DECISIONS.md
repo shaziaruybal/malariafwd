@@ -19,6 +19,43 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D52 — load_params() returns the parameter set a run was made from · 2026-11-07 · Accepted
+**Context.** `load_params()` returned every value of `params.tsv` as a string, with the record rows
+(`ACTUAL_SEED`, `SEED`, the versions, `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN`) among them,
+so `run_sim(load_params(run))` failed on the names it did not know, and comparisons of its values
+were comparisons of strings (review M16). `load_run()` accepted any directory, and gave a run with
+seed `NA` for one with no outputs (m49). The package's `%||%` masked base R's, with other semantics
+(n19), and `chrom_map()` parsed `CHROMOSOMES` its own way (m34).
+**Decision.** `load_params()` returns a `vivax_params` set: every parameter, in the defaults' order
+and types, read from the text the model wrote (T or F, numbers stored by D49's rule, strings as they
+are), and not validated. The record rows are typed fields of the `load_run()` object: `seed`,
+`slim_version`, `malariafwd_version`, `genome_length`, `n_chromosomes` and `recomb_within`, beside
+`extinct_tick` and `never_started`. A file that lacks parameters, or holds rows that are neither
+parameters nor record rows, loads with the defaults for the first and without the second, and warns
+once per directory per session (class `malariafwd_params_mismatch`, under `malariafwd_run_warning`).
+`load_run()` refuses a directory without `params.tsv` or `events.tsv`. `chrom_map()` parses
+`CHROMOSOMES` with `validate_params()`'s parser and stops when the chromosomes do not add up to the
+recorded `GENOME_LENGTH`. `%||%` is gone. Printing a run shows its size, outcome, non-default
+parameters and versions (m55).
+**Rationale.** A run's record should rebuild the run, and the set `run_sim()` takes is the form that
+does; the record rows describe the run rather than set it.
+**Alternatives rejected.** *The record rows in an attribute of the set* -- most list operations drop
+an attribute, and the run object is where a run's facts are. *Validating on load* -- a reader must
+not fail on a file's content, and `run_sim()` checks a set before it runs. *Filling missing
+parameters silently* -- every saved run of an earlier version lacks some, and the values filled in
+are this version's defaults, not settings of that run.
+**Consequences.** Runs are unchanged. `run_sim(load_params(run), seed = run$seed)` repeats a run
+started from R exactly when each of its non-zero floats lies between 1e-130 and 1e15 in magnitude.
+Code that read a record row from `load_params()` (`p$ACTUAL_SEED`) reads the run instead
+(`run$seed`), and `as.numeric()` on a parameter does nothing. Each saved run of an earlier version
+warns once a session until it is made again.
+**How to verify.** `tests/testthat/test-run.R` (the set read from a run is the set it was made from,
+and a run from it is byte-identical; the record is typed; the test helper writes `params.tsv` as the
+model does) and `tests/testthat/test-load.R` (types, unreadable files, the warning given once, the
+record rows, a directory that is not a run).
+
+---
+
 ## D51 — A host's clones of the day count toward MAX_MOI, and do not stop a bite · 2026-11-07 · Accepted
 **Context.** A blood-stage clone a host gains in `reproduction()`, by a relapse or a bite, is not in
 the host's individuals until that callback is over, while the host is tagged infected at once

@@ -1,7 +1,5 @@
 ## load.R -- the `vivax_run` object + tidy loaders for a run's outputs.
 
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || is.na(a[1])) b else a
-
 # Accept either a `vivax_run` object or a bare directory path.
 .run_dir <- function(x) {
   if (inherits(x, "vivax_run")) return(x$outdir)
@@ -10,11 +8,40 @@
        "got an object of class ", class(x)[1], ".", call. = FALSE)
 }
 
-#' @keywords internal
-read_params_tsv <- function(path) {
-  if (!file.exists(path)) return(list())
-  d <- data.table::fread(path, sep = "\t", header = TRUE, showProgress = FALSE)
-  stats::setNames(as.list(d$value), d$param)
+## Warnings given once per directory per session, keyed by class and path. Each also has the
+## class malariafwd_run_warning, so that suppressWarnings(classes = "malariafwd_run_warning")
+## silences them all.
+.warned <- new.env(parent = emptyenv())
+
+.warn_once <- function(dir, class, msg) {
+  key <- paste(class, normalizePath(dir, winslash = "/", mustWork = FALSE))
+  if (!is.null(.warned[[key]])) return(invisible(FALSE))
+  .warned[[key]] <- TRUE
+  warning(structure(class = c(class, "malariafwd_run_warning", "warning", "condition"),
+                    list(message = msg, call = NULL)))
+  invisible(TRUE)
+}
+
+## A params.tsv that does not hold this version's parameters (r from .read_params_tsv()).
+.warn_params_mismatch <- function(r, dir) {
+  if (!length(r$missing) && !length(r$dropped)) return(invisible(FALSE))
+  one <- function(x, a, b) if (length(x) == 1L) a else b
+  why <- c(if (length(r$missing))
+             paste0("it lacks ", paste(r$missing, collapse = ", "), " (",
+                    one(r$missing, "its default is", "their defaults are"), " used)"),
+           if (length(r$dropped))
+             paste0(paste(r$dropped, collapse = ", "),
+                    one(r$dropped, " is not a parameter", " are not parameters"), " (left out)"))
+  .warn_once(dir, "malariafwd_params_mismatch",
+             paste0("params.tsv in ", dir, " does not match this version's parameters: ",
+                    paste(why, collapse = ", and "), ". This is said once per directory per session."))
+}
+
+## A run's parameter set, for package code that needs a few of its values: what load_params()
+## gives, without the warning.
+.params_of <- function(run) {
+  if (inherits(run, "vivax_run") && inherits(run$params, "vivax_params")) return(run$params)
+  .read_params_tsv(file.path(.run_dir(run), "params.tsv"))$params
 }
 
 #' Load a completed run as a `vivax_run` object
@@ -35,22 +62,43 @@ read_params_tsv <- function(path) {
 #' `params.tsv` ends with a `NEVER_STARTED` row. It holds no parasite: its tree sequence has no
 #' nodes and its events are at most imports that did not take, so the readers that need a parasite,
 #' such as [arg_summary()] and [arg_diversity()], stop on it.
-#' @param outdir a run output directory (or an existing `vivax_run`).
-#' @return a `vivax_run` object: `outdir`, `params` (from `params.tsv`, as [load_params()] gives
-#'   them), `seed`, `extinct_tick`, the tick on which the run went extinct and ended, or `NA`
-#'   for a run that did not go extinct, and `never_started`, `TRUE` for a run that never started.
+#'
+#' A directory without `params.tsv` or `events.tsv` is not a run and is refused.
+#' @param outdir a run output directory, or a `vivax_run`, whose directory is read again.
+#' @return a `vivax_run` object, a list of:
+#'   * `outdir`, the run directory (character);
+#'   * `params`, the parameter set, as [load_params()] gives it;
+#'   * `seed`, the seed SLiM ran with (integer; a double beyond the 32-bit range, which only a run
+#'     started with `slim -s` can have);
+#'   * `extinct_tick`, the tick on which the run went extinct and ended, or `NA` (integer);
+#'   * `never_started`, `TRUE` for a run that never started (logical);
+#'   * `slim_version` and `malariafwd_version` (character; `malariafwd_version` is `"unknown"`
+#'     for a run started with `slim` directly);
+#'   * `genome_length`, the simulated genome in bp, and `n_chromosomes` (integers), and
+#'     `recomb_within`, the crossover rate within a chromosome per bp per meiosis (double).
+#'
+#'   A field the run's `params.tsv` does not record is `NA`.
 #' @export
 load_run <- function(outdir) {
-  outdir <- .run_dir(outdir)
-  if (!dir.exists(outdir)) stop("no such run directory: ", outdir, call. = FALSE)
-  p <- read_params_tsv(file.path(outdir, "params.tsv"))
-  seed <- suppressWarnings(as.integer(p[["ACTUAL_SEED"]] %||% p[["SEED"]] %||% NA))
-  extinct <- suppressWarnings(as.integer(p[["EXTINCT_TICK"]] %||% NA))
-  never <- !is.null(p[["NEVER_STARTED"]])
-  p[["EXTINCT_TICK"]] <- NULL   # outcomes, not parameters: see load_params()
-  p[["NEVER_STARTED"]] <- NULL
-  structure(list(outdir = outdir, params = p, seed = seed, extinct_tick = extinct,
-                 never_started = never), class = "vivax_run")
+  dir <- .run_dir(outdir)
+  if (!dir.exists(dir)) stop("no such run directory: ", dir, call. = FALSE)
+  miss <- c("params.tsv", "events.tsv")[!file.exists(file.path(dir, c("params.tsv", "events.tsv")))]
+  if (length(miss))
+    stop(dir, " is not a malariafwd run: it has no ", paste(miss, collapse = " or "), ".", call. = FALSE)
+  r <- .read_params_tsv(file.path(dir, "params.tsv"))
+  .warn_params_mismatch(r, dir)
+  rec <- r$record
+  or <- function(x, y) if (is.null(x)) y else x
+  structure(list(outdir = dir, params = r$params,
+                 seed = or(rec$ACTUAL_SEED, or(rec$SEED, NA_integer_)),
+                 extinct_tick = or(rec$EXTINCT_TICK, NA_integer_),
+                 never_started = !is.null(rec$NEVER_STARTED),
+                 slim_version = or(rec$SLIM_VERSION, NA_character_),
+                 malariafwd_version = or(rec$MALARIAFWD_VERSION, NA_character_),
+                 genome_length = or(rec$GENOME_LENGTH, NA_integer_),
+                 n_chromosomes = or(rec$N_CHROMOSOMES, NA_integer_),
+                 recomb_within = or(rec$RECOMB_WITHIN, NA_real_)),
+            class = "vivax_run")
 }
 
 #' Load the event log of a run
@@ -80,22 +128,30 @@ load_state <- function(run) .read_output(run, "state.tsv", .STATE_SCHEMA, .OUTPU
 #' @export
 trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
-#' Resolved parameters of a run (from `params.tsv`)
+#' The parameter set a run was made from
 #'
-#' An extinct run's `params.tsv` ends with an `EXTINCT_TICK` row, and one that never started with a
-#' `NEVER_STARTED` row (see [load_run()]). They are outcomes of the run rather than parameters, so
-#' they are left out here, and every run's list has the same names; [load_run()] reads them into
-#' the run's `extinct_tick` and `never_started`.
+#' Reads `params.tsv` into a [vivax_params()] object holding every parameter, in order and of its
+#' type: `run_sim(load_params(run), seed = run$seed)` gives the same run again. Values are not
+#' checked here ([run_sim()] checks them). The seed, the versions, the derived genome and the
+#' outcome rows are on the [load_run()] object instead.
+#'
+#' A file from another version of the package can lack some parameters, which take their
+#' defaults, or hold rows that are not parameters, which are left out. Either warns, once per
+#' directory per session, with class `malariafwd_params_mismatch`.
 #' @param run a `vivax_run` or a run directory path.
-#' @return a named list of the resolved parameter values, with `ACTUAL_SEED`, `SLIM_VERSION`,
-#'   `MALARIAFWD_VERSION` and the derived `GENOME_LENGTH`, `N_CHROMOSOMES` and `RECOMB_WITHIN`.
+#' @return a [vivax_params()] object.
+#' @examples
+#' \dontrun{
+#' run <- load_run("runs/demo")
+#' run_sim(load_params(run), seed = run$seed + 1, outdir = "runs/demo_seed2")
+#' }
 #' @export
 load_params <- function(run) {
-  p <- if (inherits(run, "vivax_run")) run$params
-       else read_params_tsv(file.path(.run_dir(run), "params.tsv"))
-  p[["EXTINCT_TICK"]] <- NULL
-  p[["NEVER_STARTED"]] <- NULL
-  p
+  if (inherits(run, "vivax_run") && inherits(run$params, "vivax_params")) return(run$params)
+  dir <- .run_dir(run)
+  r <- .read_params_tsv(file.path(dir, "params.tsv"))
+  .warn_params_mismatch(r, dir)
+  r$params
 }
 
 #' Detect the model generation that produced a run

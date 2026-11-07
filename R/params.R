@@ -221,6 +221,33 @@ vivax_params <- function(...) {
 ## The defaults, stored as a set stores them.
 .malariafwd_defaults <- .normalise_params(.malariafwd_defaults)
 
+## The values of parameter `name` from the text a run's record holds for them: T or F for a
+## logical, a number for a number, and text as it is ("NA" and spaces included). `where` names the
+## file in messages.
+.type_param_text <- function(name, values, where) {
+  d <- .malariafwd_defaults[[name]]
+  if (is.logical(d)) {
+    out <- c("T" = TRUE, "TRUE" = TRUE, "F" = FALSE, "FALSE" = FALSE)[values]
+    bad <- which(is.na(out))
+    if (length(bad)) stop(where, ": ", name, " is \"", values[bad[1]], "\", not T or F.", call. = FALSE)
+    return(unname(out))
+  }
+  if (is.numeric(d)) {
+    out <- suppressWarnings(as.numeric(values))
+    bad <- which(is.na(out))
+    if (length(bad)) stop(where, ": ", name, " is \"", values[bad[1]], "\", not a number.", call. = FALSE)
+    return(out)
+  }
+  values
+}
+
+## The parameters among a named vector of texts (from a run's record), each stored as a set stores
+## it; names that are not parameters are left to the caller.
+.type_params <- function(txt, where) {
+  nm <- intersect(names(txt), names(.malariafwd_defaults))
+  .normalise_params(stats::setNames(lapply(nm, function(k) .type_param_text(k, txt[[k]], where)), nm))
+}
+
 ## The days that default to 99999, which the model reads as "never".
 .never_params <- names(.malariafwd_defaults)[vapply(.malariafwd_defaults, identical, logical(1), 99999L)]
 
@@ -528,7 +555,8 @@ validate_params <- function(p) {
 }
 
 ## The model accepts "1-14", "1,3,5" or "5-8": comma-separated chromosome numbers or low-high
-## ranges, each chromosome once. The ends are checked before a range is expanded.
+## ranges, each chromosome once. The ends are checked before a range is expanded. Gives the
+## chromosomes, in the order listed.
 .check_chromosomes <- function(x) {
   bad <- function(why) stop("CHROMOSOMES must be chromosome numbers 1-14, comma-separated, with ",
                             "low-high ranges, e.g. \"1-14\" or \"1-3,5\" (", why, "); got \"", x,
@@ -541,6 +569,7 @@ validate_params <- function(p) {
     seq(r[1], r[length(r)])
   }))
   if (anyDuplicated(idx)) bad("a chromosome is listed twice")
+  invisible(idx)
 }
 
 ## The days of the run on which the parameters bring imports, as the model reads them: the pulse
@@ -622,10 +651,15 @@ as_slim_args <- function(params) {
 #' @export
 print.vivax_params <- function(x, ...) {
   cat("<vivax_params>", length(x), "parameters\n")
+  .print_non_default(x)
+  invisible(x)
+}
+
+## The parameters of a set that differ from their defaults, one a line.
+.print_non_default <- function(x) {
   nd <- x[!vapply(names(x), function(n) identical(x[[n]], .malariafwd_defaults[[n]]), logical(1))]
   if (length(nd)) {
     cat("  non-default:\n")
     for (n in names(nd)) cat(sprintf("    %-24s = %s\n", n, format(nd[[n]])))
   } else cat("  (all defaults)\n")
-  invisible(x)
 }

@@ -1302,16 +1302,19 @@ of creation in `events.tsv`.
 
 ### 16.4 Reproducibility
 
-`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the
-derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
+`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the derived
+`GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
 (`SLIM_VERSION`, `MALARIAFWD_VERSION`). Floats are recorded to 15 significant digits, the precision
-`run_sim()` passes to SLiM, and `vivax_params()` stores a double as that value, so a set rebuilt
-from the record is the set the run used. An extinct run's file ends with an `EXTINCT_TICK` row, and a
-run that never started with a `NEVER_STARTED` row (§2). These are outcomes rather than parameters:
-`load_params()` leaves them out, so every run's list has the same names, and `load_run()` reads them
-into the run's `extinct_tick` and `never_started`. Requires SLiM ≥ 5.2 on `PATH` and
-Python with `tskit` for IBD. `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared
-infections — without it, relapse-to-prior comparisons silently lose ancestors.
+`run_sim()` passes to SLiM. An extinct run's file ends with an `EXTINCT_TICK` row, and a run that
+never started with a `NEVER_STARTED` row (§2). `load_params()` reads the parameters back into the
+`vivax_params()` set the run was made from, each of its type, so
+`run_sim(load_params(run), seed = run$seed)` repeats a run started from R exactly when each of its
+non-zero floats lies between 1e-130 and 1e15 in magnitude. The seed, the versions, the derived
+genome and the outcome rows are on the `load_run()` object (`seed`, `slim_version`,
+`malariafwd_version`, `genome_length`, `n_chromosomes`, `recomb_within`, `extinct_tick`,
+`never_started`). Requires SLiM ≥ 5.2 on `PATH` and Python with `tskit` for IBD.
+`RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it,
+relapse-to-prior comparisons silently lose ancestors.
 
 ### 16.5 Worked example
 

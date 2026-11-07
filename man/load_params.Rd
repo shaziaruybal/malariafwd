@@ -2,7 +2,7 @@
 % Please edit documentation in R/load.R
 \name{load_params}
 \alias{load_params}
-\title{Resolved parameters of a run (from \code{params.tsv})}
+\title{The parameter set a run was made from}
 \usage{
 load_params(run)
 }
@@ -10,12 +10,22 @@ load_params(run)
 \item{run}{a \code{vivax_run} or a run directory path.}
 }
 \value{
-a named list of the resolved parameter values, with \code{ACTUAL_SEED}, \code{SLIM_VERSION},
-\code{MALARIAFWD_VERSION} and the derived \code{GENOME_LENGTH}, \code{N_CHROMOSOMES} and \code{RECOMB_WITHIN}.
+a \code{\link[=vivax_params]{vivax_params()}} object.
 }
 \description{
-An extinct run's \code{params.tsv} ends with an \code{EXTINCT_TICK} row, and one that never started with a
-\code{NEVER_STARTED} row (see \code{\link[=load_run]{load_run()}}). They are outcomes of the run rather than parameters, so
-they are left out here, and every run's list has the same names; \code{\link[=load_run]{load_run()}} reads them into
-the run's \code{extinct_tick} and \code{never_started}.
+Reads \code{params.tsv} into a \code{\link[=vivax_params]{vivax_params()}} object holding every parameter, in order and of its
+type: \code{run_sim(load_params(run), seed = run$seed)} gives the same run again. Values are not
+checked here (\code{\link[=run_sim]{run_sim()}} checks them). The seed, the versions, the derived genome and the
+outcome rows are on the \code{\link[=load_run]{load_run()}} object instead.
+}
+\details{
+A file from another version of the package can lack some parameters, which take their
+defaults, or hold rows that are not parameters, which are left out. Either warns, once per
+directory per session, with class \code{malariafwd_params_mismatch}.
+}
+\examples{
+\dontrun{
+run <- load_run("runs/demo")
+run_sim(load_params(run), seed = run$seed + 1, outdir = "runs/demo_seed2")
+}
 }

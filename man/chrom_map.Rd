@@ -15,7 +15,8 @@ a data.table of \code{chrom} (PvP01 number), \code{start}, \code{end}, \code{len
 \description{
 The model simulates the 14 PvP01 chromosomes as ONE concatenated linkage group. This
 recovers the chromosome boundaries in those concatenated coordinates, from the genome
-parameters the run itself recorded (\code{GENOME_MODE}, \code{CHROMOSOMES}).
+parameters the run itself recorded (\code{GENOME_MODE}, \code{CHROMOSOMES}), and stops if they do not
+add up to the genome length the run recorded.
 }
 \examples{
 \dontrun{chrom_map(run)}

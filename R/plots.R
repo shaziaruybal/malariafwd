@@ -141,7 +141,7 @@ plot_host_trajectory <- function(state, events, host_id,
 plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   .need_ggplot(); .need_patchwork()
   st <- as.data.table(load_state(run)); ev <- as.data.table(load_events(run))
-  rp <- load_params(run); nh <- as.numeric(rp$N_HOSTS); nm <- as.numeric(rp$N_MOSQ)
+  rp <- .params_of(run); nh <- as.numeric(rp$N_HOSTS); nm <- as.numeric(rp$N_MOSQ)
   h <- st[entity_type == "human"]; endt <- max(st$tick); burn <- round(endt * burn_frac)
   keep <- function(d) d[w <= endt - bin]
   h[, w := (tick %/% bin) * bin]

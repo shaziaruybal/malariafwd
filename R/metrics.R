@@ -199,7 +199,7 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
 #' @export
 force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
-  nh <- as.numeric(load_params(run)$N_HOSTS)
+  nh <- as.numeric(.params_of(run)$N_HOSTS)
   cs <- classify_cases(load_events(run))
   ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
   ## contained imports, so the returned vocabulary depended on run CONTENT: `baseline` came

@@ -7,12 +7,24 @@
 load_run(outdir)
 }
 \arguments{
-\item{outdir}{a run output directory (or an existing \code{vivax_run}).}
+\item{outdir}{a run output directory, or a \code{vivax_run}, whose directory is read again.}
 }
 \value{
-a \code{vivax_run} object: \code{outdir}, \code{params} (from \code{params.tsv}, as \code{\link[=load_params]{load_params()}} gives
-them), \code{seed}, \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA}
-for a run that did not go extinct, and \code{never_started}, \code{TRUE} for a run that never started.
+a \code{vivax_run} object, a list of:
+\itemize{
+\item \code{outdir}, the run directory (character);
+\item \code{params}, the parameter set, as \code{\link[=load_params]{load_params()}} gives it;
+\item \code{seed}, the seed SLiM ran with (integer; a double beyond the 32-bit range, which only a run
+started with \code{slim -s} can have);
+\item \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA} (integer);
+\item \code{never_started}, \code{TRUE} for a run that never started (logical);
+\item \code{slim_version} and \code{malariafwd_version} (character; \code{malariafwd_version} is \code{"unknown"}
+for a run started with \code{slim} directly);
+\item \code{genome_length}, the simulated genome in bp, and \code{n_chromosomes} (integers), and
+\code{recomb_within}, the crossover rate within a chromosome per bp per meiosis (double).
+}
+
+A field the run's \code{params.tsv} does not record is \code{NA}.
 }
 \description{
 Wraps a run's output directory; use \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=trees_path]{trees_path()}}
@@ -32,4 +44,6 @@ last import day, but not before tick 10, or on its last day if that comes first,
 \code{params.tsv} ends with a \code{NEVER_STARTED} row. It holds no parasite: its tree sequence has no
 nodes and its events are at most imports that did not take, so the readers that need a parasite,
 such as \code{\link[=arg_summary]{arg_summary()}} and \code{\link[=arg_diversity]{arg_diversity()}}, stop on it.
+
+A directory without \code{params.tsv} or \code{events.tsv} is not a run and is refused.
 }

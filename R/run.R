@@ -21,8 +21,8 @@
 #'   `NULL` (default) leaves the param as set (quiet).
 #' @param timeout seconds before the run is stopped, with an error saying so (`Inf` = no limit).
 #' @param echo if `TRUE`, stream SLiM output live to the console.
-#' @return invisibly, a `vivax_run` object (`outdir`, `params`, `seed`, `extinct_tick`,
-#'   `never_started`; see [load_run()]). A run that goes extinct, with no parasite left and no
+#' @return invisibly, a `vivax_run` object: the run directory, its parameter set, seed, outcome,
+#'   versions and genome (see [load_run()]). A run that goes extinct, with no parasite left and no
 #'   importation still to come, ends on that tick and gives a message; so does a founder-free run
 #'   whose imports never established a parasite.
 #' @examples
@@ -91,7 +91,7 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
             "importation was still to come, so its outputs end there.")
   if (isTRUE(run$never_started))
     message("The run never started and ended on tick ",
-            read_params_tsv(file.path(outdir, "params.tsv"))[["NEVER_STARTED"]], " of ",
+            .read_params_tsv(file.path(outdir, "params.tsv"))$record$NEVER_STARTED, " of ",
             .slim_num(params$SIM_DAYS), ": no import established a parasite and none was still to ",
             "come, so its outputs hold no parasite.")
   invisible(run)
@@ -224,10 +224,18 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
 
 #' @export
 print.vivax_run <- function(x, ...) {
-  cat("<vivax_run> seed", x$seed, "\n  outdir:", x$outdir, "\n")
+  p <- x$params
+  typed <- inherits(p, "vivax_params")
+  cat("<vivax_run> seed", format(x$seed), "\n  outdir:", x$outdir, "\n")
+  if (typed)
+    cat("  ", .slim_num(p$SIM_DAYS), " days, ", .slim_num(p$N_HOSTS), " hosts, ", .slim_num(p$N_MOSQ),
+        " mosquitoes\n", sep = "")
   if (!is.null(x$extinct_tick) && !is.na(x$extinct_tick))
-    cat("  went extinct on tick", x$extinct_tick, "of", x$params$SIM_DAYS %||% NA, "\n")
+    cat("  went extinct on tick", x$extinct_tick, "of", format(p$SIM_DAYS), "\n")
   if (isTRUE(x$never_started))
     cat("  never started: no import established a parasite\n")
+  if (typed) .print_non_default(p)
+  if (!is.null(x$slim_version))
+    cat("  SLiM ", x$slim_version, ", malariafwd ", x$malariafwd_version, "\n", sep = "")
   invisible(x)
 }

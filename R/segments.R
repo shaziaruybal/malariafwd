@@ -15,21 +15,23 @@
 #'
 #' The model simulates the 14 PvP01 chromosomes as ONE concatenated linkage group. This
 #' recovers the chromosome boundaries in those concatenated coordinates, from the genome
-#' parameters the run itself recorded (`GENOME_MODE`, `CHROMOSOMES`).
+#' parameters the run itself recorded (`GENOME_MODE`, `CHROMOSOMES`), and stops if they do not
+#' add up to the genome length the run recorded.
 #' @param run a run directory or `vivax_run`.
 #' @return a data.table of `chrom` (PvP01 number), `start`, `end`, `length` in concatenated bp.
 #' @examples
 #' \dontrun{chrom_map(run)}
 #' @export
 chrom_map <- function(run) {
-  p <- load_params(run)
-  spec <- as.character(p[["CHROMOSOMES"]] %||% "1-14")
-  idx <- unlist(lapply(strsplit(spec, ",")[[1]], function(tok) {
-    q <- strsplit(trimws(tok), "-")[[1]]
-    if (length(q) == 2) seq(as.integer(q[1]), as.integer(q[2])) else as.integer(q)
-  }))
+  r <- .read_params_tsv(file.path(.run_dir(run), "params.tsv"))
+  p <- r$params
+  idx <- .check_chromosomes(p$CHROMOSOMES)
   len <- .PVP01_FULL[idx]
-  if (identical(as.character(p[["GENOME_MODE"]] %||% "full"), "core")) len <- round(len * 0.90)
+  if (p$GENOME_MODE == "core") len <- round(len * 0.90)
+  gl <- r$record$GENOME_LENGTH
+  if (!is.null(gl) && sum(len) != gl)
+    stop("CHROMOSOMES \"", p$CHROMOSOMES, "\" in ", p$GENOME_MODE, " mode is ", .slim_num(sum(len)),
+         " bp, but the run recorded GENOME_LENGTH ", .slim_num(gl), ".", call. = FALSE)
   data.table::data.table(chrom = idx, length = len,
                          start = cumsum(c(0, utils::head(len, -1))), end = cumsum(len))
 }

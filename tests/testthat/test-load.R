@@ -1,20 +1,6 @@
-## The run loaders. Most of these write a small run directory by hand, so they need no SLiM.
+## The run loaders. Most of these write a small run directory by hand (helper-runs.R), so they
+## need no SLiM.
 
-ev_cols <- c("tick", "event_id", "event_type", "inoculation_id", "mosq_id", "human_id", "lineage_id",
-             "parent1_lineage_id", "parent2_lineage_id", "is_recombinant", "p_outcross", "recipient",
-             "is_dormant", "is_imported", "pedigree_id", "parent1_pedigree_id", "parent2_pedigree_id",
-             "n_hypnozoites", "oocyst_id", "detected", "into_patent_lineage")
-st_cols <- c("tick", "entity_type", "entity_id", "tag", "moi_active", "moi_subpatent", "moi_dormant",
-             "hyp_reservoir_size", "lineage_ids", "n_transmissible", "mosq_age_days", "infectious_bites")
-
-## a run directory with the given rows (each a tab-separated line) under the given headers
-fake_run <- function(ev_rows = character(), st_rows = character(), ev_head = ev_cols, st_head = st_cols) {
-  d <- tempfile("mfwd_fake_"); dir.create(d)
-  writeLines(c(paste(ev_head, collapse = "\t"), ev_rows), file.path(d, "events.tsv"))
-  writeLines(c(paste(st_head, collapse = "\t"), st_rows), file.path(d, "state.tsv"))
-  writeLines(c("param\tvalue", "N_HOSTS\t2"), file.path(d, "params.tsv"))
-  d
-}
 classes <- function(d) vapply(d, function(x) class(x)[1], "")
 ev_classes <- c(tick = "integer", event_id = "character", event_type = "character",
                 inoculation_id = "integer", mosq_id = "integer", human_id = "integer",
@@ -89,4 +75,86 @@ test_that("normal, extinct and never-started runs load with the same columns and
   expect_identical(names(data.table::fread(file.path(runs[[1]]$outdir, "state.tsv"), nrows = 0)), st_cols)
   ## a run with no event joins as any other
   expect_equal(nrow(moi_vs_relapse(load_state(runs[[3]]), load_events(runs[[3]]))), 0L)
+})
+
+test_that("load_params() reads each parameter into its type, and text as it is", {
+  r <- fake_run(drop = c("VERBOSE", "RETAIN_FULL_HISTORY", "N_HOSTS", "N_MOSQ", "INTERVENTION_START",
+                         "ALPHA_ACTIVATE", "SIM_ID"),
+                extra = c("VERBOSE\tT", "RETAIN_FULL_HISTORY\tFALSE", "N_HOSTS\t20.0", "N_MOSQ\t20",
+                          "INTERVENTION_START\t3000000000", "ALPHA_ACTIVATE\t0.0058823529411764",
+                          "SIM_ID\tNA"))
+  p <- load_params(r)
+  expect_s3_class(p, "vivax_params")
+  expect_identical(names(p), names(vivax_params()))
+  expect_identical(p$VERBOSE, TRUE)
+  expect_identical(p$RETAIN_FULL_HISTORY, FALSE)
+  expect_identical(c(p$N_HOSTS, p$N_MOSQ), c(20L, 20L))
+  expect_identical(p$INTERVENTION_START, 3e9)
+  expect_identical(p$ALPHA_ACTIVATE, 0.0058823529411764)
+  expect_identical(p$SIM_ID, "NA")
+  expect_identical(load_params(fake_run(drop = "SIM_ID", extra = "SIM_ID\t x\ty"))$SIM_ID, " x\ty")
+  ## every parameter of the set as written, and nothing else
+  expect_identical(load_params(fake_run(params = list(N_HOSTS = 30, BITING_RATE = 0.12))),
+                   vivax_params(N_HOSTS = 30, BITING_RATE = 0.12))
+})
+
+test_that("a params.tsv that cannot be read stops, naming the line or the parameter", {
+  expect_error(load_params(fake_run(drop = "N_HOSTS", extra = "N_HOSTS\tabc")),
+               "params.tsv in .*: N_HOSTS is \"abc\", not a number")
+  expect_error(load_params(fake_run(drop = "VERBOSE", extra = "VERBOSE\tyes")), "VERBOSE is \"yes\", not T or F")
+  expect_error(load_params(fake_run(extra = "N_HOSTS\t20")), "N_HOSTS is given twice")
+  expect_error(load_params(fake_run(extra = c("", "a line"))), "line [0-9]+ has no tab")
+  r <- fake_run(); writeLines("x\ty", file.path(r, "params.tsv"))
+  expect_error(load_params(r), "does not start with the line param<TAB>value")
+  r <- fake_run(); unlink(file.path(r, "params.tsv"))
+  expect_error(load_params(r), "no params.tsv in")
+})
+
+test_that("a params.tsv of another version warns once, naming what it lacks and what it leaves out", {
+  r <- fake_run(drop = "MDA_COVERAGE", extra = "MAX_BROOD_AGE\t180")
+  w <- list()
+  p <- withCallingHandlers(load_params(r),
+                           warning = function(x) { w[[length(w) + 1]] <<- x; invokeRestart("muffleWarning") })
+  expect_length(w, 1L)
+  expect_s3_class(w[[1]], "malariafwd_params_mismatch")
+  expect_s3_class(w[[1]], "malariafwd_run_warning")
+  expect_match(conditionMessage(w[[1]]), "lacks MDA_COVERAGE \\(its default is used\\)")
+  expect_match(conditionMessage(w[[1]]), "MAX_BROOD_AGE is not a parameter \\(left out\\)")
+  expect_identical(p$MDA_COVERAGE, vivax_params()$MDA_COVERAGE)
+  expect_null(p$MAX_BROOD_AGE)
+  ## once per directory per session, whichever reader asks
+  expect_no_warning(load_params(r))
+  expect_no_warning(load_run(r))
+  ## and never from a run object, or from the package's own reads
+  r2 <- fake_run(drop = "MDA_COVERAGE")
+  expect_no_warning(malariafwd:::.params_of(r2))
+  run <- suppressWarnings(load_run(r2))
+  expect_no_warning(load_params(run))
+  ## the founder counts a file lacks follow one another, as in vivax_params()
+  p <- suppressWarnings(load_params(fake_run(params = list(N_FOUNDERS = 7),
+                                             drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"))))
+  expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(7L, 7L))
+})
+
+test_that("load_run() carries the record rows, typed, and refuses a directory that is not a run", {
+  r <- load_run(fake_run(record = list(ACTUAL_SEED = 3e9, SEED = 4L, SLIM_VERSION = "5.2",
+                                       MALARIAFWD_VERSION = "unknown", GENOME_LENGTH = 1021664L,
+                                       N_CHROMOSOMES = 1L, RECOMB_WITHIN = 7.4e-07, EXTINCT_TICK = 40L)))
+  expect_identical(r$seed, 3e9)
+  expect_identical(r$extinct_tick, 40L)
+  expect_false(r$never_started)
+  expect_identical(r$malariafwd_version, "unknown")
+  expect_identical(c(r$genome_length, r$n_chromosomes), c(1021664L, 1L))
+  expect_identical(r$recomb_within, 7.4e-07)
+  expect_null(load_params(r)$EXTINCT_TICK)
+  ## SEED when there is no ACTUAL_SEED, and NA for what the file does not record
+  r <- load_run(fake_run(record = list(SEED = 4L, NEVER_STARTED = 10L)))
+  expect_identical(r$seed, 4L)
+  expect_true(r$never_started)
+  expect_identical(r$slim_version, NA_character_)
+  expect_identical(r$genome_length, NA_integer_)
+  d <- tempfile("mfwd_empty_"); dir.create(d)
+  expect_error(load_run(d), "is not a malariafwd run: it has no params.tsv or events.tsv")
+  r <- fake_run(); unlink(file.path(r, "events.tsv"))
+  expect_error(load_run(r), "is not a malariafwd run: it has no events.tsv")
 })
