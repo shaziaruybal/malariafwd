@@ -264,9 +264,9 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
     return(data.table::data.table(cls = factor(character(), .LADDER), a = integer(), b = integer(),
                                   ibd = numeric()))
   out <- data.table::rbindlist(P)
-  idx <- ibd_index(ibd_pairs(run, ids = unique(c(out$a, out$b))))
-  out <- out[a %in% idx$nm$pedigree_id & b %in% idx$nm$pedigree_id]
-  out[, ibd := idx$getibd(a, b)][, cls := factor(cls, .LADDER)][]
+  x <- suppressWarnings(ibd_pairs(run, ids = unique(c(out$a, out$b))))
+  out[, ibd := ibd_lookup(x, a, b)]
+  out[!is.na(ibd)][, cls := factor(cls, .LADDER)][]
 }
 
 .LADDER <- c("self (same genome)", "clonal copies", "relapse vs its origin",

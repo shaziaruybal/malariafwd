@@ -283,7 +283,7 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
 
 #' Mean pairwise IBD among cases active in each time window (relatedness trajectory)
 #' @param events an events data.table.
-#' @param idx an [ibd_index()] object.
+#' @param ibd a `vivax_ibd` object from [ibd_pairs()], of every pair among the run's cases.
 #' @param bin window width (days).
 #' @param cap max cases sampled per window.
 #' @param min_pairs drop windows with fewer pairs.
@@ -291,15 +291,18 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
 #'   on the same run agree. The caller's RNG stream is left untouched.
 #' @return a data.table of `win`, `mean_ibd`, `n_pairs`.
 #' @export
-ibd_trajectory <- function(events, idx, bin = 90, cap = 40, min_pairs = 5, seed = 1) {
-  cs <- classify_cases(events)[pedigree_id %in% idx$nm$pedigree_id]
+ibd_trajectory <- function(events, ibd, bin = 90, cap = 40, min_pairs = 5, seed = 1) {
+  if (!inherits(ibd, "vivax_ibd") || !isTRUE(ibd$all_pairs))
+    stop("`ibd` must be a vivax_ibd object of every pair among its genomes, from ibd_pairs().", call. = FALSE)
+  x <- ibd
+  cs <- classify_cases(events)[pedigree_id %in% x$samples$pedigree_id]
   cs[, win := (tick %/% bin) * bin]
   out <- cs[, {
     peds <- .sample_fixed(pedigree_id, cap, seed + .GRP)
     if (length(peds) >= 2) {
       cb <- combn(length(peds), 2)
-      ibd <- idx$getibd(peds[cb[1,]], peds[cb[2,]])
-      .(mean_ibd = mean(ibd), n_pairs = length(ibd))
+      v <- ibd_lookup(x, peds[cb[1,]], peds[cb[2,]])
+      .(mean_ibd = mean(v), n_pairs = length(v))
     } else .(mean_ibd = NA_real_, n_pairs = 0L)
   }, by = win][n_pairs >= min_pairs]
   out[order(win)]
@@ -509,11 +512,11 @@ summarise_run <- function(run, burn_frac = 0.5) {
 
 #' Relapse-vs-origin IBD: each relapse paired to a same-lineage prior primary
 #' @param events an events data.table.
-#' @param idx an [ibd_index()] object.
+#' @param ibd a `vivax_ibd` object from [ibd_pairs()] holding the relapses and their origins.
 #' @return a data.table with an `ibd` column (should be ~1, clonal).
 #' @export
-ibd_relapse_origin <- function(events, idx) {
-  ev <- as.data.table(events); nm <- idx$nm
+ibd_relapse_origin <- function(events, ibd) {
+  ev <- as.data.table(events); x <- ibd; nm <- x$samples
   rel <- ev[event_type == "hypnozoite_activation",
             .(lineage_id = as.character(lineage_id), human_id, rp = pedigree_id, rt = tick)]
   ## every inoculation route, not just local bites: a relapse whose origin was an IMPORT
@@ -524,7 +527,7 @@ ibd_relapse_origin <- function(events, idx) {
             .(lineage_id = as.character(lineage_id), human_id, pp = pedigree_id, pt = tick)]
   prm <- prm[pp %in% nm$pedigree_id][order(pt)][, .SD[1], by = .(lineage_id, human_id)]
   pr <- merge(rel[rp %in% nm$pedigree_id], prm, by = c("lineage_id","human_id"))[pt <= rt]
-  pr[, ibd := idx$getibd(rp, pp)][]
+  pr[, ibd := ibd_lookup(x, rp, pp)][]
 }
 
 #' New-infection genetic diversity (relatedness of the transmitting population)
@@ -557,10 +560,12 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   peds <- .sample_fixed(peds, cap, seed)
-  .require_python("new_infection_diversity()")
-  idx <- ibd_index(ibd_pairs(run, ids = peds))
-  vp <- idx$nm$pedigree_id
-  cb <- combn(length(vp), 2); di <- idx$getibd(vp[cb[1,]], vp[cb[2,]])
+  .require_python("new_infection_diversity()", c("tskit", "numpy"))
+  x <- suppressWarnings(ibd_pairs(run, ids = peds))
+  vp <- x$samples$pedigree_id
+  if (length(vp) < 2)
+    return(data.table(n = length(vp), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
+  di <- x$pairs$ibd
   data.table(n = length(vp), mean_ibd = mean(di), clonal_frac = 100 * mean(di >= clonal),
              n_lineages = uniqueN(ev[pedigree_id %in% vp, lineage_id]))
 }

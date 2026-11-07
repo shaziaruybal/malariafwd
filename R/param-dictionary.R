@@ -23,8 +23,8 @@
   VERBOSE = .param(FALSE, "-", "Narrate every event in run.log. The outputs are the same either way."),
   RETAIN_FULL_HISTORY = .param(TRUE, "-",
     paste("Keep every genome in the tree sequence, which IBD to infections that have already cleared",
-          "needs. With FALSE most earlier genomes leave the tree, and ibd_index() warns that the ids it",
-          "was asked about are absent.")),
+          "needs. With FALSE most earlier genomes leave the tree, and ibd_pairs() warns that the ids it",
+          "was asked about are absent; they look up as NA.")),
 
   N_HOSTS = .param(40L, "hosts", "Humans; the number is constant.", min = 1),
   N_FOUNDER_HOSTS = .param(12L, "hosts",

@@ -59,10 +59,10 @@ if (length(fl) >= 4) { cb <- combn(length(fl), 2)
   add("distinct founders", fl[cb[1, ]], fl[cb[2, ]]) }
 
 P <- rbindlist(pairs)
-idx <- ibd_index(ibd_pairs(run, ids = unique(c(P$a, P$b))))
-inN <- function(x) x %in% idx$nm$pedigree_id
+ibx <- ibd_pairs(run, ids = unique(c(P$a, P$b)))
+inN <- function(x) x %in% ibx$samples$pedigree_id
 P <- P[inN(a) & inN(b)]
-P[, ibd := idx$getibd(a, b)]
+P[, ibd := ibd_lookup(ibx, a, b)]
 
 LV <- c("self (same genome)", "clonal copies", "relapse vs its origin", "same lineage, 2 hosts",
         "same-oocyst sibs", "distinct founders")

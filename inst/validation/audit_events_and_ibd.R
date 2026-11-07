@@ -133,18 +133,18 @@ audit_run <- function(tag, params, seed = 1) {
   ## not cases), so add the founder genomes explicitly to test the diversity-axis assumption
   ## that distinct founder lineages are unrelated.
   founders <- ev[event_type == "vh_inoculation_seed", pedigree_id]
-  idx <- ibd_index(ibd_pairs(run, ids = unique(c(cs$pedigree_id, founders))))
-  present <- cs$pedigree_id %in% idx$nm$pedigree_id
+  ibx <- ibd_pairs(run, ids = unique(c(cs$pedigree_id, founders)))
+  present <- cs$pedigree_id %in% ibx$samples$pedigree_id
   ok("logged cases are retained in the tree sequence", mean(present) > 0.95,
      sprintf("%.1f%% of %d cases", 100 * mean(present), nrow(cs)))
 
   ## IBD bounds + self-identity
-  smp <- head(idx$nm$pedigree_id, 40)
-  gi <- idx$getibd(rep(smp[1], length(smp)), smp)
+  smp <- head(ibx$samples$pedigree_id, 40)
+  gi <- ibd_lookup(ibx, rep(smp[1], length(smp)), smp)
   ok("IBD values within [0,1]", all(gi >= 0 & gi <= 1, na.rm = TRUE))
-  ok("IBD of a genome with itself == 1", isTRUE(all.equal(idx$getibd(smp[1], smp[1]), 1)))
+  ok("IBD of a genome with itself == 1", isTRUE(all.equal(ibd_lookup(ibx, smp[1], smp[1]), 1)))
   ok("IBD is symmetric",
-     isTRUE(all.equal(idx$getibd(smp[1], smp[2]), idx$getibd(smp[2], smp[1]))))
+     isTRUE(all.equal(ibd_lookup(ibx, smp[1], smp[2]), ibd_lookup(ibx, smp[2], smp[1]))))
 
   ## ---- ARG-native checks (tree/branch domain, complementing the IBD/segment domain) ----
   ag <- arg_summary(run, unique(c(cs$pedigree_id, founders)))
@@ -170,7 +170,7 @@ audit_run <- function(tag, params, seed = 1) {
   }
 
   ## the key biological invariant: a relapse is clonal to its origin
-  ro <- ibd_relapse_origin(ev, idx)
+  ro <- ibd_relapse_origin(ev, ibx)
   if (!is.null(ro) && nrow(ro)) {
     ok("relapse-to-origin IBD == 1 (clonal)",
        median(ro$ibd, na.rm = TRUE) > 0.99,
@@ -181,10 +181,10 @@ audit_run <- function(tag, params, seed = 1) {
   ## (A general cross-lineage test is not meaningful: the products of one tetrad get
   ## different lineage_ids but share a third of the genome on average.)
   fnd <- ev[event_type == "vh_inoculation_seed", .(ped = pedigree_id[1]), by = lineage_id]
-  fnd <- fnd[ped %in% idx$nm$pedigree_id]
+  fnd <- fnd[ped %in% ibx$samples$pedigree_id]
   if (nrow(fnd) >= 3) {
     cb <- combn(nrow(fnd), 2)
-    bg <- idx$getibd(fnd$ped[cb[1, ]], fnd$ped[cb[2, ]])
+    bg <- ibd_lookup(ibx, fnd$ped[cb[1, ]], fnd$ped[cb[2, ]])
     ok("distinct FOUNDER lineages are unrelated (IBD ~ 0)", median(bg, na.rm = TRUE) < 0.05,
        sprintf("median %.3f, max %.3f over %d pairs", median(bg, na.rm = TRUE),
                max(bg, na.rm = TRUE), length(bg)))
@@ -193,10 +193,10 @@ audit_run <- function(tag, params, seed = 1) {
   clone_lin <- ev[event_type == "vh_inoculation_seed", .N, by = lineage_id][N > 1, lineage_id]
   if (length(clone_lin)) {
     pr <- ev[event_type == "vh_inoculation_seed" & lineage_id == clone_lin[1], pedigree_id]
-    pr <- pr[pr %in% idx$nm$pedigree_id]
+    pr <- pr[pr %in% ibx$samples$pedigree_id]
     if (length(pr) >= 2)
-      ok("clonal founder copies are IBD = 1", idx$getibd(pr[1], pr[2]) > 0.99,
-         sprintf("%.3f", idx$getibd(pr[1], pr[2])))
+      ok("clonal founder copies are IBD = 1", ibd_lookup(ibx, pr[1], pr[2]) > 0.99,
+         sprintf("%.3f", ibd_lookup(ibx, pr[1], pr[2])))
   }
   invisible(NULL)
 }

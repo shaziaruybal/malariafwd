@@ -4,12 +4,12 @@
 \alias{ibd_relapse_origin}
 \title{Relapse-vs-origin IBD: each relapse paired to a same-lineage prior primary}
 \usage{
-ibd_relapse_origin(events, idx)
+ibd_relapse_origin(events, ibd)
 }
 \arguments{
 \item{events}{an events data.table.}
 
-\item{idx}{an \code{\link[=ibd_index]{ibd_index()}} object.}
+\item{ibd}{a \code{vivax_ibd} object from \code{\link[=ibd_pairs]{ibd_pairs()}} holding the relapses and their origins.}
 }
 \value{
 a data.table with an \code{ibd} column (should be ~1, clonal).

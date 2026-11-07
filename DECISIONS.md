@@ -19,6 +19,35 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D63 — ibd_pairs() returns a pedigree-keyed vivax_ibd object; unknown ids read NA · 2026-11-08 · Accepted
+**Context.** `ibd_pairs()` returned a bare list keyed by the node ids of a tree it had simplified
+and did not return, so every lookup went through `ibd_index()`, a list holding a closure that
+printed its own source. The genomes' node times, which D22's recency filter needs, were not
+returned, and an id the tree sequence did not hold scored 0, the same as "unrelated" (review M14).
+The Python ran as code pasted into `__main__`, with tables passed through CSV files (m57, m58).
+**Decision.** `ibd_pairs()` returns a `vivax_ibd` object: `pairs` (every pair of the genomes found,
+`a < b`, zeros included), `samples` (`pedigree_id`, `node_time`, `tick`), `missing`, `segments`
+(with `mrca_id`, the common ancestor's pedigree id, and `depth`, its age measured from the pair),
+and the run's `end_tick`. `ibd_lookup()` reads pairs (1 for a genome with itself, `NA` for one not
+in the object), and `as.matrix()` and `as.data.frame()` give the table. Requested ids the tree
+sequence does not hold warn and are listed; asking only for such ids is an error. `ibd_index()` is
+removed. The Python side is one private module, called with arguments and returning arrays.
+**Rationale.** An object keyed by what callers hold, pedigree ids, needs no translation, and `NA`
+for an unknown genome cannot be mistaken for an unrelated one.
+**Alternatives rejected.** *A deprecated `ibd_index()` wrapper* -- nothing has been released. *A
+sparse table with implicit zeros* -- every reader would have to fill them. *0 for absent ids* -- the
+confusion this removes. *Returning the simplified tree* -- a live Python object, which cannot be
+saved.
+**Consequences.** Values are unchanged, except a few that the CSV round trip had moved by one unit
+in the last place (at most 5.6e-17); the design's measurement put it about three times as fast (0.35
+against 1.02 s for 800 genomes). Code that used `ibd_index()` or `getibd()` changes, six files of
+the analysis repo among it. `ibd_pairs()` no longer uses pandas.
+**How to verify.** `tests/testthat/test-ibd.R` (reading the object back; its shape on a run; lookups
+of relapses against their origin; segment ancestors and ages; ids not in the tree sequence; a run
+with no parasite) and the IBD checks of `inst/validation/audit_events_and_ibd.R`.
+
+---
+
 ## D62 — Windowed series have a row for every window of the run · 2026-11-08 · Accepted
 **Context.** `force_of_infection()` had rows only for the (window, origin) cells with a case, and
 the dashboard and `plot_force_of_infection()` zero-filled only over windows that already had a row,
@@ -1526,7 +1555,7 @@ unchanged. Suites: `test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_para
 
 ---
 
-## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted
+## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted; partly superseded by D63 (the shape of ibd_pairs()'s result)
 **Context.** `ibd_pairs(max_time=)` was documented as counting "only ancestry coalescing within
 this many time units (days)" -- a genealogical **depth**. It passed the value straight to tskit's
 `ibd_segments(max_time=)`, which compares against the common ancestor's **absolute node time**,

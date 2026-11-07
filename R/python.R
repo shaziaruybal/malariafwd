@@ -223,3 +223,37 @@ print.malariafwd_setup <- function(x, ...) {
                           " missing, for the plots."), "\n", sep = "")
   invisible(x)
 }
+
+## ---- private Python modules ---------------------------------------------------------------
+## Code shared by the package's Python modules. SLiM writes each node's metadata as an int64
+## slim_id (the haplosome id, 2 * pedigree_id + k) followed by one is_vacant byte per chromosome.
+.py_prelude_src <- '
+import numpy as np, tskit
+
+def _ped_nodes(ts):
+    """pedigree id -> its first real (not vacant) sample node; and the pedigree id of every node."""
+    nodes = ts.tables.nodes
+    md = tskit.unpack_bytes(nodes.metadata, nodes.metadata_offset)
+    slim = np.frombuffer(b"".join(m[:8] for m in md), dtype="<i8") if len(md) else np.zeros(0, "<i8")
+    vac = np.array([m[8] & 1 for m in md], dtype=bool)
+    ped_of_node = slim // 2
+    real = np.where(((nodes.flags & tskit.NODE_IS_SAMPLE) > 0) & ~vac & (nodes.individual >= 0))[0]
+    p2n = {}
+    for n in real:
+        p2n.setdefault(int(ped_of_node[n]), int(n))
+    return p2n, ped_of_node
+'
+
+## A private Python module of the prelude and `src`, built once a session (again if `src` changes)
+## and kept out of Python's __main__: callers pass their values as arguments, and nothing is pasted
+## into code or written to files.
+.py_modules <- new.env(parent = emptyenv())
+.py_module <- function(name, src) {
+  full <- paste(.py_prelude_src, src, sep = "\n")
+  hit <- .py_modules[[name]]
+  if (!is.null(hit) && identical(hit$src, full)) return(hit$module)
+  m <- reticulate::import("types", convert = FALSE)$ModuleType(name)
+  reticulate::import_builtins(convert = FALSE)$exec(full, m$`__dict__`)
+  .py_modules[[name]] <- list(src = full, module = m)
+  m
+}

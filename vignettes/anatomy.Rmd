@@ -95,8 +95,8 @@ coi_distribution(st)                         # complexity-of-infection distribut
 Because the full genealogy is recorded, identity-by-descent is exact rather than inferred:
 
 ```{r}
-idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
-ibd_relapse_origin(ev, idx)            # relapses are clonal to their origin (IBD ~ 1)
+x <- ibd_pairs(run, ids = cs$pedigree_id)
+ibd_relapse_origin(ev, x)              # relapses are clonal to their origin (IBD ~ 1)
 ```
 
 ## Seeing the relatedness, not just the number

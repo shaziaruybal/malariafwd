@@ -1,6 +1,6 @@
 ## ibd.R -- ground-truth identity-by-descent from the tree sequence (tskit via reticulate).
-## reticulate is a Suggests, and Python with tskit, pandas and numpy a system requirement; each
-## function checks them through .require_python() (R/python.R), which says what is missing.
+## reticulate is a Suggests, and Python with tskit and numpy a system requirement; each function
+## checks them through .require_python() (R/python.R), which says what is missing.
 
 .trees_of <- function(run) {
   if (inherits(run, "vivax_run")) return(trees_path(run))
@@ -11,171 +11,220 @@
   stop("`run` must be a vivax_run, a run directory, or a .trees path.", call. = FALSE)
 }
 
+## The IBD module: the tree sequence simplified once to the requested genomes, and one
+## ibd_segments() call over every pair among them. Returns numpy arrays, keyed by pedigree id.
+.ibd_py_src <- '
+def mfw_ibd(trees, ids, min_span, want_segments):
+    ts = tskit.load(trees)
+    md = ts.metadata
+    end_tick = int(md["SLiM"]["tick"]) if isinstance(md, dict) and "SLiM" in md else -1
+    p2n, _ = _ped_nodes(ts)
+    req = sorted(p2n) if ids is None else sorted({int(x) for x in np.atleast_1d(ids)})
+    found = [p for p in req if p in p2n]
+    out = dict(end_tick=end_tick, sequence_length=float(ts.sequence_length),
+               missing=np.array([p for p in req if p not in p2n], dtype=np.int64),
+               ped=np.zeros(0, np.int64), node_time=np.zeros(0), pa=np.zeros(0, np.int64),
+               pb=np.zeros(0, np.int64), span=np.zeros(0), sa=np.zeros(0, np.int64),
+               sb=np.zeros(0, np.int64), left=np.zeros(0), right=np.zeros(0),
+               mrca=np.zeros(0, np.int64), mrca_time=np.zeros(0))
+    if not found:
+        return out
+    sts = ts.simplify(samples=sorted(p2n[p] for p in found))
+    del ts
+    _, sped = _ped_nodes(sts)
+    samp = np.asarray(sts.samples(), dtype=np.int64)
+    out["ped"] = sped[samp]
+    out["node_time"] = sts.nodes_time[samp]
+    # store_segments stays off unless they are asked for: total_span per pair needs no segments,
+    # and storing every one only to sum it costs several times as long
+    res = sts.ibd_segments(within=list(samp), min_span=min_span, store_pairs=True,
+                           store_segments=bool(want_segments))
+    A = []; B = []; S = []; SA = []; SB = []; LE = []; RI = []; MN = []
+    for (a, b), sl in res.items():
+        A.append(sped[a]); B.append(sped[b]); S.append(sl.total_span)
+        if want_segments:
+            n = len(sl)
+            SA.append(np.full(n, sped[a])); SB.append(np.full(n, sped[b]))
+            LE.append(np.asarray(sl.left)); RI.append(np.asarray(sl.right)); MN.append(np.asarray(sl.node))
+    out["pa"] = np.array(A, dtype=np.int64); out["pb"] = np.array(B, dtype=np.int64)
+    out["span"] = np.array(S, dtype=float)
+    if want_segments and MN:
+        mn = np.concatenate(MN).astype(np.int64)
+        out.update(sa=np.concatenate(SA).astype(np.int64), sb=np.concatenate(SB).astype(np.int64),
+                   left=np.concatenate(LE).astype(float), right=np.concatenate(RI).astype(float),
+                   mrca=sped[mn], mrca_time=sts.nodes_time[mn])
+    return out
+'
+
+## A vivax_ibd object, its parts checked.
+.new_vivax_ibd <- function(pairs, samples, missing, segments, sequence_length, min_span, all_pairs,
+                           end_tick, trees) {
+  stopifnot(identical(names(pairs), c("a", "b", "ibd")), is.integer(pairs$a), is.integer(pairs$b),
+            is.double(pairs$ibd), identical(names(samples), c("pedigree_id", "node_time", "tick")),
+            is.integer(samples$pedigree_id), is.double(samples$node_time), is.integer(samples$tick),
+            is.integer(missing), is.null(segments) || data.table::is.data.table(segments))
+  data.table::setkey(pairs, a, b)
+  structure(list(pairs = pairs, samples = samples, missing = missing, segments = segments,
+                 sequence_length = sequence_length, min_span = min_span, all_pairs = all_pairs,
+                 end_tick = end_tick, trees = trees), class = "vivax_ibd")
+}
+
 #' Ground-truth IBD from a run's tree sequence
 #'
-#' Computes genome-wide identity-by-descent (shared-segment length / sequence length)
-#' among a set of individuals, working on the tskit tree sequence recorded by the model.
-#' If `ids` is given the tree is first simplified to just those individuals (memory-safe) and
-#' SLiM's vacant null haplosome nodes are always excluded. **All** shared ancestry is counted,
-#' however far back it goes -- there is no time cutoff. To impose one, ask for `segments` and
-#' filter them yourself; see the note below, and D22 in `DECISIONS.md` for why a cutoff is no
-#' longer offered as an argument.
+#' Computes genome-wide identity-by-descent (shared-segment length / sequence length) among a set
+#' of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model. The tree
+#' is simplified to the genomes asked for, and SLiM's vacant nodes are left out. **All** shared
+#' ancestry is counted, however far back it goes; to impose a cutoff, ask for `segments` and filter
+#' them on their age (see *Segment ages*).
 #'
 #' @param run a `vivax_run`, a run directory, or a `.trees` file path.
-#' @param ids optional integer vector of `pedigree_id`s to restrict to (e.g. sampled cases).
+#' @param ids the pedigree ids of the genomes to compare, every pair among them; `NULL` for every
+#'   genome the tree sequence records, which warns when that is more than 1e6 pairs.
 #' @param min_span minimum shared-segment length (bp) to count (default 1000).
-#' @param segments if `TRUE`, also return every shared segment with the time of the common
-#'   ancestor it came from. Costs roughly 3-7x the default run time (the multiple grows with
-#'   the number of samples) and returns one row per segment per pair, so restrict it with
-#'   `ids` and `min_span`.
-#' @return a list with `ibd` (data.table: `node_a`, `node_b`, `ibd_fraction`), `node_map`
-#'   (data.table: `node_id`, `pedigree_id`) and `sequence_length`. With `segments = TRUE`,
-#'   also `segments` (data.table: `node_a`, `node_b`, `left`, `right`, `mrca_node`,
-#'   `mrca_time`). Pass to [ibd_index()] for lookups.
-#' @section Segment times are not depths:
-#' `mrca_time` is a tskit node time, i.e. **ticks before the end of the run**, not a
-#' genealogical depth. A segment's depth relative to its own pair is
-#' `mrca_time - max(t_a, t_b)`, where `t_a`/`t_b` are the two samples' own node times. A
-#' recency filter must be written against that difference: filtering on `mrca_time` alone
-#' scores a pair by when its lineage last branched, not by how related the two genomes are.
+#' @param segments if `TRUE`, also return every shared segment with its common ancestor and that
+#'   ancestor's age.
+#' @return a `vivax_ibd` object, a list of:
+#'   * `pairs`, a data.table keyed by `a` and `b`: one row for every pair of distinct genomes
+#'     found, `a < b` (integer pedigree ids), and `ibd` (double, in \[0, 1\]), 0 for a pair that
+#'     shares nothing;
+#'   * `samples`, one row per genome found, by pedigree id: `pedigree_id`, `node_time` (ticks
+#'     before the end of the run) and `tick` (the day the genome arose, as in `events.tsv`);
+#'   * `missing`, the requested ids the tree sequence does not hold;
+#'   * `segments`, `NULL` or a data.table of `a`, `b`, `left`, `right` (bp), `mrca_id` (the pedigree
+#'     id of the common ancestor), `mrca_time` and `depth` (its age, see *Segment ages*);
+#'   * `sequence_length`, `min_span`, `all_pairs` (`TRUE`: every pair of the genomes is in
+#'     `pairs`), `end_tick` (the run's last tick) and `trees` (the file read).
+#'
+#'   Read a pair's value with [ibd_lookup()], or the table with `as.matrix()` or `as.data.frame()`.
+#' @section Ids that are not in the tree sequence:
+#' A run written with `RETAIN_FULL_HISTORY = FALSE` keeps only a fraction of genomes in the tree
+#' sequence. A requested id it does not hold is listed in `missing`, gives one warning, and looks
+#' up as `NA`, not as 0; asking only for such ids is an error.
+#' @section Segment ages:
+#' `mrca_time` is a tskit node time, ticks before the end of the run, not an age. A segment's
+#' `depth` is how long before the older of the two genomes its common ancestor lived,
+#' `mrca_time - max(node_time[a], node_time[b])`, in ticks. A recency filter is written against it, for
+#' example `x$segments[depth <= 180]` for ancestry within about six months: filtering on
+#' `mrca_time` alone scores a pair by when its lineage last branched, not by how related the two
+#' genomes are.
+#' @section Cost:
+#' One simplification and one pass over the pairs; `segments = TRUE` costs several times as long
+#' and gives one row per segment per pair, so restrict it with `ids` and `min_span`.
+#' @examples
+#' \dontrun{
+#' x <- ibd_pairs(run, ids = classify_cases(load_events(run))$pedigree_id)
+#' ibd_lookup(x, 12, 345)
+#' }
+#' @seealso [ibd_lookup()], [ibd_segments()]
 #' @inheritSection tskit_available Python
 #' @export
 ibd_pairs <- function(run, ids = NULL, min_span = 1000, segments = FALSE) {
-  .require_python("ibd_pairs()")
+  if (!is.null(ids)) {
+    if (!is.numeric(ids) || anyNA(ids) || any(!is.finite(ids)) || any(ids != round(ids)) ||
+        any(abs(ids) > .Machine$integer.max))
+      stop("`ids` must be pedigree ids: whole numbers, none missing.", call. = FALSE)
+    ids <- sort(unique(as.integer(ids)))
+  }
+  if (!is.numeric(min_span) || length(min_span) != 1L || is.na(min_span) || min_span < 0)
+    stop("`min_span` must be a number of bp, 0 or more.", call. = FALSE)
+  .check_flag(segments, "segments")
+  .require_python("ibd_pairs()", c("tskit", "numpy"))
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
-  out <- tempfile(fileext = ".csv"); nmap <- tempfile(fileext = ".csv")
-  segf <- tempfile(fileext = ".csv"); lenf <- tempfile(fileext = ".txt")
-  want_expr <- if (is.null(ids)) "None" else {
-    pf <- tempfile(); writeLines(as.character(unique(ids)), pf)
-    paste0("set(int(x) for x in open(r'''", pf, "''').read().split())")
+  m <- .py_module("_malariafwd_ibd", .ibd_py_src)
+  r <- reticulate::py_to_r(m$mfw_ibd(tf, if (is.null(ids)) NULL else as.list(ids), as.numeric(min_span), segments))
+  missing <- as.integer(r$missing)
+  if (!is.null(ids) && length(ids) && length(missing) == length(ids))
+    stop("none of the ", length(ids), " requested ids is in the tree sequence; a run with ",
+         "RETAIN_FULL_HISTORY = FALSE keeps only a fraction of genomes.", call. = FALSE)
+  if (length(missing))
+    warning(length(missing), " of the requested ids are not in the tree sequence (such as ",
+            paste(utils::head(missing, 3), collapse = ", "), "): they are listed in `missing` and look ",
+            "up as NA.", call. = FALSE)
+  end_tick <- as.integer(r$end_tick)
+  smp <- data.table::data.table(pedigree_id = as.integer(r$ped), node_time = as.numeric(r$node_time))
+  smp[, tick := as.integer(end_tick - node_time)]
+  data.table::setorder(smp, pedigree_id)
+  p <- smp$pedigree_id; n <- length(p)
+  if (is.null(ids) && n * (n - 1) / 2 > 1e6)
+    warning("ibd_pairs() of every genome gave ", format(n * (n - 1) / 2, big.mark = ","), " pairs; pass ",
+            "`ids` to compare only the genomes you need.", call. = FALSE)
+  all <- if (n >= 2) data.table::data.table(a = rep(p[-n], (n - 1):1), b = p[sequence((n - 1):1, from = 2:n)])
+         else data.table::data.table(a = integer(), b = integer())
+  pa <- as.integer(r$pa); pb <- as.integer(r$pb)
+  got <- data.table::data.table(a = pmin(pa, pb), b = pmax(pa, pb), ibd = as.numeric(r$span) / r$sequence_length)
+  pairs <- merge(all, got, by = c("a", "b"), all.x = TRUE)
+  pairs[is.na(ibd), ibd := 0]
+  sg <- NULL
+  if (segments) {
+    sa <- as.integer(r$sa); sb <- as.integer(r$sb)
+    sg <- data.table::data.table(a = pmin(sa, sb), b = pmax(sa, sb), left = as.numeric(r$left),
+                                 right = as.numeric(r$right), mrca_id = as.integer(r$mrca),
+                                 mrca_time = as.numeric(r$mrca_time))
+    tt <- stats::setNames(smp$node_time, smp$pedigree_id)
+    sg[, depth := mrca_time - pmax(tt[as.character(a)], tt[as.character(b)])]
+    data.table::setorder(sg, a, b, left)
   }
-  py <- paste0("
-import tskit, pandas as pd, json, gc
-ts = tskit.load(r'''", tf, "''')
-want = ", want_expr, "
-def _md(x):
-    md = x.metadata
-    if isinstance(md, bytes):
-        try: md = json.loads(md.decode()) if md else {}
-        except Exception: md = {}
-    return md if isinstance(md, dict) else {}
-def vac(nd):
-    v = _md(nd).get('is_vacant'); return bool(v[0]) if v else False
-def pedof(ind):
-    md = _md(ind); return md.get('pedigree_id', md.get('pedigreeID'))
-keep = []
-for n in ts.samples():
-    nd = ts.node(n)
-    if nd.individual == tskit.NULL or vac(nd): continue
-    p = pedof(ts.individual(nd.individual))
-    if p is None: continue
-    if want is not None and int(p) not in want: continue
-    keep.append(int(n))
-sts = ts.simplify(samples=keep); del ts; gc.collect()
-n2p = {}
-for n in sts.samples():
-    nd = sts.node(n)
-    if nd.individual != tskit.NULL and not vac(nd):
-        p = pedof(sts.individual(nd.individual))
-        if p is not None: n2p[int(n)] = int(p)
-L = sts.sequence_length
-open(r'''", lenf, "''', 'w').write(repr(L))
-want_seg = ", if (isTRUE(segments)) "True" else "False", "
-# store_segments stays OFF unless the caller asked for them: tskit exposes total_span per
-# pair without it, and materialising every segment only to sum and discard it costs ~7x
-# (38.1s vs 5.1s over 14.8M segments on a 5413-sample tree; 3.2x at 800 ids).
-res = sts.ibd_segments(within=list(sts.samples()), min_span=", as.integer(min_span), ",
-                       store_pairs=True, store_segments=want_seg)
-keys = list(res.keys())
-rows = [{'node_a': int(a), 'node_b': int(b), 'ibd_fraction': float(res[(a, b)].total_span) / L}
-        for (a, b) in keys]
-pd.DataFrame(rows, columns=['node_a','node_b','ibd_fraction']).to_csv(r'''", out, "''', index=False)
-pd.DataFrame(list(n2p.items()), columns=['node_id','pedigree_id']).to_csv(r'''", nmap, "''', index=False)
-if want_seg:
-    nt = sts.nodes_time
-    srows = [{'node_a': int(a), 'node_b': int(b), 'left': float(sg.left), 'right': float(sg.right),
-              'mrca_node': int(sg.node), 'mrca_time': float(nt[int(sg.node)])}
-             for (a, b) in keys for sg in res[(a, b)]]
-    pd.DataFrame(srows, columns=['node_a','node_b','left','right','mrca_node','mrca_time']).to_csv(
-        r'''", segf, "''', index=False)
-")
-  reticulate::py_run_string(py)
-  ## Pin the column types. fread() on a header-only CSV -- which is what a run with no shared
-  ## ancestry above min_span produces -- types every column as logical, so the table silently
-  ## changes CLASS with run content and any rbind across runs mis-types or errors. Same
-  ## reasoning as the coercion in segments.R.
-  ibd <- data.table::fread(out, showProgress = FALSE)
-  ibd[, `:=`(node_a = as.integer(node_a), node_b = as.integer(node_b),
-             ibd_fraction = as.numeric(ibd_fraction))]
-  nm <- data.table::fread(nmap, showProgress = FALSE)
-  nm[, `:=`(node_id = as.integer(node_id), pedigree_id = as.integer(pedigree_id))]
-  res <- list(ibd = ibd, node_map = nm,
-              sequence_length = as.numeric(readLines(lenf, warn = FALSE)))
-  if (isTRUE(segments)) {
-    sg <- data.table::fread(segf, showProgress = FALSE)
-    sg[, `:=`(node_a = as.integer(node_a), node_b = as.integer(node_b),
-              left = as.numeric(left), right = as.numeric(right),
-              mrca_node = as.integer(mrca_node), mrca_time = as.numeric(mrca_time))]
-    res$segments <- sg
-  }
-  res
+  .new_vivax_ibd(pairs, smp, missing, sg, r$sequence_length, min_span, TRUE, end_tick, tf)
 }
 
-#' Build a fast pairwise-IBD lookup from [ibd_pairs()]
+#' The IBD of pairs of genomes, from ibd_pairs()
 #'
-#' @param ibd_obj the list returned by [ibd_pairs()].
-#' @param warn_missing warn (once) if `getibd()` is asked about a pedigree id that is not in
-#'   the index. Such an id scores 0, which is indistinguishable from "shares nothing" -- the
-#'   warning is what tells you the difference. Set `FALSE` for a query you know is a superset.
-#' @return a list with `nm` (the pedigree/node map) and `getibd(pa, pb)`, a vectorised
-#'   function returning genome-wide IBD (0 for pairs sharing nothing, and 1 for a self-pair).
-#' @section Ids that are not in the index:
-#' A run written with `RETAIN_FULL_HISTORY = FALSE` keeps only a fraction of genomes in the
-#' tree sequence, so most historical pedigree ids will be absent. `getibd()` scores an absent
-#' id 0 and warns once; check ids against `$nm$pedigree_id` before relying on a result.
+#' `ibd_lookup()` gives the IBD of each pair (`a[i]`, `b[i]`): 1 for a genome with itself, the
+#' pair's value otherwise, and `NA` when either genome is not in the object. A length-1 argument is
+#' recycled against the other. `as.matrix()` gives the pairs as a symmetric matrix named by
+#' pedigree id, with a unit diagonal, and `as.data.frame()` the `pairs` table.
+#' @param x a `vivax_ibd` object, from [ibd_pairs()].
+#' @param a,b pedigree ids.
+#' @param ids for `as.matrix()`, the genomes to give, in order; `NULL` for every one.
+#' @param ... ignored.
+#' @return `ibd_lookup()`: a numeric vector; `as.matrix()`: a matrix; `as.data.frame()`: a
+#'   data.frame of `a`, `b` and `ibd`.
+#' @examples
+#' \dontrun{
+#' x <- ibd_pairs(run, ids = c(12, 345, 678))
+#' ibd_lookup(x, 12, c(345, 678))
+#' as.matrix(x)
+#' }
+#' @seealso [ibd_pairs()]
 #' @export
-ibd_index <- function(ibd_obj, warn_missing = TRUE) {
-  nm <- data.table::as.data.table(ibd_obj$node_map)[!is.na(pedigree_id)]
-  nm <- unique(nm, by = "pedigree_id")
-  nmap <- stats::setNames(nm$node_id, as.character(nm$pedigree_id))
-  ib <- data.table::as.data.table(ibd_obj$ibd)
-  ib[, `:=`(node_a = as.double(node_a), node_b = as.double(node_b),
-            ibd_fraction = as.double(ibd_fraction))]
-  ib <- data.table::rbindlist(list(ib[, .(a = node_a, b = node_b, ibd = ibd_fraction)],
-                                   ib[, .(a = node_b, b = node_a, ibd = ibd_fraction)]))
-  data.table::setkey(ib, a, b)
-  ## Two different things used to return the same 0: a pair that genuinely shares nothing
-  ## above min_span, and a pedigree id that is NOT IN THE INDEX AT ALL. The second is a
-  ## caller error or a consequence of RETAIN_FULL_HISTORY = FALSE, and reading it as
-  ## "unrelated" is how a query can silently lose most of its data -- measured, 1265 of 1595
-  ## ids absent under RETAIN_FULL_HISTORY = FALSE, which took ibd_relapse_origin() from 1146
-  ## pairs to 79 without a word. The 0 is kept (an error would make that mode unusable, and
-  ## NA would break every downstream comparison), but it is no longer silent. Warned once per
-  ## index so a combn() loop does not emit thousands.
-  warned <- FALSE
-  getibd <- function(pa, pb) {
-    na <- nmap[as.character(pa)]; nb <- nmap[as.character(pb)]
-    if (warn_missing && !warned) {
-      miss <- unique(c(pa[is.na(na)], pb[is.na(nb)]))
-      if (length(miss)) {
-        warned <<- TRUE
-        warning(length(miss), " pedigree id(s) are not in this IBD index and score 0, which is ",
-                "indistinguishable from \"shares nothing\" -- e.g. ",
-                paste(utils::head(miss, 3), collapse = ", "),
-                ". Check ids against `$nm$pedigree_id`; a run with RETAIN_FULL_HISTORY = FALSE ",
-                "keeps only a fraction of genomes. Pass warn_missing = FALSE to silence.",
-                call. = FALSE)
-      }
-    }
-    v <- ib[.(na, nb), ibd, on = .(a, b)]
-    v <- data.table::fifelse(is.na(v), 0, v)   # 0-default = below the min_span detection floor
-    ## tskit's ibd_segments(within=) only returns DISTINCT pairs, so a self-pair would fall
-    ## through to the 0-default. A genome is identical to itself by definition, so return 1
-    ## (otherwise a pairwise matrix built with the diagonal would be silently wrong).
-    ## unname(): the node lookup carries pedigree-id names, which would otherwise ride along
-    ## on the returned IBD values and trip up identity comparisons downstream.
-    unname(data.table::fifelse(!is.na(na) & !is.na(nb) & na == nb, 1, v))
+ibd_lookup <- function(x, a, b) {
+  if (!inherits(x, "vivax_ibd")) stop("`x` must be a vivax_ibd object, from ibd_pairs().", call. = FALSE)
+  a <- as.integer(a); b <- as.integer(b)
+  if (length(a) != length(b)) {
+    if (length(a) == 1L) a <- rep(a, length(b))
+    else if (length(b) == 1L) b <- rep(b, length(a))
+    else stop("`a` and `b` must have the same length, or one of them length 1.", call. = FALSE)
   }
-  list(nm = nm, getibd = getibd)
+  lo <- pmin(a, b); hi <- pmax(a, b)
+  v <- x$pairs[data.table::data.table(a = lo, b = hi), on = c("a", "b")]$ibd
+  known <- a %in% x$samples$pedigree_id & b %in% x$samples$pedigree_id
+  v[known & a == b] <- 1
+  v[!known] <- NA_real_
+  unname(v)
+}
+
+#' @rdname ibd_lookup
+#' @export
+as.matrix.vivax_ibd <- function(x, ids = NULL, ...) {
+  ids <- if (is.null(ids)) x$samples$pedigree_id else as.integer(ids)
+  g <- expand.grid(i = seq_along(ids), j = seq_along(ids))
+  matrix(ibd_lookup(x, ids[g$i], ids[g$j]), length(ids), length(ids),
+         dimnames = list(as.character(ids), as.character(ids)))
+}
+
+#' @rdname ibd_lookup
+#' @param row.names,optional ignored.
+#' @export
+as.data.frame.vivax_ibd <- function(x, row.names = NULL, optional = FALSE, ...)
+  as.data.frame(x$pairs)
+
+#' @export
+print.vivax_ibd <- function(x, ...) {
+  cat("<vivax_ibd> ", nrow(x$samples), " genomes, ", nrow(x$pairs), " pairs, min_span ",
+      .slim_num(x$min_span), " bp\n", sep = "")
+  if (length(x$missing)) cat("  ", length(x$missing), " requested ids not in the tree sequence\n", sep = "")
+  cat("  segments: ", if (is.null(x$segments)) "not computed" else paste(nrow(x$segments), "rows"), "\n", sep = "")
+  cat("  from ", x$trees, ", ending on tick ", x$end_tick, "\n", sep = "")
+  invisible(x)
 }

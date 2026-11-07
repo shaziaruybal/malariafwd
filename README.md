@@ -96,8 +96,8 @@ summarise_run(run)                                  # prevalence, COI, relapse f
 
 # ground-truth IBD (tskit)
 cs  <- classify_cases(ev)
-idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
-ibd_relapse_origin(ev, idx)                       # relapses are clonal to their origin (IBD = 1)
+x   <- ibd_pairs(run, ids = cs$pedigree_id)       # keyed by pedigree id; read with ibd_lookup()
+ibd_relapse_origin(ev, x)                         # relapses are clonal to their origin (IBD = 1)
 new_infection_diversity(run)                       # relatedness of the transmitting population
 
 # parallel sweep (see ?run_grid; use future::plan() for a cluster). Calling it again resumes:
@@ -122,7 +122,7 @@ force_of_infection(run)     # FOI (mosquito-borne) vs molFOB (compound, incl. re
 
 ```r
 # pairwise IBD, and the segments behind it
-idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
+x <- ibd_pairs(run, ids = cs$pedigree_id); as.matrix(x)
 ibd_segments(run, a, b)                  # the shared stretches, split by chromosome
 plot_ibd_pair(run, a, b)                 # IBD "karyotype" -- 14 chromosomes, shared blocks
 plot_relatedness_ladder(ibd_truth_pairs(run))   # IBD by known relationship vs the textbook rungs

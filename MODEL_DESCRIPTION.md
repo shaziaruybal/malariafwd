@@ -564,8 +564,8 @@ per-chromosome tree sequences, which would require rewriting the entire IBD pipe
 
 **Gotcha for anyone writing new tskit code:** SLiM haploid individuals get **two** tskit nodes — the
 real haplosome (`is_vacant = [0]`) and a null placeholder (`is_vacant = [1]`, isolated, IBD 0 with
-everything). About half of `ts.samples()` are vacant and **must be filtered**. The package's
-`ibd_pairs()` / `ibd_index()` already do this.
+everything). About half of `ts.samples()` are vacant and **must be filtered**. The package's IBD
+and ARG functions do this.
 
 ---
 
@@ -817,7 +817,7 @@ Length, label and what is recorded.
 | `SIM_DAYS` | 365 | days | whole number in [2, 1e9]; a run that reaches day 99999 must move the days that default to 99999 past its end | Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. |
 | `SIM_ID` | "default" | - | text; UTF-8, without control characters | A label for the run, written into params.tsv. |
 | `VERBOSE` | FALSE | - | TRUE or FALSE | Narrate every event in run.log. The outputs are the same either way. |
-| `RETAIN_FULL_HISTORY` | TRUE | - | TRUE or FALSE | Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_index() warns that the ids it was asked about are absent. |
+| `RETAIN_FULL_HISTORY` | TRUE | - | TRUE or FALSE | Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_pairs() warns that the ids it was asked about are absent; they look up as NA. |
 
 ### Population
 
@@ -1400,8 +1400,9 @@ md5 of the model, the versions, and the size of every file; `load_run()` reports
 the model, so running `slim` with the arguments in `cmdline.txt` from a directory holding
 `model.slim` repeats the run. Requires SLiM ≥ 5.2 on `PATH` and, for IBD and the ARG functions,
 Python with `tskit` (≥ 1.0), `pandas` and `numpy` through reticulate; `check_setup()` reports both.
-`RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it,
-relapse-to-prior comparisons silently lose ancestors.
+`RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it, most
+earlier genomes leave the tree, and `ibd_pairs()` warns about the ids it was asked for that are gone
+and gives them `NA`.
 
 ### 16.5 Worked example
 
@@ -1421,7 +1422,7 @@ st <- load_state(run)
 summarise_run(run)                       # prevalence, COI, reservoir, relapse fraction
 
 cs  <- classify_cases(ev)                # episode-level truth labels
-idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))   # ground-truth IBD matrix
+x   <- ibd_pairs(run, ids = cs$pedigree_id)  # ground-truth IBD; as.matrix(x) for the matrix
 
 plot_diagnostics(run)                    # six-panel run-health dashboard
 plot_host_trajectory(st, ev, host_id = cs$human_id[1])

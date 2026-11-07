@@ -61,13 +61,16 @@ plot_diagnostics(run)
 
 ## Ground-truth IBD
 
-`ibd_pairs()` computes genome-wide IBD from the tree sequence; `ibd_index()` builds a fast
-pairwise lookup. Relapses are clonal to their origin (IBD = 1):
+`ibd_pairs()` computes genome-wide IBD from the tree sequence, keyed by pedigree id, and
+`ibd_lookup()` reads a pair's value (`NA` for a genome the object does not hold). Relapses are
+clonal to their origin (IBD = 1):
 
 ```{r}
-cs  <- classify_cases(ev)                          # each case by TRUE origin
-idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
-ibd_relapse_origin(ev, idx)                        # IBD of each relapse vs its origin (~1)
+cs <- classify_cases(ev)                           # each case by TRUE origin
+x  <- ibd_pairs(run, ids = cs$pedigree_id)
+x                                                  # genomes, pairs, and where they came from
+ibd_lookup(x, cs$pedigree_id[1], cs$pedigree_id[2])
+ibd_relapse_origin(ev, x)                          # IBD of each relapse vs its origin (~1)
 new_infection_diversity(run)                        # relatedness of the transmitting population
 ```
 
@@ -76,15 +79,14 @@ the shared blocks themselves, each tagged with the common ancestor it was inheri
 
 ```{r}
 sg <- ibd_pairs(run, ids = cs$pedigree_id, segments = TRUE)
-head(sg$segments)                  # node_a, node_b, left, right, mrca_node, mrca_time
+head(sg$segments)                  # a, b, left, right, mrca_id, mrca_time, depth
 ```
 
-`mrca_time` is a tskit node time -- ticks before the **end of the run**, not a depth. A
-"recent ancestry only" variant has to measure depth from the pair itself
-(`mrca_time - max(t_a, t_b)`, using the two samples' own node times), never from `mrca_time`
-alone: the latter scores a pair by when its lineage last branched rather than by how related
-the two genomes are, which inverts the relapse-vs-reinfection comparison. See D22 in
-`DECISIONS.md`.
+`mrca_time` is a tskit node time -- ticks before the **end of the run**, not an age. A "recent
+ancestry only" variant filters on `depth`, the age of each segment's common ancestor measured
+from the pair itself (for example `sg$segments[depth <= 180]`), never on `mrca_time` alone: that
+scores a pair by when its lineage last branched rather than by how related the two genomes are,
+which inverts the relapse-vs-reinfection comparison. See `?ibd_pairs`.
 
 ## Parallel sweeps
 

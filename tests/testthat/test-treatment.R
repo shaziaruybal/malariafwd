@@ -195,9 +195,9 @@ test_that("a recrudescence is clonal to its holder and MOI-neutral", {
   skip_if(nrow(rec) < 2, "too few recrudescences in this run")
 
   ## the payoff of minting: "IBD 1 to the prior episode" is a real measurement, not a
-  ## self-pair that ibd_index() hard-codes to 1
-  idx <- ibd_index(ibd_pairs(run, ids = unique(c(rec$pedigree_id, rec$parent1_pedigree_id))))
-  expect_true(all(idx$getibd(rec$pedigree_id, rec$parent1_pedigree_id) > 0.999))
+  ## self-pair, which ibd_lookup() gives as 1
+  x <- ibd_pairs(run, ids = unique(c(rec$pedigree_id, rec$parent1_pedigree_id)))
+  expect_true(all(ibd_lookup(x, rec$pedigree_id, rec$parent1_pedigree_id) > 0.999))
   tm <- data.table::as.data.table(arg_tmrca(run, rec$pedigree_id, rec$parent1_pedigree_id))
   expect_true(all(tm$coalesced > 0.99, na.rm = TRUE))
   expect_true(all(abs(tm$tmrca) < 1e-9, na.rm = TRUE))        # depth 0: parent -> child

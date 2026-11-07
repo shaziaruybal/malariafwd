@@ -9,37 +9,59 @@ ibd_pairs(run, ids = NULL, min_span = 1000, segments = FALSE)
 \arguments{
 \item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path.}
 
-\item{ids}{optional integer vector of \code{pedigree_id}s to restrict to (e.g. sampled cases).}
+\item{ids}{the pedigree ids of the genomes to compare, every pair among them; \code{NULL} for every
+genome the tree sequence records, which warns when that is more than 1e6 pairs.}
 
 \item{min_span}{minimum shared-segment length (bp) to count (default 1000).}
 
-\item{segments}{if \code{TRUE}, also return every shared segment with the time of the common
-ancestor it came from. Costs roughly 3-7x the default run time (the multiple grows with
-the number of samples) and returns one row per segment per pair, so restrict it with
-\code{ids} and \code{min_span}.}
+\item{segments}{if \code{TRUE}, also return every shared segment with its common ancestor and that
+ancestor's age.}
 }
 \value{
-a list with \code{ibd} (data.table: \code{node_a}, \code{node_b}, \code{ibd_fraction}), \code{node_map}
-(data.table: \code{node_id}, \code{pedigree_id}) and \code{sequence_length}. With \code{segments = TRUE},
-also \code{segments} (data.table: \code{node_a}, \code{node_b}, \code{left}, \code{right}, \code{mrca_node},
-\code{mrca_time}). Pass to \code{\link[=ibd_index]{ibd_index()}} for lookups.
+a \code{vivax_ibd} object, a list of:
+\itemize{
+\item \code{pairs}, a data.table keyed by \code{a} and \code{b}: one row for every pair of distinct genomes
+found, \code{a < b} (integer pedigree ids), and \code{ibd} (double, in [0, 1]), 0 for a pair that
+shares nothing;
+\item \code{samples}, one row per genome found, by pedigree id: \code{pedigree_id}, \code{node_time} (ticks
+before the end of the run) and \code{tick} (the day the genome arose, as in \code{events.tsv});
+\item \code{missing}, the requested ids the tree sequence does not hold;
+\item \code{segments}, \code{NULL} or a data.table of \code{a}, \code{b}, \code{left}, \code{right} (bp), \code{mrca_id} (the pedigree
+id of the common ancestor), \code{mrca_time} and \code{depth} (its age, see \emph{Segment ages});
+\item \code{sequence_length}, \code{min_span}, \code{all_pairs} (\code{TRUE}: every pair of the genomes is in
+\code{pairs}), \code{end_tick} (the run's last tick) and \code{trees} (the file read).
+}
+
+Read a pair's value with \code{\link[=ibd_lookup]{ibd_lookup()}}, or the table with \code{as.matrix()} or \code{as.data.frame()}.
 }
 \description{
-Computes genome-wide identity-by-descent (shared-segment length / sequence length)
-among a set of individuals, working on the tskit tree sequence recorded by the model.
-If \code{ids} is given the tree is first simplified to just those individuals (memory-safe) and
-SLiM's vacant null haplosome nodes are always excluded. \strong{All} shared ancestry is counted,
-however far back it goes -- there is no time cutoff. To impose one, ask for \code{segments} and
-filter them yourself; see the note below, and D22 in \code{DECISIONS.md} for why a cutoff is no
-longer offered as an argument.
+Computes genome-wide identity-by-descent (shared-segment length / sequence length) among a set
+of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model. The tree
+is simplified to the genomes asked for, and SLiM's vacant nodes are left out. \strong{All} shared
+ancestry is counted, however far back it goes; to impose a cutoff, ask for \code{segments} and filter
+them on their age (see \emph{Segment ages}).
 }
-\section{Segment times are not depths}{
+\section{Ids that are not in the tree sequence}{
 
-\code{mrca_time} is a tskit node time, i.e. \strong{ticks before the end of the run}, not a
-genealogical depth. A segment's depth relative to its own pair is
-\code{mrca_time - max(t_a, t_b)}, where \code{t_a}/\code{t_b} are the two samples' own node times. A
-recency filter must be written against that difference: filtering on \code{mrca_time} alone
-scores a pair by when its lineage last branched, not by how related the two genomes are.
+A run written with \code{RETAIN_FULL_HISTORY = FALSE} keeps only a fraction of genomes in the tree
+sequence. A requested id it does not hold is listed in \code{missing}, gives one warning, and looks
+up as \code{NA}, not as 0; asking only for such ids is an error.
+}
+
+\section{Segment ages}{
+
+\code{mrca_time} is a tskit node time, ticks before the end of the run, not an age. A segment's
+\code{depth} is how long before the older of the two genomes its common ancestor lived,
+\code{mrca_time - max(node_time[a], node_time[b])}, in ticks. A recency filter is written against it, for
+example \code{x$segments[depth <= 180]} for ancestry within about six months: filtering on
+\code{mrca_time} alone scores a pair by when its lineage last branched, not by how related the two
+genomes are.
+}
+
+\section{Cost}{
+
+One simplification and one pass over the pairs; \code{segments = TRUE} costs several times as long
+and gives one row per segment per pair, so restrict it with \code{ids} and \code{min_span}.
 }
 
 \section{Python}{
@@ -53,3 +75,12 @@ session. A function that cannot reach them stops with an error of class
 \code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
 }
 
+\examples{
+\dontrun{
+x <- ibd_pairs(run, ids = classify_cases(load_events(run))$pedigree_id)
+ibd_lookup(x, 12, 345)
+}
+}
+\seealso{
+\code{\link[=ibd_lookup]{ibd_lookup()}}, \code{\link[=ibd_segments]{ibd_segments()}}
+}

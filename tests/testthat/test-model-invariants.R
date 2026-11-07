@@ -107,19 +107,18 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
   skip_if(length(ids) < 10, "too few cases in this run")
 
   ## D22: no time cutoff is offered, so a clonal relapse reads 1 however old its ancestor is
-  idx <- ibd_index(ibd_pairs(run, ids = ids))
-  ro  <- data.table::as.data.table(ibd_relapse_origin(ev, idx))
+  x <- ibd_pairs(run, ids = ids)
+  ro  <- data.table::as.data.table(ibd_relapse_origin(ev, x))
   if (nrow(ro)) expect_true(all(ro$ibd > 0.999))
 
   sg <- ibd_pairs(run, ids = ids, segments = TRUE)
-  expect_named(sg$segments,
-               c("node_a", "node_b", "left", "right", "mrca_node", "mrca_time"))
+  expect_named(sg$segments, c("a", "b", "left", "right", "mrca_id", "mrca_time", "depth"))
   expect_gt(sg$sequence_length, 0)
   ## the segments must add back up to the pair table they came from
-  rec <- sg$segments[, .(f = sum(right - left) / sg$sequence_length), by = .(node_a, node_b)]
-  cmp <- merge(data.table::as.data.table(sg$ibd), rec, by = c("node_a", "node_b"))
-  expect_equal(nrow(cmp), nrow(sg$ibd))
-  expect_lt(max(abs(cmp$ibd_fraction - cmp$f)), 1e-9)
+  rec <- sg$segments[, .(f = sum(right - left) / sg$sequence_length), by = .(a, b)]
+  cmp <- merge(sg$pairs[ibd > 0], rec, by = c("a", "b"))
+  expect_equal(nrow(cmp), nrow(sg$pairs[ibd > 0]))
+  expect_lt(max(abs(cmp$ibd - cmp$f)), 1e-9)
   ## mrca_time is a node time, never more recent than either sample it joins
   expect_true(all(sg$segments$mrca_time >= 0))
 })
@@ -156,8 +155,8 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   skip_if(nrow(pairs) == 0, "no inoculation produced both a primary and a batch")
 
   take <- pairs[seq_len(min(.N, 25))]
-  idx  <- ibd_index(ibd_pairs(run, ids = unique(c(take$primary, take$batch))))
-  take[, ibd := idx$getibd(primary, batch)]
+  x <- ibd_pairs(run, ids = unique(c(take$primary, take$batch)))
+  take[, ibd := ibd_lookup(x, primary, batch)]
   expect_equal(take$ibd, rep(1, nrow(take)), tolerance = 1e-8)
 
   ## and the import path specifically, since that is where the defect was

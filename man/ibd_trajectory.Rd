@@ -4,12 +4,12 @@
 \alias{ibd_trajectory}
 \title{Mean pairwise IBD among cases active in each time window (relatedness trajectory)}
 \usage{
-ibd_trajectory(events, idx, bin = 90, cap = 40, min_pairs = 5, seed = 1)
+ibd_trajectory(events, ibd, bin = 90, cap = 40, min_pairs = 5, seed = 1)
 }
 \arguments{
 \item{events}{an events data.table.}
 
-\item{idx}{an \code{\link[=ibd_index]{ibd_index()}} object.}
+\item{ibd}{a \code{vivax_ibd} object from \code{\link[=ibd_pairs]{ibd_pairs()}}, of every pair among the run's cases.}
 
 \item{bin}{window width (days).}
 

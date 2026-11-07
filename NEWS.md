@@ -84,7 +84,8 @@ apart rather than choosing for you:
 
 * **Ground-truth IBD.** `ibd_pairs()` computes genome-wide IBD from the tree sequence and, with
   `segments = TRUE`, returns the shared blocks themselves — each tagged with the common ancestor
-  it came from. `ibd_index()` builds a fast pairwise lookup; `ibd_segments()` and
+  it came from, keyed by pedigree id: `ibd_lookup()`, `as.matrix()` and `as.data.frame()` read it
+  (`NA` for a genome the run's tree sequence does not hold); `ibd_segments()` and
   `plot_ibd_pair()` show *why* a pair's IBD is what it is, painted along the 14 chromosomes.
 
 * **ARG-native summaries.** `arg_summary()`, `arg_tmrca()`, `arg_diversity()`,

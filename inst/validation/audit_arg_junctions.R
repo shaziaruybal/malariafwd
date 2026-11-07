@@ -56,10 +56,10 @@ prs <- merge(prs[la != lb], rec[, .(oocyst_id, par1, par2, unrelated_parents)], 
 ## where their parents are. Two of the four products carry each parent's genome at every locus,
 ## so two products of unrelated parents share a third of the genome on average, and two
 ## products of parents that share a fraction f of theirs share 1/3 + 2f/3.
-idx <- ibd_index(ibd_pairs(run, ids = unique(c(prs$a, prs$b, prs$par1, prs$par2))))
-inN <- function(x) x %in% idx$nm$pedigree_id
+ibx <- ibd_pairs(run, ids = unique(c(prs$a, prs$b, prs$par1, prs$par2)))
+inN <- function(x) x %in% ibx$samples$pedigree_id
 prs <- prs[inN(a) & inN(b) & inN(par1) & inN(par2)]
-prs[, `:=`(ibd = idx$getibd(a, b), f = idx$getibd(par1, par2))]
+prs[, `:=`(ibd = ibd_lookup(ibx, a, b), f = ibd_lookup(ibx, par1, par2))]
 prs[, parents := factor(fifelse(unrelated_parents, "unrelated founders", "not both founders"),
                         c("unrelated founders", "not both founders"))]
 sib <- prs[, .(n = .N, oocysts = uniqueN(oocyst_id), f = mean(f), mean_ibd = mean(ibd),
