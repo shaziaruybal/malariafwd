@@ -139,6 +139,9 @@ test_that("a params.tsv of another version warns once, naming what it lacks and 
                                               extra = "N_FOUNDERS\t7")))
   expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(7L, 7L))
   expect_null(p$N_FOUNDERS)
+  ## and the row of N_OOCYSTS_PER_BITE is left out, also without a warning
+  expect_no_warning(p <- load_params(fake_run(extra = "N_OOCYSTS_PER_BITE\t1")))
+  expect_null(p$N_OOCYSTS_PER_BITE)
 })
 
 test_that("load_run() carries the record rows, typed, and refuses a directory that is not a run", {

@@ -12,7 +12,7 @@
   BITING_RATE = 0.1, P_TRANS_VH = 0.5, P_TRANS_HV = 0.5, MOSQ_LIFESPAN = 10.0,
   EIP_DAYS = 10L, MAX_MOI = 20L, MAX_BROODS_PER_MOSQ = 20L,
   # parasite / infection
-  MEAN_BLOOD_STAGE_DURATION = 60, N_OOCYSTS_PER_BITE = 1L,
+  MEAN_BLOOD_STAGE_DURATION = 60,
   # mosquito uptake / inoculation sampling . lambda = 0 (default) -> exactly 1
   # oocyst per uptake and 1 genotype per bite. K_OOCYSTS > 0 makes the oocyst count
   # negative-binomial (var = lambda + lambda^2/K); 0 = Poisson.
@@ -150,7 +150,10 @@ vivax_params <- function(...) {
 .RETIRED_PARAMS <- list(
   N_FOUNDERS = paste("N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS, the hosts infected at the",
                      "start, and N_FOUNDER_LINEAGES, the distinct founding genomes among them (it",
-                     "defaults to N_FOUNDER_HOSTS)."))
+                     "defaults to N_FOUNDER_HOSTS)."),
+  N_OOCYSTS_PER_BITE = paste("N_OOCYSTS_PER_BITE is not a parameter: the products a bite delivers are set",
+                             "by LAMBDA_SPOROZOITES, the mean of their zero-truncated count (0 gives",
+                             "exactly one)."))
 
 ## Refuses names that are not parameters: a retired one with what to set instead, any other listed.
 .refuse_unknown <- function(nms) {
@@ -362,8 +365,6 @@ validate_params <- function(p) {
   if (!is.finite(p$MEAN_BLOOD_STAGE_DURATION) || p$MEAN_BLOOD_STAGE_DURATION < 1)
     stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days): blood-stage infections clear each day ",
          "with probability 1/MEAN_BLOOD_STAGE_DURATION.", call. = FALSE)
-  if (p$N_OOCYSTS_PER_BITE != 1)
-    stop("N_OOCYSTS_PER_BITE is deprecated; use LAMBDA_SPOROZOITES instead.", call. = FALSE)
   if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))
     stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '", p$RADCURE_MODE, "'",
          call. = FALSE)

@@ -76,8 +76,9 @@
 ## the defaults' order and types (one the file lacks takes its default, and N_FOUNDER_LINEAGES
 ## follows N_FOUNDER_HOSTS as in vivax_params()); `record`, the record rows it has, typed; and
 ## `missing` and `dropped`, the parameters it lacks and the rows that are neither. Each line is
-## split at its first tab, so a value keeps any tab or space it holds. The N_FOUNDERS row of a file
-## made before it was retired gives its value to N_FOUNDER_HOSTS where the file has none.
+## split at its first tab, so a value keeps any tab or space it holds. The rows of retired
+## parameters, in files made before they were retired, are left out without a warning; an
+## N_FOUNDERS row gives its value to N_FOUNDER_HOSTS where the file has none.
 .read_params_tsv <- function(path) {
   dir <- dirname(path)
   where <- paste("params.tsv in", dir)
@@ -110,5 +111,5 @@
   }
   list(params = structure(p, class = "vivax_params"), record = rec,
        missing = setdiff(names(d), c(names(txt), "N_FOUNDER_LINEAGES")),
-       dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS), "N_FOUNDERS")))
+       dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS), names(.RETIRED_PARAMS))))
 }

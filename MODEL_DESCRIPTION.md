@@ -458,9 +458,6 @@ plus high carriage (≈3 and ≈0.9).
 > off by default for backward compatibility, and changing that default is the first planned
 > extension (§15).
 
-`N_OOCYSTS_PER_BITE` is **retired**; it capped lineages rather than oocysts and now stops the run
-if set to anything but 1.
-
 ### 6.1 The zero-truncated count distributions
 
 Both `LAMBDA_*` parameters feed `drawZTCount(lambda, k)`:
@@ -832,7 +829,6 @@ derived and written to `params.tsv` for provenance.
 | `LAMBDA_OOCYSTS` | 0.0 | → exactly 1 oocyst. Field vivax DMFA median is **7.2/midgut** (wild *An. arabiensis*, Ethiopia) |
 | `K_OOCYSTS` | 0.0 | 0 = Poisson; > 0 = NB. Vivax DMFA counts are overdispersed |
 | `LAMBDA_SPOROZOITES` | 0.0 | → exactly 1 genotype per bite. **Co-transmission impossible at the default** |
-| `N_OOCYSTS_PER_BITE` | 1 | **retired**; tripwire |
 | `GAMETOCYTE_DELAY` | 0 | fixed; vivax realistic ≈ 2–3 d |
 | `P_GAMETOCYTE` | 1.0 | vivax realistic ≈ 0.9 |
 

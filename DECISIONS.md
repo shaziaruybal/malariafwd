@@ -19,6 +19,25 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D55 — N_OOCYSTS_PER_BITE is retired · 2026-11-07 · Accepted
+**Context.** `N_OOCYSTS_PER_BITE` was kept as a tripwire after `LAMBDA_SPOROZOITES` replaced it: any
+value but 1 stopped the run, yet it was still a parameter, in every set and every `params.tsv`
+(review n20). It capped the lineages a bite delivered, not oocysts. Retiring it is the review's fix,
+taken as the Phase B plan's default; the author can reverse it at the B1 review stop.
+**Decision.** It is retired as `N_FOUNDERS` is (D54): `vivax_params(N_OOCYSTS_PER_BITE = )`, a set
+edited to hold it, and a direct run that defines it are refused, whatever the value, with a message
+naming `LAMBDA_SPOROZOITES`; `params.tsv` has no row for it; a saved `params.tsv`'s row is left out
+without a warning, as is the row of any retired parameter.
+**Rationale.** A parameter that can take one value only sets nothing.
+**Alternatives rejected.** *Keep the tripwire* -- one more name in every set and every record, for a
+value that cannot change.
+**Consequences.** Runs are unchanged (`params.tsv` loses one row). No analysis script sets it.
+**How to verify.** `tests/testthat/test-params.R` and `tests/testthat/test-slim.R` (refused from R
+and with `-d`, at the value 1 too) and `tests/testthat/test-load.R` (a saved row is left out
+quietly).
+
+---
+
 ## D54 — N_FOUNDERS is retired; the founders are N_FOUNDER_HOSTS and N_FOUNDER_LINEAGES · 2026-11-07 · Accepted
 **Context.** `N_FOUNDERS` survived from before the founders were split into hosts infected at the
 start (`N_FOUNDER_HOSTS`) and the distinct genomes among them (`N_FOUNDER_LINEAGES`): it only set

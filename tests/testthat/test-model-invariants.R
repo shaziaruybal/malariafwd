@@ -40,10 +40,6 @@ test_that("classify_cases labels imported relapses", {
   expect_gt(nrow(cs[origin == "relapse" & imported == TRUE]), 0)
 })
 
-test_that("deprecated N_OOCYSTS_PER_BITE is rejected", {
-  expect_error(vivax_params(N_OOCYSTS_PER_BITE = 2), "deprecated")
-})
-
 test_that("zero-truncated count helpers round-trip", {
   ## lambda is the PRE-truncation rate: the realised mean is higher
   expect_gt(uptake_moments(2)[["mean"]], 2)

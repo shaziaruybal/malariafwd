@@ -51,6 +51,11 @@ test_that("N_FOUNDERS is refused, naming the founder parameters to set instead",
   expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
 })
 
+test_that("N_OOCYSTS_PER_BITE is refused, naming LAMBDA_SPOROZOITES", {
+  expect_error(vivax_params(N_OOCYSTS_PER_BITE = 1), "^N_OOCYSTS_PER_BITE is not a parameter.*LAMBDA_SPOROZOITES")
+  expect_false("N_OOCYSTS_PER_BITE" %in% names(vivax_params()))
+})
+
 test_that("every argument is named, given once, and not NULL", {
   expect_error(vivax_params(300), "every argument must be named")
   expect_error(vivax_params(N_HOSTS = 300, 0.5), "every argument must be named")
