@@ -669,6 +669,9 @@ reproduction()
 {
 	humans = sim.subpopulations[HUMANS];
 	mosq = sim.subpopulations[VECTORS];
+	// the lineages of the blood-stage clones each host gains today, which h.individuals shows only
+	// once reproduction() is over; the MAX_MOI check counts them (D51)
+	humans.setValue("new_lineages", integer(0));
 	
 	// DEBUGGING
 	vcat("⏱️----------" + " tick " + sim.cycle + " ------------⏱️");
@@ -791,6 +794,7 @@ reproduction()
 					// its originating infection's ancestry and is IBD 1 to it. This
 					// invariant is asserted in inst/validation/audit_events_and_ibd.R.
 					new_active = h.addCloned(hyp);
+					h.setValue("new_lineages", c(h.getValue("new_lineages"), hyp.getValue("lineage_id")));
 					new_active.setValue("brood_birth_tick",      hyp.getValue("brood_birth_tick"));
 					new_active.setValue("lineage_id",               hyp.getValue("lineage_id"));
 					new_active.setValue("oocyst_id",              hyp.getValue("oocyst_id"));  // relapse keeps its meiosis of origin
@@ -1048,7 +1052,7 @@ reproduction()
 			// The same capacity check as Event 4, before the P_TRANS_VH draw (D38). A host tagged
 			// susceptible can still carry blood-stage clones: at SUBPATENT_INFECTIVITY = 0 its
 			// subpatent clones are not infectious, but they count toward MAX_MOI.
-			else if (getBloodStageLineageCount(h) >= MAX_MOI)
+			else if (getCapacityLineageCount(h) >= MAX_MOI)
 			{
 				vcat("Iv-Sh event: human 👤" + h.id + " at max MOI (" + MAX_MOI + "); mosquito-to-human transmission skipped");
 			}
@@ -1078,16 +1082,19 @@ reproduction()
 		// --------------------------------------------------
 		else if (m.tag == INFECTED & h.tag == INFECTED)
 		{
-			if (mosq_MOI == 0 | human_MOI == 0)
+			// A host tagged infected may show no transmissible clone yet: one it gained earlier in
+			// today's reproduction() is not in h.individuals until that is over. It can still be
+			// infected; it cannot yet infect the mosquito (D51).
+			if (mosq_MOI == 0)
 			{
-				vcat("note: Iv-Ih: host tagged I during this tick but currently has zero broods; skipping");
+				vcat("note: Iv-Ih: mosquito tagged I but has no broods; skipping");
 			}
 			else
 			{
 				// ------------------------------------------
 				// 👤 HUMAN 👤
 				// ------------------------------------------
-				if (getBloodStageLineageCount(h) < MAX_MOI)   // capacity: patent AND subpatent
+				if (getCapacityLineageCount(h) < MAX_MOI)   // capacity: patent, subpatent and today's
 				{
 					if (size(transmissible_mosq_broods) == 0)
 					{
@@ -1113,7 +1120,10 @@ reproduction()
 				// ------------------------------------------
 				// 🦟 MOSQUITO 🦟
 				// ------------------------------------------
-				if (runif(1) < P_TRANS_HV)
+				takes_up = F;
+				if (human_MOI > 0)
+					takes_up = (runif(1) < P_TRANS_HV);
+				if (takes_up)
 				{
 					if (getActiveLineageCount(m) >= MAX_BROODS_PER_MOSQ)
 					{
@@ -1167,6 +1177,7 @@ reproduction()
 			if (rt > sim.cycle)
 				next;
 			new_active = h.addCloned(hold);
+			h.setValue("new_lineages", c(h.getValue("new_lineages"), hold.getValue("lineage_id")));
 			new_active.setValue("brood_birth_tick",      hold.getValue("brood_birth_tick"));
 			new_active.setValue("lineage_id",            hold.getValue("lineage_id"));
 			new_active.setValue("oocyst_id",             hold.getValue("oocyst_id"));
@@ -1209,6 +1220,8 @@ reproduction()
 // then self-deactivates. Default N_FOUNDER_LINEAGES == N_FOUNDER_HOSTS => nothing pending => no-op.
 // A day-1 import pulse lands before this (D39): a clone host is still empty then, so MAX_MOI does not
 // refuse it an import and it holds both from tick 2, and an import can sit beside a template founder.
+// Day 2's bites come before this too (SLiM calls reproduction() callbacks in script order), so the
+// MAX_MOI check does not refuse a clone host a bite that day either.
 2 reproduction()
 {
 	for (i in seqLen(size(PENDING_CLONE_HOSTS)))
@@ -1348,6 +1361,7 @@ reproduction()
 	// infectious bites each host received today, for the EIR; written and reset by
 	// writeStateSnapshot()
 	sim.subpopulations[HUMANS].setValue("inf_bites", 0);
+	sim.subpopulations[HUMANS].setValue("new_lineages", integer(0));
 	sim.subpopulations[VECTORS].setValue("pop_type", "mosquito");
 	
 	humans = sim.subpopulations[HUMANS];
@@ -2066,6 +2080,20 @@ function (integer$) getBloodStageLineageCount(o<Subpopulation>$ s)
 	return size(unique(act.getValue("lineage_id")));
 }
 
+// CAPACITY on the day: the blood-stage lineages present, and those of the clones the host gained
+// earlier in today's reproduction(), which h.individuals shows only once that is over (D51).
+function (integer$) getCapacityLineageCount(o<Subpopulation>$ h)
+{
+	ids = h.getValue("new_lineages");
+	if (h.individualCount > 0)
+	{
+		act = h.individuals[h.individuals.getValue("is_dormant") == F];
+		if (size(act) > 0)
+			ids = c(ids, act.getValue("lineage_id"));
+	}
+	return size(unique(ids));
+}
+
 // Suppressed but present: reported as moi_subpatent, and the compartment recrudescence
 // comes out of.
 function (integer$) getSubpatentLineageCount(o<Subpopulation>$ s)
@@ -2624,6 +2652,7 @@ function (integer) establishInfectionOutcome(
 	if (has_primary)
 	{
 		new_active = h.addCloned(source);
+		h.setValue("new_lineages", c(h.getValue("new_lineages"), source.getValue("lineage_id")));
 		
 		new_active.setValue("brood_birth_tick", source.getValue("brood_birth_tick"));
 		new_active.setValue("lineage_id", source.getValue("lineage_id"));

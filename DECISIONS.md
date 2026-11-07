@@ -19,6 +19,43 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D51 — A host's clones of the day count toward MAX_MOI, and do not stop a bite · 2026-11-07 · Accepted
+**Context.** A blood-stage clone a host gains in `reproduction()`, by a relapse or a bite, is not in
+the host's individuals until that callback is over, while the host is tagged infected at once
+(D47). A further infectious bite on the host the same day went to the branch for an infected host
+and an infected mosquito, which skipped a host with no visible transmissible clone, so the bite was
+dropped both ways: 0-1% of infectious bites in untreated runs and 2.8-5.5% with case management
+(`BLOODCURE_COVERAGE` 0.8), where hosts whose only clone is that day's relapse are common. The
+`MAX_MOI` check (D38) counted only visible clones, so same-day bites took a host past it: at
+`MAX_MOI = 2` with no relapses, blood-stage MOI reached 4. The author chose to fix it before
+Phase B (2026-11-07).
+**Decision.** Each host keeps the lineages of the blood-stage clones it gained that day, cleared at
+the start of each day's `reproduction()`, and a bite's `MAX_MOI` check counts them with the clones
+the host carries. A bite on a host tagged infected is inoculated as any other: only the mosquito's
+uptake needs a transmissible clone, and it is skipped, with no draw, when the host shows none yet.
+**Rationale.** The order of the bites within a day is an artefact of the loop; it should decide
+neither whether a bite counts nor whether the cap holds.
+**Alternatives rejected.** *Guard each direction of the branch separately, and nothing else* -- the
+cap cannot see same-day clones either, so it would let a second clone in on the same day even at
+`MAX_MOI = 1`. *Make the day's clones visible to the day's bites* -- SLiM adds a callback's new
+individuals only once `reproduction()` is over.
+**Consequences.** A run changes from the first infectious bite on a host tagged infected that shows
+no transmissible clone, or on one that the day's clones have filled to `MAX_MOI`; a run with neither
+is unchanged. With every infectious bite infecting and no host full, a host's inoculations a day are
+its infectious bites. A clone a host gains during the day is first taken up by a mosquito the next
+day, even at `GAMETOCYTE_DELAY = 0`. A founder host's copy of another founder's genome arrives on
+day 2 after that day's bites, so the check does not refuse it a day-2 bite, as it does not refuse a
+day-1 import (D39); relapses still bypass the check, and a bite that delivers several genotypes is
+admitted whole. Re-checked, ν = 3 is still inside all four bands (D48 and MODEL_DESCRIPTION 13 give
+the new figures); MODEL_DESCRIPTION's other measured figures, the representative run among them, are
+refreshed before release (review M33).
+**How to verify.** `tests/testthat/test-model-invariants.R`: at `P_TRANS_VH = 1` with case
+management and no host full, each host's infectious bites a day are its inoculations that day; at
+`MAX_MOI = 2` with no relapses and one genotype per bite, no host ever carries more than 2
+blood-stage lineages.
+
+---
+
 ## D50 — The loaders give every run the same columns, in the same classes · 2026-11-07 · Accepted
 **Context.** `load_events()` and `load_state()` let `fread()` guess each column's class from the
 values, so the classes drifted with what a run held: a header-only `events.tsv` (a run with no
@@ -89,9 +126,9 @@ fit supports.
 **Alternatives rejected.** *Keep 5 and call it a placeholder* -- it is out of band and used
 nowhere.
 **Consequences.** Every run that leaves `NU_HYPNOZOITE_BATCH` at its default changes. The re-check
-(400 hosts, 5 years, `BITING_RATE` 0.08, 3 seeds) puts ν = 3 inside all four bands when every
-relapse is counted: relapses per person-year 2.29, molFOB 3.39, median MOI 1, relapse fraction
-0.66. With the relapses into a patent clone of their own lineage left out of both, as agreed for
+(400 hosts, 5 years, `BITING_RATE` 0.08, 3 seeds, re-measured after D51) puts ν = 3 inside all four
+bands when every relapse is counted: relapses per person-year 2.32, molFOB 3.44, median MOI 1,
+relapse fraction 0.66. With the relapses into a patent clone of their own lineage left out of both, as agreed for
 the relapse-fraction band (two-thirds of relapses at ν = 3), relapses per person-year stay inside
 their band up to ν = 12, but the relapse fraction is 0.39 at ν = 3 and stays below its band at
 every ν up to 12 (0.48). Not settled here: which reading the band is compared with.
@@ -126,11 +163,10 @@ by a relapse or by an earlier bite: a clone made in `reproduction()` is not visi
 bites are over, while the host is already tagged infected, so the bite goes to the infected-pair
 branch, which skips a host with no visible transmissible clone. That is 0-1% of infectious bites in
 untreated runs and 2.8-5.5% with case management (`BLOODCURE_COVERAGE` 0.8) in the test's settings.
-The same invisibility lets same-day bites take a host past `MAX_MOI`. Not settled here.
+The same invisibility lets same-day bites take a host past `MAX_MOI`. D51 fixes both.
 **How to verify.** `tests/testthat/test-model-invariants.R`: at `P_TRANS_VH = 1` with no host ever
-full and no hypnozoites, every inoculation is one infectious bite, a host-day without an
-inoculation has no infectious bite, and more than 98% of infectious bites inoculate; these hold for
-the test's settings, not in general.
+full, each host's infectious bites a day are its inoculations that day, with case management too
+(D51).
 ---
 
 ## D46 — Local vector control does not scale imports · 2026-11-07 · Accepted

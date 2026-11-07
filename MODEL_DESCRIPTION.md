@@ -152,10 +152,10 @@ for each tick t:
         if runif(1) >= biting_rate_eff(t):  continue
         h <- a uniformly chosen host
         broods <- sampleTransmissibleMosqBroods(m)       # n ~ ZT(LAMBDA_SPOROZOITES), past the EIP
-        if m infectious and blood_stage_lineages(h) < MAX_MOI:   # patent or subpatent
+        if m infectious and blood_stage_lineages(h) < MAX_MOI:   # patent, subpatent, or gained today
             if runif(1) < P_TRANS_VH:
                 inoculateMosquitoToHuman(broods, h)          # ONE Geom(nu) batch, split over k
-        if h infectious and runif(1) < P_TRANS_HV:
+        if h infectious and runif(1) < P_TRANS_HV:            # by a clone it held before today
             if active_lineages(m) < MAX_BROODS_PER_MOSQ:
                 seedBroodFromHuman(m, h)                     # n ~ ZT(LAMBDA_OOCYSTS) meioses
 
@@ -232,9 +232,12 @@ superinfection). The gate is the same for every new inoculation, a local bite or
 already carrying `MAX_MOI` blood-stage lineages, patent or subpatent, has the **whole** inoculation
 skipped — primary *and* hypnozoite batch, so the reservoir also stops being topped up — whether or
 not those lineages are infectious (at `SUBPATENT_INFECTIVITY = 0` subpatent clones are not). The
-check comes before the bite's `P_TRANS_VH` draw. **Relapses bypass the gate entirely**, so realised
-MOI can exceed it. At 20 it is a runaway guard that essentially never binds (COI is typically 1–3);
-set it low and you are measuring the cap, not the biology.
+check comes before the bite's `P_TRANS_VH` draw, and counts the clones the host gained earlier the
+same day, by a relapse or a bite. **Relapses bypass the gate entirely**, so realised MOI can exceed
+it; so can a bite that delivers several genotypes, which the gate admits whole, and a founder host's
+copy of another founder's genome, which arrives on day 2 after that day's bites (§8). At 20 it is a
+runaway guard that essentially never binds (COI is typically 1–3); set it low and you are measuring
+the cap, not the biology.
 
 ---
 
@@ -1085,11 +1088,11 @@ observer could not see as a recurrence.
 
 | ν | prevalence | relapses per person-year (0.5–5): all / masked left out | molFOB (0.7–15) | median MOI (1–3) | relapse fraction (0.55–0.85): all / masked left out | EIR |
 |---|---|---|---|---|---|---|
-| 2 | 0.11 | 0.67 / 0.27 | 0.95 | 1 | 0.56 / 0.34 | 0.84 |
-| **3** | 0.31 | 2.29 / 0.74 | 3.39 | 1 | 0.66 / 0.39 | 2.26 |
-| 5 | 0.49 | 5.30 / 1.24 | 6.87 | 1 | 0.77 / 0.43 | 3.20 |
-| 8 | 0.63 | 10.39 / 1.66 | 12.41 | 1 | 0.84 / 0.45 | 4.08 |
-| 12 | 0.78 | 19.25 / 2.28 | 21.70 | 1.67 | 0.89 / 0.48 | 4.90 |
+| 2 | 0.11 | 0.66 / 0.27 | 0.92 | 1 | 0.56 / 0.34 | 0.80 |
+| **3** | 0.33 | 2.32 / 0.76 | 3.44 | 1 | 0.66 / 0.39 | 2.35 |
+| 5 | 0.53 | 5.81 / 1.40 | 7.59 | 1 | 0.76 / 0.44 | 3.58 |
+| 8 | 0.62 | 10.21 / 1.60 | 12.20 | 1 | 0.83 / 0.44 | 4.00 |
+| 12 | 0.78 | 19.91 / 2.38 | 22.44 | 2 | 0.89 / 0.48 | 5.06 |
 
 Counting every relapse, ν = 2 and 3 sit inside all four bands; from ν = 5 relapses per person-year
 are above their band, and at ν = 12 molFOB is too. Two-thirds of the relapses at ν = 3 are masked.
