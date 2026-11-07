@@ -148,3 +148,8 @@ test_that("check_setup() finds this machine's SLiM, and its Python when tskit is
   expect_true(all(s$ok[s$component %in% c("reticulate", "Python", "tskit", "pandas", "numpy")]))
   expect_true(numeric_version(sub("^([0-9.]+).*", "\\1", s$version[s$component == "tskit"])) >= "1.0")
 })
+
+test_that("skip_if_no_tskit() skips when Python with tskit is not there", {
+  local_mocked_bindings(tskit_available = function() FALSE)
+  expect_condition(skip_if_no_tskit(), class = "skip")
+})

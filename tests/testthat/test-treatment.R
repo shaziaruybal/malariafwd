@@ -184,8 +184,7 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
 })
 
 test_that("a recrudescence is clonal to its holder and MOI-neutral", {
-  skip_if_no_slim()
-  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  skip_if_no_slim(); skip_if_no_tskit()
   out <- file.path(tempdir(), "mfw-recrud-ibd"); unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L,
                               BITING_RATE = 0.14, BLOODCURE_COVERAGE = 1,

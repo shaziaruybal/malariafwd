@@ -37,15 +37,13 @@ test_that("hypnozoite dynamics match alpha/(alpha+mu) [transmission-invariant]",
 })
 
 test_that("relapse-to-origin IBD is clonal (= 1)", {
-  skip_if_not(slim_available(), "SLiM not on PATH")
-  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  skip_if_no_slim(); skip_if_no_tskit()
   run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
                               LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
                  seed = 3, outdir = file.path(tempdir(), "mfwd_test_ibd"))
   ev <- load_events(run)
   cs <- classify_cases(ev)
-  idx <- tryCatch(ibd_index(ibd_pairs(run, ids = cs$pedigree_id)),
-                  error = function(e) skip(paste("tskit unavailable:", conditionMessage(e))))
+  idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
   roi <- ibd_relapse_origin(ev, idx)
   skip_if(nrow(roi) < 10, "too few relapse-origin pairs")
   expect_equal(median(roi$ibd), 1, tolerance = 0.001)

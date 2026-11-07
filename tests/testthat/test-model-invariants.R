@@ -58,8 +58,7 @@ test_that("zero-truncated count helpers round-trip", {
 })
 
 test_that("ARG summaries behave on the forest genealogy", {
-  skip_if_no_slim()
-  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  skip_if_no_slim(); skip_if_no_tskit()
   out <- file.path(tempdir(), "mfw-arg")
   unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12,
@@ -98,8 +97,7 @@ test_that("ARG summaries behave on the forest genealogy", {
 })
 
 test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
-  skip_if_no_slim()
-  skip_if_not(requireNamespace("reticulate", quietly = TRUE), "reticulate not available")
+  skip_if_no_slim(); skip_if_no_tskit()
   out <- file.path(tempdir(), "mfw-ibdseg")
   unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(N_HOSTS = 50, N_MOSQ = 100, BITING_RATE = 0.12,
@@ -127,7 +125,7 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
 })
 
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
-  skip_if_no_slim()
+  skip_if_no_slim(); skip_if_no_tskit()
   ## Regression for D17. The import path used to build the batch with addEmpty(NULL), giving
   ## two genetically unrelated founders (measured IBD 0) under one lineage_id, while an
   ## ordinary bite gave IBD 1. Imports are now seeded in early() and the second compartment is
