@@ -19,6 +19,29 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D56 — The event vocabulary has no seed uptake, and mosq_death counts genomes · 2026-11-07 · Accepted
+**Context.** `event_types()` listed `hv_uptake_seed`, a mosquito's founder genotype, but every
+mosquito starts uninfected, so the type could never occur, and the model's mosquito-seeding branches
+were dead code with comments saying otherwise. `mosq_death` was described as "mosquito dies", while
+the model writes one row per genome an infected mosquito carried and none for an uninfected death,
+so counting its rows as deaths gave vector mortality wrong by a factor of 4 to 40 (review m24).
+**Decision.** `hv_uptake_seed` and the dead branches are removed; the dictionary describes
+`mosq_death` as one row per genome lost when an infected mosquito dies, and says that uninfected
+deaths are not logged. MODEL_DESCRIPTION 4 says that mosquitoes start uninfected.
+**Rationale.** A dictionary is read as a promise about the log; a type that cannot occur, or a
+description of the wrong unit, breaks it.
+**Alternatives rejected.** *Seed infected mosquitoes, so the type can occur* -- no analysis asks for
+it, and the founders are hosts by design. *Log every mosquito death* -- one row per death of a
+mosquito without parasites would add most of a run's rows for a number the state table already
+gives.
+**Consequences.** Runs are unchanged: events, state, `params.tsv` and the tree tables are
+byte-identical, and only the copied model and the provenance differ. `event_types()` has one row
+fewer.
+**How to verify.** `tests/testthat/test-load.R` (the vocabulary) and `tests/testthat/test-run.R`
+(every type a rich run logs is in the dictionary).
+
+---
+
 ## D55 — N_OOCYSTS_PER_BITE is retired · 2026-11-07 · Accepted
 **Context.** `N_OOCYSTS_PER_BITE` was kept as a tripwire after `LAMBDA_SPOROZOITES` replaced it: any
 value but 1 stopped the run, yet it was still a parameter, in every set and every `params.tsv`

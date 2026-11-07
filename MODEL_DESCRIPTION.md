@@ -255,7 +255,8 @@ Standard S_v → E_v → I_v, with:
 - **Carrying capacity:** `MAX_BROODS_PER_MOSQ` = 20 lineages; uptake is skipped above it. No
   fitness cost of burden (mortality and transmissibility do not decline with parasite load).
 
-Mosquito death removes all of its broods, so a mosquito is a hard transmission bottleneck.
+Mosquito death removes all of its broods, so a mosquito is a hard transmission bottleneck. Every
+mosquito starts uninfected: the founders are hosts (§3).
 
 ### 4.1 Mapping to Ross–Macdonald quantities
 
@@ -1197,19 +1198,19 @@ subset(event_types(), ends_episode)$event_type # ...and every way one can END
 | blood, ends an episode | `human_clearance`, `case_bloodstage_clear`, `mda_bloodstage_clear`, `bloodcure_subpatent` |
 | blood, other | `vh_inoculation_no_take`, `vh_inoculation_import_no_take`, `bloodcure_given`, `bloodcure_persist`, `mda_bloodcure_given`, `mda_subpatent_clear` |
 | liver | `hypnozoite_clearance`, `radcure_given`, `radcure_failure`, `radcure_hypnozoite_clear`, `mda_radcure_given`, `mda_radcure_failure`, `mda_hypnozoite_clear` |
-| vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `hv_uptake_seed`, `mosq_death` |
+| vector | `hv_uptake_clonal`, `hv_uptake_recombinant`, `mosq_death` |
 
 A `*_no_take` suffix is logged when an inoculation produces neither a primary nor a batch, and when
 an import's host already carries `MAX_MOI` blood-stage lineages (`vh_inoculation_import_no_take`);
-a local bite refused at `MAX_MOI` leaves no row.
+a local bite refused at `MAX_MOI` leaves no row. `mosq_death` is one row per parasite genome an
+infected mosquito carried when it died; the deaths of uninfected mosquitoes are not logged.
 Note `bloodcure_subpatent` **ends a patent episode** without ending the infection — the clone is
 suppressed, not cleared, and returns later as a `recrudescence` (§9a), unless an MDA round clears
 it first (`mda_subpatent_clear`).
 
-> **Derive filters from `event_types()`; do not restate them.** Hard-coded event lists in this
-> project have gone stale twice — once dropping treated cases from episode spans, once dropping
-> imported and recrudescent onsets. That is why `is_onset` exists alongside `ends_episode`: both
-> sides of the episode vocabulary are now derivable, so adding an event type is one edit.
+> **Derive filters from `event_types()`; do not restate them.** `is_onset` and `ends_episode`
+> mark every way a patent episode begins and ends, so a filter derived from them stays correct as
+> event types are added.
 
 **`lineage_id` does not identify a genome.** Two properties of the column catch people out,
 and both are deliberate:

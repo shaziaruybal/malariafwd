@@ -315,6 +315,8 @@ test_that("into_patent_lineage marks a relapse into a patent clone of its own li
                  seed = 3, outdir = tempfile("mfwd_masked_"))
   ev <- load_events(run)
   et <- event_types()
+  ## the dictionary names every type the run logged
+  expect_true(all(unique(ev$event_type) %in% et$event_type))
   ## each blood-stage clone is patent from its onset row to its first row that ends an episode
   on <- ev[event_type %in% et$event_type[et$is_onset] & is_dormant == 0,
            .(pedigree_id, human_id, lineage_id, start = tick)]

@@ -26,9 +26,10 @@
 #'
 #' **Derive filters from this table rather than restating event names.** `ends_episode`
 #' marks every way a patent blood-stage episode can end and `is_onset` every way one can
-#' begin, so episode reconstruction stays correct as the vocabulary grows. Hard-coded lists
-#' have gone stale twice: once dropping treated cases from episode spans, once dropping
-#' imported and recrudescent onsets.
+#' begin, so episode reconstruction stays correct as the vocabulary grows.
+#'
+#' `mosq_death` is one row per parasite genome an infected mosquito carried when it died; the
+#' deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.
 #'
 #' @return a data.frame with columns `event_type`, `stage`, `ends_episode` (does this event
 #'   end a patent blood-stage episode?), `is_onset` (does it begin one?) and `description`.
@@ -93,8 +94,6 @@ event_types <- function() {
       "mosquito takes up a clonal (selfed) oocyst genotype"),
     r("hv_uptake_recombinant",         "vector", FALSE, FALSE,
       "mosquito takes up a recombinant (outcrossed) oocyst genotype"),
-    r("hv_uptake_seed",                "vector", FALSE, FALSE,
-      "mosquito takes up a founder (seed) genotype"),
     r("mosq_death",                    "vector", FALSE, FALSE,
-      "mosquito dies"))
+      "a parasite genome lost when an infected mosquito dies: one row per genome it carried"))
 }

@@ -1304,15 +1304,13 @@ reproduction()
 			pending_clone_hosts     = c(pending_clone_hosts, s);
 			pending_clone_templates = c(pending_clone_templates, sample(seqLen(asInteger(N_FOUNDER_LINEAGES)), 1));
 		}
-		else                                         // susceptible host or (later-bootstrapping) mosquito
+		else                                         // a susceptible host, or a mosquito: every mosquito starts uninfected
 			subpop = sim.addSubpop(s, 0);
 
 		// subpop = sim.addSubpop(s, (s % 10 < 3) ? 1 else 0); // TODO try to do this vectorized
 		subpop.tag = (subpop.individualCount == 1) ? INFECTED else SUSCEPTIBLE;
 		
 		subpop.individuals.color = "grey";
-		
-		is_mosq = (s >= N_HOSTS);
 		
 		for (lin in subpop.individuals)
 		{
@@ -1327,22 +1325,10 @@ reproduction()
 			lin.setValue("activation_tick", NULL);
 			lin.setValue("latency_stage", 0);
 			lin.setValue("inoculation_id", -1); // seeds have no inoculation event
-			
-			
-			if (is_mosq)
-			{
-				lin.setValue("brood_ready_tick", sim.cycle); // infectious at start
-				lin.setValue("bloodstage_start_tick", NULL); // mosquitoes have no blood stage
-				lin.setValue("gametocyte_ready_tick", NULL); // NA in mosq 
-				lin.setValue("inoculation_tick", NULL);
-			}
-			else
-			{
-				lin.setValue("brood_ready_tick", -1);
-				lin.setValue("bloodstage_start_tick", sim.cycle);  // seed humans start in blood stage
-				lin.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-				lin.setValue("inoculation_tick", sim.cycle); // seeded directly in human so record 'inoculation' seed
-			}
+			lin.setValue("brood_ready_tick", -1);
+			lin.setValue("bloodstage_start_tick", sim.cycle);  // founders start in blood stage
+			lin.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
+			lin.setValue("inoculation_tick", sim.cycle); // seeded directly in the host, so the seed is its 'inoculation'
 		}
 	}
 	
@@ -1410,37 +1396,12 @@ reproduction()
 		append=F);
 	
 	// -------------------------------------------------------
-	// Log seed broods so transmission chains are complete
-	// from tick 1 — these founder lineages were never acquired
-	// via a real bite so we log them as synthetic events
+	// Log the founders so transmission chains are complete from
+	// tick 1: they were never acquired by a bite, so each gets a
+	// synthetic vh_inoculation_seed row. Mosquitoes start uninfected.
 	// -------------------------------------------------------
 	
-	// Seed mosquito broods — immediately transmissible founders
-	for (m in mosq)
-	{
-		if (m.individualCount > 0)
-		{
-			for (lin in m.individuals)
-			{
-				logEvent(
-					"hv_uptake_seed",
-					-1, // no inoc ID bc not V-H event
-					m.id, -1,
-					asString(lin.getValue("lineage_id")),
-					"NA", "NA",
-					0, 0.0,
-					"mosquito",
-					0, 0,
-					lin.pedigreeID
-					);
-			
-			}
-		}
-		
-		self.active = 0;
-	}
-	
-	// Seed human broods — active blood-stage founders
+	// Founder blood-stage clones
 	for (h in humans)
 	{
 		if (h.individualCount > 0)

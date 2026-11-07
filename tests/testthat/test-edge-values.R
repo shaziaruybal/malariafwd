@@ -51,8 +51,7 @@ test_that("local vector control scales biting, not imports", {
                   INTERVENTION_START = 10, INTERVENTION_EFFICACY = 1)
   ev <- load_events(run)
   expect_equal(max(load_state(run)$tick), 60)
-  bites <- c("vh_inoculation", "vh_inoculation_no_take", "hv_uptake_clonal", "hv_uptake_recombinant",
-             "hv_uptake_seed")
+  bites <- c("vh_inoculation", "vh_inoculation_no_take", "hv_uptake_clonal", "hv_uptake_recombinant")
   expect_gt(nrow(ev[event_type %in% bites & tick < 10]), 0L)
   expect_equal(nrow(ev[event_type %in% bites & tick >= 10]), 0L)
   expect_gt(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 40L)

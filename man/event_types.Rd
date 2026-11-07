@@ -21,9 +21,10 @@ import whose host already carries \code{MAX_MOI} blood-stage lineages
 \details{
 \strong{Derive filters from this table rather than restating event names.} \code{ends_episode}
 marks every way a patent blood-stage episode can end and \code{is_onset} every way one can
-begin, so episode reconstruction stays correct as the vocabulary grows. Hard-coded lists
-have gone stale twice: once dropping treated cases from episode spans, once dropping
-imported and recrudescent onsets.
+begin, so episode reconstruction stays correct as the vocabulary grows.
+
+\code{mosq_death} is one row per parasite genome an infected mosquito carried when it died; the
+deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.
 }
 \examples{
 event_types()

@@ -191,3 +191,10 @@ test_that("load_state() gives the host rows unless asked for the mosquitoes, or 
   }
   expect_error(load_state(r, entity = "hosts"), "should be one of")
 })
+
+test_that("event_types() lists the types the model can write, and says what mosq_death counts", {
+  et <- event_types()
+  expect_false("hv_uptake_seed" %in% et$event_type)
+  expect_identical(anyDuplicated(et$event_type), 0L)
+  expect_match(et$description[et$event_type == "mosq_death"], "one row per genome")
+})
