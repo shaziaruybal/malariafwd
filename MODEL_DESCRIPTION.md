@@ -269,9 +269,10 @@ MU_MOSQ = 1 / MOSQ_LIFESPAN                # daily mosquito mortality
 row is the number of bites the host received that day from a mosquito carrying a product past the
 EIP, whatever the bite then did (§16.2), so the EIR is their sum over hosts and days divided by
 `N_HOSTS` and the run's length in years. The formula above, with `s` read from `state.tsv` as the
-share of mosquitoes with `n_transmissible > 0`, gives 0.87–0.94 of it in test runs: the snapshot
-is taken after the day's mosquito deaths, and it misses the products that complete the EIP before
-the next day's bites.
+share of mosquitoes with `n_transmissible > 0`, gives about 1 − 1/`MOSQ_LIFESPAN` of it (about 0.9
+at the default 10 days), because the snapshot is taken after the day's mosquito deaths; it also
+assumes a constant biting rate, so with seasonality, vector control or a boost its error can go
+either way. Use the count.
 
 **Seasonality** modulates the biting probability:
 

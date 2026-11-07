@@ -46,10 +46,10 @@ test that keeps the two in sync); MODEL_DESCRIPTION 13's table is the re-check.
 ## D47 — state.tsv counts each host's infectious bites a day, which gives the EIR · 2026-11-07 · Accepted
 **Context.** MODEL_DESCRIPTION said the package computes the EIR from `state.tsv`, with the
 sporozoite rate read from `n_transmissible`. No function did, and that formula under-counts: the
-snapshot is taken after the day's mosquito deaths, and it misses products that complete the EIP
-before the next day's bites (review m15; about 0.9 of the realised rate). The EIR is the usual
-target for calibrating transmission intensity, and the author asked for it to be part of
-`summarise_run()` (Q12).
+snapshot is taken after the day's mosquito deaths, so it gives about 1 − 1/`MOSQ_LIFESPAN` of the
+realised rate at constant biting (review m15), and with seasonality its error can go either way.
+The EIR is the usual target for calibrating transmission intensity, and the author asked for it to
+be part of `summarise_run()` (Q12).
 **Decision.** Each host row of `state.tsv` gains `infectious_bites`: the bites the host received
 that day from a mosquito carrying a product past the EIP, whatever the bite then did (`NA` on
 mosquito rows). The model counts a bite as infectious exactly when
@@ -64,14 +64,17 @@ is where a reader looks for exposure. *A separate per-day file* -- one more outp
 document, for one number per day.
 **Consequences.** `state.tsv` has one more column, last; `events.tsv`, `params.tsv`, the tree
 sequence and every other column of `state.tsv` are byte-identical. In test runs the snapshot
-formula gives 0.87-0.94 of the counted EIR. Writing the test found that a further infectious bite
-on a host whose only clone arrived earlier the same day is dropped, about 0.1-1% of infectious
-bites in test runs: the new clone is not visible until the day's bites are over, while the host is
-already tagged infected. Not settled here.
+formula gives 0.79-0.97 of the counted EIR at mosquito lifespans of 5-20 days. Writing the test
+found that an infectious bite is dropped on a host whose only clones arrived earlier the same day,
+by a relapse or by an earlier bite: a clone made in `reproduction()` is not visible until the day's
+bites are over, while the host is already tagged infected, so the bite goes to the infected-pair
+branch, which skips a host with no visible transmissible clone. That is 0.1-1% of infectious bites
+in untreated runs and up to about 3-5% with case management. The same invisibility lets same-day
+bites take a host past `MAX_MOI`. Not settled here.
 **How to verify.** `tests/testthat/test-model-invariants.R`: at `P_TRANS_VH = 1` with no host ever
-full, every inoculation is one infectious bite, a host-day without an inoculation has no infectious
-bite, and more than 98% of infectious bites inoculate.
-
+full and no hypnozoites, every inoculation is one infectious bite, a host-day without an
+inoculation has no infectious bite, and more than 98% of infectious bites inoculate; these hold for
+the test's settings, not in general.
 ---
 
 ## D46 — Local vector control does not scale imports · 2026-11-07 · Accepted
@@ -92,8 +95,10 @@ so the seasonal factor is kept.
 **Alternatives rejected.** *Keep the factor* -- it ties a border measure to local vector control,
 so an arm with vector control and open borders could not be expressed. *Scale the fixed count and
 the pulse as well* -- they are set directly, and a user who wants them to vary can vary them.
-**Supersedes.** D19's statement that `INTERVENTION_*` scales the importation rate; its separation
-of case management from vector control stands.
+**Supersedes.** D19's statement that `INTERVENTION_*` scales the importation rate (its separation
+of case management from vector control stands), and the same statement where D33, D37 and D38 make
+it in passing: full vector control as a closed border, and the vector-control factor in the
+import-rate warning.
 **Consequences.** A run with an import-rate window that overlaps an intervention window with
 `INTERVENTION_EFFICACY > 0` brings more imports while the two overlap, and changes from the first
 such day; every other run is byte-identical. The edge-value test closes the border with
@@ -101,7 +106,6 @@ such day; every other run is byte-identical. The edge-value test closes the bord
 **How to verify.** `tests/testthat/test-edge-values.R`: with full vector control from day 10, no
 bite or uptake happens from day 10 while imports keep arriving. `tests/testthat/test-params.R`: an
 import rate of 40 a day for 30 hosts warns even under vector control.
-
 ---
 
 ## D45 — A run started with slim -d is checked as R checks it, and takes either spelling of a number · 2026-11-07 · Accepted
@@ -357,7 +361,7 @@ the imports arrive on tick 1.
 
 ---
 
-## D38 — Imports go to uniformly random hosts, with the MAX_MOI check a bite gets · 2026-11-05 · Accepted
+## D38 — Imports go to uniformly random hosts, with the MAX_MOI check a bite gets · 2026-11-05 · Accepted; partly superseded by D46 (vector control does not scale imports)
 **Context.** The importation block filled its quota from hosts without a blood-stage infection
 first, using infected hosts only when those ran out, and checked no capacity (review M6). An
 import therefore almost never arrived in a host that already carried a clone, which made import
@@ -411,7 +415,7 @@ started directly.
 
 ---
 
-## D37 — A run that goes extinct records the tick and says so · 2026-11-05 · Accepted
+## D37 — A run that goes extinct records the tick and says so · 2026-11-05 · Accepted; partly superseded by D46 (vector control does not scale imports)
 **Context.** A run in which every parasite and hypnozoite was gone, with no importation to come,
 ended on that tick without telling R (review M7). Only run.log carried the EXTINCT line;
 `run_sim()` returned as for a full run, and `run_grid()` reported the cell as ok. Metrics that take
@@ -564,7 +568,7 @@ across junctions and correlated within chromosomes.
 
 ---
 
-## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted; partly superseded by D43 (founder-free runs whose imports never take)
+## D33 — Legitimate edge values run to the end; values the model cannot run are refused first · 2026-11-05 · Accepted; partly superseded by D43 (founder-free runs whose imports never take) and D46 (vector control does not scale imports)
 **Context.** A search of the model's random draws, empty vectors, parameter edges and arithmetic
 found about seventeen ways for a run to stop part-way with an Eidos error, or never finish, on
 values `validate_params()` accepted. Some of those values are legitimate and the model mishandled
