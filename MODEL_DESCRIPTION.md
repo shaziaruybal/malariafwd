@@ -297,7 +297,7 @@ Follows the **White et al. 2014** batch model.
 - Each transmitted genotype may cause an **active primary infection** with probability
   `P_PRIMARY` = 1.0 (White's base model treats this as certain given successful inoculation), and
   **independently** establishes a batch of hypnozoites.
-- **Batch size** is geometric with mean `NU_HYPNOZOITE_BATCH` (ν) = 5.
+- **Batch size** is geometric with mean `NU_HYPNOZOITE_BATCH` (ν), 3 by default (§13).
   **The batch is drawn once per *bite*** and split uniformly across the co-inoculated
   genotypes, matching White's per-bite parameterisation (§12). Both, either, or neither of primary
   and batch can occur for a given genotype.
@@ -342,7 +342,7 @@ P(N = n) = 1/(1 + nu) * (nu / (1 + nu))^n ,    n = 0, 1, 2, ...      E[N] = nu
 ```
 
 So a non-trivial fraction of bites deposit **no** hypnozoites at all: `P(N = 0) = 1/(1 + ν)` —
-**16.7% at ν = 5**, 25.0% at ν = 3, 11.1% at ν = 8.
+**25.0% at ν = 3**, 16.7% at ν = 5, 11.1% at ν = 8.
 
 **Activation and death are competing risks** applied daily, per hypnozoite, with activation drawn
 first and death drawn from the survivors, so that each day a hypnozoite activates with
@@ -367,8 +367,8 @@ At the shipped `ALPHA_ACTIVATE` = 1/170 and `MU_HYPNOZOITE` = 1/442:
 | α + μ | 0.008145 /day |
 | P(activate rather than die) | **0.722** |
 | mean time to activation-or-death | **122.8 days** |
-| expected relapsing hypnozoites per bite at ν = 5 | **3.61** |
-| …at ν = 3 | 2.17 |
+| expected relapsing hypnozoites per bite at ν = 3 | **2.17** |
+| …at ν = 5 | 3.61 |
 | …at ν = 8 | 5.78 |
 
 **Note the episode/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating on
@@ -807,7 +807,7 @@ derived and written to `params.tsv` for provenance.
 | parameter | default | source |
 |---|---|---|
 | `P_PRIMARY` | 1.0 | White 2014 base model |
-| `NU_HYPNOZOITE_BATCH` | 5.0 | White 2014 §2, geometric. **Placeholder** — calibrate per setting |
+| `NU_HYPNOZOITE_BATCH` | 3.0 | White 2014 §2, geometric; fitted to the published vivax bands at moderate transmission (§13). Re-fit it per setting |
 | `ALPHA_ACTIVATE` | 1/170 /d | Mehra (White 2014 = 1/344) |
 | `MU_HYPNOZOITE` | 1/442 /d | White 2014 |
 | `K_LATENCY` | 0 | 0 tropical, 2 temperate |
@@ -897,7 +897,7 @@ Stated plainly, because several matter for interpretation.
 | 9 | **Imports unrelated to local parasites** | imports maximally distinguishable; an upper bound on import-detection performance |
 | 10 | **Detection not origin-dependent** | active vs passive surveillance indistinguishable |
 | 11 | **Homogeneous mixing** | no spatial structure, no household clustering, no heterogeneous biting |
-| 12 | **`NU_HYPNOZOITE_BATCH` is a placeholder** | shipped at 5; calibrate per setting against relapse rate / fraction |
+| 12 | **`NU_HYPNOZOITE_BATCH` is fitted to one setting** | shipped at 3, inside the four published bands at moderate transmission (§13); re-fit it per setting against relapse rate / fraction |
 | 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
 | 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces, which is what makes `P_RECRUD_GIVEN_FAIL` exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
 | 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
@@ -1060,10 +1060,26 @@ junctions (φ about 0.09), because meiosis I pairs the products alike on every c
 
 | quantity | status |
 |---|---|
-| `NU_HYPNOZOITE_BATCH` | re-fitted against the published bands; 3 sits inside all of them (relapses/py, molFOB, median MOI, relapse fraction). Shipped default is **5** and is a placeholder |
+| `NU_HYPNOZOITE_BATCH` | fitted against four published bands at moderate transmission, and shipped at 3 (measured below) |
 | `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI depend on `N_HOSTS`/`N_MOSQ`), so calibrate at the scale you will publish |
 | hypnozoite rates | literature values (White, Mehra), not fitted |
 | genome, recombination | reference values, not fitted |
+
+**ν against the bands, measured at this version**: 400 hosts, 800 mosquitoes, 5 years,
+`BITING_RATE` 0.08, 20 founder hosts carrying 10 lineages, the first 2 years as burn-in, means of
+3 seeds.
+
+| ν | prevalence | relapses per person-year (0.5–5) | molFOB (0.7–15) | median MOI (1–3) | relapse fraction (0.55–0.85) | the same, masked relapses left out | EIR |
+|---|---|---|---|---|---|---|---|
+| 2 | 0.11 | 0.67 | 0.95 | 1 | 0.56 | 0.34 | 0.84 |
+| **3** | 0.31 | 2.29 | 3.39 | 1 | 0.66 | 0.39 | 2.26 |
+| 5 | 0.49 | 5.30 | 6.87 | 1 | 0.77 | 0.43 | 3.20 |
+
+Counting every relapse, ν = 2 and 3 sit inside all four bands, and ν = 5 has more relapses per
+person-year than its band allows. Two-thirds of the relapses at ν = 3 start while a patent clone
+of their own lineage is in the host (`into_patent_lineage = 1`, §5), where an observer could not
+see them as recurrences. With those left out, the relapse fraction is below its band at every ν
+tried, including ν = 5, which already has too many relapses per person-year.
 
 > **Identification warning.** COI is jointly determined by biting rate *and* the uptake/inoculation
 > parameters. Fitting both to COI leaves them confounded. Set the parasite-side parameters from
@@ -1078,7 +1094,7 @@ Ordered by how much the answer is likely to move.
 | # | target | why | status |
 |---|---|---|---|
 | S1 | **`LAMBDA_SPOROZOITES`** (genotypes per bite) | no measurement of genotypes per *natural* bite exists; the Saimiri anchor (2–4 genotypes) comes from ~20 bites' worth of sporozoites | **priority** — sweep, don't trust a point value |
-| S2 | **`NU_HYPNOZOITE_BATCH`** | placeholder at 5; drives relapse rate, reservoir size and COI | sweep per setting |
+| S2 | **`NU_HYPNOZOITE_BATCH`** | fitted at 3 for one setting; drives relapse rate, reservoir size and COI | sweep per setting |
 | S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax DMFA counts overdispersed; field median 7.2 vs our effective 1 | sweep; NB option exists |
 | S4 | **Per-oocyst sporozoite productivity** | we assume equal (weight 4); IDM draws ~3,000/oocyst Poisson with 20% gland migration, so an early or productive oocyst would dominate | not implemented; test as sensitivity |
 | S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax realistic ≈ 3 d and ≈ 0.9 | knobs exist for exactly this |

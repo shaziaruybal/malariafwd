@@ -55,6 +55,18 @@ run_cfg <- function(tag, ...) {
 ## A directional comparison on a noisy quantity needs more than one realisation: at these
 ## settings the standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single-seed
 ## "<" decides nothing whenever the true effect is comparable to that spread.
+## Outcrossing needs hosts that carry several lineages, so it is compared where transmission gives
+## them (BITING_RATE 0.2), over 3 seeds: at the base's COI of about 1 the share of outcrossed
+## oocysts is a few percent either way, and one seed decided the order.
+mean_recomb <- function(tag, ...) {
+  mean(vapply(1:3, function(sd) {
+    d <- file.path(OUT, paste0("rec_", tag, "_", sd)); unlink(d, recursive = TRUE)
+    p <- do.call(vivax_params, utils::modifyList(BASE, list(BITING_RATE = 0.2, ...)))
+    ev <- as.data.table(load_events(run_sim(p, seed = sd, outdir = d)))
+    100 * mean(ev[grepl("^hv_uptake_(clonal|recombinant)$", event_type), event_type] == "hv_uptake_recombinant")
+  }, numeric(1)))
+}
+
 mean_reservoir <- function(tag, ...) {
   mean(vapply(1:3, function(sd) {
     d <- file.path(OUT, paste0("res_", tag, "_", sd)); unlink(d, recursive = TRUE)
@@ -131,9 +143,10 @@ ok("vector-control intervention -> lower prevalence",
 ok("importation -> imported cases appear", g("imports","imported") > 0,
    sprintf("%d imported (baseline %d)", g("imports","imported"), g("baseline","imported")))
 ok("baseline is a closed system (no imports)", g("baseline","imported") == 0)
+rec_multi <- mean_recomb("wsf_multi", LAMBDA_OOCYSTS = 2.0, LAMBDA_SPOROZOITES = 2.0)
+rec_single <- mean_recomb("single")
 ok("multi-oocyst uptake -> more outcrossing than single",
-   g("wsf_multi","recomb_pct") >= g("baseline","recomb_pct"),
-   sprintf("%.1f%% vs %.1f%%", g("wsf_multi","recomb_pct"), g("baseline","recomb_pct")))
+   rec_multi > rec_single, sprintf("%.1f%% vs %.1f%% (3-seed means at BITING_RATE 0.2)", rec_multi, rec_single))
 ok("resurgence trigger -> higher prevalence than baseline",
    g("resurgence","prev") > g("baseline","prev"),
    sprintf("%.2f vs %.2f", g("resurgence","prev"), g("baseline","prev")))

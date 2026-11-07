@@ -19,7 +19,7 @@
   LAMBDA_OOCYSTS = 0.0, LAMBDA_SPOROZOITES = 0.0, K_OOCYSTS = 0.0,
   GAMETOCYTE_DELAY = 0L, P_GAMETOCYTE = 1.0, P_PRIMARY = 1.0,
   # hypnozoite reservoir
-  NU_HYPNOZOITE_BATCH = 5.0, ALPHA_ACTIVATE = 1/170, MU_HYPNOZOITE = 1/442,
+  NU_HYPNOZOITE_BATCH = 3.0, ALPHA_ACTIVATE = 1/170, MU_HYPNOZOITE = 1/442,
   K_LATENCY = 0L, DELTA_LATENCY = 1/100,
   # genome (see DECISIONS D2/D3/D13): pure coordinate switch; both modes rate 7.4e-7
   GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
@@ -58,6 +58,11 @@
 #' Returns a named list of all model parameters, starting from the defaults (which
 #' mirror the SLiM model) and overriding any you name. `SEED` and `OUTDIR` are set by
 #' [run_sim()], not here.
+#'
+#' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
+#' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to published vivax bands at moderate
+#' transmission (MODEL_DESCRIPTION section 13); `BITING_RATE`, with `N_MOSQ / N_HOSTS`, sets the
+#' transmission intensity and is for each study to choose.
 #'
 #' Time is in days: one model tick is one day. A duration parameter `D` (such as
 #' `MEAN_BLOOD_STAGE_DURATION` or `MOSQ_LIFESPAN`) is the mean of a geometric duration: the

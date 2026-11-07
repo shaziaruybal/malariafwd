@@ -81,7 +81,7 @@ initialize() {
 	// as a single "batch" object (geometric, mean NU_HYPNOZOITE_BATCH) - both,
 	// either, or neither can occur for the same transmitted genotype.
 	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); White 2014 base model treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     5.0); // mean hypnozoite batch size per transmitted genotype (geometric distribution, White et al. 2014 sec. 2); PLACEHOLDER - recommend calibrating against relapse-fraction/KM validation targets
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per transmitted genotype (geometric distribution, White et al. 2014 sec. 2); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
 	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day (Mehra 2023/2026; 344 days would be from White 2014)
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day (White 2014)
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate

@@ -144,8 +144,8 @@ calibration of it is ongoing.
   and no heterogeneous biting.
 * **Detection is not origin-dependent** beyond the primary / relapse / recrudescence split, so
   active and passive surveillance cannot currently be distinguished.
-* `NU_HYPNOZOITE_BATCH` is a placeholder — calibrate it per setting against relapse rate and
-  relapse fraction.
+* `NU_HYPNOZOITE_BATCH` (3) is fitted to one setting — re-fit it per setting against relapse rate
+  and relapse fraction.
 
 ### In development
 

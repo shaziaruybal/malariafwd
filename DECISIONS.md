@@ -19,6 +19,30 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D48 — NU_HYPNOZOITE_BATCH defaults to 3, the fitted value · 2026-11-07 · Accepted
+**Context.** The default hypnozoite batch mean was 5, called a placeholder, while every documented
+figure and the fit to four published vivax bands (relapses per person-year 0.5-5, molFOB 0.7-15,
+median MOI 1-3, relapse fraction 0.55-0.85; malariafwd-analyses `01_calibrate_nu.R`) used 3. A
+default run gave 6.8 relapses per person-year, above its band (review M32, question Q19).
+**Decision.** The default is 3. `?vivax_params` says the 40-host defaults are an illustrative
+preview, not a calibrated setting. MODEL_DESCRIPTION 13 gives the fit, re-measured at this version.
+The author chose this, with a re-check of the bands after the other model changes (Q19,
+2026-11-05).
+**Rationale.** A default should be the value the documentation and its figures use, and the one the
+fit supports.
+**Alternatives rejected.** *Keep 5 and call it a placeholder* -- it is out of band and used
+nowhere.
+**Consequences.** Every run that leaves `NU_HYPNOZOITE_BATCH` at its default changes. The re-check
+(400 hosts, 5 years, `BITING_RATE` 0.08, 3 seeds) puts ν = 3 inside all four bands when every
+relapse is counted: relapses per person-year 2.29, molFOB 3.39, median MOI 1, relapse fraction
+0.66. With the relapses into a patent clone of their own lineage left out, as agreed for the
+relapse-fraction band (two-thirds of relapses at ν = 3), the relapse fraction is 0.39, and no ν
+from 2 to 5 reaches the band. Not settled here: which reading the band is compared with.
+**How to verify.** `vivax_params()$NU_HYPNOZOITE_BATCH` is 3, as is the model's own default (the
+test that keeps the two in sync); MODEL_DESCRIPTION 13's table is the re-check.
+
+---
+
 ## D47 — state.tsv counts each host's infectious bites a day, which gives the EIR · 2026-11-07 · Accepted
 **Context.** MODEL_DESCRIPTION said the package computes the EIR from `state.tsv`, with the
 sporozoite rate read from `n_transmissible`. No function did, and that formula under-counts: the
