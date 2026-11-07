@@ -18,7 +18,7 @@ ok <- function(lbl, cond, detail = "") {
 .CLEARERS <- event_types()$event_type[event_types()$ends_episode]
 
 BASE <- list(N_HOSTS = 80L, N_MOSQ = 160L, BITING_RATE = 0.10, SIM_DAYS = 400L,
-             N_FOUNDERS = 10L, N_FOUNDER_HOSTS = 10L, N_FOUNDER_LINEAGES = 10L)
+             N_FOUNDER_HOSTS = 10L, N_FOUNDER_LINEAGES = 10L)
 
 ## run one configuration and return its summary + invariant results
 run_cfg <- function(tag, ...) {
@@ -83,7 +83,7 @@ CFG <- list(
   biting_low   = list(BITING_RATE = 0.05),
   biting_high  = list(BITING_RATE = 0.18),
   founders_2   = list(N_FOUNDER_LINEAGES = 2L),
-  founders_40  = list(N_FOUNDERS = 40L, N_FOUNDER_HOSTS = 40L, N_FOUNDER_LINEAGES = 40L),
+  founders_40  = list(N_FOUNDER_HOSTS = 40L, N_FOUNDER_LINEAGES = 40L),
   no_relapse   = list(NU_HYPNOZOITE_BATCH = 0),
   temperate    = list(K_LATENCY = 2L, DELTA_LATENCY = 0.02),
   imports      = list(IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.15),

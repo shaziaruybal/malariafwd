@@ -47,11 +47,11 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
   expect_true(r$status != 0)
   expect_match(paste(r$stdout, r$stderr), "reaches day 99999")
   ## a founder-free run whose only import falls on day 0, before imports can arrive
-  r <- slim("-d", "N_FOUNDERS=0", "-d", "IMPORT_TICK=0", "-d", "N_IMPORTS=5")
+  r <- slim("-d", "N_FOUNDER_HOSTS=0", "-d", "IMPORT_TICK=0", "-d", "N_IMPORTS=5")
   expect_true(r$status != 0)
   expect_match(paste(r$stdout, r$stderr), "nothing can start this run")
   ## ... or whose only window of imports ends on day 1
-  r <- slim("-d", "N_FOUNDERS=0", "-d", "IMPORT_START=0", "-d", "IMPORT_END=1", "-d", "N_IMPORTS_PER_TICK=5")
+  r <- slim("-d", "N_FOUNDER_HOSTS=0", "-d", "IMPORT_START=0", "-d", "IMPORT_END=1", "-d", "N_IMPORTS_PER_TICK=5")
   expect_true(r$status != 0)
   expect_match(paste(r$stdout, r$stderr), "nothing can start this run")
   ## the integer spelling that -d X=7 produces is accepted at the start...
@@ -83,7 +83,8 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
            "N_MOSQ=0" = "N_MOSQ must be > 0",
            "BITING_RATE=INF" = "BITING_RATE must be > 0 and finite",
            "EIP_DAYS=-1" = "EIP_DAYS must be >= 0",
-           "N_FOUNDERS=21" = "N_FOUNDER_HOSTS \\(21\\) must be at most N_HOSTS \\(20\\)",
+           "N_FOUNDER_HOSTS=21" = "N_FOUNDER_HOSTS \\(21\\) must be at most N_HOSTS \\(20\\)",
+           "N_FOUNDERS=12" = "N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS",
            "N_HOSTS=20.5" = "N_HOSTS must be a whole number",
            "MOSQ_LIFESPAN=0.5" = "MOSQ_LIFESPAN must be >= 1",
            "MEAN_BLOOD_STAGE_DURATION=0.5" = "MEAN_BLOOD_STAGE_DURATION must be >= 1",

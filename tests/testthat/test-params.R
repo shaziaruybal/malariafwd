@@ -33,10 +33,22 @@ test_that("vivax_params defaults stay in sync with the SLiM model", {
 
 test_that("validation catches bad input", {
   expect_error(vivax_params(GENOME_MODE = "xyz"))
-  expect_error(vivax_params(N_HOSTS = 5, N_FOUNDERS = 10))
+  expect_error(vivax_params(N_HOSTS = 5, N_FOUNDER_HOSTS = 10))
   expect_error(vivax_params(FOO = 1))
   expect_error(vivax_params(P_TRANS_VH = 2))
   expect_error(vivax_params(SIM_DAYS = -1))
+})
+
+test_that("N_FOUNDERS is refused, naming the founder parameters to set instead", {
+  expect_error(vivax_params(N_FOUNDERS = 12), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
+  e <- tryCatch(vivax_params(N_FOUNDERS = 12, FOO = 1), error = conditionMessage)
+  expect_match(e, "N_FOUNDERS is not a parameter")
+  expect_match(e, "unknown parameter\\(s\\): FOO")
+  expect_false("N_FOUNDERS" %in% names(vivax_params()))
+  expect_identical(vivax_params(N_FOUNDER_HOSTS = 5)$N_FOUNDER_LINEAGES, 5L)
+  ## a set edited to hold it is refused when run_sim() rebuilds it
+  p <- vivax_params(); p$N_FOUNDERS <- 5
+  expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
 })
 
 test_that("every argument is named, given once, and not NULL", {
@@ -47,7 +59,6 @@ test_that("every argument is named, given once, and not NULL", {
 })
 
 test_that("founder counts are checked against each other, with messages that name them", {
-  ## N_FOUNDERS is only the default of N_FOUNDER_HOSTS
   expect_no_error(vivax_params(N_HOSTS = 5L, N_FOUNDER_HOSTS = 2L))
   expect_error(vivax_params(N_HOSTS = 5L), "N_FOUNDER_HOSTS \\(12\\) must be at most N_HOSTS \\(5\\)")
   expect_error(vivax_params(N_HOSTS = 0L), "N_HOSTS must be > 0")
@@ -59,13 +70,13 @@ test_that("founder counts are checked against each other, with messages that nam
 
 test_that("an import path is open only on a day of the run", {
   ## imports arrive from day 1, so a pulse on day 0 or a window that ends on day 1 never comes
-  expect_error(vivax_params(N_FOUNDERS = 0, IMPORT_TICK = 0, N_IMPORTS = 5), "nothing can start this run")
-  expect_error(vivax_params(N_FOUNDERS = 0, IMPORT_START = 0, IMPORT_END = 1, N_IMPORTS_PER_TICK = 5),
+  expect_error(vivax_params(N_FOUNDER_HOSTS = 0, IMPORT_TICK = 0, N_IMPORTS = 5), "nothing can start this run")
+  expect_error(vivax_params(N_FOUNDER_HOSTS = 0, IMPORT_START = 0, IMPORT_END = 1, N_IMPORTS_PER_TICK = 5),
                "nothing can start this run")
-  expect_error(vivax_params(N_FOUNDERS = 0, SIM_DAYS = 100, IMPORT_TICK = 101, N_IMPORTS = 5),
+  expect_error(vivax_params(N_FOUNDER_HOSTS = 0, SIM_DAYS = 100, IMPORT_TICK = 101, N_IMPORTS = 5),
                "nothing can start this run")
-  expect_no_error(vivax_params(N_FOUNDERS = 0, IMPORT_TICK = 1, N_IMPORTS = 5))
-  expect_no_error(vivax_params(N_FOUNDERS = 0, IMPORT_START = 0, IMPORT_END = 2, N_IMPORTS_PER_TICK = 5))
+  expect_no_error(vivax_params(N_FOUNDER_HOSTS = 0, IMPORT_TICK = 1, N_IMPORTS = 5))
+  expect_no_error(vivax_params(N_FOUNDER_HOSTS = 0, IMPORT_START = 0, IMPORT_END = 2, N_IMPORTS_PER_TICK = 5))
 })
 
 test_that("run_sim() checks a parameter set edited after it was built", {
@@ -257,7 +268,7 @@ test_that("each value has its default's type, is finite, and is whole where the 
                "MDA_TICK must not be 1 when a founder host carries a copy")
   expect_no_error(vivax_params(MDA_TICK = 2L, N_FOUNDER_LINEAGES = 4L))
   expect_no_error(vivax_params(MDA_TICK = 1L))
-  expect_no_error(vivax_params(MDA_TICK = 1L, N_FOUNDERS = 0L, IMPORT_TICK = 5L, N_IMPORTS = 3L))
+  expect_no_error(vivax_params(MDA_TICK = 1L, N_FOUNDER_HOSTS = 0L, IMPORT_TICK = 5L, N_IMPORTS = 3L))
   expect_error(vivax_params(TREATMENT_START = -Inf), "TREATMENT_START must be finite.*use 0")
   expect_error(vivax_params(K_OOCYSTS = Inf), "K_OOCYSTS must be finite.*use 0 for Poisson")
   expect_error(vivax_params(IMPORT_RATE_PER_TICK = Inf), "IMPORT_RATE_PER_TICK must be finite, got Inf$")
@@ -422,7 +433,7 @@ test_that("uptake_moments() keeps its precision for a tiny lambda or a huge K", 
 test_that("the import rate is capped where its draw would fail, not at the number of hosts", {
   ## one host, a window that closes before the boost starts: the model runs it, and since the one
   ## host takes one import a day, the warning gives the days that draw more
-  expect_warning(vivax_params(N_HOSTS = 1L, N_FOUNDERS = 1L, IMPORT_START = 1L, IMPORT_END = 50L,
+  expect_warning(vivax_params(N_HOSTS = 1L, N_FOUNDER_HOSTS = 1L, IMPORT_START = 1L, IMPORT_END = 50L,
                               IMPORT_RATE_PER_TICK = 0.6, RESURGENCE_TRIGGER_TICK = 100L,
                               IMPORT_RATE_BOOST = 2, SIM_DAYS = 200L),
                  "reaches 0.6 imports a day on day 1: that day draws more than N_HOSTS = 1 imports with probability 0.122",

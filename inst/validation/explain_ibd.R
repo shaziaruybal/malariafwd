@@ -13,7 +13,7 @@ OUT  <- file.path(tempdir(), "mfw_ibd_explain")
 ## ---- a run with enough outcrossing to populate the sib rungs ----
 unlink(OUT, recursive = TRUE)
 p <- vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.14, SIM_DAYS = 500,
-                  N_FOUNDERS = 20, N_FOUNDER_HOSTS = 20, N_FOUNDER_LINEAGES = 12,
+                  N_FOUNDER_HOSTS = 20, N_FOUNDER_LINEAGES = 12,
                   LAMBDA_OOCYSTS = 2.0, LAMBDA_SPOROZOITES = 2.0)
 run <- run_sim(p, seed = 7, outdir = OUT)
 ev  <- as.data.table(load_events(run)); cs <- classify_cases(ev)

@@ -53,7 +53,7 @@ p <- vivax_params(
   N_HOSTS = 100, N_MOSQ = 200,     # a small population, so this finishes quickly
   BITING_RATE = 0.11,              # moderate transmission
   SIM_DAYS = 548,                  # 1.5 years
-  N_FOUNDERS = 16, N_FOUNDER_HOSTS = 16,
+  N_FOUNDER_HOSTS = 16,
   N_FOUNDER_LINEAGES = 10,         # 10 distinct founding genomes among 16 infected hosts
   LAMBDA_SPOROZOITES = 2           # >1 genotype can be co-transmitted in a bite
 )

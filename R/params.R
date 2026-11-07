@@ -7,7 +7,7 @@
   # run / meta
   SIM_ID = "default", SIM_DAYS = 365L, VERBOSE = FALSE, RETAIN_FULL_HISTORY = TRUE,
   # population
-  N_HOSTS = 40L, N_FOUNDERS = 12L, N_FOUNDER_HOSTS = 12L, N_FOUNDER_LINEAGES = 12L, N_MOSQ = 100L,
+  N_HOSTS = 40L, N_FOUNDER_HOSTS = 12L, N_FOUNDER_LINEAGES = 12L, N_MOSQ = 100L,
   # transmission (Ross-Macdonald)
   BITING_RATE = 0.1, P_TRANS_VH = 0.5, P_TRANS_HV = 0.5, MOSQ_LIFESPAN = 10.0,
   EIP_DAYS = 10L, MAX_MOI = 20L, MAX_BROODS_PER_MOSQ = 20L,
@@ -129,12 +129,7 @@ vivax_params <- function(...) {
   over <- list(...)
   if (length(over) && (is.null(names(over)) || !all(nzchar(names(over)))))
     stop("every argument must be named, e.g. vivax_params(N_HOSTS = 300).", call. = FALSE)
-  unknown <- setdiff(names(over), names(.malariafwd_defaults))
-  if (length(unknown))
-    stop("unknown parameter(s): ", paste(unknown, collapse = ", "),
-         if (any(c("SEED", "OUTDIR") %in% unknown))
-           "\nSEED and OUTDIR are set by run_sim(seed =, outdir =), not in the parameter set.",
-         "\nsee names(vivax_params()) for valid names.", call. = FALSE)
+  .refuse_unknown(names(over))
   twice <- unique(names(over)[duplicated(names(over))])
   if (length(twice))
     stop(paste(twice, collapse = ", "), " given more than once.", call. = FALSE)
@@ -144,13 +139,32 @@ vivax_params <- function(...) {
     stop(paste(nulls, collapse = ", "), " cannot be NULL: leave a parameter out to use its default.",
          call. = FALSE)
   p <- utils::modifyList(.malariafwd_defaults, over)
-  ## As in the model, N_FOUNDER_HOSTS defaults to N_FOUNDERS, and N_FOUNDER_LINEAGES to
-  ## N_FOUNDER_HOSTS
-  if (!"N_FOUNDER_HOSTS"    %in% names(over)) p$N_FOUNDER_HOSTS    <- p$N_FOUNDERS
+  ## As in the model, N_FOUNDER_LINEAGES defaults to N_FOUNDER_HOSTS
   if (!"N_FOUNDER_LINEAGES" %in% names(over)) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
   p <- .normalise_params(p)
   validate_params(p)
   structure(p, class = "vivax_params")
+}
+
+## Names that were parameters once, each with what to set instead.
+.RETIRED_PARAMS <- list(
+  N_FOUNDERS = paste("N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS, the hosts infected at the",
+                     "start, and N_FOUNDER_LINEAGES, the distinct founding genomes among them (it",
+                     "defaults to N_FOUNDER_HOSTS)."))
+
+## Refuses names that are not parameters: a retired one with what to set instead, any other listed.
+.refuse_unknown <- function(nms) {
+  unknown <- setdiff(nms, names(.malariafwd_defaults))
+  if (!length(unknown)) return(invisible())
+  retired <- intersect(unknown, names(.RETIRED_PARAMS))
+  other <- setdiff(unknown, retired)
+  stop(paste(c(unlist(.RETIRED_PARAMS[retired]),
+               if (length(other))
+                 paste0("unknown parameter(s): ", paste(other, collapse = ", "),
+                        if (any(c("SEED", "OUTDIR") %in% other))
+                          "\nSEED and OUTDIR are set by run_sim(seed =, outdir =), not in the parameter set.",
+                        "\nsee names(vivax_params()) for valid names.")), collapse = "\n"),
+       call. = FALSE)
 }
 
 ## A number as as_slim_args() writes it: 15 significant digits, never in scientific notation.
@@ -307,7 +321,7 @@ validate_params <- function(p) {
   for (pr in c("LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS", "NU_HYPNOZOITE_BATCH",
                "ALPHA_ACTIVATE_BOOST", "NU_HYPNOZOITE_BATCH_BOOST", "BITING_RATE_BOOST",
                "IMPORT_RATE_PER_TICK", "IMPORT_RATE_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
-               "N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
+               "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
                "GAMETOCYTE_DELAY", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
   ## at 0 the gate would refuse every inoculation, an empty host's included (D38)
@@ -315,10 +329,9 @@ validate_params <- function(p) {
     stop("MAX_MOI must be at least 1, got ", .slim_num(p$MAX_MOI), ": a host takes a new inoculation ",
          "only while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.",
          call. = FALSE)
-  ## N_FOUNDERS itself is only the default of N_FOUNDER_HOSTS, so it is not checked
   if (p$N_FOUNDER_HOSTS > p$N_HOSTS)
     stop("N_FOUNDER_HOSTS (", .slim_num(p$N_FOUNDER_HOSTS), ") must be at most N_HOSTS (",
-         .slim_num(p$N_HOSTS), "). It defaults to N_FOUNDERS, so set either one.", call. = FALSE)
+         .slim_num(p$N_HOSTS), ").", call. = FALSE)
   if (p$N_FOUNDER_LINEAGES > p$N_FOUNDER_HOSTS)
     stop("N_FOUNDER_LINEAGES (", .slim_num(p$N_FOUNDER_LINEAGES), ") must be at most N_FOUNDER_HOSTS (",
          .slim_num(p$N_FOUNDER_HOSTS), "): each founder host carries one of the founding genomes.",

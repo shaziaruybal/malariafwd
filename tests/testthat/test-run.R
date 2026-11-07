@@ -152,7 +152,7 @@ test_that("run_sim() stops when SLiM exits without writing the run's outputs", {
 test_that("blood-stage infections last a geometric time with mean MEAN_BLOOD_STAGE_DURATION days", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   # founders only: they carry no hypnozoites, and a single mosquito almost never bites
-  run <- run_sim(vivax_params(N_HOSTS = 1000, N_FOUNDERS = 1000, N_FOUNDER_HOSTS = 1000,
+  run <- run_sim(vivax_params(N_HOSTS = 1000, N_FOUNDER_HOSTS = 1000,
                               N_FOUNDER_LINEAGES = 1000, N_MOSQ = 1, BITING_RATE = 1e-6,
                               MEAN_BLOOD_STAGE_DURATION = 2, SIM_DAYS = 40),
                  seed = 6, outdir = file.path(tempdir(), "mfwd_test_clearance"))
@@ -165,7 +165,7 @@ test_that("blood-stage infections last a geometric time with mean MEAN_BLOOD_STA
 
 test_that("no blood-stage infection is forced to clear at a fixed age", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  run <- run_sim(vivax_params(N_HOSTS = 200, N_FOUNDERS = 200, N_FOUNDER_HOSTS = 200,
+  run <- run_sim(vivax_params(N_HOSTS = 200, N_FOUNDER_HOSTS = 200,
                               N_FOUNDER_LINEAGES = 200, N_MOSQ = 1, BITING_RATE = 1e-6,
                               MEAN_BLOOD_STAGE_DURATION = 1000, SIM_DAYS = 200),
                  seed = 7, outdir = file.path(tempdir(), "mfwd_test_nocap"))
@@ -179,7 +179,7 @@ test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapse
   skip_if_not(slim_available(), "SLiM not on PATH")
   ## one pulse of imports, no onward transmission, long enough for every batch to resolve
   run <- run_sim(vivax_params(N_HOSTS = 300, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 1500,
-                              N_FOUNDERS = 0, IMPORT_TICK = 2, N_IMPORTS = 300,
+                              N_FOUNDER_HOSTS = 0, IMPORT_TICK = 2, N_IMPORTS = 300,
                               K_LATENCY = 2L, DELTA_LATENCY = 1 / 100, CHROMOSOMES = "1"),
                  seed = 3, outdir = file.path(tempdir(), "mfwd_test_latency"))
   ev <- load_events(run)
@@ -199,7 +199,7 @@ test_that("clearance rows carry the is_imported of their lineage", {
   ## batches without latency
   for (lat in list(list(K_LATENCY = 2L, DELTA_LATENCY = 1e-4), list(K_LATENCY = 0L))) {
     p <- do.call(vivax_params, c(list(N_HOSTS = 60, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 200,
-                                      N_FOUNDERS = 0, IMPORT_TICK = 2, N_IMPORTS = 60,
+                                      N_FOUNDER_HOSTS = 0, IMPORT_TICK = 2, N_IMPORTS = 60,
                                       CHROMOSOMES = "1"), lat))
     ev <- load_events(run_sim(p, seed = 2, outdir = tempfile("mfwd_imported_")))
     expect_equal(ev[event_type == "vh_inoculation", .N], 0)
@@ -215,7 +215,7 @@ test_that("clearance rows carry the is_imported of their lineage", {
 test_that("a run that goes extinct says so and records the tick", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   ## few bites and no hypnozoites: all of 60 seeds died out, by day 308 at the latest
-  base <- list(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.015, SIM_DAYS = 400, N_FOUNDERS = 6,
+  base <- list(N_HOSTS = 60, N_MOSQ = 60, BITING_RATE = 0.015, SIM_DAYS = 400, N_FOUNDER_HOSTS = 6,
                NU_HYPNOZOITE_BATCH = 0, CHROMOSOMES = "1")
   dies <- do.call(vivax_params, base)
   expect_message(run <- run_sim(dies, seed = 1, outdir = tempfile("mfwd_extinct_")), "went extinct on tick")
@@ -250,7 +250,7 @@ test_that("a run that goes extinct says so and records the tick", {
 test_that("imports go to random hosts, and a host at MAX_MOI takes none", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   ## 200 hosts, 100 of them founders, and a pulse of 100 imports on tick 3 with no transmission
-  base <- list(N_HOSTS = 200, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 5, N_FOUNDERS = 100,
+  base <- list(N_HOSTS = 200, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 5, N_FOUNDER_HOSTS = 100,
                N_FOUNDER_LINEAGES = 10, IMPORT_TICK = 3, N_IMPORTS = 100, CHROMOSOMES = "1")
   counts <- function(...) {
     run <- run_sim(do.call(vivax_params, utils::modifyList(base, list(...))), seed = 4,
@@ -437,6 +437,7 @@ test_that("load_run() carries the run's record, typed", {
   expect_output(print(r), "60 days, 30 hosts, 60 mosquitoes")
   expect_output(print(r), "SLiM [0-9.]+, malariafwd")
   ## the test helper writes params.tsv as the model does
+  expect_false(any(startsWith(readLines(file.path(r$outdir, "params.tsv")), "N_FOUNDERS\t")))
   rec <- malariafwd:::.read_params_tsv(file.path(r$outdir, "params.tsv"))$record
   expect_setequal(params_tsv_lines(load_params(r), rec), readLines(file.path(r$outdir, "params.tsv"), encoding = "UTF-8"))
 })

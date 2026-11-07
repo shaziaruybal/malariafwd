@@ -73,10 +73,11 @@
   RECOMB_WITHIN = "double", EXTINCT_TICK = "integer", NEVER_STARTED = "integer")
 
 ## A run's params.tsv, read as the parameter set it was made from: `params`, every parameter in
-## the defaults' order and types (one the file lacks takes its default, the founder counts
-## following one another as in vivax_params()); `record`, the record rows it has, typed; and
+## the defaults' order and types (one the file lacks takes its default, and N_FOUNDER_LINEAGES
+## follows N_FOUNDER_HOSTS as in vivax_params()); `record`, the record rows it has, typed; and
 ## `missing` and `dropped`, the parameters it lacks and the rows that are neither. Each line is
-## split at its first tab, so a value keeps any tab or space it holds.
+## split at its first tab, so a value keeps any tab or space it holds. The N_FOUNDERS row of a file
+## made before it was retired gives its value to N_FOUNDER_HOSTS where the file has none.
 .read_params_tsv <- function(path) {
   dir <- dirname(path)
   where <- paste("params.tsv in", dir)
@@ -95,9 +96,9 @@
   nm <- substr(l, 1, tab - 1)
   txt <- stats::setNames(substring(l, tab + 1), nm)
   if (anyDuplicated(nm)) stop(where, ": ", nm[duplicated(nm)][1], " is given twice.", call. = FALSE)
+  if ("N_FOUNDERS" %in% nm && !"N_FOUNDER_HOSTS" %in% nm) txt[["N_FOUNDER_HOSTS"]] <- txt[["N_FOUNDERS"]]
   d <- .malariafwd_defaults
   p <- utils::modifyList(d, .type_params(txt, where))
-  if (!"N_FOUNDER_HOSTS"    %in% nm) p$N_FOUNDER_HOSTS    <- p$N_FOUNDERS
   if (!"N_FOUNDER_LINEAGES" %in% nm) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
   rec <- list()
   for (k in intersect(names(.RECORD_ROWS), nm)) {
@@ -108,5 +109,6 @@
       as.integer(v) else v
   }
   list(params = structure(p, class = "vivax_params"), record = rec,
-       missing = setdiff(names(d), nm), dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS))))
+       missing = setdiff(names(d), c(names(txt), "N_FOUNDER_LINEAGES")),
+       dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS), "N_FOUNDERS")))
 }

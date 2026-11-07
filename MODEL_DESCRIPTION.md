@@ -803,8 +803,7 @@ derived and written to `params.tsv` for provenance.
 |---|---|---|
 | `N_HOSTS` | 40 | humans |
 | `N_MOSQ` | 100 | mosquitoes (constant) |
-| `N_FOUNDERS` | 12 | legacy; decomposed below |
-| `N_FOUNDER_HOSTS` | `N_FOUNDERS` | infected hosts at t = 0 (**establishment**) |
+| `N_FOUNDER_HOSTS` | 12 | infected hosts at t = 0 (**establishment**) |
 | `N_FOUNDER_LINEAGES` | `N_FOUNDER_HOSTS` | distinct founding genomes (**diversity** knob — the clean genealogical axis) |
 | `BITING_RATE` | 0.1 | per-**mosquito** daily biting probability |
 | `P_TRANS_VH` | 0.5 | `b` |

@@ -8,9 +8,8 @@ initialize() {
 	defineDefault("SEED",                    55);
 	defineDefault("SIM_DAYS",                365); // 365 days or one year
 	defineDefault("N_HOSTS",                 40);
-	defineDefault("N_FOUNDERS",              12); // legacy founder count. v3 DECOUPLES this into N_FOUNDER_HOSTS (establishment) x N_FOUNDER_LINEAGES (diversity); both default to N_FOUNDERS so N_FOUNDERS-only runs == v2.
-	defineDefault("N_FOUNDER_HOSTS",         N_FOUNDERS); // v3: number of INFECTED founder hosts at t=0 (establishment / does the epidemic sustain). Hold FIXED to isolate diversity from transmission.
-	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // v3: number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS). The clean GENEALOGICAL diversity knob: fewer lineages -> more hosts carry clonal copies -> higher background relatedness, at fixed establishment.
+	defineDefault("N_FOUNDER_HOSTS",         12); // hosts infected at the start (establishment: does the epidemic sustain?). Hold it fixed to vary diversity alone.
+	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS). The clean GENEALOGICAL diversity knob: fewer lineages -> more hosts carry clonal copies -> higher background relatedness, at fixed establishment.
 	defineDefault("N_MOSQ",                  100);
 	
 	// epi
@@ -256,7 +255,10 @@ initialize() {
 	// bypasses R, so the same checks are made here. A number may be written either way, 7 or 7.0,
 	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
 	// must also be a whole number.
-	whole_params = c("SIM_DAYS", "N_HOSTS", "N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES",
+	if (exists("N_FOUNDERS"))
+		stop("N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS, the hosts infected at the start, and " +
+			"N_FOUNDER_LINEAGES, the distinct founding genomes among them (it defaults to N_FOUNDER_HOSTS).");
+	whole_params = c("SIM_DAYS", "N_HOSTS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES",
 		"N_MOSQ", "EIP_DAYS", "MAX_MOI", "MAX_BROODS_PER_MOSQ", "N_OOCYSTS_PER_BITE",
 		"GAMETOCYTE_DELAY", "K_LATENCY", "INTERVENTION_START", "INTERVENTION_END", "TREATMENT_START",
 		"TREATMENT_END", "MDA_TICK", "RESURGENCE_TRIGGER_TICK", "IMPORT_START", "IMPORT_END",
@@ -412,7 +414,7 @@ initialize() {
 			stop(nm + " must be > 0 and finite, got " + shown(v));
 	}
 	for (nm in c("NU_HYPNOZOITE_BATCH", "NU_HYPNOZOITE_BATCH_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
-		"N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS", "GAMETOCYTE_DELAY",
+		"N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS", "GAMETOCYTE_DELAY",
 		"MAX_BROODS_PER_MOSQ", "K_LATENCY"))
 	{
 		v = executeLambda(nm + ";");
@@ -425,8 +427,7 @@ initialize() {
 		stop("RECOMB_RATE must be at most 0.5 per bp and finite, got " + shown(RECOMB_RATE) +
 			" (a value <= 0 means the default map rate, 7.4e-7).");
 	if (N_FOUNDER_HOSTS > N_HOSTS)
-		stop("N_FOUNDER_HOSTS (" + N_FOUNDER_HOSTS + ") must be at most N_HOSTS (" + N_HOSTS +
-			"). It defaults to N_FOUNDERS, so set either one.");
+		stop("N_FOUNDER_HOSTS (" + N_FOUNDER_HOSTS + ") must be at most N_HOSTS (" + N_HOSTS + ").");
 	if (N_FOUNDER_LINEAGES > N_FOUNDER_HOSTS)
 		stop("N_FOUNDER_LINEAGES (" + N_FOUNDER_LINEAGES + ") must be at most N_FOUNDER_HOSTS (" +
 			N_FOUNDER_HOSTS + "): each founder host carries one of the founding genomes.");
@@ -1271,7 +1272,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDERS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","N_OOCYSTS_PER_BITE","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	_plines = c(_plines, "SLIM_VERSION\t" + version(F)[1]);
@@ -1288,9 +1289,9 @@ reproduction()
 
 	for (s in seqLen(n_subpops))
 	{
-		// v3: decouple establishment (N_FOUNDER_HOSTS infected hosts) from diversity (N_FOUNDER_LINEAGES distinct
+		// Establishment (N_FOUNDER_HOSTS infected hosts) is set apart from diversity (N_FOUNDER_LINEAGES distinct
 		// genomes). First N_FOUNDER_LINEAGES founder hosts = new distinct lineages; the rest = GENETIC CLONES of them
-		// (addCloned -> IBD 1 in the tree). N_FOUNDERS-only runs (defaults) reproduce v2 exactly.
+		// (addCloned -> IBD 1 in the tree).
 		// A naive population, seeded only by imports, is N_FOUNDER_HOSTS = 0 with an import path (D39).
 		if (s < N_HOSTS & s < N_FOUNDER_LINEAGES)    // a NEW distinct founder lineage (genome root), human host
 		{

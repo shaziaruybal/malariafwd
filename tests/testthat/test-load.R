@@ -130,10 +130,15 @@ test_that("a params.tsv of another version warns once, naming what it lacks and 
   expect_no_warning(malariafwd:::.params_of(r2))
   run <- suppressWarnings(load_run(r2))
   expect_no_warning(load_params(run))
-  ## the founder counts a file lacks follow one another, as in vivax_params()
-  p <- suppressWarnings(load_params(fake_run(params = list(N_FOUNDERS = 7),
-                                             drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"))))
+  ## the N_FOUNDERS row of an older file: ignored beside N_FOUNDER_HOSTS, and its value otherwise,
+  ## with N_FOUNDER_LINEAGES following; neither warns
+  expect_no_warning(p <- load_params(fake_run(params = list(N_FOUNDER_HOSTS = 30, N_HOSTS = 40),
+                                              extra = "N_FOUNDERS\t40")))
+  expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(30L, 30L))
+  expect_no_warning(p <- load_params(fake_run(drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"),
+                                              extra = "N_FOUNDERS\t7")))
   expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(7L, 7L))
+  expect_null(p$N_FOUNDERS)
 })
 
 test_that("load_run() carries the record rows, typed, and refuses a directory that is not a run", {

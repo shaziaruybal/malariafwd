@@ -19,6 +19,34 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D54 — N_FOUNDERS is retired; the founders are N_FOUNDER_HOSTS and N_FOUNDER_LINEAGES · 2026-11-07 · Accepted
+**Context.** `N_FOUNDERS` survived from before the founders were split into hosts infected at the
+start (`N_FOUNDER_HOSTS`) and the distinct genomes among them (`N_FOUNDER_LINEAGES`): it only set
+the default of `N_FOUNDER_HOSTS`, so an edit to it in a built set did nothing, and the documentation
+called it legacy (review m48, n32). The author chose to retire it (2026-11-06).
+**Decision.** `vivax_params(N_FOUNDERS = )`, a set edited to hold it, and a direct run with
+`-d N_FOUNDERS=` are refused with a message that names `N_FOUNDER_HOSTS` and `N_FOUNDER_LINEAGES`.
+`N_FOUNDER_HOSTS` defaults to 12 and `N_FOUNDER_LINEAGES` to `N_FOUNDER_HOSTS`. `params.tsv` has no
+`N_FOUNDERS` row. A saved `params.tsv` that has one still loads: the row is ignored beside an
+`N_FOUNDER_HOSTS` row, and gives `N_FOUNDER_HOSTS` its value otherwise, without a warning. A retired
+name gets its own message, so a later retirement is one more entry.
+**Rationale.** A parameter whose edit does nothing is a trap, and two names for one count invite
+sets that disagree.
+**Alternatives rejected.** *Keep it as an alias, re-deriving `N_FOUNDER_HOSTS` from it on every
+edit* -- two names for one value, and the rule for which one wins is one more thing to learn.
+*Refuse saved files that have the row* -- every saved run has it, and the value is recorded beside
+it.
+**Consequences.** Runs are unchanged (events, state and trees; `params.tsv` loses one row). Code
+that sets `N_FOUNDERS` stops with the message until the argument is deleted; where it set
+`N_FOUNDER_HOSTS` too, as every call in the package and the analysis scripts did, the run is the
+same without it.
+**How to verify.** `tests/testthat/test-params.R` (the refusal, with another unknown name, from an
+edited set, and `N_FOUNDER_LINEAGES` following `N_FOUNDER_HOSTS`), `tests/testthat/test-slim.R`
+(`-d N_FOUNDERS=12` refused), `tests/testthat/test-load.R` (an older file's row) and
+`tests/testthat/test-run.R` (no `N_FOUNDERS` row in `params.tsv`).
+
+---
+
 ## D53 — load_state() gives the host rows unless asked · 2026-11-07 · Accepted
 **Context.** Most rows of `state.tsv` are mosquitoes (100 of every 140 at the defaults), whose
 `moi_active` counts the broods they carry, so a prevalence taken over every row,

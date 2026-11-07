@@ -25,7 +25,7 @@ D <- 100000   # flanking distance (bp) used on both tests
 
 unlink(OUT, recursive = TRUE)
 run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.14, SIM_DAYS = 500,
-                            N_FOUNDERS = 20, N_FOUNDER_HOSTS = 20, N_FOUNDER_LINEAGES = 12,
+                            N_FOUNDER_HOSTS = 20, N_FOUNDER_LINEAGES = 12,
                             LAMBDA_OOCYSTS = 2.0, LAMBDA_SPOROZOITES = 2.0),
                seed = 7, outdir = OUT)
 ev <- as.data.table(load_events(run))
