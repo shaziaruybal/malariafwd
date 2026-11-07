@@ -68,9 +68,9 @@ formula gives 0.79-0.97 of the counted EIR at mosquito lifespans of 5-20 days. W
 found that an infectious bite is dropped on a host whose only clones arrived earlier the same day,
 by a relapse or by an earlier bite: a clone made in `reproduction()` is not visible until the day's
 bites are over, while the host is already tagged infected, so the bite goes to the infected-pair
-branch, which skips a host with no visible transmissible clone. That is 0.1-1% of infectious bites
-in untreated runs and up to about 3-5% with case management. The same invisibility lets same-day
-bites take a host past `MAX_MOI`. Not settled here.
+branch, which skips a host with no visible transmissible clone. That is 0-1% of infectious bites in
+untreated runs and 2.8-5.5% with case management (`BLOODCURE_COVERAGE` 0.8) in the test's settings.
+The same invisibility lets same-day bites take a host past `MAX_MOI`. Not settled here.
 **How to verify.** `tests/testthat/test-model-invariants.R`: at `P_TRANS_VH = 1` with no host ever
 full and no hypnozoites, every inoculation is one infectious bite, a host-day without an
 inoculation has no infectious bite, and more than 98% of infectious bites inoculate; these hold for

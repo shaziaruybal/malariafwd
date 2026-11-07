@@ -333,8 +333,13 @@ initialize() {
 	// mean, and so the work per uptake, can be many times lambda.
 	if (LAMBDA_OOCYSTS > 0)
 	{
-		x0 = (K_OOCYSTS > 0) ? K_OOCYSTS * log(1 + LAMBDA_OOCYSTS / K_OOCYSTS) else asFloat(LAMBDA_OOCYSTS);
-		m_ooc = LAMBDA_OOCYSTS / (1 - exp(-x0));
+		// the same branches as uptake_moments(): x is -log P(0), and the series stand in for
+		// k log(1 + r) and 1 - exp(-x) where those round to 0 (a tiny lambda, or a huge K)
+		lam = asFloat(LAMBDA_OOCYSTS);
+		r_ooc = (K_OOCYSTS > 0) ? lam / K_OOCYSTS else 0.0;
+		x0 = (K_OOCYSTS > 0) ? ((r_ooc < 1e-8) ? lam * (1 - r_ooc / 2) else K_OOCYSTS * log(1 + r_ooc)) else lam;
+		q0 = (x0 < 1e-8) ? x0 * (1 - x0 / 2) else 1 - exp(-x0);
+		m_ooc = lam / q0;
 		if (!(m_ooc <= 1000 * (1 + 1e-11)))
 			stop("LAMBDA_OOCYSTS = " + shown(LAMBDA_OOCYSTS) + " with K_OOCYSTS = " + shown(K_OOCYSTS) +
 				" gives a mean of " + shown(m_ooc) + " oocysts per successful uptake; the mean must be at most 1000.");
@@ -557,13 +562,21 @@ initialize() {
 		parts = strsplit(tok, "-");
 		if (size(parts) == 2)
 		{
+			// the ends are checked before the range is built, as validate_params() does: Eidos cannot
+			// build a range of 1e11 entries, and would stop without naming CHROMOSOMES
+			if (any(asFloat(parts) < 1) | any(asFloat(parts) > 14))
+				stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
 			// Eidos counts down a high-low range; validate_params() refuses one (m62)
 			if (asInteger(parts[0]) > asInteger(parts[1]))
 				stop("CHROMOSOMES has a range that runs high-low: " + CHROMOSOMES);
 			chr_idx = c(chr_idx, asInteger(parts[0]):asInteger(parts[1]));
 		}
 		else
+		{
+			if (asFloat(tok) < 1 | asFloat(tok) > 14)
+				stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
 			chr_idx = c(chr_idx, asInteger(tok));
+		}
 	}
 	if (any(chr_idx < 1) | any(chr_idx > 14))
 		stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);

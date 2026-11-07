@@ -59,7 +59,8 @@
 #' mirror the SLiM model) and overriding any you name. `SEED` and `OUTDIR` are set by
 #' [run_sim()], not here.
 #'
-#' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
+#' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting: at them
+#' the relapse rate is above the published band even with `NU_HYPNOZOITE_BATCH = 3`.
 #' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to published vivax bands at moderate
 #' transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and 400 hosts; MODEL_DESCRIPTION
 #' section 13); re-fit it when transmission or scale change, since both move the relapse rate.
