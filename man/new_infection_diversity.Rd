@@ -15,7 +15,7 @@ new_infection_diversity(
 \arguments{
 \item{run}{a \code{vivax_run} or run directory.}
 
-\item{burn_frac}{steady-state fraction.}
+\item{burn_frac}{the fraction of \code{SIM_DAYS} discarded as burn-in.}
 
 \item{cap}{max cases sampled.}
 

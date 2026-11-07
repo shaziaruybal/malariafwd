@@ -9,9 +9,11 @@ plot_diagnostics(run, bin = 30, burn_frac = 0.5)
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
 
-\item{bin}{window width in days.}
+\item{bin}{window width in days.
+The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop to zero and stay
+there to the end of the run, and the subtitle says on which day it went extinct.}
 
-\item{burn_frac}{fraction of the run marked as burn-in (a display + summary choice).}
+\item{burn_frac}{the fraction of \code{SIM_DAYS} marked as burn-in (a display and summary choice).}
 }
 \value{
 a patchwork object (combined ggplot).
@@ -23,10 +25,10 @@ the hypnozoite reservoir, and circulating-lineage richness -- all over time, wit
 burn-in marked. Surfaces the common failure modes at a glance: extinction (lines crash to
 zero), saturation (prevalence pinned near 100\%), and non-stationarity (metrics still
 trending at the burn-in). The two "by origin" panels share a palette: imported /
-local reinfection (= FOI) plus relapse (the extra molFOB contribution, Mueller et al. 2013),
+local reinfection (= FOI) plus relapse (the extra molFOB contribution, Koepfli et al. 2013),
 plus recrudescence where a run produces any. Only the first three are clone ACQUISITIONS, so
 the FOI panel sums those and not the fourth.
 }
 \references{
-Mueller I, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
+Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
 }

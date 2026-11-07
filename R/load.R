@@ -56,6 +56,18 @@
   inherits(run, "vivax_run") && inherits(run$params, "vivax_params") &&
     identical(names(run$params), names(.malariafwd_defaults))
 
+## A run's length, SIM_DAYS, from which every function that summarises a window of the run takes its
+## end, so that the days after an extinction count as days with no parasite (D61).
+.sim_days <- function(run, fun = "this function") {
+  if (is.data.frame(run))
+    stop(fun, "() needs the run for its length, SIM_DAYS: pass the vivax_run or its directory, not its ",
+         "events.", call. = FALSE)
+  n <- .params_of(run)$SIM_DAYS
+  if (length(n) != 1L || is.na(n) || n < 1 || n != round(n))
+    stop("the run's params.tsv gives no SIM_DAYS: ", .run_dir(run), call. = FALSE)
+  as.integer(n)
+}
+
 ## A run's parameter set, for package code that needs a few of its values: what load_params()
 ## gives, without the warning.
 .params_of <- function(run) {
@@ -81,6 +93,9 @@
 #' `params.tsv` ends with a `NEVER_STARTED` row. It holds no parasite: its tree sequence has no
 #' nodes and its events are at most imports that did not take, so the readers that need a parasite,
 #' such as [arg_summary()] and [arg_diversity()], stop on it.
+#'
+#' The functions that summarise a window of a run take its length from `SIM_DAYS`, so the days
+#' after an extinction count as days with no parasite.
 #'
 #' A directory without `params.tsv` or `events.tsv` is not a run and is refused. One whose `DONE`
 #' file is missing, or whose files have changed since the run finished (see [run_sim()]), loads

@@ -47,6 +47,9 @@ last import day, but not before tick 10, or on its last day if that comes first,
 nodes and its events are at most imports that did not take, so the readers that need a parasite,
 such as \code{\link[=arg_summary]{arg_summary()}} and \code{\link[=arg_diversity]{arg_diversity()}}, stop on it.
 
+The functions that summarise a window of a run take its length from \code{SIM_DAYS}, so the days
+after an extinction count as days with no parasite.
+
 A directory without \code{params.tsv} or \code{events.tsv} is not a run and is refused. One whose \code{DONE}
 file is missing, or whose files have changed since the run finished (see \code{\link[=run_sim]{run_sim()}}), loads
 with \code{complete = FALSE} and a warning of class \code{malariafwd_incomplete_run}, given once per

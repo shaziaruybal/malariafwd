@@ -22,7 +22,7 @@ inoculations only). The distance between the lines is the relapse contribution, 
 episodes with new transmission.
 }
 \details{
-Naming follows Mueller/Koepfli: molFOB counts blood-stage infections however they arise,
+Naming follows Koepfli et al. (2013): molFOB counts blood-stage infections however they arise,
 FOI counts mosquito-borne infections only.
 }
 \examples{

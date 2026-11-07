@@ -15,8 +15,9 @@ force_of_infection(run, bin = 30, split_imported = TRUE)
 gives five origin levels, \code{FALSE} gives four.}
 }
 \value{
-a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers, which is
-less than \code{bin} for a trailing window when the run length is not a multiple of \code{bin}),
+a data.table of \code{win}, \code{origin}, \code{n}, \code{days} (the days the window covers within the
+run, which is \code{SIM_DAYS} days long whether or not it went extinct: less than \code{bin} for a
+trailing window when the run length is not a multiple of \code{bin}),
 \code{rate} (per host-year, scaled by \code{days}) and \code{is_acquisition}. Sum only the
 \code{is_acquisition} rows for FOI or molFOB: a recrudescence is returned as its own row so
 incidence stays complete, but it is not a newly acquired clone.
@@ -26,7 +27,7 @@ New blood-stage clone acquisitions per host per year, split by origin.
 \code{imported} + \verb{local reinfection} give the mosquito-borne \strong{force of infection (FOI)};
 adding \code{relapse} gives the \strong{molecular force of blood-stage infection (molFOB)} -- a
 compound measure that is elevated in \emph{P. vivax} because relapses contribute new
-blood-stage clones (Mueller et al. 2013).
+blood-stage clones (Koepfli et al. 2013).
 Relapses are split into \code{relapse (imported)} and \code{relapse (local)} -- a relapse of an
 imported genotype is a distinct truth category. Set \code{split_imported = FALSE} for a single
 \code{relapse} class. Either way \code{origin} comes back as a factor with \strong{all} levels present, so
@@ -41,6 +42,7 @@ study visits, would often count a recrudescence as a new clone, because the clon
 undetectable at the previous visit; the gap between the two sums here estimates that bias.
 }
 \references{
-Mueller I, et al. (2013) A high force of \emph{Plasmodium vivax} blood-stage
-infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
+Koepfli C, et al. (2013) A high force of \emph{Plasmodium vivax} blood-stage
+infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl
+Trop Dis 7(9):e2403.
 }

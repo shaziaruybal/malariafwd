@@ -98,12 +98,14 @@ first tick on which no parasite is left in any host or mosquito, hypnozoites inc
 importation is still to come; every further tick would then be empty, so the run ends there. It
 writes the tree sequence; its `events.tsv` and `state.tsv` stop on that tick; and its `params.tsv`
 ends with the tick as `EXTINCT_TICK` (D37), also when the tick is `SIM_DAYS` itself. `run_sim()`
-then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` for a run that did
-not go extinct. An importation is still to come until the run has passed the last day on which one
-can arrive, the pulse day or the import window's last day inside the run (§8); a pulse or window
-that falls outside the run brings nothing. A window inside the run counts to its last day even
-while its rate is 0, as under a border closed by `IMPORT_RATE_BOOST = 0`, so a run that dies out
-meanwhile goes extinct only once that day has passed.
+then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` for a run that did not
+go extinct. The functions that summarise a window of a run take its length from `SIM_DAYS`, so the
+days after an extinction count as days with no parasite (D61). An importation is still to come until
+the run has passed the last day on which one can arrive, the pulse day or the import window's last
+day inside the run (§8); a pulse or window that falls outside the run brings nothing. A window
+inside the run counts to its last day even while its rate is 0, as under a border closed by
+`IMPORT_RATE_BOOST = 0`, so a run that dies out meanwhile goes extinct only once that day has
+passed.
 
 A founder-free run (`N_FOUNDER_HOSTS = 0`) starts only from its imports, and they can all fail to
 establish a parasite: by chance, through a Poisson rate that draws none or imports that take in
@@ -1364,14 +1366,17 @@ of creation in `events.tsv`.
 
 ### 16.3 Derived metrics
 
+**Summary metrics.** Each is over a window of the run, which ends at `SIM_DAYS` whether or not the
+run went extinct.
+
 | metric | definition |
 |---|---|
-| prevalence | fraction of hosts with `moi_active > 0` |
+| prevalence | fraction of the window's host-days with `moi_active > 0`; a day after an extinction counts as a day with no infection |
 | COI / MOI | `moi_active` among infected hosts |
-| reservoir | mean `hyp_reservoir_size` per host |
+| reservoir | mean `hyp_reservoir_size` per host-day of the window |
 | relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) |
 | relapses per person-year | activations ÷ (hosts × years) |
-| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Mueller/Koepfli). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
+| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
 | EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |
 

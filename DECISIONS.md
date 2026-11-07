@@ -19,6 +19,31 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D61 — Run-length windows use SIM_DAYS, and days after an extinction count as days with no parasite · 2026-11-08 · Accepted
+**Context.** D37 ended an extinct run on its extinction tick, and the R functions that summarise a
+window of a run took its end from the last day of `state.tsv` or the last event (D21), so a run that
+went extinct had a shorter window: six runs extinct by day 196 of 400 reported a prevalence of 0.005
+to 0.045 for days 200 to 400, and the windows holding their extinction day were 10 to 25 days long
+(review M7, Q8).
+**Decision.** `summarise_run()`, `force_of_infection()`, `new_infection_diversity()` and
+`plot_diagnostics()` take the run's end from `SIM_DAYS`. Prevalence and the reservoir are means over
+every host-day of the window, so the days after an extinction count as days with no infected host;
+COI and polyclonality stay means over infected host-days, `NA` when there are none. The dashboard's
+panels run to `SIM_DAYS` on a grid of every window, at zero after the extinction, and its subtitle
+names the extinction day. The per-day tables (`coi_distribution()`, `host_state_prevalence()`,
+`reservoir_trajectory()`) report the days `state.tsv` holds, which is not padded.
+**Rationale.** A run's window is the period the study asks about, not the period the parasite
+lasted; a run that died out had no infection on its remaining days.
+**Alternatives rejected.** *Padding `state.tsv` to `SIM_DAYS`* -- the file would hold rows for days
+the model never ran.
+**Consequences.** Runs are unchanged. A run that reaches `SIM_DAYS` gives the same values; one that
+went extinct gives zero prevalence for its days after the extinction, and full-length windows.
+`force_of_infection()` no longer reads `state.tsv`. The molFOB citation is corrected to Koepfli et
+al. (2013) (review m89).
+**How to verify.** `tests/testthat/test-windows.R`.
+
+---
+
 ## D60 — Parameters are documented from one dictionary; an edited set is checked when it is used · 2026-11-08 · Accepted
 **Context.** `?vivax_params` documented no parameter, and MODEL_DESCRIPTION section 10 missed ten of
 them, with no link between the two (review M21). The facts about each parameter (its unit, the
@@ -1545,7 +1570,7 @@ range 43-391) and `tmrca` must never be negative. Both are now regression tests 
 
 ---
 
-## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted
+## D21 — Windowed series report the days they actually cover; onset filters derive from the event dictionary · 2026-10-20 · Accepted; partly superseded by D61 (the run end is SIM_DAYS)
 **Context.** The downstream sweep found four defects in the summary plots and in
 `force_of_infection()`, all of them "the function is internally correct but silently disagrees
 with the event log". Measured before the change, on the audit run set: `plot_diagnostics()`

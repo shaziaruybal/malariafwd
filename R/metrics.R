@@ -174,7 +174,7 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' `imported` + `local reinfection` give the mosquito-borne **force of infection (FOI)**;
 #' adding `relapse` gives the **molecular force of blood-stage infection (molFOB)** -- a
 #' compound measure that is elevated in *P. vivax* because relapses contribute new
-#' blood-stage clones (Mueller et al. 2013).
+#' blood-stage clones (Koepfli et al. 2013).
 #' Relapses are split into `relapse (imported)` and `relapse (local)` -- a relapse of an
 #' imported genotype is a distinct truth category. Set `split_imported = FALSE` for a single
 #' `relapse` class. Either way `origin` comes back as a factor with **all** levels present, so
@@ -190,13 +190,15 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @param bin window width in days.
 #' @param split_imported split relapses by the provenance of the genotype. `TRUE` (default)
 #'   gives five origin levels, `FALSE` gives four.
-#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers, which is
-#'   less than `bin` for a trailing window when the run length is not a multiple of `bin`),
+#' @return a data.table of `win`, `origin`, `n`, `days` (the days the window covers within the
+#'   run, which is `SIM_DAYS` days long whether or not it went extinct: less than `bin` for a
+#'   trailing window when the run length is not a multiple of `bin`),
 #'   `rate` (per host-year, scaled by `days`) and `is_acquisition`. Sum only the
 #'   `is_acquisition` rows for FOI or molFOB: a recrudescence is returned as its own row so
 #'   incidence stays complete, but it is not a newly acquired clone.
-#' @references Mueller I, et al. (2013) A high force of *Plasmodium vivax* blood-stage
-#'   infection drives the rapid acquisition of immunity. PLoS Negl Trop Dis 7(9):e2403.
+#' @references Koepfli C, et al. (2013) A high force of *Plasmodium vivax* blood-stage
+#'   infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl
+#'   Trop Dis 7(9):e2403.
 #' @export
 force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
   nh <- as.numeric(.params_of(run)$N_HOSTS)
@@ -213,15 +215,15 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
   ## a multiple of `bin` the trailing window is short - 10 days of a 30-day bin on a 400-day
   ## run - and dividing it by a full bin understated the final point 3x, so every series ended
   ## in a crash that was pure binning artefact, right where a reader looks to judge whether
-  ## transmission stopped. The run end comes from the state table rather than the last case,
-  ## so a run that ends with no transmission still reports its true trailing zero. Full windows
-  ## are unchanged, because there days == bin.
-  endt <- max(as.data.table(load_state(run))$tick)
+  ## transmission stopped. The run end is SIM_DAYS rather than the last case or the last day of
+  ## state.tsv, so a run that ends with no transmission, or goes extinct, still reports its true
+  ## trailing zero. Full windows are unchanged, because there days == bin.
+  endt <- .sim_days(run, "force_of_infection")
   fo <- cs[, .(n = .N), by = .(win, origin)]
   fo[, days := pmin(bin, endt - win + 1)]
   fo[, rate := n / nh / (days / 365)]
   ## A recrudescence is a new EPISODE but not a new CLONE, so it must not enter a
-  ## force-of-infection rate: molFOB (Mueller 2013) counts clone acquisitions. It is returned
+  ## force-of-infection rate: molFOB (Koepfli et al. 2013) counts clone acquisitions. It is returned
   ## as its own row rather than dropped, so incidence stays complete and the caller sums the
   ## rows it means. Note a REAL molFOB, measured by comparing genotypes between visits, would
   ## often count a recrudescence as a new clone - the gap between the two sums here is an
@@ -429,20 +431,25 @@ pick_host <- function(events) {
 
 #' One-call calibration metrics for a run (steady state = 2nd half)
 #' @param run a `vivax_run` or run directory.
-#' @param burn_frac steady-state fraction (drop the first `burn_frac` of the run).
+#' @param burn_frac the fraction of `SIM_DAYS` discarded as burn-in. Prevalence and the reservoir
+#'   are means over every host-day of the rest of the run, so a run that went extinct counts its
+#'   remaining days as days with no infected host.
 #' @return a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
 #' @export
 summarise_run <- function(run, burn_frac = 0.5) {
   st <- load_state(run); ev <- load_events(run)
-  endt <- max(st$tick); burn <- round(endt * burn_frac)
+  endt <- .sim_days(run, "summarise_run"); burn <- round(endt * burn_frac)
+  nh <- as.numeric(.params_of(run)$N_HOSTS)
+  ## every host-day of the window, also those after an extinction, which state.tsv does not hold
+  host_days <- nh * (endt - max(burn, 1L) + 1L)
   h <- as.data.table(st)[entity_type == "human" & tick >= burn]
   cd <- coi_distribution(st, burn_in = burn)
   vi <- as.data.table(ev)[event_type %in% c("vh_inoculation","vh_inoculation_import") & is_dormant == 0]
   data.table(
-    prev = round(mean(h$moi_active > 0), 3),
+    prev = round(sum(h$moi_active > 0) / host_days, 3),
     COI = round(if (nrow(cd)) sum(cd$moi_active * cd$pct/100) else NA_real_, 2),
     poly = round(if (nrow(cd)) sum(cd[moi_active > 1]$pct) else NA_real_, 1),
-    mean_res = round(mean(h$hyp_reservoir_size), 1),
+    mean_res = round(sum(h$hyp_reservoir_size) / host_days, 1),
     relapse_frac = round(relapse_fraction(ev)$relapse_fraction, 3),
     relapses_py = relapses_per_person_year(ev)$relapses_per_py,
     ## courses GIVEN, not clones cleared: one course clears every clone in the host, and a
@@ -479,7 +486,7 @@ ibd_relapse_origin <- function(events, idx) {
 #' clonal fraction rises / lineage richness falls as transmission falls (the surveillance
 #' signal). Requires the tree sequence (IBD).
 #' @param run a `vivax_run` or run directory.
-#' @param burn_frac steady-state fraction.
+#' @param burn_frac the fraction of `SIM_DAYS` discarded as burn-in.
 #' @param cap max cases sampled.
 #' @param clonal IBD threshold for a "clonal" pair.
 #' @param seed seed for the subsample when the pool exceeds `cap`, so repeat calls on the same
@@ -489,7 +496,7 @@ ibd_relapse_origin <- function(events, idx) {
 #' @export
 new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
   ev <- load_events(run)
-  endt <- max(ev$tick); burn <- round(endt * burn_frac)
+  endt <- .sim_days(run, "new_infection_diversity"); burn <- round(endt * burn_frac)
   ## Every non-relapse acquisition route, derived from classify_cases() rather than from a
   ## literal event type. Matching "vh_inoculation" alone dropped imported genomes, which
   ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%

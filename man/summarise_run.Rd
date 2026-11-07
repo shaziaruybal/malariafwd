@@ -9,7 +9,9 @@ summarise_run(run, burn_frac = 0.5)
 \arguments{
 \item{run}{a \code{vivax_run} or run directory.}
 
-\item{burn_frac}{steady-state fraction (drop the first \code{burn_frac} of the run).}
+\item{burn_frac}{the fraction of \code{SIM_DAYS} discarded as burn-in. Prevalence and the reservoir
+are means over every host-day of the rest of the run, so a run that went extinct counts its
+remaining days as days with no infected host.}
 }
 \value{
 a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
