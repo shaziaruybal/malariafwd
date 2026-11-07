@@ -23,7 +23,7 @@
   K_LATENCY = 0L, DELTA_LATENCY = 1/100,
   # genome (see DECISIONS D2/D3/D13): pure coordinate switch; both modes rate 7.4e-7
   GENOME_MODE = "full", CHROMOSOMES = "1-14", RECOMB_RATE = -1.0,
-  # vector control: biting rate and importation rate only, never case management
+  # vector control: biting rate only, never importation or case management
   INTERVENTION_START = 99999L, INTERVENTION_END = 99999L, INTERVENTION_EFFICACY = 0.0,
   ## case management has its own window (D19); INTERVENTION_* is vector control only
   TREATMENT_START = 0L, TREATMENT_END = 99999L,
@@ -95,9 +95,9 @@
 #' one arm of a grid. Each host takes at most one import a day, so a day's imports beyond `N_HOSTS`
 #' never arrive. This warns when a day's fixed imports inside the run exceed `N_HOSTS` (`N_IMPORTS`
 #' on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the window, or both on the same day), and when
-#' `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal, intervention and
-#' resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day
-#' with probability above 0.01.
+#' `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal and resurgence multipliers
+#' and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day with probability above
+#' 0.01.
 #'
 #' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
 #' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given
@@ -193,11 +193,12 @@ vivax_params <- function(...) {
 
 ## The largest daily value of a rate over days first..last, worked out the way the model applies
 ## its factors to the biting and import rates: seasonality only when SEASONAL_AMP > 0 (floored at
-## 0), the intervention factor inside [INTERVENTION_START, INTERVENTION_END), the boost from
-## RESURGENCE_TRIGGER_TICK. The factors change only on those days and the seasonal one repeats every
-## 365 days, so a year from each change covers every value the rate can take.
-.peak_rate <- function(p, rate, boost, first, last) {
-  starts <- c(first, p$INTERVENTION_START, p$INTERVENTION_END, p$RESURGENCE_TRIGGER_TICK)
+## 0), the vector-control factor inside [INTERVENTION_START, INTERVENTION_END) for biting only
+## (`control`; D46), the boost from RESURGENCE_TRIGGER_TICK. The factors change only on those days
+## and the seasonal one repeats every 365 days, so a year from each change covers every value the
+## rate can take.
+.peak_rate <- function(p, rate, boost, first, last, control = TRUE) {
+  starts <- c(first, if (control) c(p$INTERVENTION_START, p$INTERVENTION_END), p$RESURGENCE_TRIGGER_TICK)
   starts <- starts[starts >= first & starts <= last]
   t <- sort(unique(unlist(lapply(starts, function(a) seq(a, min(last, a + 364))))))
   r <- rep(rate, length(t))
@@ -206,8 +207,10 @@ vivax_params <- function(...) {
     if (!all(is.finite(angle))) return(c(rate = NaN, day = NA))
     r <- r * pmax(0, 1 + p$SEASONAL_AMP * cos(angle))
   }
-  inside <- t >= p$INTERVENTION_START & t < p$INTERVENTION_END
-  r[inside] <- r[inside] * (1 - p$INTERVENTION_EFFICACY)
+  if (control) {
+    inside <- t >= p$INTERVENTION_START & t < p$INTERVENTION_END
+    r[inside] <- r[inside] * (1 - p$INTERVENTION_EFFICACY)
+  }
   boosted <- t >= p$RESURGENCE_TRIGGER_TICK
   r[boosted] <- r[boosted] * boost
   c(rate = max(r), day = t[which.max(r)])
@@ -359,10 +362,10 @@ validate_params <- function(p) {
             "at most N_HOSTS = ", .slim_num(p$N_HOSTS), " of them arrive.", call. = FALSE)
   room <- p$N_HOSTS - daily
   if (!is.null(win) && p$IMPORT_RATE_PER_TICK > 0 && room >= 0) {
-    peak <- .peak_rate(p, p$IMPORT_RATE_PER_TICK, p$IMPORT_RATE_BOOST, win[1], win[2])
+    peak <- .peak_rate(p, p$IMPORT_RATE_PER_TICK, p$IMPORT_RATE_BOOST, win[1], win[2], control = FALSE)
     lost <- if (isTRUE(peak[["rate"]] > 0)) stats::ppois(room, peak[["rate"]], lower.tail = FALSE) else 0
     if (lost > 0.01)
-      warning("IMPORT_RATE_PER_TICK with its seasonal, intervention and resurgence multipliers reaches ",
+      warning("IMPORT_RATE_PER_TICK with its seasonal and resurgence multipliers reaches ",
               signif(peak[["rate"]], 3), " imports a day on day ", .slim_num(peak[["day"]]),
               ": that day draws more than N_HOSTS = ", .slim_num(p$N_HOSTS), " imports",
               if (daily > 0) paste0(" together with N_IMPORTS_PER_TICK = ", .slim_num(daily)),

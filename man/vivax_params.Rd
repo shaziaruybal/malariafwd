@@ -54,9 +54,9 @@ set outside the run brings nothing, without a warning, which is how imports are 
 one arm of a grid. Each host takes at most one import a day, so a day's imports beyond \code{N_HOSTS}
 never arrive. This warns when a day's fixed imports inside the run exceed \code{N_HOSTS} (\code{N_IMPORTS}
 on \code{IMPORT_TICK}, \code{N_IMPORTS_PER_TICK} in the window, or both on the same day), and when
-\code{IMPORT_RATE_PER_TICK} at its peak over the window, with its seasonal, intervention and
-resurgence multipliers and with \code{N_IMPORTS_PER_TICK}, draws more than \code{N_HOSTS} imports on a day
-with probability above 0.01.
+\code{IMPORT_RATE_PER_TICK} at its peak over the window, with its seasonal and resurgence multipliers
+and with \code{N_IMPORTS_PER_TICK}, draws more than \code{N_HOSTS} imports on a day with probability above
+0.01.
 
 A named number (such as \code{coef(fit)["k"]}), a value wrapped in \code{I()}, a whole number carrying
 floating-point noise (such as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given

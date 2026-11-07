@@ -87,15 +87,15 @@ initialize() {
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
 	
-	// VECTOR-CONTROL interventions (off by default). These affect TRANSMISSION ONLY -
-	// biting rate and the importation rate. They must never switch case management on or
-	// off; that is TREATMENT_START/END below. See D19.
+	// VECTOR-CONTROL interventions (off by default). These scale the BITING RATE only: not
+	// importation, whose infections were acquired elsewhere (D46), and never case management,
+	// which is TREATMENT_START/END below (D19).
 	defineDefault("INTERVENTION_START",      99999); // these interventions affect transmission (eg biting rates)
 	defineDefault("INTERVENTION_END",        99999);
 	defineDefault("INTERVENTION_EFFICACY",   0.0);
 
 	// CASE MANAGEMENT window (D19). Previously all case-based treatment was gated on
-	// INTERVENTION_START/END, the same window that scales biting and imports, so setting a
+	// INTERVENTION_START/END, the vector-control window, so setting a
 	// coverage without opening that window gave zero treatments and no warning, and turning
 	// treatment on forced a change in biting. Defaults are "always on", so a coverage alone
 	// is now sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
@@ -1651,14 +1651,13 @@ early() {
 			if (imp_seasonal < 0) imp_seasonal = 0;
 			eff_import_rate = eff_import_rate * imp_seasonal;
 		}
-		// control / border-tightening reduces importation during the intervention window
-		if (sim.cycle >= INTERVENTION_START & sim.cycle < INTERVENTION_END)
-			eff_import_rate = eff_import_rate * (1 - INTERVENTION_EFFICACY);
+		// Local vector control (INTERVENTION_*) does not scale imports: they are infections
+		// acquired elsewhere (D46). A border measure is IMPORT_RATE_BOOST, or the window itself.
 		// import-driven resurgence: leaky border reopens after the trigger
 		if (sim.cycle >= RESURGENCE_TRIGGER_TICK)
 			eff_import_rate = eff_import_rate * IMPORT_RATE_BOOST;
-		// rpois() refuses a rate of 0, which a closed border (IMPORT_RATE_BOOST = 0), full border
-		// control (INTERVENTION_EFFICACY = 1) or a seasonal amplitude above 1 all produce
+		// rpois() refuses a rate of 0, which a closed border (IMPORT_RATE_BOOST = 0) or a seasonal
+		// amplitude above 1 produces
 		if (eff_import_rate > 0.0)
 			n_import_target = n_import_target + rpois(1, eff_import_rate);
 	}
@@ -2041,7 +2040,7 @@ function (integer$) drawHypnozoiteBatchSize(fi$ mean_batch)
 
 // D19: is case management running right now? Expressed once so the five treatment sites
 // cannot drift apart, and so the distinction from the vector-control window is explicit:
-// this gate decides who gets drugs, INTERVENTION_* decides biting and importation, and
+// this gate decides who gets drugs, INTERVENTION_* decides biting, and
 // neither may stand in for the other.
 function (logical$) caseManagementOn(void)
 {

@@ -102,9 +102,8 @@ then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` fo
 not go extinct. An importation is still to come until the run has passed the last day on which one
 can arrive, the pulse day or the import window's last day inside the run (§8); a pulse or window
 that falls outside the run brings nothing. A window inside the run counts to its last day even
-while its rate is 0, as under a border closed by `INTERVENTION_EFFICACY = 1` or
-`IMPORT_RATE_BOOST = 0`, so a run that dies out meanwhile goes extinct only once that day has
-passed.
+while its rate is 0, as under a border closed by `IMPORT_RATE_BOOST = 0`, so a run that dies out
+meanwhile goes extinct only once that day has passed.
 
 A founder-free run (`N_FOUNDER_HOSTS = 0`) starts only from its imports, and they can all fail to
 establish a parasite: by chance, through a Poisson rate that draws none or imports that take in
@@ -174,8 +173,9 @@ for each tick t:
     # --- importation ---
     n_imp <- (N_IMPORTS if t == IMPORT_TICK)
              + (N_IMPORTS_PER_TICK + Poisson(import_rate_eff(t)) if IMPORT_START <= t < IMPORT_END)
-        # import_rate_eff(t): IMPORT_RATE_PER_TICK times the seasonal and intervention factors
-        # that biting_rate_eff(t) applies to BITING_RATE, and IMPORT_RATE_BOOST from the trigger
+        # import_rate_eff(t): IMPORT_RATE_PER_TICK times the seasonal factor that
+        # biting_rate_eff(t) applies to BITING_RATE (not its vector-control factor), and
+        # IMPORT_RATE_BOOST from the trigger
     pick min(n_imp, N_HOSTS) distinct hosts uniformly at random      # at most one import per host
     a host already carrying MAX_MOI blood-stage lineages takes none  # vh_inoculation_import_no_take
     for each other host: roll primary and batch as a bite does, and if either takes, mint an
@@ -562,11 +562,17 @@ everything). About half of `ts.samples()` are vacant and **must be filtered**. T
 
 Three mechanisms, additive:
 
-| parameter | behaviour |
-|---|---|
-| `IMPORT_RATE_PER_TICK` | genuine Poisson arrival rate — the realistic "leaky border" |
-| `N_IMPORTS_PER_TICK` | deterministic floor, between `IMPORT_START`/`IMPORT_END` |
-| `IMPORT_TICK` / `N_IMPORTS` | single pulse event |
+| parameter | behaviour | modifiers |
+|---|---|---|
+| `IMPORT_RATE_PER_TICK` | genuine Poisson arrival rate between `IMPORT_START`/`IMPORT_END` — the realistic "leaky border" | the seasonal factor of biting (§9), floored at 0, and `IMPORT_RATE_BOOST` from `RESURGENCE_TRIGGER_TICK` |
+| `N_IMPORTS_PER_TICK` | deterministic floor, between `IMPORT_START`/`IMPORT_END` | none |
+| `IMPORT_TICK` / `N_IMPORTS` | single pulse event | none |
+
+The rate follows the season because travel, or transmission where the travellers were infected,
+can follow the same season. Local vector control (`INTERVENTION_*`) does not scale imports, which
+are infections acquired elsewhere; a border measure is `IMPORT_RATE_BOOST` or the import window
+itself (D46). The fixed count and the pulse are values the user sets directly, so nothing scales
+them.
 
 Imports use the **same bite outcomes** as local transmission (primary and/or batch) and are
 labelled `is_imported`, which is **carried through to relapses** so an imported relapse is a
@@ -576,9 +582,9 @@ blood-stage lineages, patent or subpatent, takes none, as for a local bite (§3)
 logged as `vh_inoculation_import_no_take`. Each host takes at most one import a day, so a day's
 imports beyond `N_HOSTS` are dropped. `vivax_params()` warns when a day's fixed imports inside the
 run exceed `N_HOSTS` (`N_IMPORTS` on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the window, or both on
-the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal,
-intervention and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS`
-imports on a day with probability above 0.01. Imports arrive in `early()`, which first runs on
+the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal
+and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a
+day with probability above 0.01. Imports arrive in `early()`, which first runs on
 day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a window brings imports on its days
 from `max(1, IMPORT_START)` to `min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run
 brings nothing. A day-1 pulse lands alongside the founders, with one difference from other days:
@@ -601,9 +607,9 @@ overlap 0.03). A structured source pool is planned (§15).
   `BITING_RATE × (1 + SEASONAL_AMP·cos(2π(t − SEASONAL_PHASE)/365))`, with `SEASONAL_PHASE` the
   day-of-year of the **peak**.
 - **Case management** has its own window, `TREATMENT_START` / `TREATMENT_END` (default: the whole
-  run). `INTERVENTION_*` is vector control and importation only, and does not touch treatment
-  (D19). The window gates the **decision**, not delivery: a case detected on the programme's last
-  day still completes its course afterwards.
+  run). `INTERVENTION_*` is vector control only: it scales biting, not importation (§8, D46), and
+  does not touch treatment (D19). The window gates the **decision**, not delivery: a case detected
+  on the programme's last day still completes its course afterwards.
 - **Case-based blood-stage treatment** (`BLOODCURE_COVERAGE`) is decided where a case arises and
   applied to the **host** later: each day after the case the course arrives with probability
   1/`TREATMENT_DELAY`, so the delay is at least one day with mean `TREATMENT_DELAY` (7 by
@@ -826,7 +832,7 @@ derived and written to `params.tsv` for provenance.
 
 | parameter | default |
 |---|---|
-| `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 — vector control and importation only; it does **not** gate treatment (D19) |
+| `INTERVENTION_START` / `_END` / `_EFFICACY` | 99999 / 99999 / 0 — vector control: scales biting, not importation (D46); it does **not** gate treatment (D19) |
 | `SEASONAL_AMP` / `SEASONAL_PHASE` | 0 / 0 — `SEASONAL_AMP` ≥ 0, and 0 means no seasonality; `SEASONAL_PHASE` is the day of the peak |
 | `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD` | 1.0 / 1.0 / 0.5 — drawn once per episode |
 | `RESURGENCE_TRIGGER_TICK` + 4 boosts | 99999, all 1.0 |

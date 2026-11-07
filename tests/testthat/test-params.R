@@ -197,10 +197,10 @@ test_that("a day's fixed imports above N_HOSTS warn, since a host takes one impo
 test_that("an import rate that often brings more than N_HOSTS imports a day warns", {
   ## P(Poisson(50) > 30) = 0.998, so about 20 imports are lost almost every day
   expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 50),
-                 paste("IMPORT_RATE_PER_TICK with its seasonal, intervention and resurgence multipliers",
-                       "reaches 50 imports a day on day 1: that day draws more than N_HOSTS = 30 imports",
+                 paste("IMPORT_RATE_PER_TICK with its seasonal and resurgence multipliers reaches 50",
+                       "imports a day on day 1: that day draws more than N_HOSTS = 30 imports",
                        "with probability 0.998, but each host takes at most one import a day"), fixed = TRUE)
-  ## the peak follows the model's timeline: the boost from its trigger, the season, the intervention
+  ## the peak follows the model's timeline: the boost from its trigger, and the season
   expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 200, IMPORT_RATE_PER_TICK = 15,
                               IMPORT_RATE_BOOST = 3, RESURGENCE_TRIGGER_TICK = 100L),
                  "reaches 45 imports a day on day 100:", fixed = TRUE)
@@ -209,8 +209,10 @@ test_that("an import rate that often brings more than N_HOSTS imports a day warn
   expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 300, IMPORT_RATE_PER_TICK = 15,
                               SEASONAL_AMP = 1, SEASONAL_PHASE = 100), "reaches 30 imports a day on day 100:",
                  fixed = TRUE)
-  expect_no_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 100, IMPORT_RATE_PER_TICK = 40,
-                                 INTERVENTION_START = 1L, INTERVENTION_END = 100L, INTERVENTION_EFFICACY = 0.9))
+  ## vector control scales biting, not imports
+  expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 100, IMPORT_RATE_PER_TICK = 40,
+                              INTERVENTION_START = 1L, INTERVENTION_END = 100L, INTERVENTION_EFFICACY = 0.9),
+                 "with its seasonal and resurgence multipliers reaches 40 imports a day on day 1:", fixed = TRUE)
   ## the window's fixed count leaves less room for the rate
   expect_warning(vivax_params(N_HOSTS = 30, IMPORT_START = 1, IMPORT_END = 10, IMPORT_RATE_PER_TICK = 10,
                               N_IMPORTS_PER_TICK = 20), "imports together with N_IMPORTS_PER_TICK = 20 with probability",

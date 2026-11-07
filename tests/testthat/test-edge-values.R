@@ -37,18 +37,25 @@ test_that("an import rate that reaches zero means no imports, not an error", {
   ev <- load_events(run)
   expect_equal(max(load_state(run)$tick), 30)
   expect_equal(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 0L)
-  ## ...full border control stops imports from the start of the intervention (a batch imported on
-  ## day 9 is logged on day 10)...
-  run <- edge_run("impeff1", SIM_DAYS = 60, IMPORT_START = 5, IMPORT_END = 60,
-                  IMPORT_RATE_PER_TICK = 1, INTERVENTION_START = 10, INTERVENTION_EFFICACY = 1)
-  ev <- load_events(run)
-  expect_equal(max(load_state(run)$tick), 60)
-  expect_gt(nrow(ev[event_type == "vh_inoculation_import" & tick < 10]), 0L)
-  expect_equal(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 0L)
   ## ...and a seasonal amplitude above 1 floors the seasonal factor at 0 for part of the year
   run <- edge_run("impseason", SIM_DAYS = 140, IMPORT_START = 5, IMPORT_END = 140,
                   IMPORT_RATE_PER_TICK = 0.2, SEASONAL_AMP = 1.5)
   expect_equal(max(load_state(run)$tick), 140)
+})
+
+test_that("local vector control scales biting, not imports", {
+  skip_if_no_slim()
+  ## full vector control from day 10: no mosquito bites from then on, while imports, infections
+  ## acquired elsewhere, keep arriving
+  run <- edge_run("vc1", SIM_DAYS = 60, IMPORT_START = 5, IMPORT_END = 60, IMPORT_RATE_PER_TICK = 1,
+                  INTERVENTION_START = 10, INTERVENTION_EFFICACY = 1)
+  ev <- load_events(run)
+  expect_equal(max(load_state(run)$tick), 60)
+  bites <- c("vh_inoculation", "vh_inoculation_no_take", "hv_uptake_clonal", "hv_uptake_recombinant",
+             "hv_uptake_seed")
+  expect_gt(nrow(ev[event_type %in% bites & tick < 10]), 0L)
+  expect_equal(nrow(ev[event_type %in% bites & tick >= 10]), 0L)
+  expect_gt(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 40L)
 })
 
 test_that("a small K_OOCYSTS runs, although its gamma draws can underflow to zero", {

@@ -19,6 +19,36 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D46 — Local vector control does not scale imports · 2026-11-07 · Accepted
+**Context.** The Poisson import stream (`IMPORT_RATE_PER_TICK`) was scaled by the seasonal factor
+of biting, by the vector-control factor 1 − `INTERVENTION_EFFICACY` inside the intervention window,
+and by `IMPORT_RATE_BOOST` from the trigger; the fixed count (`N_IMPORTS_PER_TICK`) and the pulse
+were not scaled at all, and none of this was documented (review m4, question Q6). Imports are
+infections acquired elsewhere, which local vector control does not reach.
+**Decision.** The vector-control factor no longer applies to imports. The seasonal factor stays on
+the Poisson stream, and `IMPORT_RATE_BOOST` from `RESURGENCE_TRIGGER_TICK` and the import window
+are the border measures. The fixed count and the pulse stay unscaled, as values the user sets
+directly. MODEL_DESCRIPTION 2.1 and 8 list each route with its modifiers. `vivax_params()`'s
+warning for an import rate above `N_HOSTS` follows the same factors. The author chose this (Q6,
+2026-11-05).
+**Rationale.** Bed nets and spraying reduce local biting, not the infections travellers bring back.
+Travel, or transmission where travellers were infected, can follow the same season as local biting,
+so the seasonal factor is kept.
+**Alternatives rejected.** *Keep the factor* -- it ties a border measure to local vector control,
+so an arm with vector control and open borders could not be expressed. *Scale the fixed count and
+the pulse as well* -- they are set directly, and a user who wants them to vary can vary them.
+**Supersedes.** D19's statement that `INTERVENTION_*` scales the importation rate; its separation
+of case management from vector control stands.
+**Consequences.** A run with an import-rate window that overlaps an intervention window with
+`INTERVENTION_EFFICACY > 0` brings more imports while the two overlap, and changes from the first
+such day; every other run is byte-identical. The edge-value test closes the border with
+`IMPORT_RATE_BOOST = 0` and a seasonal amplitude above 1, not with full vector control.
+**How to verify.** `tests/testthat/test-edge-values.R`: with full vector control from day 10, no
+bite or uptake happens from day 10 while imports keep arriving. `tests/testthat/test-params.R`: an
+import rate of 40 a day for 30 hosts warns even under vector control.
+
+---
+
 ## D45 — A run started with slim -d is checked as R checks it, and takes either spelling of a number · 2026-11-07 · Accepted
 **Context.** `validate_params()` refuses every value the model cannot run (D33), and the model's
 `initialize()` repeated only some of those checks for runs started directly with `slim -d`, which
@@ -1192,7 +1222,7 @@ Step 0 baseline across 5 seeds (prevalence +0.004, reservoir −0.14, relapse fr
 
 ---
 
-## D19 — Case management gets its own window, separate from vector control · 2026-10-19 · Accepted
+## D19 — Case management gets its own window, separate from vector control · 2026-10-19 · Accepted; partly superseded by D46 (vector control does not scale imports)
 **Context.** Every case-based treatment was gated on `INTERVENTION_START`/`INTERVENTION_END`
 (five sites), which is the SAME window that scales biting and the importation rate by
 `INTERVENTION_EFFICACY`. Two consequences, both silent: setting `RADCURE_COVERAGE` or
