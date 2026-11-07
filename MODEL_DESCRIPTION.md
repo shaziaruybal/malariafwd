@@ -768,7 +768,8 @@ most 10⁶ imports a day; and
 tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
 past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports
 never establish a parasite, by chance or because its settings let none take, is not refused; it
-ends as never started (§2).
+ends as never started (§2). The model makes the same checks itself when it is run with `slim -d`,
+bypassing R, and there a number may be written either way, `7` or `7.0`, for the same run.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 

@@ -19,6 +19,41 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D45 — A run started with slim -d is checked as R checks it, and takes either spelling of a number · 2026-11-07 · Accepted
+**Context.** `validate_params()` refuses every value the model cannot run (D33), and the model's
+`initialize()` repeated only some of those checks for runs started directly with `slim -d`, which
+bypass R. The rest ran: `RADCURE_MODE = 'Person'` silently ran the per-hypnozoite mode, a
+probability above 1 was always true, and 12 founder hosts in a 10-host run seeded 10. And `-d X=7`
+makes an Eidos integer where `-d X=7.0` makes a float, which Eidos will not mix in `min()`,
+`rbinom()`, `seqLen()`, `setSeed()`, subsetting or a tick range, so a legal spelling of ten
+parameters stopped the run: `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `P_RAD_SURVIVAL`, `N_HOSTS`,
+`N_MOSQ`, `N_FOUNDER_LINEAGES`, `N_IMPORTS`, `N_IMPORTS_PER_TICK`, `SEED` and `SIM_DAYS` (review
+m62).
+**Decision.** `initialize()` makes the rest of `validate_params()`'s checks: each parameter's type
+and that it is a single value, whole numbers for counts and days, the probability ranges,
+positivity and non-negativity, the founder bounds, `MOSQ_LIFESPAN`, `MEAN_BLOOD_STAGE_DURATION`,
+`MU_HYPNOZOITE`, `DELTA_LATENCY`, `RECOMB_RATE`, `SEASONAL_PHASE`, `RADCURE_MODE`, a coverage
+against a closed treatment window, and `CHROMOSOMES` listed twice or as a high-low range. The model
+converts a parameter to the type it needs at each place Eidos is strict, so either spelling of a
+number gives the same run. Not repeated: R's limits on what text can carry (values below 1e-300,
+control characters), and `SIM_DAYS` outside 2 to 1e9, which SLiM refuses itself before
+`initialize()` runs.
+**Rationale.** A direct run is the one place where a typo cannot be caught in R, and every one of
+these ran to exit 0 meaning something else.
+**Alternatives rejected.** *Refuse the other spelling* -- `-d TREATMENT_DELAY=7` is already
+accepted on purpose (D32), and a rule that a float parameter must be written `7.0` is one users
+would trip over. *Convert the constants once in `initialize()`* -- SLiM 5.2 cannot remove a
+constant set with `-d`, so it cannot be redefined in another type.
+**Consequences.** Every run started from R is byte-identical: R writes each parameter in its own
+type and passes every check. In a direct run, the values listed are refused with the parameter
+named. Across 318 pairs of direct runs on three configurations, each parameter in each spelling
+gives byte-identical `events.tsv` and `state.tsv`.
+**How to verify.** `tests/testthat/test-slim.R` refuses each new case with its parameter named, and
+runs a 5-day configuration with latency, an MDA round in the per-hypnozoite mode and a pulse of
+imports in both spellings, with identical outputs.
+
+---
+
 ## D44 — MDA reaches subpatent clones and clones that became patent that day · 2026-11-07 · Accepted
 **Context.** MDA goes through `applyTreatment()`, the case-management course (D20, D28), so it
 inherited two filters meant for case courses: a course skips subpatent clones (a holder is below

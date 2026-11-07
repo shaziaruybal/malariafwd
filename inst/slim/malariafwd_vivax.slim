@@ -250,6 +250,50 @@ initialize() {
 	// infections is NOT needed.
 	defineDefault("RETAIN_FULL_HISTORY", T);
 
+	// ── PARAMETER TYPES, for runs started directly with -d (m62) ────────────
+	// validate_params() checks every parameter's type before SLiM starts; a run started with -d
+	// bypasses R, so the same checks are made here. A number may be written either way, 7 or 7.0,
+	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
+	// must also be a whole number.
+	whole_params = c("SIM_DAYS", "N_HOSTS", "N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES",
+		"N_MOSQ", "EIP_DAYS", "MAX_MOI", "MAX_BROODS_PER_MOSQ", "N_OOCYSTS_PER_BITE",
+		"GAMETOCYTE_DELAY", "K_LATENCY", "INTERVENTION_START", "INTERVENTION_END", "TREATMENT_START",
+		"TREATMENT_END", "MDA_TICK", "RESURGENCE_TRIGGER_TICK", "IMPORT_START", "IMPORT_END",
+		"N_IMPORTS_PER_TICK", "IMPORT_TICK", "N_IMPORTS", "SEED");
+	real_params = c("BITING_RATE", "P_TRANS_VH", "P_TRANS_HV", "MOSQ_LIFESPAN",
+		"MEAN_BLOOD_STAGE_DURATION", "LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS",
+		"P_GAMETOCYTE", "P_PRIMARY", "NU_HYPNOZOITE_BATCH", "ALPHA_ACTIVATE", "MU_HYPNOZOITE",
+		"DELTA_LATENCY", "RECOMB_RATE", "INTERVENTION_EFFICACY", "P_RAD_SURVIVAL", "RADCURE_COVERAGE",
+		"BLOODCURE_COVERAGE", "P_BLOODCURE_SURVIVAL", "MDA_COVERAGE", "P_RECRUD_GIVEN_FAIL",
+		"MEAN_RECRUD_DELAY", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY", "TREATMENT_DELAY",
+		"P_DETECT_PRIMARY", "P_DETECT_RELAPSE", "SEASONAL_AMP", "SEASONAL_PHASE", "BITING_RATE_BOOST",
+		"ALPHA_ACTIVATE_BOOST", "NU_HYPNOZOITE_BATCH_BOOST", "IMPORT_RATE_PER_TICK", "IMPORT_RATE_BOOST");
+	flag_params = c("VERBOSE", "RETAIN_FULL_HISTORY");
+	text_params = c("SIM_ID", "OUTDIR", "GENOME_MODE", "CHROMOSOMES", "RADCURE_MODE", "RECRUD_DELAY_DIST");
+	for (nm in c(whole_params, real_params, flag_params, text_params))
+	{
+		v = executeLambda(nm + ";");
+		if (size(v) != 1)
+			stop(nm + " must be a single value, got " + size(v) + " values.");
+		if (match(nm, flag_params) >= 0)
+		{
+			if (!isLogical(v))
+				stop(nm + " must be T or F, got " + v);
+		}
+		else if (match(nm, text_params) >= 0)
+		{
+			if (!isString(v))
+				stop(nm + " must be a string, quoted as in -d \"" + nm + "='...'\", got " + v);
+		}
+		else if (!(isInteger(v) | isFloat(v)))
+			stop(nm + " must be a number, got " + v);
+		// nested ifs, not `&`: Eidos does not short-circuit, and round() refuses an integer
+		else if (match(nm, whole_params) >= 0)
+			if (isFloat(v))
+				if (!(v == round(v) & abs(v) <= 2^53))
+					stop(nm + " must be a whole number, got " + v);
+	}
+
 	// ── DERIVED CONSTANTS (always computed from above) ────────────
 	defineConstant("MU_MOSQ",       1/MOSQ_LIFESPAN); // daily mosquito mortality rate
 	defineConstant("P_BLOOD_CLEAR", 1/MEAN_BLOOD_STAGE_DURATION); // daily clearance prob: a geometric duration, mean MEAN_BLOOD_STAGE_DURATION days
@@ -325,6 +369,64 @@ initialize() {
 	if (!(MAX_MOI >= 1))
 		stop("MAX_MOI must be at least 1, got " + MAX_MOI + ": a host takes a new inoculation only " +
 			"while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.");
+	// The rest of validate_params()'s refusals (m62). Without them a direct run starts and means
+	// something else (RADCURE_MODE = 'Person' ran the per-hypnozoite mode, and a probability
+	// above 1 is always true) or stops part-way.
+	for (nm in c("P_TRANS_VH", "P_TRANS_HV", "P_GAMETOCYTE", "P_PRIMARY", "P_DETECT_PRIMARY",
+		"P_DETECT_RELAPSE", "RADCURE_COVERAGE", "P_RAD_SURVIVAL", "BLOODCURE_COVERAGE",
+		"P_BLOODCURE_SURVIVAL", "P_RECRUD_GIVEN_FAIL", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY",
+		"MDA_COVERAGE", "ALPHA_ACTIVATE"))
+	{
+		v = executeLambda(nm + ";");
+		if (!(v >= 0 & v <= 1))
+			stop(nm + " must be in [0, 1], got " + v);
+	}
+	for (nm in c("N_HOSTS", "N_MOSQ", "BITING_RATE"))
+	{
+		v = executeLambda(nm + ";");
+		if (!(v > 0 & v < INF))
+			stop(nm + " must be > 0 and finite, got " + v);
+	}
+	for (nm in c("NU_HYPNOZOITE_BATCH", "NU_HYPNOZOITE_BATCH_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
+		"N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS", "GAMETOCYTE_DELAY",
+		"MAX_BROODS_PER_MOSQ", "K_LATENCY"))
+	{
+		v = executeLambda(nm + ";");
+		if (!(v >= 0 & v < INF))
+			stop(nm + " must be >= 0 and finite, got " + v);
+	}
+	if (!(abs(SEASONAL_PHASE) < INF))
+		stop("SEASONAL_PHASE must be finite (the day of the year of the peak), got " + SEASONAL_PHASE);
+	if (!(RECOMB_RATE <= 0.5 & RECOMB_RATE > -INF))
+		stop("RECOMB_RATE must be at most 0.5 per bp and finite, got " + RECOMB_RATE +
+			" (a value <= 0 means the default map rate, 7.4e-7).");
+	if (N_FOUNDER_HOSTS > N_HOSTS)
+		stop("N_FOUNDER_HOSTS (" + N_FOUNDER_HOSTS + ") must be at most N_HOSTS (" + N_HOSTS +
+			"). It defaults to N_FOUNDERS, so set either one.");
+	if (N_FOUNDER_LINEAGES > N_FOUNDER_HOSTS)
+		stop("N_FOUNDER_LINEAGES (" + N_FOUNDER_LINEAGES + ") must be at most N_FOUNDER_HOSTS (" +
+			N_FOUNDER_HOSTS + "): each founder host carries one of the founding genomes.");
+	if (!(MOSQ_LIFESPAN >= 1 & MOSQ_LIFESPAN < INF))
+		stop("MOSQ_LIFESPAN must be >= 1 and finite (days), got " + MOSQ_LIFESPAN +
+			": a mosquito dies each day with probability 1/MOSQ_LIFESPAN.");
+	if (!(MEAN_BLOOD_STAGE_DURATION >= 1 & MEAN_BLOOD_STAGE_DURATION < INF))
+		stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days), got " + MEAN_BLOOD_STAGE_DURATION +
+			": blood-stage infections clear each day with probability 1/MEAN_BLOOD_STAGE_DURATION.");
+	if (!(MU_HYPNOZOITE > 0 & MU_HYPNOZOITE <= 1))
+		stop("MU_HYPNOZOITE must be in (0, 1], got " + MU_HYPNOZOITE + ": it is a daily probability, " +
+			"and hypnozoites that cannot die keep their batch alive forever.");
+	if (K_LATENCY > 0)
+		if (!(DELTA_LATENCY > 0 & DELTA_LATENCY <= 1))
+			stop("DELTA_LATENCY must be in (0, 1] when K_LATENCY > 0, got " + DELTA_LATENCY +
+				": a latent batch leaves each latency stage with daily probability DELTA_LATENCY.");
+	if (!(RADCURE_MODE == "person" | RADCURE_MODE == "hypnozoite"))
+		stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '" + RADCURE_MODE + "'");
+	// a coverage set against a closed case-management window would give no treatment at all (D19)
+	if ((RADCURE_COVERAGE > 0 | BLOODCURE_COVERAGE > 0) &
+		(TREATMENT_END <= TREATMENT_START | TREATMENT_START > SIM_DAYS))
+		stop("a treatment coverage is set but the case-management window is closed (TREATMENT_START = " +
+			TREATMENT_START + ", TREATMENT_END = " + TREATMENT_END + ", SIM_DAYS = " + SIM_DAYS +
+			"): no case would ever be treated.");
 
 	// ---- configurations that cannot produce a single parasite ----------------------------
 	// Mirrored in validate_params() on the R side; repeated here because the model can be run
@@ -367,7 +469,7 @@ initialize() {
 			"from 1 to SIM_DAYS (IMPORT_TICK + N_IMPORTS, or IMPORT_START/IMPORT_END with " +
 			"N_IMPORTS_PER_TICK or IMPORT_RATE_PER_TICK).");
 
-	setSeed(SEED);
+	setSeed(asInteger(SEED));
 	
 	// SLiM 5.2 is the supported version: 5.0 and 5.1 give different output for the same seed.
 	if (version(F)[1] < 5.2)
@@ -411,12 +513,19 @@ initialize() {
 	{
 		parts = strsplit(tok, "-");
 		if (size(parts) == 2)
+		{
+			// Eidos counts down a high-low range; validate_params() refuses one (m62)
+			if (asInteger(parts[0]) > asInteger(parts[1]))
+				stop("CHROMOSOMES has a range that runs high-low: " + CHROMOSOMES);
 			chr_idx = c(chr_idx, asInteger(parts[0]):asInteger(parts[1]));
+		}
 		else
 			chr_idx = c(chr_idx, asInteger(tok));
 	}
 	if (any(chr_idx < 1) | any(chr_idx > 14))
 		stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
+	if (size(unique(chr_idx)) != size(chr_idx))
+		stop("CHROMOSOMES lists a chromosome twice: " + CHROMOSOMES);
 
 	is_core = (GENOME_MODE == "core");
 	if (!is_core & (GENOME_MODE != "full"))
@@ -481,7 +590,7 @@ initialize() {
 	// range so the two can never collide, but NOT far above: SLiM materialises a DENSE
 	// population table up to the highest id used, so a base of 1e6 added ~1,000,000 empty rows
 	// and ~8 MB of padding to every tree sequence from a run with imports.
-	defineGlobal("NEXT_SCRATCH_SUBPOP", N_HOSTS + N_MOSQ + 1000);
+	defineGlobal("NEXT_SCRATCH_SUBPOP", asInteger(N_HOSTS + N_MOSQ) + 1000);
 	// the second compartment of an import, awaiting its clone on the next tick
 	defineGlobal("PENDING_BATCH_PED",  integer(0));
 	defineGlobal("PENDING_BATCH_N",    integer(0));
@@ -531,7 +640,7 @@ reproduction()
 		ALPHA_ACTIVATE * ALPHA_ACTIVATE_BOOST else ALPHA_ACTIVATE;
 	// F7: keep the competing-risks probabilities valid under a large activation boost -
 	// need alpha < 1 and death-thinning MU/(1-alpha) <= 1, i.e. alpha <= 1 - MU.
-	effective_alpha_activate = min(effective_alpha_activate, 1 - MU_HYPNOZOITE);
+	effective_alpha_activate = min(asFloat(effective_alpha_activate), 1.0 - MU_HYPNOZOITE);
 	
 	for (h in humans)
 	{
@@ -562,7 +671,7 @@ reproduction()
 			// latency per infection.
 			if (latency_stage > 0)
 			{
-				n_dying = rbinom(1, batch_count, MU_HYPNOZOITE);
+				n_dying = rbinom(1, batch_count, asFloat(MU_HYPNOZOITE));
 				if (n_dying > 0)
 				{
 					logEvent("hypnozoite_clearance",
@@ -1097,7 +1206,7 @@ reproduction()
 		_plines = c(_plines, _nm + "\t" + paste(executeLambda(_nm + ";"), sep=","));
 	writeFile(OUTDIR + "/params.tsv", _plines);
 
-	n_subpops = N_HOSTS + N_MOSQ;
+	n_subpops = asInteger(N_HOSTS + N_MOSQ);
 
 	founder_templates = c();          // v3: distinct founder-lineage template individuals (genome roots)
 	pending_clone_hosts     = c();    // v3: subpop IDs of founder HOSTS awaiting a clonal copy (seeded tick 2; addCloned needs reproduction())
@@ -1119,7 +1228,7 @@ reproduction()
 			subpop = sim.addSubpop(s, 0);            // empty for now; clone added by the one-shot 2 reproduction()
 			// record integer IDs only (defineGlobal can't retain Subpopulation objects). Templates = subpops 0..N_FOUNDER_LINEAGES-1.
 			pending_clone_hosts     = c(pending_clone_hosts, s);
-			pending_clone_templates = c(pending_clone_templates, sample(seqLen(N_FOUNDER_LINEAGES), 1));
+			pending_clone_templates = c(pending_clone_templates, sample(seqLen(asInteger(N_FOUNDER_LINEAGES)), 1));
 		}
 		else                                         // susceptible host or (later-bootstrapping) mosquito
 			subpop = sim.addSubpop(s, 0);
@@ -1168,8 +1277,8 @@ reproduction()
 	defineGlobal("PENDING_CLONE_TEMPLATES", pending_clone_templates);
 
 	// add tags for hosts supop and mosq subpops
-	defineConstant("HUMANS", seqLen(N_HOSTS));
-	defineConstant("VECTORS", seq(N_HOSTS, N_MOSQ + N_HOSTS - 1));
+	defineConstant("HUMANS", seqLen(asInteger(N_HOSTS)));
+	defineConstant("VECTORS", seq(asInteger(N_HOSTS), asInteger(N_MOSQ + N_HOSTS) - 1));
 	sim.subpopulations[HUMANS].setValue("pop_type", "human");
 	sim.subpopulations[VECTORS].setValue("pop_type", "mosquito");
 	
@@ -1560,7 +1669,7 @@ early() {
 		// N_HOSTS are dropped (this keeps the R cap of 1e6 imports a day cheap to run). A host
 		// already carrying MAX_MOI blood-stage lineages takes none, as for a local bite; the
 		// refusal is logged as vh_inoculation_import_no_take.
-		import_hosts = sample(humans, min(n_import_target, size(humans)));
+		import_hosts = sample(humans, min(asInteger(n_import_target), size(humans)));
 		full = (sapply(import_hosts, "getBloodStageLineageCount(applyValue);") >= MAX_MOI);
 		for (h_full in import_hosts[full])
 		{
@@ -1639,12 +1748,12 @@ early() {
 	}
 }
 
-1:(SIM_DAYS - 1) late()
+1:(asInteger(SIM_DAYS) - 1) late()
 {
 	writeStateSnapshot();
 }
 
-SIM_DAYS late() {
+asInteger(SIM_DAYS) late() {
 	writeStateSnapshot();
 	sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
 	vcat("------------------------------------------------");
@@ -2024,14 +2133,14 @@ function (void) applyRadicalCure(o<Subpopulation>$ h, s$ src)
 			b.setValue("batch_count", 0);   // retired; the early() cleanup kills it
 		}
 	}
-	else
+	else if (RADCURE_MODE == "hypnozoite")
 	{
 		// per hypnozoite: each survives independently, so a course can clear PART of a
 		// reservoir and leave a subset of genotypes behind
 		for (b in batches)
 		{
 			bc = b.getValue("batch_count");
-			n_surv = rbinom(1, bc, P_RAD_SURVIVAL);
+			n_surv = rbinom(1, bc, asFloat(P_RAD_SURVIVAL));
 			if (bc - n_surv > 0)
 				logLineageEvent((src == "mda") ? "mda_hypnozoite_clear" else "radcure_hypnozoite_clear",
 					h, b, bc - n_surv);

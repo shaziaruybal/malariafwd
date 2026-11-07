@@ -21,7 +21,7 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
   ## validate_params() refuses these too, but the model can be run with -d, bypassing R
   slim <- function(..., days = 5) {
     out <- tempfile("mfwd_direct_"); dir.create(out)
-    processx::run(slim_path(), c("-s", "1", "-d", paste0("SIM_DAYS=", days), "-d", "N_HOSTS=10", "-d", "N_MOSQ=20",
+    processx::run(slim_path(), c("-s", "1", "-d", paste0("SIM_DAYS=", days), "-d", "N_HOSTS=20", "-d", "N_MOSQ=20",
                                  "-d", paste0("OUTDIR='", out, "'"), ..., slim_model()),
                   error_on_status = FALSE)
   }
@@ -74,4 +74,52 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
               "-d", "P_RECRUD_GIVEN_FAIL=1.0")
     expect_equal(r$status, 0L, label = paste0("a '", shape, "' delay given as an integer"))
   }
+})
+
+test_that("a direct run refuses what validate_params() refuses, and takes either spelling of a number", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  ## a 5-day, 20-host run; a setting given here replaces the default one
+  slim <- function(...) {
+    set <- c(SIM_DAYS = "5", N_HOSTS = "20", N_MOSQ = "20")
+    a <- c(...); set[sub("=.*", "", a)] <- sub("^[^=]*=", "", a)
+    out <- tempfile("mfwd_direct_"); dir.create(out)
+    r <- processx::run(slim_path(), c("-s", "1", as.vector(rbind("-d", c(paste0(names(set), "=", set),
+                                      paste0("OUTDIR='", out, "'")))), slim_model()), error_on_status = FALSE)
+    r$outdir <- out; r
+  }
+  bad <- c("RADCURE_MODE='Person'" = "RADCURE_MODE must be 'person' or 'hypnozoite'",
+           "P_TRANS_VH=1.5" = "P_TRANS_VH must be in \\[0, 1\\]",
+           "ALPHA_ACTIVATE=NAN" = "ALPHA_ACTIVATE must be in \\[0, 1\\]",
+           "N_MOSQ=0" = "N_MOSQ must be > 0",
+           "BITING_RATE=INF" = "BITING_RATE must be > 0 and finite",
+           "EIP_DAYS=-1" = "EIP_DAYS must be >= 0",
+           "N_FOUNDERS=21" = "N_FOUNDER_HOSTS \\(21\\) must be at most N_HOSTS \\(20\\)",
+           "N_HOSTS=20.5" = "N_HOSTS must be a whole number",
+           "MOSQ_LIFESPAN=0.5" = "MOSQ_LIFESPAN must be >= 1",
+           "MEAN_BLOOD_STAGE_DURATION=0.5" = "MEAN_BLOOD_STAGE_DURATION must be >= 1",
+           "MU_HYPNOZOITE=0.0" = "MU_HYPNOZOITE must be in \\(0, 1\\]",
+           "VERBOSE='F'" = "VERBOSE must be T or F",
+           "SIM_ID=3" = "SIM_ID must be a string",
+           "N_MOSQ=c(10, 20)" = "N_MOSQ must be a single value",
+           "CHROMOSOMES='1,1'" = "CHROMOSOMES lists a chromosome twice",
+           "CHROMOSOMES='3-1'" = "CHROMOSOMES has a range that runs high-low")
+  for (arg in names(bad)) {
+    r <- slim(arg)
+    expect_true(r$status != 0, label = arg)
+    expect_match(paste(r$stdout, r$stderr), bad[[arg]], label = arg)
+  }
+  r <- slim("BLOODCURE_COVERAGE=0.5", "TREATMENT_START=10", "TREATMENT_END=5")
+  expect_match(paste(r$stdout, r$stderr), "case-management window is closed")
+  ## a number in either spelling gives the same run, through latency, an MDA round in the
+  ## per-hypnozoite mode and a pulse of imports
+  on <- c("K_LATENCY=1", "DELTA_LATENCY=0.5", "RADCURE_MODE='hypnozoite'", "MDA_TICK=3", "MDA_COVERAGE=1.0",
+          "IMPORT_TICK=2")
+  a <- slim(on, "ALPHA_ACTIVATE=1", "MU_HYPNOZOITE=1", "P_RAD_SURVIVAL=0", "N_IMPORTS=2.0", "N_HOSTS=20.0",
+            "SIM_DAYS=5.0", "SEED=5.0")
+  b <- slim(on, "ALPHA_ACTIVATE=1.0", "MU_HYPNOZOITE=1.0", "P_RAD_SURVIVAL=0.0", "N_IMPORTS=2", "N_HOSTS=20",
+            "SIM_DAYS=5", "SEED=5")
+  expect_equal(c(a$status, b$status), c(0L, 0L))
+  for (f in c("events.tsv", "state.tsv"))
+    expect_identical(unname(tools::md5sum(file.path(a$outdir, f))), unname(tools::md5sum(file.path(b$outdir, f))),
+                     label = f)
 })
