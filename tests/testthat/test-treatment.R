@@ -240,7 +240,7 @@ test_that("MDA reaches subpatent clones and clones patent that day, as a case co
   held <- setdiff(sub[tick < 150 | (tick == 150 & (is.na(from) | row < from)), pedigree_id],
                   ev[event_type == "recrudescence" & tick <= 150, parent1_pedigree_id])
   cl <- ev[event_type == "mda_subpatent_clear"]
-  expect_gt(length(held), 0); expect_gt(nrow(cl), 0)
+  expect_gt(length(held), 0); expect_gt(nrow(cl), 0); expect_gt(length(by_round), 0)
   expect_true(all(cl$tick == 150)); expect_true(all(cl$pedigree_id %in% held))
   expect_false(any(by_round %in% cl$pedigree_id))   # a clone it has just suppressed is not drawn
   ## a cleared holder never recrudesces; one that survives is not suppressed again
@@ -264,7 +264,7 @@ test_that("MDA reaches subpatent clones and clones patent that day, as a case co
   expect_gte(length(same_day), 8)
   expect_true(all(same_day %in% ev[event_type == "mda_bloodstage_clear" & tick == 2, pedigree_id]))
   expect_equal(st[tick == 2 & entity_type == "human", sum(moi_active + moi_subpatent)], 0L)
-  ## such a one-day episode is drawn, as classify_cases() counts it
+  ## such a one-day episode is drawn (classify_cases() counts one for any clone but a founder)
   skip_if_not_installed("ggplot2")
   h <- ev[pedigree_id == same_day[1], human_id][1]
   expect_s3_class(plot_host_trajectory(st, ev, h), "ggplot")

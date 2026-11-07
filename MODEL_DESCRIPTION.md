@@ -372,11 +372,12 @@ At the shipped `ALPHA_ACTIVATE` = 1/170 and `MU_HYPNOZOITE` = 1/442:
 | …at ν = 5 | 3.61 |
 | …at ν = 8 | 5.78 |
 
-**Note the episode/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating on
-the same tick collapse into **one** blood-stage episode (they are clonal, so they are genetically
-one thing). The expected number of relapse *episodes* is therefore lower than 3.61, and depends on
-batch size — a larger batch yields more simultaneous activations and so proportionally fewer
-episodes per hypnozoite. This is why relapse *rate* is not linear in ν.
+**Note the episode/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating
+on the same tick collapse into **one** blood-stage episode (they are clonal, so they are
+genetically one thing). The expected number of relapse *episodes* is therefore lower than the 2.17
+relapsing hypnozoites per bite at the default ν = 3, and depends on batch size — a larger batch
+yields more simultaneous activations and so proportionally fewer episodes per hypnozoite. This is
+why relapse *rate* is not linear in ν.
 
 **Temperate latency.** With `K_LATENCY = k > 0`, a new batch must pass `k` latency stages before
 its hypnozoites can activate, producing the long-latency phenotype (D35). Each day every latent
@@ -1040,7 +1041,7 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | radical cure → smaller reservoir | 0.50 vs 1.90 |
 | vector control → lower prevalence | 0.04 vs 0.34 |
 | temperate latency delays first relapse | median **142 d** vs **46 d** tropical |
-| multi-oocyst uptake → more outcrossing | 7.6% vs 6.6% |
+| co-transmission (`LAMBDA_SPOROZOITES = 2`) → more outcrossing, 3-seed means at `BITING_RATE` 0.2 | 48.3% vs 43.2% |
 | all three importation modes produce imports | 184 / 1,535 / 64 |
 | `MAX_MOI` gates superinfection (relapses bypass it) | COI 2.04 at `MAX_MOI = 2`, 5.05 without |
 | detection layer thins the observed list only | baseline 315/315 detected |
@@ -1076,19 +1077,24 @@ junctions (φ about 0.09), because meiosis I pairs the products alike on every c
 
 **ν against the bands, measured at this version**: 400 hosts, 800 mosquitoes, 5 years,
 `BITING_RATE` 0.08, 20 founder hosts carrying 10 lineages, the first 2 years as burn-in, means of
-3 seeds.
+3 seeds. Relapses per person-year are the relapses after burn-in per year of the hosts ever
+infected; molFOB is the new blood-stage clones, relapses included, per person-year of all hosts;
+the median MOI is over infected host-days; the EIR is over the 3 years after burn-in. A *masked*
+relapse is one into a patent clone of its own lineage (`into_patent_lineage = 1`, §5), which an
+observer could not see as a recurrence.
 
-| ν | prevalence | relapses per person-year (0.5–5) | molFOB (0.7–15) | median MOI (1–3) | relapse fraction (0.55–0.85) | the same, masked relapses left out | EIR |
-|---|---|---|---|---|---|---|---|
-| 2 | 0.11 | 0.67 | 0.95 | 1 | 0.56 | 0.34 | 0.84 |
-| **3** | 0.31 | 2.29 | 3.39 | 1 | 0.66 | 0.39 | 2.26 |
-| 5 | 0.49 | 5.30 | 6.87 | 1 | 0.77 | 0.43 | 3.20 |
+| ν | prevalence | relapses per person-year (0.5–5): all / masked left out | molFOB (0.7–15) | median MOI (1–3) | relapse fraction (0.55–0.85): all / masked left out | EIR |
+|---|---|---|---|---|---|---|
+| 2 | 0.11 | 0.67 / 0.27 | 0.95 | 1 | 0.56 / 0.34 | 0.84 |
+| **3** | 0.31 | 2.29 / 0.74 | 3.39 | 1 | 0.66 / 0.39 | 2.26 |
+| 5 | 0.49 | 5.30 / 1.24 | 6.87 | 1 | 0.77 / 0.43 | 3.20 |
+| 8 | 0.63 | 10.39 / 1.66 | 12.41 | 1 | 0.84 / 0.45 | 4.08 |
+| 12 | 0.78 | 19.25 / 2.28 | 21.70 | 1.67 | 0.89 / 0.48 | 4.90 |
 
-Counting every relapse, ν = 2 and 3 sit inside all four bands, and ν = 5 has more relapses per
-person-year than its band allows. Two-thirds of the relapses at ν = 3 start while a patent clone
-of their own lineage is in the host (`into_patent_lineage = 1`, §5), where an observer could not
-see them as recurrences. With those left out, the relapse fraction is below its band at every ν
-tried, including ν = 5, which already has too many relapses per person-year.
+Counting every relapse, ν = 2 and 3 sit inside all four bands; from ν = 5 relapses per person-year
+are above their band, and at ν = 12 molFOB is too. Two-thirds of the relapses at ν = 3 are masked.
+With the masked relapses left out of both, relapses per person-year stay inside their band up to
+ν = 12, but the relapse fraction stays below its band at every ν tried (0.48 at ν = 12).
 
 > **Identification warning.** COI is jointly determined by biting rate *and* the uptake/inoculation
 > parameters. Fitting both to COI leaves them confounded. Set the parasite-side parameters from

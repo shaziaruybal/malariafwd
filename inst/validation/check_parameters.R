@@ -57,7 +57,9 @@ run_cfg <- function(tag, ...) {
 ## "<" decides nothing whenever the true effect is comparable to that spread.
 ## Outcrossing needs hosts that carry several lineages, so it is compared where transmission gives
 ## them (BITING_RATE 0.2), over 3 seeds: at the base's COI of about 1 the share of outcrossed
-## oocysts is a few percent either way, and one seed decided the order.
+## oocysts is a few percent either way, and one seed decided the order. Co-transmission raises it,
+## by raising COI; more oocysts per uptake does not, as each oocyst draws its two gametes from the
+## same pool.
 mean_recomb <- function(tag, ...) {
   mean(vapply(1:3, function(sd) {
     d <- file.path(OUT, paste0("rec_", tag, "_", sd)); unlink(d, recursive = TRUE)
@@ -143,9 +145,9 @@ ok("vector-control intervention -> lower prevalence",
 ok("importation -> imported cases appear", g("imports","imported") > 0,
    sprintf("%d imported (baseline %d)", g("imports","imported"), g("baseline","imported")))
 ok("baseline is a closed system (no imports)", g("baseline","imported") == 0)
-rec_multi <- mean_recomb("wsf_multi", LAMBDA_OOCYSTS = 2.0, LAMBDA_SPOROZOITES = 2.0)
+rec_multi <- mean_recomb("cotrans", LAMBDA_SPOROZOITES = 2.0)
 rec_single <- mean_recomb("single")
-ok("multi-oocyst uptake -> more outcrossing than single",
+ok("co-transmission -> more outcrossing than single-genotype bites",
    rec_multi > rec_single, sprintf("%.1f%% vs %.1f%% (3-seed means at BITING_RATE 0.2)", rec_multi, rec_single))
 ok("resurgence trigger -> higher prevalence than baseline",
    g("resurgence","prev") > g("baseline","prev"),

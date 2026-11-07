@@ -35,12 +35,12 @@ nowhere.
 **Consequences.** Every run that leaves `NU_HYPNOZOITE_BATCH` at its default changes. The re-check
 (400 hosts, 5 years, `BITING_RATE` 0.08, 3 seeds) puts ν = 3 inside all four bands when every
 relapse is counted: relapses per person-year 2.29, molFOB 3.39, median MOI 1, relapse fraction
-0.66. With the relapses into a patent clone of their own lineage left out, as agreed for the
-relapse-fraction band (two-thirds of relapses at ν = 3), the relapse fraction is 0.39, and no ν
-from 2 to 5 reaches the band. Not settled here: which reading the band is compared with.
+0.66. With the relapses into a patent clone of their own lineage left out of both, as agreed for
+the relapse-fraction band (two-thirds of relapses at ν = 3), relapses per person-year stay inside
+their band up to ν = 12, but the relapse fraction is 0.39 at ν = 3 and stays below its band at
+every ν up to 12 (0.48). Not settled here: which reading the band is compared with.
 **How to verify.** `vivax_params()$NU_HYPNOZOITE_BATCH` is 3, as is the model's own default (the
 test that keeps the two in sync); MODEL_DESCRIPTION 13's table is the re-check.
-
 ---
 
 ## D47 — state.tsv counts each host's infectious bites a day, which gives the EIR · 2026-11-07 · Accepted

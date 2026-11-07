@@ -61,8 +61,10 @@
 #'
 #' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
 #' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to published vivax bands at moderate
-#' transmission (MODEL_DESCRIPTION section 13); `BITING_RATE`, with `N_MOSQ / N_HOSTS`, sets the
-#' transmission intensity and is for each study to choose.
+#' transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and 400 hosts; MODEL_DESCRIPTION
+#' section 13); re-fit it when transmission or scale change, since both move the relapse rate.
+#' `BITING_RATE`, with `N_MOSQ / N_HOSTS`, sets the transmission intensity and is for each study to
+#' choose.
 #'
 #' Time is in days: one model tick is one day. A duration parameter `D` (such as
 #' `MEAN_BLOOD_STAGE_DURATION` or `MOSQ_LIFESPAN`) is the mean of a geometric duration: the

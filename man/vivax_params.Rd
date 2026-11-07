@@ -20,8 +20,10 @@ mirror the SLiM model) and overriding any you name. \code{SEED} and \code{OUTDIR
 \details{
 The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
 \code{NU_HYPNOZOITE_BATCH = 3} is the value fitted to published vivax bands at moderate
-transmission (MODEL_DESCRIPTION section 13); \code{BITING_RATE}, with \code{N_MOSQ / N_HOSTS}, sets the
-transmission intensity and is for each study to choose.
+transmission (\code{BITING_RATE} 0.08 with 2 mosquitoes per host and 400 hosts; MODEL_DESCRIPTION
+section 13); re-fit it when transmission or scale change, since both move the relapse rate.
+\code{BITING_RATE}, with \code{N_MOSQ / N_HOSTS}, sets the transmission intensity and is for each study to
+choose.
 
 Time is in days: one model tick is one day. A duration parameter \code{D} (such as
 \code{MEAN_BLOOD_STAGE_DURATION} or \code{MOSQ_LIFESPAN}) is the mean of a geometric duration: the
