@@ -37,10 +37,16 @@
                     paste(why, collapse = ", and "), ". This is said once per directory per session."))
 }
 
+## A run object whose parameter set is one of this version, which the readers return as it is; one
+## saved by an earlier version is read again from its directory.
+.has_current_set <- function(run)
+  inherits(run, "vivax_run") && inherits(run$params, "vivax_params") &&
+    identical(names(run$params), names(.malariafwd_defaults))
+
 ## A run's parameter set, for package code that needs a few of its values: what load_params()
 ## gives, without the warning.
 .params_of <- function(run) {
-  if (inherits(run, "vivax_run") && inherits(run$params, "vivax_params")) return(run$params)
+  if (.has_current_set(run)) return(run$params)
   .read_params_tsv(file.path(.run_dir(run), "params.tsv"))$params
 }
 
@@ -156,7 +162,7 @@ trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 #' }
 #' @export
 load_params <- function(run) {
-  if (inherits(run, "vivax_run") && inherits(run$params, "vivax_params")) return(run$params)
+  if (.has_current_set(run)) return(run$params)
   dir <- .run_dir(run)
   r <- .read_params_tsv(file.path(dir, "params.tsv"))
   .warn_params_mismatch(r, dir)

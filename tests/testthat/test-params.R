@@ -46,9 +46,17 @@ test_that("N_FOUNDERS is refused, naming the founder parameters to set instead",
   expect_match(e, "unknown parameter\\(s\\): FOO")
   expect_false("N_FOUNDERS" %in% names(vivax_params()))
   expect_identical(vivax_params(N_FOUNDER_HOSTS = 5)$N_FOUNDER_LINEAGES, 5L)
-  ## a set edited to hold it is refused when run_sim() rebuilds it
+  ## the message says an edited set keeps its N_FOUNDER_LINEAGES, which it does
+  expect_match(e, "editing N_FOUNDER_HOSTS in a set already built leaves N_FOUNDER_LINEAGES as it was")
+  p <- vivax_params(); p$N_FOUNDER_HOSTS <- 30L
+  expect_identical(p$N_FOUNDER_LINEAGES, 12L)
+  ## a set edited to hold it, or built by an earlier version, is refused by run_sim(), which says how
+  ## to drop it
   p <- vivax_params(); p$N_FOUNDERS <- 5
   expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
+  old <- structure(c(unclass(vivax_params()), list(N_FOUNDERS = 12L)), class = "vivax_params")
+  expect_error(run_sim(old, outdir = tempfile("mfwd_nf_")),
+               "This set holds N_FOUNDERS, as every set built by an earlier version of malariafwd does: remove it with p\\$N_FOUNDERS <- NULL")
 })
 
 test_that("N_OOCYSTS_PER_BITE is refused, naming LAMBDA_SPOROZOITES", {

@@ -77,8 +77,9 @@
 ## follows N_FOUNDER_HOSTS as in vivax_params()); `record`, the record rows it has, typed; and
 ## `missing` and `dropped`, the parameters it lacks and the rows that are neither. Each line is
 ## split at its first tab, so a value keeps any tab or space it holds. The rows of retired
-## parameters, in files made before they were retired, are left out without a warning; an
-## N_FOUNDERS row gives its value to N_FOUNDER_HOSTS where the file has none.
+## parameters, in files made before they were retired, are left out without a warning. A file made
+## before the founders were split records N_FOUNDERS alone: it gives N_FOUNDER_HOSTS its value, and
+## N_FOUNDER_LINEAGES follows, as that model had a genome per founder host, so neither is missing.
 .read_params_tsv <- function(path) {
   dir <- dirname(path)
   where <- paste("params.tsv in", dir)
@@ -97,7 +98,12 @@
   nm <- substr(l, 1, tab - 1)
   txt <- stats::setNames(substring(l, tab + 1), nm)
   if (anyDuplicated(nm)) stop(where, ": ", nm[duplicated(nm)][1], " is given twice.", call. = FALSE)
-  if ("N_FOUNDERS" %in% nm && !"N_FOUNDER_HOSTS" %in% nm) txt[["N_FOUNDER_HOSTS"]] <- txt[["N_FOUNDERS"]]
+  stand_in <- "N_FOUNDERS" %in% nm && !"N_FOUNDER_HOSTS" %in% nm
+  if (stand_in) {
+    if (is.na(suppressWarnings(as.numeric(txt[["N_FOUNDERS"]]))))
+      stop(where, ": N_FOUNDERS is \"", txt[["N_FOUNDERS"]], "\", not a number.", call. = FALSE)
+    txt[["N_FOUNDER_HOSTS"]] <- txt[["N_FOUNDERS"]]
+  }
   d <- .malariafwd_defaults
   p <- utils::modifyList(d, .type_params(txt, where))
   if (!"N_FOUNDER_LINEAGES" %in% nm) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
@@ -110,6 +116,6 @@
       as.integer(v) else v
   }
   list(params = structure(p, class = "vivax_params"), record = rec,
-       missing = setdiff(names(d), c(names(txt), "N_FOUNDER_LINEAGES")),
+       missing = setdiff(names(d), c(names(txt), if (stand_in) "N_FOUNDER_LINEAGES")),
        dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS), names(.RETIRED_PARAMS))))
 }

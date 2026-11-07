@@ -45,10 +45,15 @@ the default of `N_FOUNDER_HOSTS`, so an edit to it in a built set did nothing, a
 called it legacy (review m48, n32). The author chose to retire it (2026-11-06).
 **Decision.** `vivax_params(N_FOUNDERS = )`, a set edited to hold it, and a direct run with
 `-d N_FOUNDERS=` are refused with a message that names `N_FOUNDER_HOSTS` and `N_FOUNDER_LINEAGES`.
-`N_FOUNDER_HOSTS` defaults to 12 and `N_FOUNDER_LINEAGES` to `N_FOUNDER_HOSTS`. `params.tsv` has no
-`N_FOUNDERS` row. A saved `params.tsv` that has one still loads: the row is ignored beside an
-`N_FOUNDER_HOSTS` row, and gives `N_FOUNDER_HOSTS` its value otherwise, without a warning. A retired
-name gets its own message, so a later retirement is one more entry.
+`N_FOUNDER_HOSTS` defaults to 12 and `N_FOUNDER_LINEAGES` to `N_FOUNDER_HOSTS`; the message says
+that editing `N_FOUNDER_HOSTS` in a set already built leaves `N_FOUNDER_LINEAGES` as it was, so both
+should be set there. A set built by an earlier version holds `N_FOUNDERS`, so `run_sim()` tells such
+a set how to drop it (`p$N_FOUNDERS <- NULL`), and `load_params()` reads a run object saved by an
+earlier version again from its directory. `params.tsv` has no `N_FOUNDERS` row. A saved `params.tsv`
+that has one still loads: the row is ignored beside an `N_FOUNDER_HOSTS` row, and otherwise, in a
+file made before the founders were split, gives `N_FOUNDER_HOSTS` its value, with
+`N_FOUNDER_LINEAGES` following, without a warning. A retired name gets its own message, so a later
+retirement is one more entry.
 **Rationale.** A parameter whose edit does nothing is a trap, and two names for one count invite
 sets that disagree.
 **Alternatives rejected.** *Keep it as an alias, re-deriving `N_FOUNDER_HOSTS` from it on every
@@ -56,17 +61,13 @@ edit* -- two names for one value, and the rule for which one wins is one more th
 *Refuse saved files that have the row* -- every saved run has it, and the value is recorded beside
 it.
 **Consequences.** Runs are unchanged (events, state and trees; `params.tsv` loses one row). Code
-that sets `N_FOUNDERS` stops with the message until the argument is deleted; where it set
-`N_FOUNDER_HOSTS` too, as every call in the package and the analysis scripts did, the run is the
-same without it.
+that sets `N_FOUNDERS` stops with the message. Renaming it to `N_FOUNDER_HOSTS` gives the same run;
+where the code set `N_FOUNDER_HOSTS` too, as every analysis script did, deleting it does.
 **How to verify.** `tests/testthat/test-params.R` (the refusal, with another unknown name, from an
-edited set, and `N_FOUNDER_LINEAGES` following `N_FOUNDER_HOSTS`), `tests/testthat/test-slim.R`
-(`-d N_FOUNDERS=12` refused), `tests/testthat/test-load.R` (an older file's row) and
+edited set and from a set of an earlier version, and `N_FOUNDER_LINEAGES` following
+`N_FOUNDER_HOSTS`), `tests/testthat/test-slim.R` (`-d N_FOUNDERS=12` refused),
+`tests/testthat/test-load.R` (an older file's rows, and a run object of an earlier version) and
 `tests/testthat/test-run.R` (no `N_FOUNDERS` row in `params.tsv`).
-
----
-
-## D53 — load_state() gives the host rows unless asked · 2026-11-07 · Accepted
 **Context.** Most rows of `state.tsv` are mosquitoes (100 of every 140 at the defaults), whose
 `moi_active` counts the broods they carry, so a prevalence taken over every row,
 `mean(moi_active > 0)`, gave 0.30 against a host prevalence of 0.54 in the review's run (m28). No

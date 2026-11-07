@@ -38,6 +38,7 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   ## Rebuilt every time, so that a set edited after vivax_params() (with $<- or modifyList(),
   ## which keep the class) is checked as well: a misspelt name or an impossible value is refused
   ## here rather than run.
+  if (inherits(params, "vivax_params")) .refuse_unknown(names(params), built = TRUE)
   params <- do.call(vivax_params, as.list(unclass(params)), quote = TRUE)
   if (!slim_available())
     stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)

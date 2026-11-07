@@ -139,6 +139,17 @@ test_that("a params.tsv of another version warns once, naming what it lacks and 
                                               extra = "N_FOUNDERS\t7")))
   expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(7L, 7L))
   expect_null(p$N_FOUNDERS)
+  ## but a file that records N_FOUNDER_HOSTS and lacks N_FOUNDER_LINEAGES says so
+  expect_warning(p <- load_params(fake_run(params = list(N_FOUNDER_HOSTS = 9), drop = "N_FOUNDER_LINEAGES")),
+                 "lacks N_FOUNDER_LINEAGES", class = "malariafwd_params_mismatch")
+  expect_identical(p$N_FOUNDER_LINEAGES, 9L)
+  expect_error(load_params(fake_run(drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"), extra = "N_FOUNDERS\tabc")),
+               "N_FOUNDERS is \"abc\", not a number")
+  ## a run object saved by an earlier version, whose set held N_FOUNDERS, is read again from its directory
+  r <- fake_run(params = list(N_HOSTS = 30))
+  run <- load_run(r)
+  run$params <- structure(c(unclass(run$params), list(N_FOUNDERS = 12L)), class = "vivax_params")
+  expect_identical(load_params(run), vivax_params(N_HOSTS = 30))
   ## and the row of N_OOCYSTS_PER_BITE is left out, also without a warning
   expect_no_warning(p <- load_params(fake_run(extra = "N_OOCYSTS_PER_BITE\t1")))
   expect_null(p$N_OOCYSTS_PER_BITE)
