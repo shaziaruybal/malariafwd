@@ -16,10 +16,12 @@ test_that("state.tsv has one row per host and per mosquito on every tick it cove
   skip_if_not(slim_available(), "SLiM not on PATH")
   run <- run_sim(vivax_params(N_HOSTS = 30, N_MOSQ = 60, SIM_DAYS = 40),
                  seed = 4, outdir = file.path(tempdir(), "mfwd_test_state"))
-  st <- load_state(run)
+  st <- load_state(run, entity = "all")
   per_tick <- st[, .N, by = tick]
   expect_equal(per_tick$tick, seq_len(max(st$tick)))
   expect_true(all(per_tick$N == 30 + 60))
+  expect_equal(nrow(load_state(run)), 30 * max(st$tick))
+  expect_equal(nrow(load_state(run, entity = "mosquito")), 60 * max(st$tick))
 })
 
 test_that("hypnozoite dynamics match alpha/(alpha+mu) [transmission-invariant]", {

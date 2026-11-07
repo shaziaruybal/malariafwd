@@ -4,16 +4,21 @@
 \alias{load_state}
 \title{Load the per-tick state table of a run}
 \usage{
-load_state(run)
+load_state(run, entity = c("human", "mosquito", "all"))
 }
 \arguments{
 \item{run}{a \code{vivax_run} or a run directory path.}
+
+\item{entity}{the rows to give: \code{"human"} (the hosts), \code{"mosquito"}, or \code{"all"}, both in the
+order of the file.}
 }
 \value{
-a \code{data.table} with one row per host and per mosquito per day, from day 1 to the run's
-last day.
+a \code{data.table} with one row per host (or mosquito, or both) per day, from day 1 to the
+run's last day.
 }
 \description{
-Reads \code{state.tsv}. Every run gives the same 12 columns, in the order and classes the model writes
-them (MODEL_DESCRIPTION section 16.2), whatever the run holds; a column the file lacks is \code{NA}.
+Reads \code{state.tsv}, by default its host rows. A mosquito's row counts the broods it carries, so a
+prevalence or MOI taken over every row mixes the two populations. Every run gives the same 12
+columns, in the order and classes the model writes them (MODEL_DESCRIPTION section 16.2),
+whatever the run holds; a column the file lacks is \code{NA}.
 }

@@ -307,7 +307,9 @@ test_that("infectious_bites counts each host's bites from a mosquito past the EI
                               P_TRANS_VH = 1, MAX_MOI = 1000L, BLOODCURE_COVERAGE = 0.8,
                               CHROMOSOMES = "1"),
                  seed = 4, outdir = file.path(tempdir(), "mfw-eir"))
-  st <- data.table::as.data.table(load_state(run)); ev <- data.table::as.data.table(load_events(run))
+  st <- data.table::as.data.table(load_state(run, entity = "all"))
+  ev <- data.table::as.data.table(load_events(run))
+  expect_gt(nrow(st[entity_type == "mosquito"]), 0)
   expect_true(all(is.na(st[entity_type == "mosquito", infectious_bites])))
   bites <- st[entity_type == "human", .(tick, human_id = entity_id, infectious_bites)]
   inoc <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_no_take"),

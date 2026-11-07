@@ -1235,7 +1235,8 @@ silently drop every recombinant.
 
 ### 16.2 `state.tsv` data dictionary
 
-One row per entity per tick:
+One row per entity per tick; `load_state()` gives the host rows, and `entity = "mosquito"` or
+`"all"` the mosquitoes' or both:
 
 | column | meaning |
 |---|---|

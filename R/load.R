@@ -114,13 +114,22 @@ load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OU
 
 #' Load the per-tick state table of a run
 #'
-#' Reads `state.tsv`. Every run gives the same 12 columns, in the order and classes the model writes
-#' them (MODEL_DESCRIPTION section 16.2), whatever the run holds; a column the file lacks is `NA`.
+#' Reads `state.tsv`, by default its host rows. A mosquito's row counts the broods it carries, so a
+#' prevalence or MOI taken over every row mixes the two populations. Every run gives the same 12
+#' columns, in the order and classes the model writes them (MODEL_DESCRIPTION section 16.2),
+#' whatever the run holds; a column the file lacks is `NA`.
 #' @param run a `vivax_run` or a run directory path.
-#' @return a `data.table` with one row per host and per mosquito per day, from day 1 to the run's
-#'   last day.
+#' @param entity the rows to give: `"human"` (the hosts), `"mosquito"`, or `"all"`, both in the
+#'   order of the file.
+#' @return a `data.table` with one row per host (or mosquito, or both) per day, from day 1 to the
+#'   run's last day.
 #' @export
-load_state <- function(run) .read_output(run, "state.tsv", .STATE_SCHEMA, .OUTPUT_RENAMES$state)
+load_state <- function(run, entity = c("human", "mosquito", "all")) {
+  entity <- match.arg(entity)
+  d <- .read_output(run, "state.tsv", .STATE_SCHEMA, .OUTPUT_RENAMES$state)
+  if (entity != "all") d <- d[entity_type == entity]
+  d[]
+}
 
 #' Path to a run's tree-sequence file
 #' @param run a `vivax_run` or a run directory path.

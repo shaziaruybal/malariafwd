@@ -78,7 +78,7 @@ run <- run_sim(p, seed = 1, outdir = "runs/demo")
 
 # tidy outputs
 ev  <- load_events(run)
-st  <- load_state(run)
+st  <- load_state(run)                              # per-tick host state
 summarise_run(run)                                  # prevalence, COI, relapse fraction, ...
 
 # ground-truth IBD (tskit)

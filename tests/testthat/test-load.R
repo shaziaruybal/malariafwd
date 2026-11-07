@@ -158,3 +158,17 @@ test_that("load_run() carries the record rows, typed, and refuses a directory th
   r <- fake_run(); unlink(file.path(r, "events.tsv"))
   expect_error(load_run(r), "is not a malariafwd run: it has no events.tsv")
 })
+
+test_that("load_state() gives the host rows unless asked for the mosquitoes, or both", {
+  r <- fake_run(st_rows = c("1\thuman\t0\t1\t1\t0\t0\t0\t7\tNA\tNA\t0", "1\tmosquito\t2\t1\t1\t0\t0\t0\t7\t0\t3\tNA",
+                            "2\thuman\t0\t1\t1\t0\t0\t0\t7\tNA\tNA\t1", "2\tmosquito\t2\t1\t1\t0\t0\t0\t7\t1\t4\tNA"))
+  expect_identical(load_state(r)$entity_type, c("human", "human"))
+  expect_identical(load_state(r)$infectious_bites, c(0L, 1L))
+  expect_identical(load_state(r, entity = "mosquito")$mosq_age_days, c(3L, 4L))
+  expect_identical(load_state(r, entity = "all")$entity_type, c("human", "mosquito", "human", "mosquito"))
+  for (e in c("human", "mosquito", "all")) {
+    expect_identical(classes(load_state(r, entity = e)), st_classes)
+    expect_identical(classes(load_state(fake_run(), entity = e)), st_classes)
+  }
+  expect_error(load_state(r, entity = "hosts"), "should be one of")
+})

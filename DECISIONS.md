@@ -19,6 +19,28 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D53 — load_state() gives the host rows unless asked · 2026-11-07 · Accepted
+**Context.** Most rows of `state.tsv` are mosquitoes (100 of every 140 at the defaults), whose
+`moi_active` counts the broods they carry, so a prevalence taken over every row,
+`mean(moi_active > 0)`, gave 0.30 against a host prevalence of 0.54 in the review's run (m28). No
+function of the package needs the mosquito rows. The author chose the host rows as the default
+(2026-11-07).
+**Decision.** `load_state(run, entity = c("human", "mosquito", "all"))` keeps the rows of the entity
+asked for, the hosts by default; `"all"` gives both, in the order of the file. The columns and their
+classes do not depend on `entity`.
+**Rationale.** The default should be the rows nearly every analysis wants, so that the obvious
+summary is the right one.
+**Alternatives rejected.** *Every row by default* -- it keeps the mistake easy. *Separate loaders
+for hosts and mosquitoes* -- two functions for one file, with one schema.
+**Consequences.** Runs are unchanged. Code that used the mosquito rows of `load_state(run)` gets
+none until it passes `entity = "all"` or `"mosquito"`; the package's own readers filter hosts
+already and read less.
+**How to verify.** `tests/testthat/test-load.R` (each `entity` gives its rows, with the same
+classes; another value is refused) and `tests/testthat/test-run.R` (a run's host and mosquito rows a
+day).
+
+---
+
 ## D52 — load_params() returns the parameter set a run was made from · 2026-11-07 · Accepted
 **Context.** `load_params()` returned every value of `params.tsv` as a string, with the record rows
 (`ACTUAL_SEED`, `SEED`, the versions, `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN`) among them,
