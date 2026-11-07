@@ -265,8 +265,13 @@ EIR = ma * s * 365                         # infectious bites per person-year
 MU_MOSQ = 1 / MOSQ_LIFESPAN                # daily mosquito mortality
 ```
 
-`EIR` is **emergent**, not a parameter; `malariafwd` computes it from `state.tsv`
-(`n_transmissible > 0` gives the sporozoite rate `s`).
+`EIR` is **emergent**, not a parameter, and `state.tsv` counts it: `infectious_bites` on a host's
+row is the number of bites the host received that day from a mosquito carrying a product past the
+EIP, whatever the bite then did (§16.2), so the EIR is their sum over hosts and days divided by
+`N_HOSTS` and the run's length in years. The formula above, with `s` read from `state.tsv` as the
+share of mosquitoes with `n_transmissible > 0`, gives 0.87–0.94 of it in test runs: the snapshot
+is taken after the day's mosquito deaths, and it misses the products that complete the EIP before
+the next day's bites.
 
 **Seasonality** modulates the biting probability:
 
@@ -1208,6 +1213,7 @@ One row per entity per tick:
 | `lineage_ids` | the lineage ids present, `|`-separated and de-duplicated — see below |
 | `n_transmissible` | post-EIP products (mosquitoes); drives the sporozoite rate |
 | `mosq_age_days` | |
+| `infectious_bites` | humans: the bites the host received that day from a mosquito carrying a product past the EIP, whatever the bite then did, which gives the EIR (§4.1); `NA` for mosquitoes |
 
 Note `moi_dormant` (genotypes) and `hyp_reservoir_size` (individuals) are different quantities and
 are routinely confused.
@@ -1257,7 +1263,7 @@ of creation in `events.tsv`.
 | relapses per person-year | activations ÷ (hosts × years) |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Mueller/Koepfli). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
-| EIR | `ma × s × 365` (§4.1) |
+| EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |
 
 ### 16.4 Reproducibility
 

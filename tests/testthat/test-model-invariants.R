@@ -297,3 +297,25 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
   within_phi <- sapply(1:14, function(ch) { k <- which(chr == ch)[10]; stats::cor(as.numeric(ibd[, k]), as.numeric(ibd[, k + 1])) })
   expect_gt(mean(within_phi), 0.5)
 })
+
+test_that("infectious_bites counts each host's bites from a mosquito past the EIP", {
+  skip_if_no_slim()
+  ## every infectious bite infects (P_TRANS_VH = 1) and no host is ever full, so each one is a
+  ## local inoculation, taken or not
+  run <- run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 100, SIM_DAYS = 120, BITING_RATE = 0.2,
+                              P_TRANS_VH = 1, MAX_MOI = 1000L, CHROMOSOMES = "1"),
+                 seed = 4, outdir = file.path(tempdir(), "mfw-eir"))
+  st <- data.table::as.data.table(load_state(run)); ev <- data.table::as.data.table(load_events(run))
+  expect_true(all(is.na(st[entity_type == "mosquito", infectious_bites])))
+  bites <- st[entity_type == "human", .(tick, human_id = entity_id, infectious_bites)]
+  inoc <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_no_take"),
+             .(n = data.table::uniqueN(inoculation_id)), by = .(tick, human_id)]
+  m <- merge(bites, inoc, by = c("tick", "human_id"), all.x = TRUE)
+  m[is.na(n), n := 0L]
+  expect_gt(sum(m$infectious_bites), 100)
+  expect_true(all(m$infectious_bites >= m$n))
+  expect_true(all(m[n == 0, infectious_bites] == 0))
+  ## a further bite on a host whose only clone arrived earlier that day is dropped: the model does
+  ## not see that clone until the day's bites are over
+  expect_gt(sum(m$n) / sum(m$infectious_bites), 0.98)
+})

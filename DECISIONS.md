@@ -19,6 +19,37 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D47 — state.tsv counts each host's infectious bites a day, which gives the EIR · 2026-11-07 · Accepted
+**Context.** MODEL_DESCRIPTION said the package computes the EIR from `state.tsv`, with the
+sporozoite rate read from `n_transmissible`. No function did, and that formula under-counts: the
+snapshot is taken after the day's mosquito deaths, and it misses products that complete the EIP
+before the next day's bites (review m15; about 0.9 of the realised rate). The EIR is the usual
+target for calibrating transmission intensity, and the author asked for it to be part of
+`summarise_run()` (Q12).
+**Decision.** Each host row of `state.tsv` gains `infectious_bites`: the bites the host received
+that day from a mosquito carrying a product past the EIP, whatever the bite then did (`NA` on
+mosquito rows). The model counts a bite as infectious exactly when
+`sampleTransmissibleMosqBroods()` finds a product, which it already draws for every bite, so the
+count draws no random number. The count is kept on the host and reset after each day's snapshot,
+since `reproduction()` does not run on a day with no parasite. `summarise_run()` is to report the
+EIR from it (Q12).
+**Rationale.** Counting at the bite is exact, and per host it also gives the heterogeneity of
+exposure; a snapshot formula needs a correction that depends on mosquito mortality and the EIP.
+**Alternatives rejected.** *A column on mosquito rows* -- the EIR is per person, and the host row
+is where a reader looks for exposure. *A separate per-day file* -- one more output to load and
+document, for one number per day.
+**Consequences.** `state.tsv` has one more column, last; `events.tsv`, `params.tsv`, the tree
+sequence and every other column of `state.tsv` are byte-identical. In test runs the snapshot
+formula gives 0.87-0.94 of the counted EIR. Writing the test found that a further infectious bite
+on a host whose only clone arrived earlier the same day is dropped, about 0.1-1% of infectious
+bites in test runs: the new clone is not visible until the day's bites are over, while the host is
+already tagged infected. Not settled here.
+**How to verify.** `tests/testthat/test-model-invariants.R`: at `P_TRANS_VH = 1` with no host ever
+full, every inoculation is one infectious bite, a host-day without an inoculation has no infectious
+bite, and more than 98% of infectious bites inoculate.
+
+---
+
 ## D46 — Local vector control does not scale imports · 2026-11-07 · Accepted
 **Context.** The Poisson import stream (`IMPORT_RATE_PER_TICK`) was scaled by the seasonal factor
 of biting, by the vector-control factor 1 − `INTERVENTION_EFFICACY` inside the intervention window,

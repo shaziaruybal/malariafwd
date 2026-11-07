@@ -926,6 +926,11 @@ reproduction()
 		// is the mosquito infectious?
 		mosq_MOI = getActiveLineageCount(m);
 		transmissible_mosq_broods = sampleTransmissibleMosqBroods(m);
+		// An INFECTIOUS bite: the mosquito carries a product past the EIP, whatever the bite then
+		// does. Counted for the EIR (state.tsv's infectious_bites); sampleTransmissibleMosqBroods()
+		// returns nothing exactly when no product has completed the EIP, so this draws no number.
+		if (size(transmissible_mosq_broods) > 0)
+			h.setValue("inf_bites", h.getValue("inf_bites") + 1);
 		
 		// DEBUGGING: to check whether the mosquito has any transmission plasmo broods today
 		// vcat("🦟 mosquito " + m.id + " has " + size(transmissible_mosq_broods) + " transmissible broods today");
@@ -1280,6 +1285,9 @@ reproduction()
 	defineConstant("HUMANS", seqLen(asInteger(N_HOSTS)));
 	defineConstant("VECTORS", seq(asInteger(N_HOSTS), asInteger(N_MOSQ + N_HOSTS) - 1));
 	sim.subpopulations[HUMANS].setValue("pop_type", "human");
+	// infectious bites each host received today, for the EIR; written and reset by
+	// writeStateSnapshot()
+	sim.subpopulations[HUMANS].setValue("inf_bites", 0);
 	sim.subpopulations[VECTORS].setValue("pop_type", "mosquito");
 	
 	humans = sim.subpopulations[HUMANS];
@@ -1323,7 +1331,7 @@ reproduction()
 		paste(c(
 		"tick", "entity_type", "entity_id",
 		"tag", "moi_active", "moi_subpatent", "moi_dormant", "hyp_reservoir_size", "lineage_ids",
-		"n_transmissible", "mosq_age_days"
+		"n_transmissible", "mosq_age_days", "infectious_bites"
 		), sep="\t"),
 		append=F);
 	
@@ -1878,11 +1886,13 @@ function (void) writeStateSnapshot(void)
 			asString(getHypnozoiteReservoirSize(h)), // hypnozoite reservoir TOTAL SIZE
 			lineage_ids_str,
 			"NA",   // n_transmissible — NA for humans
-			"NA"    // mosq_age_days   — NA for humans
+			"NA",   // mosq_age_days   — NA for humans
+			asString(h.getValue("inf_bites"))   // infectious bites received today
 			), sep="\t");
 		
 		rows[k] = line;
 		k = k + 1;
+		h.setValue("inf_bites", 0);   // reproduction() does not run on a day with no parasite
 	}
 	
 	for (m in mosq)
@@ -1905,7 +1915,8 @@ function (void) writeStateSnapshot(void)
 			asString(getHypnozoiteReservoirSize(m)), // always 0 - mosquitoes never carry dormant broods
 			lineage_ids_str,
 			asString(n_trans),
-			asString(mosq_age)
+			asString(mosq_age),
+			"NA"    // infectious_bites — NA for mosquitoes
 			), sep="\t");
 		
 		rows[k] = line;
