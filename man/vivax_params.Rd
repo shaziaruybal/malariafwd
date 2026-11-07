@@ -10,7 +10,8 @@ vivax_params(...)
 \item{...}{named parameter overrides, e.g. \verb{N_HOSTS = 300, BITING_RATE = 0.09}.}
 }
 \value{
-An object of class \code{vivax_params} (a named list).
+An object of class \code{vivax_params}: a named list of every parameter, each stored as
+above.
 }
 \description{
 Returns a named list of all model parameters, starting from the defaults (which
@@ -73,6 +74,10 @@ floating-point noise (such as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), 
 for a string parameter, latin1 text, and spaces around the commas and dashes of \code{CHROMOSOMES} are
 stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
 a \code{bit64::integer64}, is refused: give the number itself.
+
+Each value is stored as its default's type and as SLiM is given it: a whole number as an integer
+(a double beyond the integer range), and a double as the 15 significant digits \code{\link[=run_sim]{run_sim()}}
+passes, so \code{1 + 2e-16} is 1 and a set rebuilt from a run's \code{params.tsv} is the set it used.
 }
 \examples{
 vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")

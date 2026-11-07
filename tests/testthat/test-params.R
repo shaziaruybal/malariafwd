@@ -282,7 +282,7 @@ test_that("each value has its default's type, is finite, and is whole where the 
                "TREATMENT_DELAY must be a plain number, got an object of class mfwd_duration; give the number itself",
                fixed = TRUE)
   ## I() is dropped, whatever the value's type; a number with another class is refused
-  expect_identical(vivax_params(ALPHA_ACTIVATE = I(1/170))$ALPHA_ACTIVATE, 1/170)
+  expect_identical(vivax_params(ALPHA_ACTIVATE = I(1/170))$ALPHA_ACTIVATE, as.numeric("0.00588235294117647"))
   expect_identical(vivax_params(SIM_DAYS = I(365L))$SIM_DAYS, 365L)
   expect_identical(vivax_params(SIM_ID = I("run_a"))$SIM_ID, "run_a")
   expect_identical(vivax_params(SIM_ID = I(factor("run_a")))$SIM_ID, "run_a")
@@ -296,7 +296,7 @@ test_that("spellings of the same value are stored in the form SLiM is given", {
   ## a whole number with floating-point noise is whole as SLiM sees it
   p <- vivax_params(N_HOSTS = 100L, N_MOSQ = 1.1 * 100, N_FOUNDER_HOSTS = seq(0.1, 0.5, 0.1)[3] * 100,
                     SIM_DAYS = 365 * 2.2)
-  expect_identical(c(p$N_MOSQ, p$N_FOUNDER_HOSTS, p$SIM_DAYS), c(110, 30, 803))
+  expect_identical(c(p$N_MOSQ, p$N_FOUNDER_HOSTS, p$SIM_DAYS), c(110L, 30L, 803L))
   expect_true("N_MOSQ=110" %in% as_slim_args(p))
   ## ...and so is 0 with noise, while a small fraction is still refused
   p <- vivax_params(TREATMENT_START = 0.1 * 3 - 0.3, N_IMPORTS = 10 * (1 - 0.9) - 1)
@@ -489,4 +489,45 @@ test_that("latent hypnozoites must be able to leave latency, and durations must 
   expect_error(vivax_params(K_LATENCY = 2L, DELTA_LATENCY = 0), "DELTA_LATENCY must be in \\(0, 1\\]")
   expect_no_error(vivax_params(K_LATENCY = 0L, DELTA_LATENCY = 0))
   expect_error(vivax_params(MEAN_BLOOD_STAGE_DURATION = Inf), "MEAN_BLOOD_STAGE_DURATION must be .*finite")
+})
+
+test_that("a double is stored as SLiM is given it", {
+  p <- vivax_params(ALPHA_ACTIVATE = 1/170, P_TRANS_VH = 1 + 2e-16, SEASONAL_AMP = 0.1 + 0.2,
+                    MU_HYPNOZOITE = 1e-300)
+  expect_identical(p$ALPHA_ACTIVATE, as.numeric("0.00588235294117647"))
+  expect_identical(p$P_TRANS_VH, 1)
+  expect_identical(p$SEASONAL_AMP, 0.3)
+  expect_identical(p$MU_HYPNOZOITE, 1e-300)
+  a <- as_slim_args(p)
+  expect_true(all(c("ALPHA_ACTIVATE=0.00588235294117647", "P_TRANS_VH=1.0") %in% a))
+  expect_error(vivax_params(P_TRANS_VH = 1 + 1e-14), "P_TRANS_VH must be in \\[0, 1\\]")
+})
+
+test_that("each value has its default's type", {
+  nm <- c("N_HOSTS", "SIM_DAYS", "P_RAD_SURVIVAL", "MDA_TICK")
+  p <- vivax_params(N_HOSTS = 40, SIM_DAYS = 100, P_RAD_SURVIVAL = 0L, MDA_TICK = 99999)
+  expect_identical(vapply(p[nm], typeof, ""), vapply(.malariafwd_defaults[nm], typeof, ""))
+  ## a whole number beyond the integer range stays a double, and is sent whole
+  p <- vivax_params(INTERVENTION_START = 3e9, INTERVENTION_END = 4e9)
+  expect_identical(p$INTERVENTION_START, 3e9)
+  expect_true("INTERVENTION_START=3000000000" %in% as_slim_args(p))
+})
+
+test_that("the defaults are a parameter set", {
+  expect_identical(vivax_params(), structure(.malariafwd_defaults, class = "vivax_params"))
+  expect_output(print(vivax_params(N_HOSTS = 40)), "all defaults")
+})
+
+test_that("validation works in doubles", {
+  for (n in list(2000000000L, 2e9))
+    expect_warning(vivax_params(N_HOSTS = 30, IMPORT_TICK = 5L, N_IMPORTS = n, IMPORT_START = 1L,
+                                IMPORT_END = 10L, N_IMPORTS_PER_TICK = n),
+                   "each host takes at most one import a day")
+})
+
+test_that("a rebuilt set is the set", {
+  for (p in list(vivax_params(ALPHA_ACTIVATE = 1/170, SEASONAL_AMP = 0.1 + 0.2),
+                 vivax_params(INTERVENTION_START = 3e9, INTERVENTION_END = 4e9),
+                 vivax_params(N_HOSTS = 40, P_RAD_SURVIVAL = 0L)))
+    expect_identical(do.call(vivax_params, as.list(unclass(p)), quote = TRUE), p)
 })

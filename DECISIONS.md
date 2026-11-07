@@ -19,6 +19,36 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D49 — params.tsv records floats to 15 significant digits, and a parameter set holds what SLiM is given · 2026-11-07 · Accepted
+**Context.** `run_sim()` passes each double to SLiM with 15 significant digits, but the model wrote
+`params.tsv` with Eidos's default 6, so `load_params()` read `ALPHA_ACTIVATE = 1/170` back as
+0.00588235 and a set rebuilt from a run's record differed from the one it ran. `vivax_params()`
+kept doubles as given, so a probability computed as `1 + 2e-16` was refused although SLiM would
+have been given 1, and kept whole numbers given as doubles as doubles, so
+`vivax_params(N_HOSTS = 40)` printed 40 as a non-default (review n18). The author chose 15 digits
+(2026-11-06).
+**Decision.** The model writes every float parameter to `params.tsv` with 15 significant digits,
+keeping a decimal point on a whole value (`10.0`) and printf's exponent form (`7.4e-07`).
+`vivax_params()` stores each value as its default's type: a whole number as an integer (a double
+beyond the integer range), a double as the double SLiM is given (the value of its 15-digit text,
+where R reads that text back to itself). The defaults are stored the same way, and
+`validate_params()` works in doubles so that sums of large integer counts cannot overflow.
+**Rationale.** The record should be the run, and a parameter set should hold what the run is given.
+**Alternatives rejected.** *17 digits* -- it changes the text SLiM is given and so every run.
+*Hexadecimal floats* -- Eidos cannot read them. *A decimal point inside exponent forms* -- R reads
+`1.0e-25` and `1e-25` differently far below 1e-22. *Writing the model's own defaults as 15-digit
+literals* -- the expressions (`1/170.0`) are the documented values.
+**Consequences.** Runs are byte-identical: the text SLiM is given does not change. `params.tsv`
+rows of floats with more than 6 significant digits change text (`ALPHA_ACTIVATE` and
+`MU_HYPNOZOITE` at the defaults), and so do round exponent forms (`1.0e-06` becomes `1e-06`); R
+reads both the same. A value built in the last digits of a cap's 1e-12 allowance can be refused,
+since R checks the 15-digit value.
+**How to verify.** `tests/testthat/test-params.R` (a double is stored as SLiM is given it; each
+value has its default's type; the defaults are a parameter set; validation in doubles; a rebuilt
+set is the set) and `tests/testthat/test-slim.R` (`params.tsv` records floats to 15 significant
+digits, from R and from a direct run).
+---
+
 ## D48 — NU_HYPNOZOITE_BATCH defaults to 3, the fitted value · 2026-11-07 · Accepted
 **Context.** The default hypnozoite batch mean was 5, called a placeholder, while every documented
 figure and the fit to four published vivax bands (relapses per person-year 0.5-5, molFOB 0.7-15,

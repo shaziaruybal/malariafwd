@@ -7,8 +7,9 @@
 #'
 #' Launches SLiM with the given parameters and writes its outputs into `outdir`
 #' (`events.tsv`, `state.tsv`, `plasmo.trees`, `params.tsv`), plus a provenance snapshot
-#' (`model.slim`, `cmdline.txt`, `run.log`). The launch is shell-free (processx), so it
-#' handles the SLiM quoting/`mkdir` pitfalls for you.
+#' (`model.slim`, `cmdline.txt`, `run.log`). `params.tsv` records every parameter, floats to the
+#' 15 significant digits passed to SLiM. The launch is shell-free (processx), so it handles the SLiM
+#' quoting/`mkdir` pitfalls for you.
 #'
 #' @param params a [vivax_params()] object, or a named list of overrides. Either is checked by
 #'   [vivax_params()] again before the run, so an object edited after it was built is checked too.

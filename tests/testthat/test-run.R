@@ -79,8 +79,9 @@ test_that("a non-ASCII SIM_ID reaches SLiM unchanged, in a C locale too", {
 
 test_that("a set at the edge of the rounding allowance on the caps runs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  ## 333333.33333366667 x 3 is accepted at 1e6 x (1 + 1e-12); SLiM gets the 15-digit 333333.333333667
-  p <- vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, NU_HYPNOZOITE_BATCH = 333333.33333366667,
+  ## 333333.333333666 x 3 = 1e6 x (1 + 9.98e-13) is accepted at 1e6 x (1 + 1e-12); it is the
+  ## 15-digit value SLiM gets
+  p <- vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, NU_HYPNOZOITE_BATCH = 333333.333333666,
                     NU_HYPNOZOITE_BATCH_BOOST = 3, RESURGENCE_TRIGGER_TICK = 2L)
   expect_no_error(run_sim(p, seed = 1, outdir = tempfile("mfwd_edge_")))
 })

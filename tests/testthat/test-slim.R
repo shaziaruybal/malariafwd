@@ -142,3 +142,23 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
     expect_identical(unname(tools::md5sum(file.path(a$outdir, f))), unname(tools::md5sum(file.path(b$outdir, f))),
                      label = f)
 })
+
+test_that("params.tsv records floats to 15 significant digits", {
+  skip_if_not(slim_available(), "SLiM not on PATH")
+  run <- run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 20, SIM_DAYS = 5, CHROMOSOMES = "1",
+                              ALPHA_ACTIVATE = 1/170, SEASONAL_AMP = 1/3, SEASONAL_PHASE = 1e-7,
+                              RECOMB_RATE = 1e-7/3),
+                 seed = 1, outdir = tempfile("mfwd_digits_"))
+  rows <- readLines(file.path(run$outdir, "params.tsv"))
+  expect_true(all(c("ALPHA_ACTIVATE\t0.00588235294117647", "SEASONAL_AMP\t0.333333333333333",
+                    "MOSQ_LIFESPAN\t10.0", "SEASONAL_PHASE\t1e-07", "RECOMB_RATE\t3.33333333333333e-08",
+                    "N_HOSTS\t20", "VERBOSE\tF") %in% rows))
+  ## so a set rebuilt from the record is the set the run used
+  expect_identical(as.numeric(load_params(run)$ALPHA_ACTIVATE), vivax_params(ALPHA_ACTIVATE = 1/170)$ALPHA_ACTIVATE)
+  ## a direct run records what it was given, to the same digits
+  out <- tempfile("mfwd_digits_d_"); dir.create(out)
+  processx::run(slim_path(), c("-s", "1", "-d", "SIM_DAYS=3", "-d", "N_HOSTS=20", "-d", "N_MOSQ=20",
+                               "-d", "ALPHA_ACTIVATE=0.0058823529411764705", "-d", paste0("OUTDIR='", out, "'"),
+                               slim_model()))
+  expect_true("ALPHA_ACTIVATE\t0.00588235294117647" %in% readLines(file.path(out, "params.tsv")))
+})

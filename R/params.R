@@ -115,8 +115,13 @@
 #' stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
 #' a `bit64::integer64`, is refused: give the number itself.
 #'
+#' Each value is stored as its default's type and as SLiM is given it: a whole number as an integer
+#' (a double beyond the integer range), and a double as the 15 significant digits [run_sim()]
+#' passes, so `1 + 2e-16` is 1 and a set rebuilt from a run's `params.tsv` is the set it used.
+#'
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
-#' @return An object of class `vivax_params` (a named list).
+#' @return An object of class `vivax_params`: a named list of every parameter, each stored as
+#'   above.
 #' @examples
 #' vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
 #' @export
@@ -168,10 +173,16 @@ vivax_params <- function(...) {
     if (is.atomic(v) && !is.object(v) && length(v)) v <- p[[nm]] <- as.vector(v)
     ## functions, symbols and calls are left for the type check to refuse
     if (!(is.atomic(v) || is.list(v)) || length(v) != 1L || is.na(v)) next
-    ## a classed value (a Date, a duration, units) is left for the type check to refuse by name
-    if (is.integer(d[[nm]]) && is.double(v) && !is.object(v) && is.finite(v) &&
-        (abs(v) < 1e-9 || grepl("^-?[0-9]+$", .slim_num(v))))
-      p[[nm]] <- round(v)
+    ## a classed value (a Date, a duration, units) is left for the type check to refuse by name.
+    ## A whole number is stored as its default's type, an integer, unless it is too large for one;
+    ## a double is stored as the double SLiM is given (.as_sent())
+    if (is.integer(d[[nm]]) && is.numeric(v) && !is.object(v) && is.finite(v) &&
+        (abs(v) < 1e-9 || grepl("^-?[0-9]+$", .slim_num(v)))) {
+      v <- round(v)
+      p[[nm]] <- if (abs(v) <= .Machine$integer.max) as.integer(v) else as.double(v)
+    }
+    else if (is.double(d[[nm]]) && is.numeric(v) && !is.object(v) && is.finite(v))
+      p[[nm]] <- .as_sent(as.double(v))
     else if (is.character(d[[nm]]) && is.factor(v))
       p[[nm]] <- as.character(v)
     else if (is.character(d[[nm]]) && is.numeric(v))
@@ -197,6 +208,18 @@ vivax_params <- function(...) {
     p$CHROMOSOMES <- gsub(" ", "", ch, fixed = TRUE)
   p
 }
+
+## The double SLiM is given for v: the value of the 15-digit text as_slim_args() writes for it, so
+## that 1 + 2e-16 is 1 and a set rebuilt from params.tsv is the set the run used. v itself where R
+## does not read that text back to the same text (magnitudes from about 1e15, and near the 1e-300
+## floor).
+.as_sent <- function(v) {
+  s <- .slim_num(v); x <- as.numeric(s)
+  if (identical(.slim_num(x), s)) x else v
+}
+
+## The defaults, stored as a set stores them.
+.malariafwd_defaults <- .normalise_params(.malariafwd_defaults)
 
 ## The days that default to 99999, which the model reads as "never".
 .never_params <- names(.malariafwd_defaults)[vapply(.malariafwd_defaults, identical, logical(1), 99999L)]
@@ -238,6 +261,8 @@ validate_params <- function(p) {
   if (length(bad))
     stop(paste(bad, collapse = ", "), " must be a single non-missing value", call. = FALSE)
   .check_types(p)
+  ## the sums below are formed in doubles, so whole numbers stored as integers cannot overflow
+  p[] <- lapply(p, function(v) if (is.integer(v)) as.double(v) else v)
   if (!p$GENOME_MODE %in% c("full", "core"))
     stop("GENOME_MODE must be 'full' or 'core', got '", p$GENOME_MODE, "'", call. = FALSE)
   .check_chromosomes(p$CHROMOSOMES)

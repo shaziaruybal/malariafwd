@@ -1264,7 +1264,7 @@ reproduction()
 	_plines = c(_plines, "SLIM_VERSION\t" + version(F)[1]);
 	_plines = c(_plines, "MALARIAFWD_VERSION\t" + (exists("MALARIAFWD_VERSION") ? MALARIAFWD_VERSION else "unknown"));
 	for (_nm in _pn)
-		_plines = c(_plines, _nm + "\t" + paste(executeLambda(_nm + ";"), sep=","));
+		_plines = c(_plines, _nm + "\t" + paramText(executeLambda(_nm + ";")));
 	writeFile(OUTDIR + "/params.tsv", _plines);
 
 	n_subpops = asInteger(N_HOSTS + N_MOSQ);
@@ -1835,6 +1835,21 @@ asInteger(SIM_DAYS) late() {
 // -------------------------
 // FUNCTIONS
 // -------------------------
+// A parameter as params.tsv records it. A float is written to 15 significant digits, the
+// precision run_sim() passes to SLiM, so that R reads the record back as the value the run used. A
+// float that prints as a plain whole number keeps a decimal point ("7.0"), as SLiM writes floats;
+// an exponent form ("7.4e-07", "1e+15") is kept as printf writes it, since R reads "1.0e-25" and
+// "1e-25" differently. Every float parameter is finite (initialize() refuses the others).
+function (string$) paramText(* v)
+{
+	if (!isFloat(v))
+		return paste(v, sep=",");
+	s = format("%.15g", v);
+	if (strfind(s, ".") >= 0 | strfind(s, "e") >= 0)
+		return s;
+	return s + ".0";
+}
+
 // A parameter's value for a message: a float to 15 significant digits, so that 1.0000001 does
 // not print as 1.0, and a string quoted.
 function (string$) shown(* v)

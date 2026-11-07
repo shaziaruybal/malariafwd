@@ -41,8 +41,9 @@ whose imports never established a parasite.
 \description{
 Launches SLiM with the given parameters and writes its outputs into \code{outdir}
 (\code{events.tsv}, \code{state.tsv}, \code{plasmo.trees}, \code{params.tsv}), plus a provenance snapshot
-(\code{model.slim}, \code{cmdline.txt}, \code{run.log}). The launch is shell-free (processx), so it
-handles the SLiM quoting/\code{mkdir} pitfalls for you.
+(\code{model.slim}, \code{cmdline.txt}, \code{run.log}). \code{params.tsv} records every parameter, floats to the
+15 significant digits passed to SLiM. The launch is shell-free (processx), so it handles the SLiM
+quoting/\code{mkdir} pitfalls for you.
 }
 \examples{
 \dontrun{

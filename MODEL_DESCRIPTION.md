@@ -1301,7 +1301,9 @@ of creation in `events.tsv`.
 
 `SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the
 derived `GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
-(`SLIM_VERSION`, `MALARIAFWD_VERSION`). An extinct run's file ends with an `EXTINCT_TICK` row, and a
+(`SLIM_VERSION`, `MALARIAFWD_VERSION`). Floats are recorded to 15 significant digits, the precision
+`run_sim()` passes to SLiM, and `vivax_params()` stores a double as that value, so a set rebuilt
+from the record is the set the run used. An extinct run's file ends with an `EXTINCT_TICK` row, and a
 run that never started with a `NEVER_STARTED` row (§2). These are outcomes rather than parameters:
 `load_params()` leaves them out, so every run's list has the same names, and `load_run()` reads them
 into the run's `extinct_tick` and `never_started`. Requires SLiM ≥ 5.2 on `PATH` and
