@@ -1148,7 +1148,8 @@ an extinct run's file ends with an `EXTINCT_TICK` row, and one that never starte
 the run ran), `cmdline.txt` (SLiM's arguments), `run.log` (SLiM's output) and `DONE`, written last
 (§16.4). A run is written beside its directory and moved into place when it has finished, so the
 directory holds a whole run or what it held before; a directory that already holds a run is replaced
-only with `overwrite = TRUE`.
+only with `overwrite = TRUE`. A grid of runs (`run_grid()`) records its cells in `grid.tsv`, which
+`load_grid()` reads.
 
 **Identifier hierarchy** — worth internalising, these are not interchangeable:
 

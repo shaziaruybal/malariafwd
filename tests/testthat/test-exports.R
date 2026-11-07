@@ -8,7 +8,7 @@ test_that("the package exports these functions", {
   "chrom_map", "classify_cases", "classify_who", "coi_distribution", "dormancy_durations",
   "event_types", "force_of_infection", "host_state_prevalence", "ibd_index", "ibd_pairs",
   "ibd_relapse_origin", "ibd_segments", "ibd_trajectory", "ibd_truth_pairs", "incidence_by_origin",
-  "load_events", "load_params", "load_run", "load_state", "model_version", "moi_vs_relapse",
+  "load_events", "load_grid", "load_params", "load_run", "load_state", "model_version", "moi_vs_relapse",
   "new_infection_diversity", "pick_host", "plot_diagnostics", "plot_force_of_infection",
   "plot_host_state_prevalence", "plot_host_trajectory", "plot_ibd_pair", "plot_moi_vs_relapse",
   "plot_relapse_km", "plot_relatedness_ladder", "rc_by_origin", "relapse_fraction",

@@ -19,6 +19,41 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D59 — A grid resumes from what is on disk, and grid.tsv records it · 2026-11-08 · Accepted
+**Context.** `run_grid()` renamed every set `setNN` unless all were named, ran a set whose name
+repeated into the directory of the first and reported both as ok, ran seed 2.5 as 2 and `c(1, 1)`
+twice into one directory, found a refused set only cell by cell, ran every cell again on every call,
+wrote no record of the grid, and advanced the caller's random-number stream (review M27, m46, n41).
+**Decision.** Blank names are filled by position, and a name must differ from the others, also
+ignoring case, and be usable as a directory name; seeds must be distinct whole numbers. Every set is
+rebuilt, and every cell's directory checked against what `run_sim()` would do with it, before any
+cell starts: a refused set, or a cell holding another run, one that did not finish, or files that
+are not a run's, stops the grid with all of them listed. A cell that already holds its run is not
+run again (`skip_existing = TRUE`, the default), so a second call resumes, and `overwrite = TRUE`
+runs the cells of an edited set again. `grid.tsv`, written at the end with paths relative to the
+grid's directory and merged with an earlier one, records each cell's outcome, versions and key, and
+every parameter as SLiM was given it; `load_grid()` reads it. The result is a `data.table` with the
+parameters that vary between the sets. The cells run with `furrr`'s seed off, so the caller's stream
+is left as it was.
+**Rationale.** A grid is launched, left, and launched again after a failure; it should cost only the
+cells that are missing, and say what it holds.
+**Alternatives rejected.** *A `vivax_grid` class* -- data.table keeps a subclass through subsetting,
+so its methods would misreport subsets. *Keying cells on the SLiM version* -- a SLiM upgrade would
+invalidate every finished grid; the versions are recorded instead. *Writing the record from the
+workers* -- they race on one file. *Failing the cells whose conflicts are known before the start* --
+the grid would run half its cells before saying what was wrong.
+**Consequences.** A grid run again into the same directory skips its finished cells instead of
+running them again; a changed set stops it until `overwrite = TRUE`. The grid's directory holds
+`grid.tsv`. Cells run by other means, such as one `run_sim()` per job of a job array, are recorded
+by calling `run_grid()` with the same sets and seeds afterwards. processx's supervisor, which stops
+SLiM when R dies, opens two FIFOs the first time in each process; `run_grid()` muffles future's
+report of them.
+**How to verify.** `tests/testthat/test-grid.R` (names, seeds, the caller's stream, resuming, an
+edited set, `grid.tsv` and `load_grid()` across a moved directory and a second call, a cell that
+lost its run, a failed cell) and the grid tests in `tests/testthat/test-run.R`.
+
+---
+
 ## D58 — A run is written beside its directory and moved into place when it has finished; DONE marks it · 2026-11-07 · Accepted
 **Context.** `run_sim()` wrote into `outdir` as SLiM ran, so a run that failed, timed out or was
 interrupted left old and new files mixed, which the loaders read without complaint; nothing marked a

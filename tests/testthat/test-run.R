@@ -87,19 +87,28 @@ test_that("a set at the edge of the rounding allowance on the caps runs", {
 })
 
 test_that("run_grid() gives each warning from its cells once, after its FAILED summary", {
-  skip_if_not(slim_available(), "SLiM not on PATH")
   ## R keeps only the first 50 warnings, so a set that warns in every cell would crowd it out
   p <- suppressWarnings(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3, BITING_RATE = 2))
   q <- vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 3)
-  q$N_MOSQ <- 40.5                                   # refused in each of its cells
+  q$N_MOSQ <- 40.5
+  ## a set vivax_params() refuses stops the grid before any cell runs
+  base <- tempfile("mfwd_grid_")
+  expect_error(run_grid(list(warns = p, broken = q), seeds = 1:3, outdir_base = base),
+               "run_grid() did not start: 1 of 2 parameter sets is refused:\n  broken: N_MOSQ", fixed = TRUE)
+  expect_false(dir.exists(base))
+  ## cells that warn, and one that fails: the FAILED summary, then each warning once
+  local_mocked_bindings(run_sim = function(params, seed, ...) {
+    warning("BITING_RATE = 2: a mosquito bites at most once a day")
+    if (seed == 2) stop("cell error")
+    list(extinct_tick = NA_integer_)
+  }, .require_slim = function() "5.2")
   w <- character()
-  g <- withCallingHandlers(
-    run_grid(list(warns = p, broken = q), seeds = 1:3, outdir_base = tempfile("mfwd_grid_")),
-    warning = function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
-  expect_identical(g$ok, g$set == "warns")
+  g <- withCallingHandlers(run_grid(list(warns = p), seeds = 1:3, outdir_base = base),
+                           warning = function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
+  expect_identical(g$ok, c(TRUE, FALSE, TRUE))
   expect_length(w, 2)
-  expect_match(w[1], "3 of 6 grid cell\\(s\\) FAILED")
-  expect_match(w[2], "bites at most once a day.* \\[3 cells\\]$")
+  expect_match(w[1], "1 of 3 grid cell\\(s\\) FAILED")
+  expect_match(w[2], "bites at most once a day \\[3 cells\\]$")
 })
 
 test_that("under options(warn = 2) a warning fails its cell, as R makes it an error", {
@@ -115,7 +124,7 @@ test_that("a caller catching run_grid()'s warnings gets the FAILED summary, and 
   local_mocked_bindings(run_sim = function(params, seed, ...) {
     if (params$SIM_ID == "warns") warning("cell warning") else stop("cell error")
     list(extinct_tick = NA_integer_)
-  })
+  }, .require_slim = function() "5.2")
   got <- tryCatch(run_grid(sets, seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")),
                   warning = function(w) conditionMessage(w))
   expect_match(got, "^2 of 4 grid cell\\(s\\) FAILED")
@@ -124,7 +133,7 @@ test_that("a caller catching run_grid()'s warnings gets the FAILED summary, and 
   local_mocked_bindings(run_sim = function(params, seed, ...) {
     warning("cell warning")
     list(extinct_tick = if (seed == 2) sum else NA_integer_)
-  })
+  }, .require_slim = function() "5.2")
   expect_no_warning(expect_error(run_grid(sets["warns"], seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")),
                                  "cells that had reported gave these warnings:\n  cell warning [2 cells]",
                                  fixed = TRUE))
@@ -132,7 +141,7 @@ test_that("a caller catching run_grid()'s warnings gets the FAILED summary, and 
   local_mocked_bindings(run_sim = function(params, seed, ...) {
     warning("cell warning")
     list(extinct_tick = NA_integer_)
-  })
+  }, .require_slim = function() "5.2")
   op <- options(warn = 2); on.exit(options(op), add = TRUE)
   g <- suppressWarnings(run_grid(sets["warns"], seeds = 1:2, outdir_base = tempfile("mfwd_gridw_")))
   expect_false(any(g$ok))

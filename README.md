@@ -99,11 +99,13 @@ idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
 ibd_relapse_origin(ev, idx)                       # relapses are clonal to their origin (IBD = 1)
 new_infection_diversity(run)                       # relatedness of the transmitting population
 
-# parallel sweep (see ?run_grid; use future::plan() for a cluster)
+# parallel sweep (see ?run_grid; use future::plan() for a cluster). Calling it again resumes:
+# cells that already hold their run are not run again
 res <- run_grid(
   list(low = vivax_params(BITING_RATE = 0.06),
        hi  = vivax_params(BITING_RATE = 0.12)),
-  seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 8)
+  seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 2)
+load_grid(file.path(tempdir(), "sweep"))           # the grid's record, grid.tsv
 ```
 
 ## Checking and exploring a run

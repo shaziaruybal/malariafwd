@@ -22,6 +22,13 @@ slim_available <- function() nzchar(Sys.which(slim_path()))
 
 .slim_version_ok <- function(v) is.na(v) || numeric_version(v) >= numeric_version(.slim_floor)
 
+## Stops unless SLiM is found and is at least the floor; gives its version.
+.require_slim <- function() {
+  if (!slim_available())
+    stop("SLiM not found. Install SLiM (>= 5.2) on PATH or set env var MALARIAFWD_SLIM.", call. = FALSE)
+  .check_slim_version()
+}
+
 ## Checked once per SLiM binary per session, because slim_version() starts a process.
 .check_slim_version <- function() {
   path <- slim_path()

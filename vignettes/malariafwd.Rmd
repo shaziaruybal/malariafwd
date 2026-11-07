@@ -88,16 +88,23 @@ the two genomes are, which inverts the relapse-vs-reinfection comparison. See D2
 ## Parallel sweeps
 
 `run_grid()` runs every (parameter set × seed) in parallel via the `future` backend. Set
-`workers` for a quick local multisession; for a cluster, set `future::plan()` yourself and
-leave `workers = NULL`.
+`workers` to the cores you can spare for a quick local multisession; for a cluster, set
+`future::plan()` yourself and leave `workers = NULL`. Every set, and every cell's directory, is
+checked before any cell starts. A cell that already holds its run is not run again, so calling
+`run_grid()` again with the same arguments resumes a grid that stopped part-way, and adding seeds
+runs only the new cells. `grid.tsv` in the grid's directory records every cell, and
+`load_grid()` reads it back.
 
 ```{r}
 sets <- list(
   low  = vivax_params(BITING_RATE = 0.06),
   high = vivax_params(BITING_RATE = 0.12)
 )
-res <- run_grid(sets, seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 8)
-res   # one row per run: set, seed, outdir, ok, error, extinct_tick, never_started
+base <- file.path(tempdir(), "sweep")
+res  <- run_grid(sets, seeds = 1:10, outdir_base = base, workers = 2)
+res   # one row per cell: set, seed, outdir, ok, skipped, error, extinct_tick, never_started,
+      # elapsed_s, finished, slim_version, malariafwd_version, and BITING_RATE, which varies
+load_grid(base)   # the same table, from grid.tsv
 ```
 
 ## Plots
