@@ -115,14 +115,17 @@ parameters stopped the run: `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `P_RAD_SURVIVAL`,
 `N_MOSQ`, `N_FOUNDER_LINEAGES`, `N_IMPORTS`, `N_IMPORTS_PER_TICK`, `SEED` and `SIM_DAYS` (review
 m62).
 **Decision.** `initialize()` makes the rest of `validate_params()`'s checks: each parameter's type
-and that it is a single value, whole numbers for counts and days, the probability ranges,
-positivity and non-negativity, the founder bounds, `MOSQ_LIFESPAN`, `MEAN_BLOOD_STAGE_DURATION`,
-`MU_HYPNOZOITE`, `DELTA_LATENCY`, `RECOMB_RATE`, `SEASONAL_PHASE`, `RADCURE_MODE`, a coverage
-against a closed treatment window, and `CHROMOSOMES` listed twice or as a high-low range. The model
-converts a parameter to the type it needs at each place Eidos is strict, so either spelling of a
-number gives the same run. Not repeated: R's limits on what text can carry (values below 1e-300,
-control characters), and `SIM_DAYS` outside 2 to 1e9, which SLiM refuses itself before
-`initialize()` runs.
+and that it is a single value, whole numbers within ±2^53 for counts and days, finite numbers, the
+probability ranges, positivity and non-negativity, the founder bounds, `MOSQ_LIFESPAN`,
+`MEAN_BLOOD_STAGE_DURATION`, `MU_HYPNOZOITE`, `DELTA_LATENCY`, `RECOMB_RATE`, `SEASONAL_PHASE`,
+`RADCURE_MODE`, a coverage against a closed treatment window, the mean oocyst count per uptake, an
+overflowing biting rate, and `CHROMOSOMES` unreadable, listed twice or as a high-low range. Its
+messages give a float to 15 significant digits and quote a string. The model converts a parameter
+to the type it needs at each place Eidos is strict, so either spelling of a number gives the same
+run. Not repeated: a misspelt name, which SLiM defines as a constant the model never reads, so the
+model cannot see it; R's limits on what text can carry (UTF-8, control characters, values below
+1e-300); and `SIM_DAYS` outside 2 to 1e9, INF, NAN or a vector, which SLiM refuses itself while it
+reads the tick ranges, before `initialize()` runs, in messages that do not name `SIM_DAYS`.
 **Rationale.** A direct run is the one place where a typo cannot be caught in R, and every one of
 these ran to exit 0 meaning something else.
 **Alternatives rejected.** *Refuse the other spelling* -- `-d TREATMENT_DELAY=7` is already
@@ -136,7 +139,6 @@ gives byte-identical `events.tsv` and `state.tsv`.
 **How to verify.** `tests/testthat/test-slim.R` refuses each new case with its parameter named, and
 runs a 5-day configuration with latency, an MDA round in the per-hypnozoite mode and a pulse of
 imports in both spellings, with identical outputs.
-
 ---
 
 ## D44 — MDA reaches subpatent clones and clones that became patent that day · 2026-11-07 · Accepted
@@ -156,9 +158,9 @@ nothing, since it is not suppressed again. A clone cleared on its first patent d
 `mda_bloodstage_clear`, like any MDA clearance. Case courses keep both filters. Coverage keeps its
 per-host draw among hosts not empty at the round (D28): the draw does not depend on infection, so
 the coverage is that of the whole population, and `mda_bloodcure_given` and `mda_radcure_given`
-count courses to hosts not empty at the round. A round on day 1 is refused in a run with founders:
-they are seeded over days 1 and 2, and a day-1 round cleared the templates of the day-2 copies and
-stopped the run. The author chose this (Q9, 2026-11-05).
+count courses to hosts not empty at the round. A round on day 1 is refused when a founder host
+carries a copy of another founder's genome: the copy is seeded on day 2, and a day-1 round cleared
+its template and stopped the run. The author chose this (Q9, 2026-11-05).
 **Rationale.** MDA is given to everyone, symptoms or not, so neither filter's reason applies to it:
 the D24 floor stands for the delay from patency to symptoms and care, and the holder filter for a
 course given for some other case. Drugs taken on the day a clone reaches the blood act on it too.

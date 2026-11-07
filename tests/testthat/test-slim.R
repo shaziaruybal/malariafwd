@@ -103,7 +103,13 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
            "N_MOSQ=c(10, 20)" = "N_MOSQ must be a single value",
            "CHROMOSOMES='1,1'" = "CHROMOSOMES lists a chromosome twice",
            "CHROMOSOMES='3-1'" = "CHROMOSOMES has a range that runs high-low",
-           "MDA_TICK=1" = "MDA_TICK must not be 1 in a run with founders")
+           "CHROMOSOMES='1e1'" = "CHROMOSOMES must be chromosome numbers 1-14",
+           "CHROMOSOMES='1 4'" = "CHROMOSOMES must be chromosome numbers 1-14",
+           "DELTA_LATENCY=NAN" = "DELTA_LATENCY must be finite",
+           "N_IMPORTS=9007199254740994" = "N_IMPORTS must lie within \\+/- 2\\^53",
+           ## the value is shown as given, not rounded
+           "N_HOSTS=20.0000001" = "N_HOSTS must be a whole number, got 20.0000001",
+           "P_TRANS_VH=1.0000001" = "P_TRANS_VH must be in \\[0, 1\\], got 1.0000001")
   for (arg in names(bad)) {
     r <- slim(arg)
     expect_true(r$status != 0, label = arg)
@@ -111,6 +117,14 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
   }
   r <- slim("BLOODCURE_COVERAGE=0.5", "TREATMENT_START=10", "TREATMENT_END=5")
   expect_match(paste(r$stdout, r$stderr), "case-management window is closed")
+  r <- slim("LAMBDA_OOCYSTS=1000.0", "K_OOCYSTS=0.001")
+  expect_match(paste(r$stdout, r$stderr), "gives a mean of 72883.5597.* the mean must be at most 1000")
+  r <- slim("BITING_RATE=1.0e300", "BITING_RATE_BOOST=1.0e300", "RESURGENCE_TRIGGER_TICK=3")
+  expect_match(paste(r$stdout, r$stderr), "BITING_RATE with its seasonal and resurgence multipliers overflows")
+  ## a founder copy is seeded on day 2, so a day-1 round is refused only when there are copies
+  r <- slim("MDA_TICK=1", "N_FOUNDER_LINEAGES=4")
+  expect_match(paste(r$stdout, r$stderr), "MDA_TICK must not be 1 when a founder host carries a copy")
+  expect_equal(slim("MDA_TICK=1")$status, 0L)
   ## a number in either spelling gives the same run, through latency, an MDA round in the
   ## per-hypnozoite mode and a pulse of imports
   on <- c("K_LATENCY=1", "DELTA_LATENCY=0.5", "RADCURE_MODE='hypnozoite'", "MDA_TICK=3", "MDA_COVERAGE=1.0",

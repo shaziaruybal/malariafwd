@@ -252,9 +252,11 @@ test_that("each value has its default's type, is finite, and is whole where the 
   expect_error(vivax_params(VERBOSE = "FALSE"), "VERBOSE must be TRUE or FALSE")
   expect_error(vivax_params(GENOME_MODE = TRUE), "GENOME_MODE must be a string")
   expect_error(vivax_params(MDA_TICK = Inf), "MDA_TICK must be finite.*use a day after SIM_DAYS")
-  ## founders are seeded over days 1 and 2, so a round with founders comes on day 2 or later
-  expect_error(vivax_params(MDA_TICK = 1L), "MDA_TICK must not be 1 in a run with founders")
-  expect_no_error(vivax_params(MDA_TICK = 2L))
+  ## a founder copy is seeded on day 2, so with copies a round comes on day 2 or later
+  expect_error(vivax_params(MDA_TICK = 1L, N_FOUNDER_LINEAGES = 4L),
+               "MDA_TICK must not be 1 when a founder host carries a copy")
+  expect_no_error(vivax_params(MDA_TICK = 2L, N_FOUNDER_LINEAGES = 4L))
+  expect_no_error(vivax_params(MDA_TICK = 1L))
   expect_no_error(vivax_params(MDA_TICK = 1L, N_FOUNDERS = 0L, IMPORT_TICK = 5L, N_IMPORTS = 3L))
   expect_error(vivax_params(TREATMENT_START = -Inf), "TREATMENT_START must be finite.*use 0")
   expect_error(vivax_params(K_OOCYSTS = Inf), "K_OOCYSTS must be finite.*use 0 for Poisson")

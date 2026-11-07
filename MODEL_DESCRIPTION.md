@@ -654,9 +654,10 @@ overlap 0.03). A structured source pool is planned (§15).
   not: a clone that became patent earlier that day (the day's imports arrive after the round,
   §2.1), and a **subpatent** clone, which it clears with probability 1 − `P_BLOODCURE_SURVIVAL`,
   cancelling its recrudescence (`mda_subpatent_clear`); a subpatent clone that survives keeps its
-  schedule (D44). In a run with founders the round comes on day 2 or later, since a founder host
-  carrying a copy of another founder's genome receives it on day 2 (D39). Unlike case-based
-  treatment it is **not** gated on `TREATMENT_START` / `TREATMENT_END`.
+  schedule (D44). When a founder host carries a copy of another founder's genome
+  (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`), the round comes on day 2 or later, since the copy is
+  seeded on day 2 (D39). Unlike case-based treatment it is **not** gated on `TREATMENT_START` /
+  `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
   (`NU_HYPNOZOITE_BATCH_BOOST`) and imports (`IMPORT_RATE_BOOST`) — so one scenario can run a quiet
@@ -778,12 +779,16 @@ successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` �
 hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at most
 10⁶ imports a day; and `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most
 10⁹, SLiM's last tick, and a run that reaches day 99999, which the defaults use for "never", must
-move those days past its end and cannot schedule anything on day 99999 itself. In a run with
-founders `MDA_TICK` is not 1: the founders are seeded over days 1 and 2 (D39), so a round comes on
-day 2 or later (D44). A founder-free run whose imports never establish a parasite, by chance or
+move those days past its end and cannot schedule anything on day 99999 itself. `MDA_TICK` is not 1
+when a founder host carries a copy of another founder's genome
+(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): the copies are seeded on day 2 (D39), so a round comes
+on day 2 or later (D44). A founder-free run whose imports never establish a parasite, by chance or
 because its settings let none take, is not refused; it ends as never started (§2). The model makes
-the same checks itself when it is run with `slim -d`, bypassing R, and there a number may be
-written either way, `7` or `7.0`, for the same run.
+the same value checks itself when it is run with `slim -d`, bypassing R, and there a number may be
+written either way, `7` or `7.0`, for the same run. A direct run is not checked for a misspelt
+name, which SLiM takes as a constant the model never reads, nor for the limits on text (UTF-8,
+control characters, values below 10⁻³⁰⁰); `SIM_DAYS` outside 2 to 10⁹ is refused by SLiM itself,
+in messages that do not name it (D45).
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -862,7 +867,7 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
 | `P_RAD_SURVIVAL` | **0.29** | P(the patient's whole reservoir survives), ≈71% cure (White 2018 / malariasimulation). Per **person**, not per hypnozoite — the same number would mean 95% efficacy under the old per-hypnozoite reading (D20) |
 | `RADCURE_MODE` | `"person"` | `"hypnozoite"` restores per-hypnozoite thinning — the only mode that can partially clear a reservoir |
-| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent earlier that day (D44); day 2 or later in a run with founders; **not** gated on the treatment window |
+| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent earlier that day (D44); day 2 or later when a founder host carries a copy of another founder's genome; **not** gated on the treatment window |
 | `MDA_COVERAGE` | 1.0 | P(the round reaches a host), drawn per host (D28) |
 
 ### Recurrence: the third state (§9a)

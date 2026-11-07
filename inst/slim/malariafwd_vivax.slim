@@ -279,20 +279,28 @@ initialize() {
 		if (match(nm, flag_params) >= 0)
 		{
 			if (!isLogical(v))
-				stop(nm + " must be T or F, got " + v);
+				stop(nm + " must be T or F, got " + shown(v));
 		}
 		else if (match(nm, text_params) >= 0)
 		{
 			if (!isString(v))
-				stop(nm + " must be a string, quoted as in -d \"" + nm + "='...'\", got " + v);
+				stop(nm + " must be a string, quoted as in -d \"" + nm + "='...'\", got " + shown(v));
 		}
 		else if (!(isInteger(v) | isFloat(v)))
-			stop(nm + " must be a number, got " + v);
+			stop(nm + " must be a number, got " + shown(v));
 		// nested ifs, not `&`: Eidos does not short-circuit, and round() refuses an integer
 		else if (match(nm, whole_params) >= 0)
+		{
 			if (isFloat(v))
-				if (!(v == round(v) & abs(v) <= 2^53))
-					stop(nm + " must be a whole number, got " + v);
+			{
+				if (!(abs(v) < INF))
+					stop(nm + " must be finite, got " + shown(v));
+				if (v != round(v))
+					stop(nm + " must be a whole number, got " + shown(v));
+			}
+			if (!(abs(v) <= 2^53))
+				stop(nm + " must lie within +/- 2^53 (about 9e15), got " + shown(v));
+		}
 	}
 
 	// ── DERIVED CONSTANTS (always computed from above) ────────────
@@ -310,10 +318,10 @@ initialize() {
 	// R accepts is never refused here.
 	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates. At a given mean, the tries an
 	// uptake takes grow about as 1 / K below K = 1e-3, and so does the exact draw that follows
-	// 10,000 failed tries (about lambda / K terms). In a -d run, where R's mean cap is not
-	// checked, both grow without bound (lambda 1000 with K 1e-9 would take about 6e12 terms), and
-	// lambda / K overflows below K of about 5.6e-306. K = 1e-3 already gives a variance within 0.5%
-	// of the K -> 0 limit at the same mean.
+	// 10,000 failed tries (about lambda / K terms). Without this floor both grow without bound as K
+	// falls (lambda 1000 with K 1e-9 would take about 6e12 terms), and lambda / K overflows below K
+	// of about 5.6e-306. K = 1e-3 already gives a variance within 0.5% of the K -> 0 limit at the
+	// same mean.
 	if (!(K_OOCYSTS == 0 | (K_OOCYSTS >= 1e-3 * (1 - 1e-11) & K_OOCYSTS < INF)))
 		stop("K_OOCYSTS must be 0 (Poisson) or at least 0.001 and finite, got " + K_OOCYSTS +
 			((K_OOCYSTS > 0 & K_OOCYSTS < 1e-3) ? ": below that the oocyst draws take ever more work." else "."));
@@ -321,6 +329,16 @@ initialize() {
 	// K at least 1e-3 this keeps every gamma rate finite.
 	if (!(LAMBDA_OOCYSTS <= 1000 * (1 + 1e-11) & LAMBDA_SPOROZOITES <= 1000 * (1 + 1e-11)))
 		stop("LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be at most 1000");
+	// ...and the mean itself, as uptake_moments() works it out: a small K gives a heavy tail whose
+	// mean, and so the work per uptake, can be many times lambda.
+	if (LAMBDA_OOCYSTS > 0)
+	{
+		x0 = (K_OOCYSTS > 0) ? K_OOCYSTS * log(1 + LAMBDA_OOCYSTS / K_OOCYSTS) else asFloat(LAMBDA_OOCYSTS);
+		m_ooc = LAMBDA_OOCYSTS / (1 - exp(-x0));
+		if (!(m_ooc <= 1000 * (1 + 1e-11)))
+			stop("LAMBDA_OOCYSTS = " + shown(LAMBDA_OOCYSTS) + " with K_OOCYSTS = " + shown(K_OOCYSTS) +
+				" gives a mean of " + shown(m_ooc) + " oocysts per successful uptake; the mean must be at most 1000.");
+	}
 	// These factors scale the biting, import and activation rates, which must stay non-negative
 	// and finite (an infinite activation boost times ALPHA_ACTIVATE = 0 is NAN).
 	if (!(INTERVENTION_EFFICACY >= 0 & INTERVENTION_EFFICACY <= 1))
@@ -380,13 +398,13 @@ initialize() {
 	{
 		v = executeLambda(nm + ";");
 		if (!(v >= 0 & v <= 1))
-			stop(nm + " must be in [0, 1], got " + v);
+			stop(nm + " must be in [0, 1], got " + shown(v));
 	}
 	for (nm in c("N_HOSTS", "N_MOSQ", "BITING_RATE"))
 	{
 		v = executeLambda(nm + ";");
 		if (!(v > 0 & v < INF))
-			stop(nm + " must be > 0 and finite, got " + v);
+			stop(nm + " must be > 0 and finite, got " + shown(v));
 	}
 	for (nm in c("NU_HYPNOZOITE_BATCH", "NU_HYPNOZOITE_BATCH_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
 		"N_FOUNDERS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS", "GAMETOCYTE_DELAY",
@@ -394,12 +412,12 @@ initialize() {
 	{
 		v = executeLambda(nm + ";");
 		if (!(v >= 0 & v < INF))
-			stop(nm + " must be >= 0 and finite, got " + v);
+			stop(nm + " must be >= 0 and finite, got " + shown(v));
 	}
 	if (!(abs(SEASONAL_PHASE) < INF))
-		stop("SEASONAL_PHASE must be finite (the day of the year of the peak), got " + SEASONAL_PHASE);
+		stop("SEASONAL_PHASE must be finite (the day of the year of the peak), got " + shown(SEASONAL_PHASE));
 	if (!(RECOMB_RATE <= 0.5 & RECOMB_RATE > -INF))
-		stop("RECOMB_RATE must be at most 0.5 per bp and finite, got " + RECOMB_RATE +
+		stop("RECOMB_RATE must be at most 0.5 per bp and finite, got " + shown(RECOMB_RATE) +
 			" (a value <= 0 means the default map rate, 7.4e-7).");
 	if (N_FOUNDER_HOSTS > N_HOSTS)
 		stop("N_FOUNDER_HOSTS (" + N_FOUNDER_HOSTS + ") must be at most N_HOSTS (" + N_HOSTS +
@@ -408,31 +426,45 @@ initialize() {
 		stop("N_FOUNDER_LINEAGES (" + N_FOUNDER_LINEAGES + ") must be at most N_FOUNDER_HOSTS (" +
 			N_FOUNDER_HOSTS + "): each founder host carries one of the founding genomes.");
 	if (!(MOSQ_LIFESPAN >= 1 & MOSQ_LIFESPAN < INF))
-		stop("MOSQ_LIFESPAN must be >= 1 and finite (days), got " + MOSQ_LIFESPAN +
+		stop("MOSQ_LIFESPAN must be >= 1 and finite (days), got " + shown(MOSQ_LIFESPAN) +
 			": a mosquito dies each day with probability 1/MOSQ_LIFESPAN.");
 	if (!(MEAN_BLOOD_STAGE_DURATION >= 1 & MEAN_BLOOD_STAGE_DURATION < INF))
-		stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days), got " + MEAN_BLOOD_STAGE_DURATION +
+		stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days), got " + shown(MEAN_BLOOD_STAGE_DURATION) +
 			": blood-stage infections clear each day with probability 1/MEAN_BLOOD_STAGE_DURATION.");
 	if (!(MU_HYPNOZOITE > 0 & MU_HYPNOZOITE <= 1))
-		stop("MU_HYPNOZOITE must be in (0, 1], got " + MU_HYPNOZOITE + ": it is a daily probability, " +
+		stop("MU_HYPNOZOITE must be in (0, 1], got " + shown(MU_HYPNOZOITE) + ": it is a daily probability, " +
 			"and hypnozoites that cannot die keep their batch alive forever.");
 	if (K_LATENCY > 0)
 		if (!(DELTA_LATENCY > 0 & DELTA_LATENCY <= 1))
-			stop("DELTA_LATENCY must be in (0, 1] when K_LATENCY > 0, got " + DELTA_LATENCY +
+			stop("DELTA_LATENCY must be in (0, 1] when K_LATENCY > 0, got " + shown(DELTA_LATENCY) +
 				": a latent batch leaves each latency stage with daily probability DELTA_LATENCY.");
 	if (!(RADCURE_MODE == "person" | RADCURE_MODE == "hypnozoite"))
 		stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '" + RADCURE_MODE + "'");
 	// A founder host carrying a copy of another founder's genome receives it on day 2 (D39), so a
-	// day-1 round would clear its template and leave the copy nothing to copy (D44).
-	if (MDA_TICK == 1 & N_FOUNDER_HOSTS > 0)
-		stop("MDA_TICK must not be 1 in a run with founders: they are seeded over days 1 and 2, so " +
-			"an MDA round must come on day 2 or later.");
+	// day-1 round would clear its template first and leave the copy nothing to copy (D44).
+	if (MDA_TICK == 1 & N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS)
+		stop("MDA_TICK must not be 1 when a founder host carries a copy of another founder's genome " +
+			"(N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS): the copies are seeded on day 2, so a round comes " +
+			"on day 2 or later.");
 	// a coverage set against a closed case-management window would give no treatment at all (D19)
 	if ((RADCURE_COVERAGE > 0 | BLOODCURE_COVERAGE > 0) &
 		(TREATMENT_END <= TREATMENT_START | TREATMENT_START > SIM_DAYS))
 		stop("a treatment coverage is set but the case-management window is closed (TREATMENT_START = " +
 			TREATMENT_START + ", TREATMENT_END = " + TREATMENT_END + ", SIM_DAYS = " + SIM_DAYS +
 			"): no case would ever be treated.");
+	// the peak daily biting probability must be a number, as validate_params() requires
+	biting_boost = (RESURGENCE_TRIGGER_TICK <= SIM_DAYS) ? max(1.0, asFloat(BITING_RATE_BOOST)) else 1.0;
+	if (!(BITING_RATE * (1 + SEASONAL_AMP) * biting_boost < INF))
+		stop("BITING_RATE with its seasonal and resurgence multipliers overflows; check BITING_RATE, " +
+			"BITING_RATE_BOOST and SEASONAL_AMP.");
+	// every other number must be finite too, whatever it is used for (DELTA_LATENCY, say, while
+	// K_LATENCY is 0), as validate_params() requires
+	for (nm in real_params)
+	{
+		v = executeLambda(nm + ";");
+		if (!(abs(v) < INF))
+			stop(nm + " must be finite, got " + shown(v));
+	}
 
 	// ---- configurations that cannot produce a single parasite ----------------------------
 	// Mirrored in validate_params() on the R side; repeated here because the model can be run
@@ -514,6 +546,11 @@ initialize() {
 	                                   0.6434, 0.4373, 0.6536, 0.7529, 0.3297, 0.4711, 0.6800));
 
 	// which PvP01 chromosomes to simulate (default all 14); accepts "1-14","1,3,5","5-8"
+	// validate_params()'s reading of CHROMOSOMES, spaces aside (it removes them): Eidos would read
+	// '1e1' as 10 and '1 4' or '1-2-3' as 1, and run another genome.
+	if (size(grep("^ *[0-9]+ *(- *[0-9]+ *)?(, *[0-9]+ *(- *[0-9]+ *)?)*$", CHROMOSOMES)) == 0)
+		stop("CHROMOSOMES must be chromosome numbers 1-14, comma-separated, with low-high ranges, " +
+			"e.g. '1-14' or '1-3,5'; got '" + CHROMOSOMES + "'");
 	chr_idx = integer(0);
 	for (tok in strsplit(CHROMOSOMES, ","))
 	{
@@ -1785,6 +1822,17 @@ asInteger(SIM_DAYS) late() {
 // -------------------------
 // FUNCTIONS
 // -------------------------
+// A parameter's value for a message: a float to 15 significant digits, so that 1.0000001 does
+// not print as 1.0, and a string quoted.
+function (string$) shown(* v)
+{
+	if (isFloat(v))
+		return format("%.15g", v);
+	if (isString(v))
+		return "'" + v + "'";
+	return asString(v);
+}
+
 function (void) defineDefault(s$ name, * value)
 {
 	if (!exists(name))
