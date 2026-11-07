@@ -4,7 +4,7 @@ shared <- function(...) vivax_params(SIM_DAYS = 120L, N_HOSTS = 40L, N_MOSQ = 80
                                      BITING_RATE = 0.12, ...)
 
 run_counts <- function(p, tag) {
-  out <- file.path(tempdir(), paste0("mfw-tx-", tag))
+  out <- tempfile(paste0("mfw-tx-", tag))
   unlink(out, recursive = TRUE)
   r <- run_sim(p, seed = 2, outdir = out)
   ev <- data.table::as.data.table(load_events(r))
@@ -42,7 +42,7 @@ test_that("the case-management window bounds WHEN treatment happens", {
   ## Deliberately an assertion about TIMING, not about counts. Since treatment became
   ## host-level it suppresses transmission hard enough that an always-open window can
   ## produce FEWER courses than a late one - it prevents the cases it would have treated.
-  out <- file.path(tempdir(), "mfw-tx-window")
+  out <- tempfile("mfw-tx-window")
   unlink(out, recursive = TRUE)
   r <- run_sim(shared(BLOODCURE_COVERAGE = 1, TREATMENT_START = 90L, TREATMENT_END = 120L),
                seed = 2, outdir = out)
@@ -71,7 +71,7 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
                                 P_RECRUD_GIVEN_FAIL = 1,
                                 TREATMENT_DELAY = d, MEAN_RECRUD_DELAY = d,
                                 RECRUD_DELAY_DIST = shape),
-                   seed = 3, outdir = file.path(tempdir(), paste0("mfw-delay-", d, "-", shape)))
+                   seed = 3, outdir = tempfile(paste0("mfw-delay-", d, "-", shape)))
     ev <- load_events(run)
     gap <- merge(ev[event_type == "recrudescence", .(holder = parent1_pedigree_id, t_rec = tick)],
                  ev[event_type == "bloodcure_subpatent", .(holder = pedigree_id, t_sub = tick)],
@@ -122,7 +122,7 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   skip_if_no_slim()
   base <- list(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,
                P_DETECT_PRIMARY = 0.9, P_DETECT_RELAPSE = 0.6)
-  out <- file.path(tempdir(), "mfw-recrud"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-recrud"); unlink(out, recursive = TRUE)
 
   ## OFF is a strict no-op: no suppression, no recrudescence, no subpatent compartment
   off <- run_sim(do.call(vivax_params, c(base, list(BLOODCURE_COVERAGE = 1,
@@ -185,7 +185,7 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
 
 test_that("a recrudescence is clonal to its holder and MOI-neutral", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- file.path(tempdir(), "mfw-recrud-ibd"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-recrud-ibd"); unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L,
                               BITING_RATE = 0.14, BLOODCURE_COVERAGE = 1,
                               P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1),
@@ -213,7 +213,7 @@ test_that("a bite that seeds only hypnozoites is no case and gets no course", {
   skip_if_no_slim()
   ## With P_PRIMARY = 0 every bite seeds only a batch. Relapses are undetected, so nothing here
   ## is a case: no course may be given.
-  out <- file.path(tempdir(), "mfw-tx-liver-only"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-tx-liver-only"); unlink(out, recursive = TRUE)
   r <- run_sim(shared(P_PRIMARY = 0, BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1, P_DETECT_RELAPSE = 0),
                seed = 2, outdir = out)
   ev <- data.table::as.data.table(load_events(r))
@@ -223,7 +223,7 @@ test_that("a bite that seeds only hypnozoites is no case and gets no course", {
 
 test_that("MDA reaches subpatent clones and clones patent that day, as a case course does not", {
   skip_if_no_slim()
-  out <- file.path(tempdir(), "mfw-mda-reach"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-mda-reach"); unlink(out, recursive = TRUE)
   ## every treated clone that survives its course is suppressed, and waits about 60 days, so
   ## holders are waiting at the round
   run <- run_sim(vivax_params(SIM_DAYS = 160L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,

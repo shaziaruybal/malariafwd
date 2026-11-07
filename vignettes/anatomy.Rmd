@@ -21,7 +21,7 @@ Python `tskit`); run them locally after checking your setup with `check_setup()`
 ```{r}
 library(malariafwd)
 p   <- vivax_params(N_HOSTS = 200, N_MOSQ = 400, BITING_RATE = 0.1, SIM_DAYS = 1095)
-run <- run_sim(p, seed = 1, outdir = "runs/anatomy")
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))
 ```
 
 `run` points at the output directory, which now holds:
@@ -30,6 +30,8 @@ run <- run_sim(p, seed = 1, outdir = "runs/anatomy")
 - `state.tsv` — per-tick state of every host and mosquito
 - `plasmo.trees` — the tskit tree sequence (the genealogy behind IBD)
 - `params.tsv`, `cmdline.txt`, `model.slim`, `run.log` — provenance of the run
+- `DONE` — written last: when the run finished, a key of its parameters and seed, and the size of
+  every file, so a directory that is not a whole run can be told from one that is
 
 ## The event log
 

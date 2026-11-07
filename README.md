@@ -84,7 +84,9 @@ check_setup()                                     # SLiM, the model, and Python 
 
 # one run
 p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # validated params; full genome by default
-run <- run_sim(p, seed = 1, outdir = "runs/demo")
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
+# the run's directory appears when the run has finished; a second run into it is refused
+# unless overwrite = TRUE (or skip_existing = TRUE, which returns the same run)
 
 # tidy outputs
 ev  <- load_events(run)
@@ -101,7 +103,7 @@ new_infection_diversity(run)                       # relatedness of the transmit
 res <- run_grid(
   list(low = vivax_params(BITING_RATE = 0.06),
        hi  = vivax_params(BITING_RATE = 0.12)),
-  seeds = 1:10, outdir_base = "runs/sweep", workers = 8)
+  seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 8)
 ```
 
 ## Checking and exploring a run

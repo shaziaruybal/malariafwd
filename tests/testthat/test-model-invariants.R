@@ -3,7 +3,7 @@
 
 test_that("hypnozoite batches never draw more than they hold, and ids are unique", {
   skip_if_no_slim()
-  out <- file.path(tempdir(), "mfw-invariants")
+  out <- tempfile("mfw-invariants")
   unlink(out, recursive = TRUE)
   p <- vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 300,
                     N_FOUNDER_LINEAGES = 8)
@@ -29,7 +29,7 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
 
 test_that("classify_cases labels imported relapses", {
   skip_if_no_slim()
-  out <- file.path(tempdir(), "mfw-imported")
+  out <- tempfile("mfw-imported")
   unlink(out, recursive = TRUE)
   p <- vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.06, SIM_DAYS = 400,
                     IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.15)
@@ -59,7 +59,7 @@ test_that("zero-truncated count helpers round-trip", {
 
 test_that("ARG summaries behave on the forest genealogy", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- file.path(tempdir(), "mfw-arg")
+  out <- tempfile("mfw-arg")
   unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12,
                               SIM_DAYS = 300, N_FOUNDER_LINEAGES = 8), seed = 1, outdir = out)
@@ -98,7 +98,7 @@ test_that("ARG summaries behave on the forest genealogy", {
 
 test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- file.path(tempdir(), "mfw-ibdseg")
+  out <- tempfile("mfw-ibdseg")
   unlink(out, recursive = TRUE)
   run <- run_sim(vivax_params(N_HOSTS = 50, N_MOSQ = 100, BITING_RATE = 0.12,
                               SIM_DAYS = 250, N_FOUNDER_LINEAGES = 8), seed = 3, outdir = out)
@@ -130,7 +130,7 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   ## two genetically unrelated founders (measured IBD 0) under one lineage_id, while an
   ## ordinary bite gave IBD 1. Imports are now seeded in early() and the second compartment is
   ## cloned one tick later, so both paths must give IBD 1.
-  out <- file.path(tempdir(), "mfw-import-clone")
+  out <- tempfile("mfw-import-clone")
   unlink(out, recursive = TRUE)
   ## imports on, so both the founder path and the ordinary path are exercised
   p <- vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.10, SIM_DAYS = 500,
@@ -300,7 +300,7 @@ test_that("infectious_bites counts each host's bites from a mosquito past the EI
   run <- run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 100, SIM_DAYS = 150, BITING_RATE = 0.2,
                               P_TRANS_VH = 1, MAX_MOI = 1000L, BLOODCURE_COVERAGE = 0.8,
                               CHROMOSOMES = "1"),
-                 seed = 4, outdir = file.path(tempdir(), "mfw-eir"))
+                 seed = 4, outdir = tempfile("mfw-eir"))
   st <- data.table::as.data.table(load_state(run, entity = "all"))
   ev <- data.table::as.data.table(load_events(run))
   expect_gt(nrow(st[entity_type == "mosquito"]), 0)
@@ -321,7 +321,7 @@ test_that("MAX_MOI holds within a day, counting the clones a host gained earlier
   run <- run_sim(vivax_params(N_HOSTS = 30, N_MOSQ = 150, SIM_DAYS = 200, BITING_RATE = 0.3,
                               P_TRANS_VH = 1, MAX_MOI = 2L, NU_HYPNOZOITE_BATCH = 0,
                               LAMBDA_SPOROZOITES = 0, CHROMOSOMES = "1"),
-                 seed = 1, outdir = file.path(tempdir(), "mfw-maxmoi"))
+                 seed = 1, outdir = tempfile("mfw-maxmoi"))
   st <- data.table::as.data.table(load_state(run))[entity_type == "human"]
   expect_gt(sum(st$moi_active > 1), 100)
   expect_lte(max(st$moi_active + st$moi_subpatent), 2L)

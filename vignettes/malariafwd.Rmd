@@ -35,11 +35,13 @@ check_setup()
 ## One simulation
 
 `vivax_params()` gives a validated parameter set (all defaults mirror the model); override
-what you need. `run_sim()` launches SLiM and returns a `vivax_run` pointing at the outputs.
+what you need. `run_sim()` launches SLiM and returns a `vivax_run` pointing at the outputs. The
+run's directory appears when the run has finished, and a directory that already holds a run is
+not replaced unless you pass `overwrite = TRUE`.
 
 ```{r}
 p   <- vivax_params(N_HOSTS = 300, N_MOSQ = 600, BITING_RATE = 0.09)
-run <- run_sim(p, seed = 1, outdir = "runs/demo")
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 
 ev <- load_events(run)      # tidy event log (data.table)
 st <- load_state(run)       # per-tick host state
@@ -94,7 +96,7 @@ sets <- list(
   low  = vivax_params(BITING_RATE = 0.06),
   high = vivax_params(BITING_RATE = 0.12)
 )
-res <- run_grid(sets, seeds = 1:10, outdir_base = "runs/sweep", workers = 8)
+res <- run_grid(sets, seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 8)
 res   # one row per run: set, seed, outdir, ok, error, extinct_tick, never_started
 ```
 

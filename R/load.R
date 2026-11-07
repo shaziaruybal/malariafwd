@@ -1,9 +1,13 @@
 ## load.R -- the `vivax_run` object + tidy loaders for a run's outputs.
 
-# Accept either a `vivax_run` object or a bare directory path.
+# Accept either a `vivax_run` object or a bare directory path; a path to a directory holding a run
+# that is not whole warns, once a session (D58).
 .run_dir <- function(x) {
   if (inherits(x, "vivax_run")) return(x$outdir)
-  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) return(x)
+  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) {
+    .warn_if_incomplete(x)
+    return(x)
+  }
   stop("`run` must be a vivax_run (from run_sim() or load_run()) or the path of a run directory, ",
        "got an object of class ", class(x)[1], ".", call. = FALSE)
 }
@@ -20,6 +24,15 @@
   warning(structure(class = c(class, "malariafwd_run_warning", "warning", "condition"),
                     list(message = msg, call = NULL)))
   invisible(TRUE)
+}
+
+## A directory with a run's outputs but no whole run (.run_complete()).
+.warn_if_incomplete <- function(dir) {
+  if (!any(file.exists(file.path(dir, c("params.tsv", "events.tsv"))))) return(invisible(FALSE))
+  rc <- .run_complete(dir)
+  if (rc$complete) return(invisible(FALSE))
+  .warn_once(dir, "malariafwd_incomplete_run",
+             paste(dir, rc$reason, "This is said once per directory per session."))
 }
 
 ## A params.tsv that does not hold this version's parameters (r from .read_params_tsv()).
@@ -69,7 +82,12 @@
 #' nodes and its events are at most imports that did not take, so the readers that need a parasite,
 #' such as [arg_summary()] and [arg_diversity()], stop on it.
 #'
-#' A directory without `params.tsv` or `events.tsv` is not a run and is refused.
+#' A directory without `params.tsv` or `events.tsv` is not a run and is refused. One whose `DONE`
+#' file is missing, or whose files have changed since the run finished (see [run_sim()]), loads
+#' with `complete = FALSE` and a warning of class `malariafwd_incomplete_run`, given once per
+#' directory per session by every reader of the directory. A run started with `slim` directly
+#' has no `DONE`.
+#' `suppressWarnings(..., classes = "malariafwd_incomplete_run")` silences it.
 #' @param outdir a run output directory, or a `vivax_run`, whose directory is read again.
 #' @return a `vivax_run` object, a list of:
 #'   * `outdir`, the run directory (character);
@@ -81,7 +99,9 @@
 #'   * `slim_version` and `malariafwd_version` (character; `malariafwd_version` is `"unknown"`
 #'     for a run started with `slim` directly);
 #'   * `genome_length`, the simulated genome in bp, and `n_chromosomes` (integers), and
-#'     `recomb_within`, the crossover rate within a chromosome per bp per meiosis (double).
+#'     `recomb_within`, the crossover rate within a chromosome per bp per meiosis (double);
+#'   * `complete`, `TRUE` when the directory holds the whole run its `DONE` file describes
+#'     (logical).
 #'
 #'   A field the run's `params.tsv` does not record is `NA`.
 #' @export
@@ -103,7 +123,8 @@ load_run <- function(outdir) {
                  malariafwd_version = or(rec$MALARIAFWD_VERSION, NA_character_),
                  genome_length = or(rec$GENOME_LENGTH, NA_integer_),
                  n_chromosomes = or(rec$N_CHROMOSOMES, NA_integer_),
-                 recomb_within = or(rec$RECOMB_WITHIN, NA_real_)),
+                 recomb_within = or(rec$RECOMB_WITHIN, NA_real_),
+                 complete = .run_complete(dir)$complete),
             class = "vivax_run")
 }
 

@@ -4,7 +4,7 @@
 
 edge_run <- function(tag, ...) {
   run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 100, CHROMOSOMES = "1", ...), seed = 3,
-          outdir = file.path(tempdir(), paste0("mfwd_edge_", tag)))
+          outdir = tempfile(paste0("mfwd_edge_", tag)))
 }
 
 test_that("SUBPATENT_INFECTIVITY = 0 runs when a host carries only dormant batches", {

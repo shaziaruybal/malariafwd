@@ -1142,10 +1142,13 @@ Ordered by how much the answer is likely to move.
 **Files per run:** `events.tsv` (the event log — one row per transmission, activation, clearance,
 treatment event, with lineage/pedigree/oocyst ids, `is_dormant`, `is_imported`, `n_hypnozoites`,
 `detected`, `into_patent_lineage`), `state.tsv` (per-tick host and vector state), `params.tsv`
-(**all resolved parameters plus `ACTUAL_SEED`** and the SLiM and package versions — full
-provenance; an extinct run's file ends with an `EXTINCT_TICK` row, and one that never started with
-a `NEVER_STARTED` row, §2), `plasmo.trees` (tskit tree
-sequence).
+(**all resolved parameters plus `ACTUAL_SEED`** and the SLiM and package versions — full provenance;
+an extinct run's file ends with an `EXTINCT_TICK` row, and one that never started with a
+`NEVER_STARTED` row, §2), `plasmo.trees` (tskit tree sequence), `model.slim` (the copy of the model
+the run ran), `cmdline.txt` (SLiM's arguments), `run.log` (SLiM's output) and `DONE`, written last
+(§16.4). A run is written beside its directory and moved into place when it has finished, so the
+directory holds a whole run or what it held before; a directory that already holds a run is replaced
+only with `overwrite = TRUE`.
 
 **Identifier hierarchy** — worth internalising, these are not interchangeable:
 
@@ -1309,8 +1312,13 @@ never started with a `NEVER_STARTED` row (§2). `load_params()` reads the parame
 non-zero floats lies between 1e-130 and 1e15 in magnitude. The seed, the versions, the derived
 genome and the outcome rows are on the `load_run()` object (`seed`, `slim_version`,
 `malariafwd_version`, `genome_length`, `n_chromosomes`, `recomb_within`, `extinct_tick`,
-`never_started`). Requires SLiM ≥ 5.2 on `PATH` and, for IBD and the ARG functions, Python with
-`tskit` (≥ 1.0), `pandas` and `numpy` through reticulate; `check_setup()` reports both.
+`never_started`). `DONE` records when the run finished, how long it took, its seed, a key of its
+parameters and seed (the md5 of the arguments SLiM was given, without `OUTDIR` and `VERBOSE`), the
+md5 of the model, the versions, and the size of every file; `load_run()` reports a directory whose
+`DONE` is missing or whose files have changed since. SLiM runs in the run's directory on its copy of
+the model, so running `slim` with the arguments in `cmdline.txt` from a directory holding
+`model.slim` repeats the run. Requires SLiM ≥ 5.2 on `PATH` and, for IBD and the ARG functions,
+Python with `tskit` (≥ 1.0), `pandas` and `numpy` through reticulate; `check_setup()` reports both.
 `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it,
 relapse-to-prior comparisons silently lose ancestors.
 

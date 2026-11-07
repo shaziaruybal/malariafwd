@@ -53,7 +53,7 @@ test_that("a value that does not fit its column stops, naming it", {
 test_that("a missing or empty file, or something that is not a run, is named", {
   d <- tempfile("mfwd_none_"); dir.create(d)
   expect_error(load_events(d), "no events.tsv in")
-  r <- fake_run(); writeLines(character(), file.path(r, "state.tsv"))
+  r <- fake_run(); writeLines(character(), file.path(r, "state.tsv")); refresh_done(r)
   expect_error(load_state(r), "state.tsv in .* is empty")
   expect_error(load_events(data.table::data.table()), "`run` must be a vivax_run")
 })
@@ -104,9 +104,9 @@ test_that("a params.tsv that cannot be read stops, naming the line or the parame
   expect_error(load_params(fake_run(drop = "VERBOSE", extra = "VERBOSE\tyes")), "VERBOSE is \"yes\", not T or F")
   expect_error(load_params(fake_run(extra = "N_HOSTS\t20")), "N_HOSTS is given twice")
   expect_error(load_params(fake_run(extra = c("", "a line"))), "line [0-9]+ has no tab")
-  r <- fake_run(); writeLines("x\ty", file.path(r, "params.tsv"))
+  r <- fake_run(); writeLines("x\ty", file.path(r, "params.tsv")); refresh_done(r)
   expect_error(load_params(r), "does not start with the line param<TAB>value")
-  r <- fake_run(); unlink(file.path(r, "params.tsv"))
+  r <- fake_run(); unlink(file.path(r, "params.tsv")); refresh_done(r)
   expect_error(load_params(r), "no params.tsv in")
 })
 
@@ -174,7 +174,7 @@ test_that("load_run() carries the record rows, typed, and refuses a directory th
   expect_identical(r$genome_length, NA_integer_)
   d <- tempfile("mfwd_empty_"); dir.create(d)
   expect_error(load_run(d), "is not a malariafwd run: it has no params.tsv or events.tsv")
-  r <- fake_run(); unlink(file.path(r, "events.tsv"))
+  r <- fake_run(); unlink(file.path(r, "events.tsv")); refresh_done(r)
   expect_error(load_run(r), "is not a malariafwd run: it has no events.tsv")
 })
 

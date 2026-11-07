@@ -21,7 +21,9 @@ started with \code{slim -s} can have);
 \item \code{slim_version} and \code{malariafwd_version} (character; \code{malariafwd_version} is \code{"unknown"}
 for a run started with \code{slim} directly);
 \item \code{genome_length}, the simulated genome in bp, and \code{n_chromosomes} (integers), and
-\code{recomb_within}, the crossover rate within a chromosome per bp per meiosis (double).
+\code{recomb_within}, the crossover rate within a chromosome per bp per meiosis (double);
+\item \code{complete}, \code{TRUE} when the directory holds the whole run its \code{DONE} file describes
+(logical).
 }
 
 A field the run's \code{params.tsv} does not record is \code{NA}.
@@ -45,5 +47,10 @@ last import day, but not before tick 10, or on its last day if that comes first,
 nodes and its events are at most imports that did not take, so the readers that need a parasite,
 such as \code{\link[=arg_summary]{arg_summary()}} and \code{\link[=arg_diversity]{arg_diversity()}}, stop on it.
 
-A directory without \code{params.tsv} or \code{events.tsv} is not a run and is refused.
+A directory without \code{params.tsv} or \code{events.tsv} is not a run and is refused. One whose \code{DONE}
+file is missing, or whose files have changed since the run finished (see \code{\link[=run_sim]{run_sim()}}), loads
+with \code{complete = FALSE} and a warning of class \code{malariafwd_incomplete_run}, given once per
+directory per session by every reader of the directory. A run started with \code{slim} directly
+has no \code{DONE}.
+\code{suppressWarnings(..., classes = "malariafwd_incomplete_run")} silences it.
 }

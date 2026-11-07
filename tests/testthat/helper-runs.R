@@ -28,15 +28,22 @@ params_tsv_lines <- function(p = vivax_params(), record = list(), drop = charact
 }
 
 ## A run directory with the given event and state rows (each a tab-separated line) under the given
-## headers, and a params.tsv for `params` (overrides to vivax_params()) and `record`.
+## headers, and a params.tsv for `params` (overrides to vivax_params()) and `record`; with `done`,
+## a DONE file that marks it a whole run.
 fake_run <- function(ev_rows = character(), st_rows = character(), ev_head = ev_cols, st_head = st_cols,
                      params = list(), record = list(ACTUAL_SEED = 1L, SLIM_VERSION = "5.2",
                                                     MALARIAFWD_VERSION = "0.1.0"),
-                     drop = character(), extra = character()) {
+                     drop = character(), extra = character(), done = TRUE) {
   d <- tempfile("mfwd_fake_"); dir.create(d)
   writeLines(c(paste(ev_head, collapse = "\t"), ev_rows), file.path(d, "events.tsv"))
   writeLines(c(paste(st_head, collapse = "\t"), st_rows), file.path(d, "state.tsv"))
   writeLines(params_tsv_lines(do.call(vivax_params, params), record, drop, extra),
              file.path(d, "params.tsv"), useBytes = TRUE)
+  if (done) refresh_done(d)
   d
 }
+
+## Writes a run directory's DONE again, for the files it now holds.
+refresh_done <- function(d)
+  malariafwd:::.write_done(d, seed = 1L, run_key = "fake", model_md5 = "fake", elapsed_s = 0,
+                           slim_version = "5.2")

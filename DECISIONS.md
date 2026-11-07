@@ -19,6 +19,46 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D58 — A run is written beside its directory and moved into place when it has finished; DONE marks it · 2026-11-07 · Accepted
+**Context.** `run_sim()` wrote into `outdir` as SLiM ran, so a run that failed, timed out or was
+interrupted left old and new files mixed, which the loaders read without complaint; nothing marked a
+finished run; a second run into the same directory replaced the first file by file; SLiM's error
+output did not reach `run.log`; and SLiM kept running when R died (review M27, m60, m61). The author
+chose that a directory already holding a run is refused unless `overwrite = TRUE`, or
+`skip_existing = TRUE` for the same run (2026-11-07).
+**Decision.** `run_sim()` writes the run into a new sibling directory, with SLiM started there
+(`OUTDIR` is `'.'`) on the run's copy of the model, and renames it to `outdir` only after SLiM
+exited 0, the four outputs exist and `DONE` has been written, last. A run that fails, times out or
+is interrupted is moved to `<outdir>.failed`; a run being replaced is deleted only once the new one
+is in place, and only run files are ever deleted. `DONE` records the time, the elapsed seconds, the
+seed, a key of the parameters and seed (the md5 of the sorted arguments SLiM is given, without
+`OUTDIR` and `VERBOSE`), the model's md5, the versions and every file's size. An `outdir` holding
+the same run is returned with `skip_existing = TRUE`; one holding any run is replaced with
+`overwrite = TRUE` and is otherwise refused (class `malariafwd_outdir_in_use`); one holding other
+files is never used. `load_run()` gains `complete`, and every reader given a directory warns once
+per directory per session (class `malariafwd_incomplete_run`) when `DONE` is missing or a file has
+changed since. SLiM's error output goes to `run.log`, and SLiM is stopped when R dies.
+**Rationale.** A run directory is ground truth: it should hold one whole run or none, say which, and
+not be replaced by accident.
+**Alternatives rejected.** *Deleting `outdir` first* -- a failed run then loses the one before it.
+*`DONE` alone, with the run written in place* -- a failed run still leaves a mix. *Loaders that
+refuse an incomplete directory* -- they would lock out direct `slim` runs and every run made before
+`DONE`. *Hashing every output into `DONE`* -- sizes catch a truncated copy at no cost. *A marker
+written by the model* -- the model cannot know that R has the whole run. *Replacing by default* --
+re-running a script would replace ground truth without a word.
+**Consequences.** Events, state and `params.tsv` are byte-identical; the tree sequence's provenance
+records `OUTDIR='.'` and `model.slim`. A second run into the same directory stops unless asked, so
+the tests write into `tempfile()` directories (n47). Directories made before `DONE` warn once each a
+session. A killed R session leaves an `<outdir>.partial-*` directory to delete by hand; no SLiM
+process remains (checked with `kill -9` of R during a run).
+**How to verify.** `tests/testthat/test-run-dir.R`: a run stopped part-way leaves `outdir`
+byte-identical; `outdir` appears only when the run has finished; SLiM's error output reaches
+`run.log`; reuse and replacement only when asked; files that are not a run's are never touched;
+`DONE`'s rows and key; an incomplete directory warns once; the directory repeats its own run; the
+key in any locale.
+
+---
+
 ## D57 — The tree-sequence functions reach Python through one check · 2026-11-07 · Accepted
 **Context.** Three copies of the Python check (in `ibd_pairs()`, `ibd_segments()` and the ARG
 functions) declared different modules (tskit with pandas; tskit with numpy), hid reticulate's

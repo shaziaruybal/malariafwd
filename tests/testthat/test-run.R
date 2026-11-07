@@ -2,7 +2,7 @@
 
 test_that("run_sim produces the expected outputs", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  od <- file.path(tempdir(), "mfwd_test_run")
+  od <- tempfile("mfwd_test_run")
   run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
                               LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
                  seed = 1, outdir = od)
@@ -15,7 +15,7 @@ test_that("run_sim produces the expected outputs", {
 test_that("state.tsv has one row per host and per mosquito on every tick it covers", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   run <- run_sim(vivax_params(N_HOSTS = 30, N_MOSQ = 60, SIM_DAYS = 40),
-                 seed = 4, outdir = file.path(tempdir(), "mfwd_test_state"))
+                 seed = 4, outdir = tempfile("mfwd_test_state"))
   st <- load_state(run, entity = "all")
   per_tick <- st[, .N, by = tick]
   expect_equal(per_tick$tick, seq_len(max(st$tick)))
@@ -28,7 +28,7 @@ test_that("hypnozoite dynamics match alpha/(alpha+mu) [transmission-invariant]",
   skip_if_not(slim_available(), "SLiM not on PATH")
   run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
                               LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
-                 seed = 2, outdir = file.path(tempdir(), "mfwd_test_hyp"))
+                 seed = 2, outdir = tempfile("mfwd_test_hyp"))
   ev <- load_events(run)
   act  <- ev[event_type == "hypnozoite_activation", sum(n_hypnozoites)]
   died <- ev[event_type == "hypnozoite_clearance",  sum(n_hypnozoites)]
@@ -40,7 +40,7 @@ test_that("relapse-to-origin IBD is clonal (= 1)", {
   skip_if_no_slim(); skip_if_no_tskit()
   run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
                               LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
-                 seed = 3, outdir = file.path(tempdir(), "mfwd_test_ibd"))
+                 seed = 3, outdir = tempfile("mfwd_test_ibd"))
   ev <- load_events(run)
   cs <- classify_cases(ev)
   idx <- ibd_index(ibd_pairs(run, ids = cs$pedigree_id))
@@ -51,7 +51,7 @@ test_that("relapse-to-origin IBD is clonal (= 1)", {
 
 test_that("run_sim() works with an apostrophe and a space in the output path and SIM_ID", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  od <- file.path(tempdir(), "o'neil runs", "a")
+  od <- file.path(tempfile("o'neil runs "), "a")
   run <- run_sim(vivax_params(N_HOSTS = 20, N_MOSQ = 40, SIM_DAYS = 5, SIM_ID = "Bob's sweep"),
                  seed = 1, outdir = od)
   expect_true(file.exists(file.path(od, "events.tsv")))
@@ -153,7 +153,7 @@ test_that("blood-stage infections last a geometric time with mean MEAN_BLOOD_STA
   run <- run_sim(vivax_params(N_HOSTS = 1000, N_FOUNDER_HOSTS = 1000,
                               N_FOUNDER_LINEAGES = 1000, N_MOSQ = 1, BITING_RATE = 1e-6,
                               MEAN_BLOOD_STAGE_DURATION = 2, SIM_DAYS = 40),
-                 seed = 6, outdir = file.path(tempdir(), "mfwd_test_clearance"))
+                 seed = 6, outdir = tempfile("mfwd_test_clearance"))
   ev <- load_events(run)
   d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
              ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
@@ -166,7 +166,7 @@ test_that("no blood-stage infection is forced to clear at a fixed age", {
   run <- run_sim(vivax_params(N_HOSTS = 200, N_FOUNDER_HOSTS = 200,
                               N_FOUNDER_LINEAGES = 200, N_MOSQ = 1, BITING_RATE = 1e-6,
                               MEAN_BLOOD_STAGE_DURATION = 1000, SIM_DAYS = 200),
-                 seed = 7, outdir = file.path(tempdir(), "mfwd_test_nocap"))
+                 seed = 7, outdir = tempfile("mfwd_test_nocap"))
   ev <- load_events(run)
   d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
              ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
@@ -179,7 +179,7 @@ test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapse
   run <- run_sim(vivax_params(N_HOSTS = 300, N_MOSQ = 10, BITING_RATE = 1e-6, SIM_DAYS = 1500,
                               N_FOUNDER_HOSTS = 0, IMPORT_TICK = 2, N_IMPORTS = 300,
                               K_LATENCY = 2L, DELTA_LATENCY = 1 / 100, CHROMOSOMES = "1"),
-                 seed = 3, outdir = file.path(tempdir(), "mfwd_test_latency"))
+                 seed = 3, outdir = tempfile("mfwd_test_latency"))
   ev <- load_events(run)
   act  <- ev[event_type == "hypnozoite_activation", sum(n_hypnozoites)]
   died <- ev[event_type == "hypnozoite_clearance",  sum(n_hypnozoites)]

@@ -166,7 +166,7 @@ test_that("probabilities of exactly 0 and 1 run to completion", {
     min_alpha   = c(base, list(ALPHA_ACTIVATE = 0))
   )
   for (nm in names(cases)) {
-    out <- file.path(tempdir(), paste0("mfw-zero-one-", nm))
+    out <- tempfile(paste0("mfw-zero-one-", nm))
     unlink(out, recursive = TRUE)
     expect_no_error(suppressMessages(run_sim(do.call(vivax_params, cases[[nm]]), seed = 1, outdir = out)))
   }
