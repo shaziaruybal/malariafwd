@@ -221,9 +221,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   stopifnot(all(onset$kind %in% names(.KIND_SHAPE)))   # an unlisted kind would draw as shape NA
   clears <- event_types()$event_type[event_types()$ends_episode]
   ends <- ev[event_type %in% clears, .(pedigree_id, end = tick)]
-  ## end > start, not >=: a lineage cleared on the tick it was created never had a patent
-  ## blood stage, and seq(start, end) would still draw it as a visible one-day episode
-  seg <- merge(onset, ends, by = "pedigree_id", all.x = TRUE)[is.na(end), end := last][end > start]
+  ## end >= start: an MDA round can clear a clone on its first patent day (D44), a one-day
+  ## episode that classify_cases() counts as a case too
+  seg <- merge(onset, ends, by = "pedigree_id", all.x = TRUE)[is.na(end), end := last][end >= start]
 
   lv <- seg[order(start), unique(lineage_id)]
   grid <- seg[, .(tick = seq(start, end)), by = .(pedigree_id, lineage_id)]

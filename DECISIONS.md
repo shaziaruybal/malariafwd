@@ -144,18 +144,21 @@ imports in both spellings, with identical outputs.
 inherited two filters meant for case courses: a course skips subpatent clones (a holder is below
 patency, and re-rolling it emitted a second episode end), and it skips clones that became patent on
 its own day, which cannot yet have caused symptoms (D24). So every suppressed clone survived a
-round and later recrudesced (8 of 8 holders in a test run), although clearing undetected carriage
-is what MDA is for. D25 had left open what MDA does to a holder (review m1).
+round and later recrudesced (at 3a18dc4, the round in this entry's seed-11 run met 11 holders and
+cleared none), although clearing undetected carriage is what MDA is for. D25 had left open what MDA
+does to a holder (review m1).
 **Decision.** An MDA course bypasses both filters. Every clone in a reached host, holders and
-clones patent that day included, is cleared with probability 1 − `P_BLOODCURE_SURVIVAL`. A cleared
-holder is logged as `mda_subpatent_clear`, which ends no episode (its patent episode ended at
-`bloodcure_subpatent`), and its pending recrudescence goes with it; a holder that survives keeps
-its schedule and logs nothing, since it is not suppressed again. A clone cleared on its first
-patent day is logged as `mda_bloodstage_clear`, like any MDA clearance. Case courses keep both
-filters. Coverage keeps its per-host draw among hosts carrying parasites (D28): the draw does not
-depend on infection, so the coverage is that of the whole population, and `mda_bloodcure_given` and
-`mda_radcure_given` count courses to hosts carrying parasites. The author chose this (Q9,
-2026-11-05).
+clones that became patent earlier that day included, is cleared with probability 1 −
+`P_BLOODCURE_SURVIVAL`; the day's imports arrive after the round. A cleared holder is logged as
+`mda_subpatent_clear`, which ends no episode (its patent episode ended at `bloodcure_subpatent`),
+and its pending recrudescence goes with it; a holder that survives keeps its schedule and logs
+nothing, since it is not suppressed again. A clone cleared on its first patent day is logged as
+`mda_bloodstage_clear`, like any MDA clearance. Case courses keep both filters. Coverage keeps its
+per-host draw among hosts not empty at the round (D28): the draw does not depend on infection, so
+the coverage is that of the whole population, and `mda_bloodcure_given` and `mda_radcure_given`
+count courses to hosts not empty at the round. A round on day 1 is refused in a run with founders:
+they are seeded over days 1 and 2, and a day-1 round cleared the templates of the day-2 copies and
+stopped the run. The author chose this (Q9, 2026-11-05).
 **Rationale.** MDA is given to everyone, symptoms or not, so neither filter's reason applies to it:
 the D24 floor stands for the delay from patency to symptoms and care, and the holder filter for a
 course given for some other case. Drugs taken on the day a clone reaches the blood act on it too.
@@ -169,13 +172,14 @@ carries a holder or a clone that became patent that day, since those clones now 
 shift the random stream. Episodes that end on their first patent day exist again, on the MDA day
 only. Runs without MDA are byte-identical. In a 50-host run in which every failed course suppresses
 (seed 11, `P_BLOODCURE_SURVIVAL = 0.5`), the round met 11 holders and cleared 4; with every course
-curing, no blood-stage clone is left after a full round, where the 4 clones that became patent that
-day used to survive it.
+curing, no blood-stage clone but the day's imports is left after a full round, where the 4 clones
+that became patent that day used to survive it.
 **How to verify.** `tests/testthat/test-treatment.R` checks that holders at the round are either
-cleared (`mda_subpatent_clear`, and never recrudesce) or left without a new draw, that nothing
-clears twice, and that with `P_BLOODCURE_SURVIVAL = 0` no blood-stage clone survives a full round,
-including the clones that became patent that day.
-
+cleared (`mda_subpatent_clear`, and never recrudesce) or left on their schedule (not suppressed
+again, with no event that day), that the round does not clear a clone it has just suppressed, and
+that nothing clears twice; and that with `P_BLOODCURE_SURVIVAL = 0` a round on day 2 clears every
+founder copy seeded that morning, leaving no blood-stage clone, and `plot_host_trajectory()` draws
+such a one-day episode.
 ---
 
 ## D43 — A founder-free run whose imports never take ends cleanly, as never started · 2026-11-06 · Accepted

@@ -633,7 +633,8 @@ overlap 0.03). A structured source pool is planned (§15).
   diversity.
 - **Treatment failure has consequences** (D25). A clone that survives a course either persists at
   full density (`bloodcure_persist`) or, with probability `P_RECRUD_GIVEN_FAIL`, is suppressed
-  **below patency** (`bloodcure_subpatent`) and later re-expands as a **recrudescence**. See §9a.
+  **below patency** (`bloodcure_subpatent`) and later re-expands as a **recrudescence**, unless an
+  MDA round clears it first. See §9a.
 - **No post-treatment prophylaxis** (ongoing work). A course clears what is there and then
   stops: it leaves behind no period of drug protection, so a treated host can be reinfected, or
   relapse, the very next day. Real schizonticides protect for weeks — chloroquine for roughly a
@@ -647,13 +648,15 @@ overlap 0.03). A structured source pool is planned (§15).
 - **MDA** (`MDA_TICK`) is one round of the case-management course — blood-stage drugs plus radical
   cure — given through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can suppress
   clones subpatent. The round reaches each host with probability `MDA_COVERAGE` (D28). The draw is
-  made only for hosts carrying parasites, but does not depend on infection, so the coverage is
+  made only for hosts not empty at the round, but does not depend on infection, so the coverage is
   that of the whole population; `mda_bloodcure_given` and `mda_radcure_given` count the courses to
-  hosts carrying parasites. Because MDA waits for no symptoms, it reaches two kinds of clone a
-  case course does not: a clone that became patent that day, and a **subpatent** clone, which it
-  clears with probability 1 − `P_BLOODCURE_SURVIVAL`, cancelling its recrudescence
-  (`mda_subpatent_clear`); a subpatent clone that survives keeps its schedule (D44). Unlike
-  case-based treatment it is **not** gated on `TREATMENT_START` / `TREATMENT_END`.
+  those hosts. Because MDA waits for no symptoms, it reaches two kinds of clone a case course does
+  not: a clone that became patent earlier that day (the day's imports arrive after the round,
+  §2.1), and a **subpatent** clone, which it clears with probability 1 − `P_BLOODCURE_SURVIVAL`,
+  cancelling its recrudescence (`mda_subpatent_clear`); a subpatent clone that survives keeps its
+  schedule (D44). In a run with founders the round comes on day 2 or later, since a founder host
+  carrying a copy of another founder's genome receives it on day 2 (D39). Unlike case-based
+  treatment it is **not** gated on `TREATMENT_START` / `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
   (`NU_HYPNOZOITE_BATCH_BOOST`) and imports (`IMPORT_RATE_BOOST`) — so one scenario can run a quiet
@@ -697,9 +700,9 @@ patency**. A suppressed clone is still present but is not an episode: it does no
 (§9). After a delay it re-expands, logged as `recrudescence`.
 
 Natural clearance while subpatent is **off** by design, so every suppressed clone eventually
-recrudesces unless an MDA round clears it first, and `P_RECRUD_GIVEN_FAIL` is exactly
-P(recrudescence | the course failed) — which maps directly onto a WHO therapeutic-efficacy failure
-rate.
+recrudesces unless an MDA round clears it first. `P_RECRUD_GIVEN_FAIL` is P(suppressed | the course
+failed), and without MDA it is exactly P(recrudescence | the course failed) — which maps directly
+onto a WHO therapeutic-efficacy failure rate.
 
 **The delay** is geometric with mean `MEAN_RECRUD_DELAY` = 10.5 d and at least one day (each day
 after the suppression the clone re-expands with probability 1/10.5), selectable via
@@ -768,19 +771,19 @@ characters. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
 `RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays are whole numbers;
 mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
 `ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1], `MU_HYPNOZOITE` in (0, 1], and
-`DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only
-warns); boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative, and `MAX_MOI`
-is at least 1. A few sizes
-are capped far above anything realistic: a mean of 1000 oocysts per
+`DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only warns);
+boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative, and `MAX_MOI` is at
+least 1. A few sizes are capped far above anything realistic: a mean of 1000 oocysts per
 successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; the
-hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at
-most 10⁶ imports a day; and
-`TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most 10⁹, SLiM's last
-tick, and a run that reaches day 99999, which the defaults use for "never", must move those days
-past its end and cannot schedule anything on day 99999 itself. A founder-free run whose imports
-never establish a parasite, by chance or because its settings let none take, is not refused; it
-ends as never started (§2). The model makes the same checks itself when it is run with `slim -d`,
-bypassing R, and there a number may be written either way, `7` or `7.0`, for the same run.
+hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at most
+10⁶ imports a day; and `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most
+10⁹, SLiM's last tick, and a run that reaches day 99999, which the defaults use for "never", must
+move those days past its end and cannot schedule anything on day 99999 itself. In a run with
+founders `MDA_TICK` is not 1: the founders are seeded over days 1 and 2 (D39), so a round comes on
+day 2 or later (D44). A founder-free run whose imports never establish a parasite, by chance or
+because its settings let none take, is not refused; it ends as never started (§2). The model makes
+the same checks itself when it is run with `slim -d`, bypassing R, and there a number may be
+written either way, `7` or `7.0`, for the same run.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
@@ -855,11 +858,11 @@ nested inside a blood-stage course, so `RADCURE_COVERAGE` is inert unless `BLOOD
 | `TREATMENT_START` / `TREATMENT_END` | 0 / 99999 | case management has its own window, separate from `INTERVENTION_*` (D19). It gates the **decision**, not delivery |
 | `TREATMENT_DELAY` | 7.0 d | geometric, mean 7, **at least one day**: a course can never land on the tick the case arises, so the minimum, `1`, means the next day (D24, D32) |
 | `BLOODCURE_COVERAGE` | 0 | P(a detected case is treated). The whole treatment path is off at the default |
-| `P_BLOODCURE_SURVIVAL` | 0 | P(a given patent clone survives the course). Literature ≈ 0.10 |
+| `P_BLOODCURE_SURVIVAL` | 0 | P(a given clone survives a course: a patent one, or under MDA a subpatent one too). Literature ≈ 0.10 |
 | `RADCURE_COVERAGE` | 0 | P(radical cure \| treated) — **not** an independent coverage |
 | `P_RAD_SURVIVAL` | **0.29** | P(the patient's whole reservoir survives), ≈71% cure (White 2018 / malariasimulation). Per **person**, not per hypnozoite — the same number would mean 95% efficacy under the old per-hypnozoite reading (D20) |
 | `RADCURE_MODE` | `"person"` | `"hypnozoite"` restores per-hypnozoite thinning — the only mode that can partially clear a reservoir |
-| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent that day (D44); **not** gated on the treatment window |
+| `MDA_TICK` | 99999 | the day of one MDA round, through the same `applyTreatment()`, which also reaches subpatent clones and clones patent earlier that day (D44); day 2 or later in a run with founders; **not** gated on the treatment window |
 | `MDA_COVERAGE` | 1.0 | P(the round reaches a host), drawn per host (D28) |
 
 ### Recurrence: the third state (§9a)
@@ -899,7 +902,7 @@ Stated plainly, because several matter for interpretation.
 | 11 | **Homogeneous mixing** | no spatial structure, no household clustering, no heterogeneous biting |
 | 12 | **`NU_HYPNOZOITE_BATCH` is fitted to one setting** | shipped at 3, inside the four published bands at moderate transmission (§13); re-fit it per setting against relapse rate / fraction |
 | 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
-| 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces, which is what makes `P_RECRUD_GIVEN_FAIL` exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
+| 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces unless an MDA round clears it, which is what makes `P_RECRUD_GIVEN_FAIL`, without MDA, exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
 | 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
@@ -1168,12 +1171,12 @@ One row per event. Columns:
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
 | `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage, born on an earlier day, was still in the host (one that ends that day counts), 0 if not (§5); −1 on other rows. Activations, recrudescences and bites of the lineage on the same day do not see one another, so two batches of one lineage that wake together, with no earlier clone of it in the host, are both 0 |
 
-**Event vocabulary** — **25 types**. `event_types()` is the authority and returns them as a data
-frame with `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than
-reproduce the table here (it would go stale, and has), generate it:
+**Event vocabulary.** `event_types()` is the authority and returns them as a data frame with
+`event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than reproduce the
+table here (it would go stale, and has), generate it:
 
 ```r
-event_types()                                  # all 25
+event_types()                                  # all of them
 subset(event_types(), is_onset)$event_type     # every way an episode can BEGIN
 subset(event_types(), ends_episode)$event_type # ...and every way one can END
 ```
@@ -1190,7 +1193,8 @@ A `*_no_take` suffix is logged when an inoculation produces neither a primary no
 an import's host already carries `MAX_MOI` blood-stage lineages (`vh_inoculation_import_no_take`);
 a local bite refused at `MAX_MOI` leaves no row.
 Note `bloodcure_subpatent` **ends a patent episode** without ending the infection — the clone is
-suppressed, not cleared, and returns later as a `recrudescence` (§9a).
+suppressed, not cleared, and returns later as a `recrudescence` (§9a), unless an MDA round clears
+it first (`mda_subpatent_clear`).
 
 > **Derive filters from `event_types()`; do not restate them.** Hard-coded event lists in this
 > project have gone stale twice — once dropping treated cases from episode spans, once dropping

@@ -172,6 +172,9 @@
   <text x="951" y="374" class="nt" text-anchor="middle">present, undetectable, not an episode;</text>
   <text x="951" y="386" class="nt" text-anchor="middle">transmits at SUBPATENT_INFECTIVITY</text>
   <text x="951" y="398" class="nt" text-anchor="middle" style="fill:#8a6a14">entered w.p. P_RECRUD_GIVEN_FAIL</text>
+  <line x1="866" y1="406" x2="866" y2="428" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
+  <text x="866" y="447" font-size="16px" fill="#b8912a" text-anchor="middle" font-weight="700">&#10005;</text>
+  <text x="874" y="421" class="nt" style="fill:#8a6a14">cleared: MDA</text>
 
   <path d="M956,235 L956,312" fill="none" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
   <text x="964" y="262" class="nt" style="fill:#8a6a14">course fails,</text>

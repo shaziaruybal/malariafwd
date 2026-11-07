@@ -102,7 +102,8 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
            "SIM_ID=3" = "SIM_ID must be a string",
            "N_MOSQ=c(10, 20)" = "N_MOSQ must be a single value",
            "CHROMOSOMES='1,1'" = "CHROMOSOMES lists a chromosome twice",
-           "CHROMOSOMES='3-1'" = "CHROMOSOMES has a range that runs high-low")
+           "CHROMOSOMES='3-1'" = "CHROMOSOMES has a range that runs high-low",
+           "MDA_TICK=1" = "MDA_TICK must not be 1 in a run with founders")
   for (arg in names(bad)) {
     r <- slim(arg)
     expect_true(r$status != 0, label = arg)

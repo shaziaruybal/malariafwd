@@ -31,8 +31,9 @@ recorded genealogy rather than inferred from markers: **IBD here is ground truth
   P(radical cure | treated)) and is liver-stage only; its efficacy is per person by default,
   with `RADCURE_MODE = "hypnozoite"` restoring per-hypnozoite thinning — the only mode that can
   partially clear a reservoir. Case management has its own window (`TREATMENT_START` /
-  `TREATMENT_END`), separate from vector control. Mass drug administration gives everyone the
-  same course.
+  `TREATMENT_END`), separate from vector control. Mass drug administration (`MDA_TICK`) gives one
+  round of the same course to each host with probability `MDA_COVERAGE`, symptoms or not, so it
+  also reaches subpatent clones and clones that became patent earlier that day.
 
 * **Genetics.** The whole 14-chromosome PvP01 genome (24.2 Mb), neutral (mutation rate 0), with
   meiotic recombination in the mosquito oocyst. Each oocyst is its own meiosis producing a
@@ -101,7 +102,7 @@ apart rather than choosing for you:
   lineages as they appear, clear and return. Plots label rather than conclude: no title asserts
   a finding that may not hold for your run.
 
-* **The event dictionary.** `event_types()` is the authority on the 25 event types in
+* **The event dictionary.** `event_types()` is the authority on the event types in
   `events.tsv`, with `ends_episode` and `is_onset` flags. Derive filters from it rather than
   restating event names — that is what the flags are for.
 

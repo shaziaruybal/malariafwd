@@ -93,16 +93,17 @@
 #' trigger falls inside the run; the import rate at 1e6 a day; and `TREATMENT_DELAY` and
 #' `MEAN_RECRUD_DELAY` at 1e6 days. `SIM_DAYS` is at most 1e9, SLiM's last tick, and a run that
 #' reaches day 99999, the day the defaults use for "never", must move those days past its end and
-#' cannot schedule anything on day 99999 itself. A founder-free run whose imports never establish a
-#' parasite, by chance or because its settings let none take, is not refused here; it ends as never
-#' started (see [load_run()]). Imports arrive on days 1 to `SIM_DAYS`: a pulse or an import window
-#' set outside the run brings nothing, without a warning, which is how imports are switched off in
-#' one arm of a grid. Each host takes at most one import a day, so a day's imports beyond `N_HOSTS`
-#' never arrive. This warns when a day's fixed imports inside the run exceed `N_HOSTS` (`N_IMPORTS`
-#' on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the window, or both on the same day), and when
-#' `IMPORT_RATE_PER_TICK` at its peak over the window, with its seasonal and resurgence multipliers
-#' and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day with probability above
-#' 0.01.
+#' cannot schedule anything on day 99999 itself. In a run with founders, `MDA_TICK` is not 1: the
+#' founders are seeded over days 1 and 2, so a round comes on day 2 or later. A founder-free run
+#' whose imports never establish a parasite, by chance or because its settings let none take, is
+#' not refused here; it ends as never started (see [load_run()]). Imports arrive on days 1 to
+#' `SIM_DAYS`: a pulse or an import window set outside the run brings nothing, without a warning,
+#' which is how imports are switched off in one arm of a grid. Each host takes at most one import a
+#' day, so a day's imports beyond `N_HOSTS` never arrive. This warns when a day's fixed imports
+#' inside the run exceed `N_HOSTS` (`N_IMPORTS` on `IMPORT_TICK`, `N_IMPORTS_PER_TICK` in the
+#' window, or both on the same day), and when `IMPORT_RATE_PER_TICK` at its peak over the window,
+#' with its seasonal and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than
+#' `N_HOSTS` imports on a day with probability above 0.01.
 #'
 #' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
 #' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given
@@ -306,6 +307,11 @@ validate_params <- function(p) {
   if (!p$RECRUD_DELAY_DIST %in% c("geometric", "poisson", "fixed"))
     stop("RECRUD_DELAY_DIST must be 'geometric', 'poisson' or 'fixed', got '",
          p$RECRUD_DELAY_DIST, "'", call. = FALSE)
+  ## a founder host carrying a copy of another founder's genome receives it on day 2 (D39), so a
+  ## day-1 round would clear its template first (D44)
+  if (p$MDA_TICK == 1 && p$N_FOUNDER_HOSTS > 0)
+    stop("MDA_TICK must not be 1 in a run with founders: they are seeded over days 1 and 2, so an ",
+         "MDA round must come on day 2 or later.", call. = FALSE)
 
   ## ---- configurations that cannot produce a single parasite -------------------------------
   ## These used to run to completion with exit status 0 and an EMPTY event log, so a

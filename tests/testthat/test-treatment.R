@@ -225,37 +225,47 @@ test_that("a bite that seeds only hypnozoites is no case and gets no course", {
 test_that("MDA reaches subpatent clones and clones patent that day, as a case course does not", {
   skip_if_no_slim()
   out <- file.path(tempdir(), "mfw-mda-reach"); unlink(out, recursive = TRUE)
-  base <- list(SIM_DAYS = 160L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14, MDA_TICK = 150L,
-               CHROMOSOMES = "1")
-  ## every treated clone that survives its course is suppressed, so holders wait at the round
-  run <- run_sim(do.call(vivax_params, c(base, list(P_DETECT_PRIMARY = 0.9, BLOODCURE_COVERAGE = 1,
-                 P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1))),
+  ## every treated clone that survives its course is suppressed, and waits about 60 days, so
+  ## holders are waiting at the round
+  run <- run_sim(vivax_params(SIM_DAYS = 160L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,
+                              MDA_TICK = 150L, CHROMOSOMES = "1", P_DETECT_PRIMARY = 0.9,
+                              BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 0.5,
+                              P_RECRUD_GIVEN_FAIL = 1, MEAN_RECRUD_DELAY = 60),
                  seed = 11L, outdir = file.path(out, "holders"))
-  ev <- data.table::as.data.table(load_events(run))
-  ## the holders at the round: a case course earlier on day 150 can add one
-  holders <- function(by) setdiff(ev[event_type == "bloodcure_subpatent" & tick <= by, pedigree_id],
-                                   ev[event_type == "recrudescence" & tick <= 150, parent1_pedigree_id])
-  held <- holders(150)
+  ev <- data.table::as.data.table(load_events(run))[, row := .I]
+  ## a host's rows logged by the round come after its mda_bloodcure_given row
+  from <- ev[event_type == "mda_bloodcure_given", .(human_id, from = row)]
+  sub <- merge(ev[event_type == "bloodcure_subpatent"], from, by = "human_id", all.x = TRUE)
+  by_round <- sub[tick == 150 & !is.na(from) & row > from, pedigree_id]
+  held <- setdiff(sub[tick < 150 | (tick == 150 & (is.na(from) | row < from)), pedigree_id],
+                  ev[event_type == "recrudescence" & tick <= 150, parent1_pedigree_id])
   cl <- ev[event_type == "mda_subpatent_clear"]
   expect_gt(length(held), 0); expect_gt(nrow(cl), 0)
   expect_true(all(cl$tick == 150)); expect_true(all(cl$pedigree_id %in% held))
-  ## a cleared holder never recrudesces; one that survives is not re-rolled by the round
+  expect_false(any(by_round %in% cl$pedigree_id))   # a clone it has just suppressed is not drawn
+  ## a cleared holder never recrudesces; one that survives is not suppressed again
   expect_false(any(cl$pedigree_id %in% ev[event_type == "recrudescence", parent1_pedigree_id]))
-  kept <- setdiff(holders(149), cl$pedigree_id)
+  kept <- setdiff(held, cl$pedigree_id)
   expect_gt(length(kept), 0)
-  expect_equal(ev[tick == 150 & pedigree_id %in% kept, .N], 0L)
+  expect_equal(nrow(merge(ev[tick == 150 & pedigree_id %in% kept], from, by = "human_id")[row > from]), 0L)
   ## clearing a holder ends no episode: its patent episode ended when it was suppressed
   clears <- ev[event_type %in% .bloodstage_clear_events(), pedigree_id]
   expect_equal(data.table::uniqueN(clears), length(clears))
 
-  ## a round reaches clones that became patent on its own day, which a case course cannot; with
-  ## every course curing, no blood-stage clone is left after it
-  run <- run_sim(do.call(vivax_params, c(base, list(P_BLOODCURE_SURVIVAL = 0))),
+  ## a round reaches clones that became patent on its own day, which a case course cannot. On day
+  ## 2 those are the founder copies, seeded that morning; with every course curing, no
+  ## blood-stage clone is left after the round
+  run <- run_sim(vivax_params(SIM_DAYS = 10L, N_HOSTS = 50L, N_MOSQ = 110L, CHROMOSOMES = "1",
+                              N_FOUNDER_LINEAGES = 4L, MDA_TICK = 2L, P_BLOODCURE_SURVIVAL = 0),
                  seed = 11L, outdir = file.path(out, "same-day"))
   ev <- data.table::as.data.table(load_events(run))
   st <- data.table::as.data.table(load_state(run))
-  same_day <- ev[event_type %in% .onset_events() & is_dormant == 0 & tick == 150, pedigree_id]
-  expect_gt(length(same_day), 0)
-  expect_true(all(same_day %in% ev[event_type == "mda_bloodstage_clear" & tick == 150, pedigree_id]))
-  expect_equal(st[tick == 150 & entity_type == "human", sum(moi_active + moi_subpatent)], 0L)
+  same_day <- ev[event_type %in% .onset_events() & is_dormant == 0 & tick == 2, pedigree_id]
+  expect_gte(length(same_day), 8)
+  expect_true(all(same_day %in% ev[event_type == "mda_bloodstage_clear" & tick == 2, pedigree_id]))
+  expect_equal(st[tick == 2 & entity_type == "human", sum(moi_active + moi_subpatent)], 0L)
+  ## such a one-day episode is drawn, as classify_cases() counts it
+  skip_if_not_installed("ggplot2")
+  h <- ev[pedigree_id == same_day[1], human_id][1]
+  expect_s3_class(plot_host_trajectory(st, ev, h), "ggplot")
 })

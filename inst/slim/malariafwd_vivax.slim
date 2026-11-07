@@ -134,10 +134,11 @@ initialize() {
 	// A clone that SURVIVES a blood-stage course may be suppressed below patency rather than
 	// carrying on at full density. A subpatent clone is undetectable and is not an episode,
 	// but it is still present and still (partly) infectious; after a delay it re-expands to
-	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder.
-	// Natural clearance while subpatent is OFF, so P_RECRUD_GIVEN_FAIL is exactly
-	// P(recrudescence | the course failed) and maps onto a WHO therapeutic-efficacy failure
-	// rate. 0.0 = today's behaviour: a failed course leaves the clone fully patent.
+	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder, unless an MDA
+	// round clears it first (D44). Natural clearance while subpatent is OFF, so without MDA
+	// P_RECRUD_GIVEN_FAIL is exactly P(recrudescence | the course failed) and maps onto a WHO
+	// therapeutic-efficacy failure rate. 0.0 = today's behaviour: a failed course leaves the
+	// clone fully patent.
 	defineDefault("P_RECRUD_GIVEN_FAIL", 0.0);
 	// Mean days suppressed before re-expansion, and the shape of that waiting time.
 	//
@@ -421,6 +422,11 @@ initialize() {
 				": a latent batch leaves each latency stage with daily probability DELTA_LATENCY.");
 	if (!(RADCURE_MODE == "person" | RADCURE_MODE == "hypnozoite"))
 		stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '" + RADCURE_MODE + "'");
+	// A founder host carrying a copy of another founder's genome receives it on day 2 (D39), so a
+	// day-1 round would clear its template and leave the copy nothing to copy (D44).
+	if (MDA_TICK == 1 & N_FOUNDER_HOSTS > 0)
+		stop("MDA_TICK must not be 1 in a run with founders: they are seeded over days 1 and 2, so " +
+			"an MDA round must come on day 2 or later.");
 	// a coverage set against a closed case-management window would give no treatment at all (D19)
 	if ((RADCURE_COVERAGE > 0 | BLOODCURE_COVERAGE > 0) &
 		(TREATMENT_END <= TREATMENT_START | TREATMENT_START > SIM_DAYS))
@@ -1277,6 +1283,10 @@ reproduction()
 		}
 	}
 	
+	// A run with founders has had a parasite from tick 1, even if something cleared them all
+	// before the liveness check at the end of early() (D43).
+	if (N_FOUNDER_HOSTS > 0)
+		defineGlobal("EVER_LIVE", T);
 	// v3: hand the pending clonal-founder assignments (integer subpop IDs) to the one-shot 2 reproduction() seeder (tick 2)
 	defineGlobal("PENDING_CLONE_HOSTS", pending_clone_hosts);
 	defineGlobal("PENDING_CLONE_TEMPLATES", pending_clone_templates);
@@ -1479,9 +1489,9 @@ early() {
 			if (lin.getValue("is_dormant") == T)
 				next;  // skip if dormant, hypnozoite clearance is separate
 			// Natural clearance while subpatent is OFF by design (D25): every suppressed
-			// clone eventually recrudesces, which is what makes P_RECRUD_GIVEN_FAIL exactly
-			// P(recrudescence | the course failed) and directly comparable to a WHO
-			// therapeutic-efficacy failure rate.
+			// clone eventually recrudesces unless an MDA round clears it (D44), which is what
+			// makes P_RECRUD_GIVEN_FAIL, without MDA, exactly P(recrudescence | the course
+			// failed) and directly comparable to a WHO therapeutic-efficacy failure rate.
 			if (lin.getValue("is_subpatent") == T)
 				next;
 
@@ -1592,13 +1602,14 @@ early() {
 	// ----------------------------------------
 	if (sim.cycle == MDA_TICK)
 	{
-		// MDA is the same course as case management, given to everyone rather than to detected
-		// cases: blood-stage drugs plus radical cure, through applyTreatment() so the two paths
-		// cannot diverge. It used to carry its own copy of the hypnozoite thinning, which would
-		// now disagree with RADCURE_MODE. Because it waits for no symptoms, it also reaches
-		// subpatent clones and clones that became patent today, which a case course does not (D44).
-		// Only hosts carrying parasites are drawn, so the mda_*_given counts are courses to such
-		// hosts; the draw does not depend on infection, so the coverage is that of everyone.
+		// MDA is the same course as case management, given to each host it reaches (MDA_COVERAGE)
+		// rather than to detected cases: blood-stage drugs plus radical cure, through
+		// applyTreatment() so the two paths cannot diverge. It used to carry its own copy of the
+		// hypnozoite thinning, which would now disagree with RADCURE_MODE. Because it waits for no
+		// symptoms, it also reaches subpatent clones and clones that became patent earlier today,
+		// which a case course does not (D44); the day's imports arrive after it. Only hosts not
+		// empty at the round are drawn, so the mda_*_given counts are courses to those hosts; the
+		// draw does not depend on infection, so the coverage is that of everyone.
 		humans_mda = sim.subpopulations[HUMANS];
 		vcat("💊 MDA administered on tick " + sim.cycle);
 		n_reached = 0;
