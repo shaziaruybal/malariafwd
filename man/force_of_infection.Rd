@@ -4,7 +4,12 @@
 \alias{force_of_infection}
 \title{Force of blood-stage infection, by origin (per host-year)}
 \usage{
-force_of_infection(run, bin = 30, split_imported = TRUE)
+force_of_infection(
+  run,
+  bin = 30,
+  split_imported = TRUE,
+  exclude_masked = FALSE
+)
 }
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
@@ -13,6 +18,9 @@ force_of_infection(run, bin = 30, split_imported = TRUE)
 
 \item{split_imported}{split relapses by the provenance of the genotype. \code{TRUE} (default)
 gives five origin levels, \code{FALSE} gives four.}
+
+\item{exclude_masked}{if \code{TRUE}, leave out the masked relapses, into a patent clone of their
+own lineage (see \code{\link[=classify_cases]{classify_cases()}}): molFOB as a genotyping study measures it.}
 }
 \value{
 a data.table with one row for every window of the run and every origin, by window:

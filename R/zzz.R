@@ -30,8 +30,8 @@ utils::globalVariables(c(
   "w", "y", "rate", "n", "days", "series", "is_acquisition", "recrud_tick", "inf", "hyp",
   # plot_moi_vs_relapse / plot_relatedness_ladder
   "grp", "band",
-  # classify_cases imported-origin flag
-  "imported",
+  # classify_cases imported-origin and masked-relapse flags
+  "imported", "into_patent_lineage",
   # segments / ladder
   "gstart", "gend", "segid", "cs", "ce", "gs", "ge", "chrom", "x0", "x1", "lab", "cls", "ped",
   # data.table columns that shadow stats::start / stats::end

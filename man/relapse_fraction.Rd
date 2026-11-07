@@ -4,10 +4,12 @@
 \alias{relapse_fraction}
 \title{Relapse fraction, in two units}
 \usage{
-relapse_fraction(events)
+relapse_fraction(events, exclude_masked = FALSE)
 }
 \arguments{
 \item{events}{an events data.table (from \code{\link[=load_events]{load_events()}}).}
+
+\item{exclude_masked}{if \code{TRUE}, leave out the masked relapses.}
 }
 \value{
 a one-row data.table of \code{n_relapse}, \code{n_reinfection}, \code{n_recrudescence},
@@ -34,4 +36,8 @@ Both denominators include each host's first-ever episode, which is not a \emph{r
 strict recurrences-only fraction, drop the first episode per host:
 \code{cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]}. That is a
 materially different quantity, so never compare it against either reading here.
+
+With \code{exclude_masked = TRUE} the masked relapses, into a patent clone of their own lineage
+(see \code{\link[=classify_cases]{classify_cases()}}), leave the numerator and both denominators, as in a study that sees
+only the relapses that bring a new clone.
 }

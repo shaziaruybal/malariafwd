@@ -28,14 +28,15 @@ params_tsv_lines <- function(p = vivax_params(), record = list(), drop = charact
 }
 
 ## A run directory with the given event and state rows (each a tab-separated line) under the given
-## headers, and a params.tsv for `params` (overrides to vivax_params()) and `record`; with `done`,
-## a DONE file that marks it a whole run.
+## headers, or the events table `events`, and a params.tsv for `params` (overrides to vivax_params())
+## and `record`; with `done`, a DONE file that marks it a whole run.
 fake_run <- function(ev_rows = character(), st_rows = character(), ev_head = ev_cols, st_head = st_cols,
                      params = list(), record = list(ACTUAL_SEED = 1L, SLIM_VERSION = "5.2",
                                                     MALARIAFWD_VERSION = "0.1.0"),
-                     drop = character(), extra = character(), done = TRUE) {
+                     drop = character(), extra = character(), done = TRUE, events = NULL) {
   d <- tempfile("mfwd_fake_"); dir.create(d)
-  writeLines(c(paste(ev_head, collapse = "\t"), ev_rows), file.path(d, "events.tsv"))
+  if (is.null(events)) writeLines(c(paste(ev_head, collapse = "\t"), ev_rows), file.path(d, "events.tsv"))
+  else data.table::fwrite(events, file.path(d, "events.tsv"), sep = "\t", na = "NA", quote = FALSE)
   writeLines(c(paste(st_head, collapse = "\t"), st_rows), file.path(d, "state.tsv"))
   writeLines(params_tsv_lines(do.call(vivax_params, params), record, drop, extra),
              file.path(d, "params.tsv"), useBytes = TRUE)

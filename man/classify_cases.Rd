@@ -4,15 +4,20 @@
 \alias{classify_cases}
 \title{Classify each new blood-stage episode ("case") by TRUE origin}
 \usage{
-classify_cases(events)
+classify_cases(events, exclude_masked = FALSE)
 }
 \arguments{
 \item{events}{an events data.table.}
+
+\item{exclude_masked}{if \code{TRUE}, leave out the masked relapses. It needs the flag on every
+relapse, which runs made before it was recorded lack.}
 }
 \value{
 a data.table of \code{tick}, \code{human_id}, \code{lineage_id}, \code{oocyst_id}, \code{pedigree_id},
-\code{origin}, \code{imported} and \code{detected} -- one row per blood-stage episode. Founder seeding
-(\code{vh_inoculation_seed}) is excluded: it is burn-in, not an acquired case.
+\code{origin}, \code{imported}, \code{detected} and \code{into_patent_lineage} (\code{TRUE} for a masked relapse,
+\code{FALSE} for every other row, \code{NA} for a relapse whose run does not record the flag) -- one
+row per blood-stage episode. Founder seeding (\code{vh_inoculation_seed}) is excluded: it is
+burn-in, not an acquired case.
 }
 \description{
 \code{origin} gives the mechanism by which the episode arose, and takes \strong{four} values:
@@ -27,4 +32,9 @@ relapses} (a relapse of an imported genotype), a key vivax truth category that \
 alone ("relapse") does not expose. So the four truth classes are: imported new infection
 (\code{origin == "imported"}), local reinfection, imported relapse (\code{origin == "relapse"} &
 \code{imported}), and local relapse (\code{origin == "relapse"} & \code{!imported}).
+}
+\details{
+A relapse into a patent clone of its own lineage, born on an earlier day, is \emph{masked}: a study
+that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). \code{into_patent_lineage}
+marks it, and \code{exclude_masked = TRUE} leaves it out.
 }

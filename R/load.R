@@ -56,6 +56,12 @@
   inherits(run, "vivax_run") && inherits(run$params, "vivax_params") &&
     identical(names(run$params), names(.malariafwd_defaults))
 
+## A function's flag argument `name`: a single TRUE or FALSE.
+.check_flag <- function(x, name) {
+  if (!isTRUE(x) && !isFALSE(x)) stop("`", name, "` must be TRUE or FALSE.", call. = FALSE)
+  invisible(x)
+}
+
 ## A run's length, SIM_DAYS, from which every function that summarises a window of the run takes its
 ## end, so that the days after an extinction count as days with no parasite (D61).
 .sim_days <- function(run, fun = "this function") {

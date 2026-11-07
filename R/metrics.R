@@ -69,13 +69,18 @@ coi_distribution <- function(state, burn_in = 0) {
 #' `cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]`. That is a
 #' materially different quantity, so never compare it against either reading here.
 #'
+#' With `exclude_masked = TRUE` the masked relapses, into a patent clone of their own lineage
+#' (see [classify_cases()]), leave the numerator and both denominators, as in a study that sees
+#' only the relapses that bring a new clone.
+#'
 #' @param events an events data.table (from [load_events()]).
+#' @param exclude_masked if `TRUE`, leave out the masked relapses.
 #' @return a one-row data.table of `n_relapse`, `n_reinfection`, `n_recrudescence`,
 #'   `relapse_fraction` (over acquisitions) and `relapse_frac_episodes` (over every patent
 #'   episode). `summarise_run()$relapse_frac` reports the acquisition reading.
 #' @export
-relapse_fraction <- function(events) {
-  cs <- classify_cases(events)
+relapse_fraction <- function(events, exclude_masked = FALSE) {
+  cs <- classify_cases(events, exclude_masked)
   n_rel <- cs[origin == "relapse", .N]
   n_new <- cs[origin %in% c("imported", "local reinfection"), .N]
   n_rec <- cs[origin == "recrudescence", .N]
@@ -136,12 +141,21 @@ dormancy_durations <- function(events) {
 #' alone ("relapse") does not expose. So the four truth classes are: imported new infection
 #' (`origin == "imported"`), local reinfection, imported relapse (`origin == "relapse"` &
 #' `imported`), and local relapse (`origin == "relapse"` & `!imported`).
+#'
+#' A relapse into a patent clone of its own lineage, born on an earlier day, is *masked*: a study
+#' that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). `into_patent_lineage`
+#' marks it, and `exclude_masked = TRUE` leaves it out.
 #' @param events an events data.table.
+#' @param exclude_masked if `TRUE`, leave out the masked relapses. It needs the flag on every
+#'   relapse, which runs made before it was recorded lack.
 #' @return a data.table of `tick`, `human_id`, `lineage_id`, `oocyst_id`, `pedigree_id`,
-#'   `origin`, `imported` and `detected` -- one row per blood-stage episode. Founder seeding
-#'   (`vh_inoculation_seed`) is excluded: it is burn-in, not an acquired case.
+#'   `origin`, `imported`, `detected` and `into_patent_lineage` (`TRUE` for a masked relapse,
+#'   `FALSE` for every other row, `NA` for a relapse whose run does not record the flag) -- one
+#'   row per blood-stage episode. Founder seeding (`vh_inoculation_seed`) is excluded: it is
+#'   burn-in, not an acquired case.
 #' @export
-classify_cases <- function(events) {
+classify_cases <- function(events, exclude_masked = FALSE) {
+  .check_flag(exclude_masked, "exclude_masked")
   ev <- as.data.table(events)
   cases <- ev[(event_type %in% c("vh_inoculation","vh_inoculation_import") & is_dormant == 0) |
                 event_type %in% c("hypnozoite_activation", "recrudescence")]
@@ -151,8 +165,18 @@ classify_cases <- function(events) {
     event_type == "vh_inoculation_import" | is_imported == 1, "imported",
     default = "local reinfection")]
   cases[, imported := is_imported == 1 | event_type == "vh_inoculation_import"]
+  ## a relapse into a patent clone of its own lineage (D40); NA where the run does not record it
+  flag <- if ("into_patent_lineage" %in% names(cases)) cases$into_patent_lineage else rep(NA_integer_, nrow(cases))
+  cases[, into_patent_lineage := fifelse(event_type == "hypnozoite_activation", flag == 1L, FALSE)]
+  if (exclude_masked) {
+    gap <- cases[event_type == "hypnozoite_activation" & is.na(into_patent_lineage), .N]
+    if (gap)
+      stop("`exclude_masked = TRUE` needs into_patent_lineage on every hypnozoite_activation row, and ", gap,
+           " of these events' activation rows lack it.", call. = FALSE)
+    cases <- cases[into_patent_lineage == FALSE]
+  }
   cases[, .(tick, human_id, lineage_id = as.character(lineage_id), oocyst_id, pedigree_id,
-            origin, imported, detected)]
+            origin, imported, detected, into_patent_lineage)]
 }
 
 #' Binned incidence by origin
@@ -190,6 +214,8 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #' @param bin window width in days.
 #' @param split_imported split relapses by the provenance of the genotype. `TRUE` (default)
 #'   gives five origin levels, `FALSE` gives four.
+#' @param exclude_masked if `TRUE`, leave out the masked relapses, into a patent clone of their
+#'   own lineage (see [classify_cases()]): molFOB as a genotyping study measures it.
 #' @return a data.table with one row for every window of the run and every origin, by window:
 #'   `win` (the window's first day, an integer: 0, `bin`, `2 * bin`, ...), `origin`, `n` (the
 #'   cases, 0 where there are none), `days` (the days the window covers within the run, which is
@@ -203,10 +229,11 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #'   Trop Dis 7(9):e2403.
 #' @seealso [plot_force_of_infection()]
 #' @export
-force_of_infection <- function(run, bin = 30, split_imported = TRUE) {
+force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_masked = FALSE) {
   bin <- .check_bin(bin)
+  .check_flag(exclude_masked, "exclude_masked")
   nh <- as.numeric(.params_of(run)$N_HOSTS)
-  cs <- classify_cases(load_events(run))
+  cs <- classify_cases(load_events(run), exclude_masked)
   ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
   ## contained imports, so the returned vocabulary depended on run CONTENT: `baseline` came
   ## back with `relapse` and `imports` with `relapse (local)` for the same thing, and a pooled

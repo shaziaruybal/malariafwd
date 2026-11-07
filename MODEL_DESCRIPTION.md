@@ -321,18 +321,19 @@ Follows the **White et al. 2014** batch model.
 exactly 1. Relative to a host's *prior observed* infection it can be clonal, sibling, half-sibling
 or unrelated — which is the whole point of the identifiability work.
 
-**A relapse can start while a patent clone of its own lineage is still in the host**, most often
-the primary from the same bite or an earlier relapse of the same batch: at the defaults about 80%
-of relapses do. Such a relapse is logged and counted like any other, as a new episode and a new
-acquisition, and the lineage stays patent in the host until all its clones have cleared. It is
-drawn for detection like any other relapse, so the observation layer can report it, put it on the
-observed line list and schedule a course for it; at the default `P_DETECT_RELAPSE = 1` every one is
-reported. A real observer would see only the infection already there, not a recurrence or a new
-clone. Its `hypnozoite_activation` row has `into_patent_lineage = 1` (§16.1), which is the filter
-for leaving it out. The flag looks only at clones born on earlier days: a relapse that starts on
-the same day as another clone of its lineage in the host (another batch waking, a recrudescence or
-a bite) is not flagged for that clone, so two batches of one lineage that wake together, with no
-earlier clone of it in the host, are both 0.
+**A relapse can start while a patent clone of its own lineage is still in the host**, most often the
+primary from the same bite or an earlier relapse of the same batch: at the defaults about 80% of
+relapses do. Such a relapse is logged and counted like any other, as a new episode and a new
+acquisition, and the lineage stays patent in the host until all its clones have cleared. It is drawn
+for detection like any other relapse, so the observation layer can report it, put it on the observed
+line list and schedule a course for it; at the default `P_DETECT_RELAPSE = 1` every one is reported.
+A real observer would see only the infection already there, not a recurrence or a new clone. Its
+`hypnozoite_activation` row has `into_patent_lineage = 1` (§16.1), and `exclude_masked = TRUE` on
+`classify_cases()`, `relapse_fraction()` and `force_of_infection()` leaves it out. The flag looks
+only at clones born on earlier days: a relapse that starts on the same day as another clone of its
+lineage in the host (another batch waking, a recrudescence or a bite) is not flagged for that clone,
+so two batches of one lineage that wake together, with no earlier clone of it in the host, are both
+0.
 
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
@@ -1374,9 +1375,9 @@ run went extinct.
 | prevalence | fraction of the window's host-days with `moi_active > 0`; a day after an extinction counts as a day with no infection |
 | COI / MOI | `moi_active` among infected hosts |
 | reservoir | mean `hyp_reservoir_size` per host-day of the window |
-| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) |
+| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5), unless `exclude_masked = TRUE` |
 | relapses per person-year | activations ÷ (hosts × years) |
-| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded |
+| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded, and with `exclude_masked = TRUE` so is a masked relapse, as a genotyping study would miss it |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
 | EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |
 
