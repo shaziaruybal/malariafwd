@@ -1073,7 +1073,7 @@ and because the first one changes how earlier results should be read.
 ### Validation suite
 
 `inst/validation/` ships five scripts. Last full run (v0.1.0, this document):
-**139 assertion checks, 139 passed, 0 failed**, plus two numeric audits of the recombination
+**163 assertion checks, 163 passed, 0 failed**, plus two numeric audits of the recombination
 machinery.
 
 | script | checks | result |
