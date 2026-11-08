@@ -1470,7 +1470,8 @@ The dominant expense is **pairwise IBD**, not the simulation. Tree-sequence load
 second. Simulation itself is cheap (a 150-host, 3-year run is tens of seconds). Budget accordingly
 when scaling the number of sampled genomes, and prefer cross-matrices over n² where possible.
 Segments cost more than the pair fractions: on a 50-host run, the 23,436 pairs among 217 cases
-with their 190,151 segments take about a second. `ibd_segments()` reads only the pairs it is given.
+with their 190,151 segments take about a second. For a few pairs among many genomes, list them:
+`ibd_pairs(pairs =)` and `ibd_segments()` compute only the pairs given, about 0.2 ms each.
 
 ---
 

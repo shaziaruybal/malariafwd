@@ -4,7 +4,7 @@
 \alias{ibd_pairs}
 \title{Ground-truth IBD from a run's tree sequence}
 \usage{
-ibd_pairs(run, ids = NULL, min_span = 1000, segments = FALSE)
+ibd_pairs(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE)
 }
 \arguments{
 \item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path (in its run directory, whose
@@ -12,6 +12,10 @@ ibd_pairs(run, ids = NULL, min_span = 1000, segments = FALSE)
 
 \item{ids}{the pedigree ids of the genomes to compare, every pair among them; \code{NULL} for every
 genome the tree sequence records, which warns when that is more than 1e6 pairs.}
+
+\item{pairs}{instead of \code{ids}, a data frame of pairs to compare, with the pedigree ids in columns
+\code{a} and \code{b}: only these pairs are computed, about 0.2 ms each, so use it for a few pairs among
+many genomes, such as each recurrence against its host's earlier episodes.}
 
 \item{min_span}{the shortest segment returned, in bp, after the cut at the junctions: a segment
 of exactly \code{min_span} is kept. It does not change \code{ibd}.}
@@ -33,7 +37,8 @@ chromosome), \code{start} and \code{end} (bp within the chromosome, \code{end} e
 \code{gend} (bp along the concatenated genome), \code{length} (bp), \code{mrca_id} (the pedigree id of the
 common ancestor), \code{mrca_time} and \code{depth} (its age, see \emph{Segment ages});
 \item \code{sequence_length}, \code{min_span}, \code{all_pairs} (\code{TRUE}: every pair of the genomes is in
-\code{pairs}), \code{end_tick} (the run's last tick) and \code{trees} (the file read).
+\code{pairs}; \code{FALSE} for listed \code{pairs}, which hold each listed pair of two distinct genomes
+found, once, with \code{a < b}), \code{end_tick} (the run's last tick) and \code{trees} (the file read).
 }
 
 Read a pair's value with \code{\link[=ibd_lookup]{ibd_lookup()}}, or the table with \code{as.matrix()} or \code{as.data.frame()}.

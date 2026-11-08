@@ -209,3 +209,37 @@ test_that("segment tables keep one schema, and a genome with itself is shared en
   expect_identical(nrow(d), 2L * nrow(s1))
   expect_error(ibd_segments(r, 1:2, 1), "`ids_a` and `ids_b` must have the same length")
 })
+
+test_that("pairs mode computes only the listed pairs, with the values of the ids mode", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture(); ids <- classify_cases(load_events(r))$pedigree_id
+  x <- ibd_pairs(r, ids = ids, segments = TRUE)
+  pp <- x$pairs[unique(round(seq(1, .N, length.out = 30)))]
+  ## five listed twice, the other way round, and one genome with itself
+  listed <- data.frame(a = c(pp$a, pp$b[1:5], ids[1]), b = c(pp$b, pp$a[1:5], ids[1]))
+  y <- ibd_pairs(r, pairs = listed, segments = TRUE)
+  expect_false(y$all_pairs)
+  expect_identical(nrow(y$pairs), nrow(pp))
+  expect_equal(y$pairs$ibd, x$pairs[y$pairs, on = .(a, b)]$ibd)
+  expect_equal(y$segments, x$segments[y$pairs[, .(a, b)], on = .(a, b), nomatch = NULL][order(a, b, gstart)],
+               ignore_attr = TRUE)
+  expect_identical(ibd_lookup(y, ids[1], ids[1]), 1)
+  sampled <- y$samples$pedigree_id
+  other <- x$pairs[!y$pairs, on = .(a, b)][a %in% sampled & b %in% sampled][1]
+  expect_identical(ibd_lookup(y, other$a, other$b), NA_real_)
+  m <- as.matrix(y)
+  expect_identical(sum(!is.na(m)), 2L * nrow(pp) + nrow(m))
+  expect_output(print(y), paste(nrow(pp), "listed pairs"))
+  expect_error(ibd_pairs(r, ids = ids, pairs = listed), "give `ids` or `pairs`, not both")
+  expect_error(ibd_pairs(r, pairs = data.frame(x = 1)), "`pairs` must be a data frame")
+  expect_error(ibd_pairs(r, pairs = data.frame(a = c(1, NA), b = 2:3)), "`pairs$a` must be pedigree ids", fixed = TRUE)
+})
+
+test_that("ibd_truth_pairs() computes only its pairs, with the values of every pair", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture()
+  tp <- ibd_truth_pairs(r)
+  z <- ibd_pairs(r, ids = unique(c(tp$a, tp$b)))
+  expect_equal(tp$ibd, ibd_lookup(z, tp$a, tp$b))
+  expect_gt(nrow(tp), 0)
+})

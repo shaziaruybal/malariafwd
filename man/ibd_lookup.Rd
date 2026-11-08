@@ -29,7 +29,8 @@ data.frame of \code{a}, \code{b} and \code{ibd}.
 }
 \description{
 \code{ibd_lookup()} gives the IBD of each pair (\code{a[i]}, \code{b[i]}): 1 for a genome with itself, the
-pair's value otherwise, and \code{NA} when either genome is not in the object. A length-1 argument is
+pair's value otherwise, and \code{NA} when either genome is not in the object or, for an object of
+listed pairs (\code{ibd_pairs(pairs =)}), when the pair was not listed. A length-1 argument is
 recycled against the other. \code{as.matrix()} gives the pairs as a symmetric matrix named by
 pedigree id, with a unit diagonal, and \code{as.data.frame()} the \code{pairs} table.
 }

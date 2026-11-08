@@ -116,9 +116,13 @@ coi_distribution(st)                         # complexity-of-infection distribut
 Because the full genealogy is recorded, identity-by-descent is exact rather than inferred:
 
 ```{r}
-x <- ibd_pairs(run, ids = cs$pedigree_id)
-ibd_relapse_origin(ev, x)              # relapses are clonal to their origin (IBD ~ 1)
+rel <- ev[event_type == "hypnozoite_activation"]
+x <- ibd_pairs(run, pairs = data.frame(a = rel$pedigree_id, b = rel$parent1_pedigree_id))
+summary(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id))   # each relapse vs its batch: IBD 1
 ```
+
+Only the listed pairs are computed. To compare every pair among a set of genomes, pass `ids`
+instead, which costs the square of their number.
 
 ## Seeing the relatedness, not just the number
 

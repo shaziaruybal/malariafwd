@@ -149,7 +149,7 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   skip_if(nrow(pairs) == 0, "no inoculation produced both a primary and a batch")
 
   take <- pairs[seq_len(min(.N, 25))]
-  x <- ibd_pairs(run, ids = unique(c(take$primary, take$batch)))
+  x <- ibd_pairs(run, pairs = take[, .(a = primary, b = batch)])
   take[, ibd := ibd_lookup(x, primary, batch)]
   expect_equal(take$ibd, rep(1, nrow(take)), tolerance = 1e-8)
 

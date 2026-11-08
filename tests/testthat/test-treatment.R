@@ -203,7 +203,7 @@ test_that("a recrudescence is clonal to its holder and MOI-neutral", {
 
   ## the payoff of minting: "IBD 1 to the prior episode" is a real measurement, not a
   ## self-pair, which ibd_lookup() gives as 1
-  x <- ibd_pairs(run, ids = unique(c(rec$pedigree_id, rec$parent1_pedigree_id)))
+  x <- ibd_pairs(run, pairs = data.frame(a = rec$pedigree_id, b = rec$parent1_pedigree_id))
   expect_true(all(ibd_lookup(x, rec$pedigree_id, rec$parent1_pedigree_id) > 0.999))
   tm <- data.table::as.data.table(arg_tmrca(run, rec$pedigree_id, rec$parent1_pedigree_id))
   expect_true(all(tm$coalesced > 0.99, na.rm = TRUE))

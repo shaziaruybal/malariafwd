@@ -202,6 +202,9 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #'   `params.tsv` gives the chromosome layout the segments need).
 #' @param ids the pedigree ids of the genomes to compare, every pair among them; `NULL` for every
 #'   genome the tree sequence records, which warns when that is more than 1e6 pairs.
+#' @param pairs instead of `ids`, a data frame of pairs to compare, with the pedigree ids in columns
+#'   `a` and `b`: only these pairs are computed, about 0.2 ms each, so use it for a few pairs among
+#'   many genomes, such as each recurrence against its host's earlier episodes.
 #' @param min_span the shortest segment returned, in bp, after the cut at the junctions: a segment
 #'   of exactly `min_span` is kept. It does not change `ibd`.
 #' @param segments if `TRUE`, also return every shared segment with its common ancestor and that
@@ -218,7 +221,8 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #'     `gend` (bp along the concatenated genome), `length` (bp), `mrca_id` (the pedigree id of the
 #'     common ancestor), `mrca_time` and `depth` (its age, see *Segment ages*);
 #'   * `sequence_length`, `min_span`, `all_pairs` (`TRUE`: every pair of the genomes is in
-#'     `pairs`), `end_tick` (the run's last tick) and `trees` (the file read).
+#'     `pairs`; `FALSE` for listed `pairs`, which hold each listed pair of two distinct genomes
+#'     found, once, with `a < b`), `end_tick` (the run's last tick) and `trees` (the file read).
 #'
 #'   Read a pair's value with [ibd_lookup()], or the table with `as.matrix()` or `as.data.frame()`.
 #' @section Ids that are not in the tree sequence:
@@ -243,21 +247,34 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #' @seealso [ibd_lookup()], [ibd_segments()]
 #' @inheritSection tskit_available Python
 #' @export
-ibd_pairs <- function(run, ids = NULL, min_span = 1000, segments = FALSE) {
+ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE) {
+  if (!is.null(ids) && !is.null(pairs)) stop("give `ids` or `pairs`, not both.", call. = FALSE)
   if (!is.null(ids)) ids <- sort(unique(.ibd_ids(ids, "ids")))
+  if (!is.null(pairs)) {
+    if (!is.data.frame(pairs) || !all(c("a", "b") %in% names(pairs)))
+      stop("`pairs` must be a data frame of pedigree ids in columns `a` and `b`.", call. = FALSE)
+    pa <- .ibd_ids(pairs$a, "pairs$a"); pb <- .ibd_ids(pairs$b, "pairs$b")
+  }
   .ibd_check_min_span(min_span)
   .check_flag(segments, "segments")
   .require_python("ibd_pairs()", c("tskit", "numpy"))
-  x <- .ibd_compute(run, ids = ids, min_span = min_span, segments = segments)
-  p <- x$samples$pedigree_id; n <- length(p)
-  if (is.null(ids) && n * (n - 1) / 2 > 1e6)
-    warning("ibd_pairs() of every genome gave ", format(n * (n - 1) / 2, big.mark = ","), " pairs; pass ",
-            "`ids` to compare only the genomes you need.", call. = FALSE)
-  all <- if (n >= 2) data.table::data.table(a = rep(p[-n], (n - 1):1), b = p[sequence((n - 1):1, from = 2:n)])
-         else data.table::data.table(a = integer(), b = integer())
-  pairs <- merge(all, x$got, by = c("a", "b"), all.x = TRUE)
-  pairs[is.na(ibd), ibd := 0]
-  .new_vivax_ibd(pairs, x$samples, x$missing, x$segments, x$sequence_length, min_span, TRUE, x$end_tick,
+  if (is.null(pairs)) {
+    x <- .ibd_compute(run, ids = ids, min_span = min_span, segments = segments)
+    p <- x$samples$pedigree_id; n <- length(p)
+    if (is.null(ids) && n * (n - 1) / 2 > 1e6)
+      warning("ibd_pairs() of every genome gave ", format(n * (n - 1) / 2, big.mark = ","), " pairs; pass ",
+              "`ids` to compare only the genomes you need.", call. = FALSE)
+    all <- if (n >= 2) data.table::data.table(a = rep(p[-n], (n - 1):1), b = p[sequence((n - 1):1, from = 2:n)])
+           else data.table::data.table(a = integer(), b = integer())
+  } else {
+    x <- .ibd_compute(run, pa = pa, pb = pb, min_span = min_span, segments = segments)
+    p <- x$samples$pedigree_id
+    all <- unique(data.table::data.table(a = pmin(pa, pb), b = pmax(pa, pb)))[a != b & a %in% p & b %in% p]
+    data.table::setorder(all, a, b)
+  }
+  pt <- merge(all, x$got, by = c("a", "b"), all.x = TRUE)
+  pt[is.na(ibd), ibd := 0]
+  .new_vivax_ibd(pt, x$samples, x$missing, x$segments, x$sequence_length, min_span, is.null(pairs), x$end_tick,
                  x$trees)
 }
 
@@ -268,7 +285,8 @@ ibd_pairs <- function(run, ids = NULL, min_span = 1000, segments = FALSE) {
 #' The IBD of pairs of genomes, from ibd_pairs()
 #'
 #' `ibd_lookup()` gives the IBD of each pair (`a[i]`, `b[i]`): 1 for a genome with itself, the
-#' pair's value otherwise, and `NA` when either genome is not in the object. A length-1 argument is
+#' pair's value otherwise, and `NA` when either genome is not in the object or, for an object of
+#' listed pairs (`ibd_pairs(pairs =)`), when the pair was not listed. A length-1 argument is
 #' recycled against the other. `as.matrix()` gives the pairs as a symmetric matrix named by
 #' pedigree id, with a unit diagonal, and `as.data.frame()` the `pairs` table.
 #' @param x a `vivax_ibd` object, from [ibd_pairs()].
@@ -318,7 +336,8 @@ as.data.frame.vivax_ibd <- function(x, row.names = NULL, optional = FALSE, ...)
 
 #' @export
 print.vivax_ibd <- function(x, ...) {
-  cat("<vivax_ibd> ", nrow(x$samples), " genomes, ", nrow(x$pairs), " pairs, min_span ",
+  cat("<vivax_ibd> ", nrow(x$samples), " genomes, ", nrow(x$pairs), if (isTRUE(x$all_pairs)) " pairs" else " listed pairs",
+      ", min_span ",
       .slim_num(x$min_span), " bp\n", sep = "")
   if (length(x$missing)) cat("  ", length(x$missing), " requested ids not in the tree sequence\n", sep = "")
   cat("  segments: ", if (is.null(x$segments)) "not computed" else paste(nrow(x$segments), "rows"), "\n", sep = "")
