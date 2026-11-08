@@ -111,3 +111,101 @@ test_that("a run with no parasite gives an empty object", {
   expect_identical(names(x$pairs), c("a", "b", "ibd"))
   expect_output(print(x), "0 genomes, 0 pairs")
 })
+
+## ---- segments (D74) ----
+
+test_that("segments are maximal stretches from one ancestor, cut at the junctions, with min_span after the cut", {
+  tr <- malariafwd:::.ibd_tracts
+  lay <- data.table::data.table(chrom = c(1L, 2L), length = c(1000, 2000), start = c(0, 1000), end = c(1000, 3000))
+  raw <- function(...) data.table::rbindlist(list(...))
+  row <- function(left, right, mrca, a = 1L, b = 2L) data.table::data.table(a = a, b = b, left = left, right = right,
+                                                                          mrca_id = as.integer(mrca), mrca_time = 10)
+  ## abutting rows from one ancestor merge; two ancestors do not; a gap separates
+  x <- tr(raw(row(0, 200, 7), row(200, 500, 7), row(500, 700, 8), row(800, 900, 8)), lay, 0)
+  expect_identical(x$gstart, c(0, 500, 800)); expect_identical(x$gend, c(500, 700, 900))
+  expect_identical(x$mrca_id, c(7L, 8L, 8L))
+  ## a tract over the junction gives two pieces, in each chromosome's coordinates
+  y <- tr(raw(row(900, 1100, 7)), lay, 0)
+  expect_identical(y$chrom, 1:2); expect_identical(c(y$start, y$end), c(900, 0, 1000, 100))
+  expect_identical(y$length, c(100, 100))
+  ## min_span is applied after the cut, inclusively
+  expect_identical(nrow(tr(raw(row(900, 1100, 7)), lay, 100)), 2L)
+  expect_identical(nrow(tr(raw(row(900, 1100, 7)), lay, 150)), 0L)
+  ## a tract that ends at the junction is not split into an empty piece
+  expect_identical(tr(raw(row(500, 1000, 7)), lay, 0)$chrom, 1L)
+  e <- tr(row(0, 1, 1)[0], lay, 0)
+  expect_identical(names(e), c("a", "b", "chrom", "start", "end", "gstart", "gend", "length", "mrca_id", "mrca_time"))
+  expect_identical(nrow(e), 0L)
+  expect_identical(class(e$chrom), "integer")
+})
+
+test_that("a pair's segments are the same whatever other genomes are passed, from either function", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture(); ids <- classify_cases(load_events(r))$pedigree_id
+  x <- ibd_pairs(r, ids = ids, segments = TRUE)
+  sub <- utils::head(ids, 40)
+  y <- ibd_pairs(r, ids = sub, segments = TRUE)
+  expect_equal(y$segments, x$segments[a %in% sub & b %in% sub], ignore_attr = TRUE)
+  expect_equal(y$pairs$ibd, x$pairs[y$pairs, on = .(a, b)]$ibd)
+  pp <- x$pairs[ibd > 0 & ibd < 1][seq_len(min(.N, 30))]
+  s <- ibd_segments(r, pp$a, pp$b)
+  ref <- x$segments[pp[, .(a, b, pair = .I)], on = .(a, b)][order(pair, gstart)]
+  expect_equal(s[, !"pair"], ref[, names(s)[-1], with = FALSE], ignore_attr = TRUE)
+  expect_identical(s$pair, ref$pair)
+})
+
+test_that("no segment crosses a chromosome junction or is shorter than min_span", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture(); ids <- utils::head(classify_cases(load_events(r))$pedigree_id, 60)
+  cm <- chrom_map(r)
+  x <- ibd_pairs(r, ids = ids, segments = TRUE)
+  pp <- x$pairs[ibd > 0][seq_len(min(.N, 40))]
+  for (sg in list(x$segments, ibd_segments(r, pp$a, pp$b))) {
+    c0 <- cm$start[match(sg$chrom, cm$chrom)]; c1 <- cm$end[match(sg$chrom, cm$chrom)]
+    expect_true(all(sg$gstart >= c0 & sg$gend <= c1))
+    expect_identical(sg$start, sg$gstart - c0)
+    expect_identical(sg$length, sg$gend - sg$gstart)
+    expect_true(all(sg$length >= 1000))
+  }
+})
+
+test_that("at min_span 0 the segments add up to each pair's IBD", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture(); ids <- utils::head(classify_cases(load_events(r))$pedigree_id, 60)
+  x <- ibd_pairs(r, ids = ids, segments = TRUE, min_span = 0)
+  s <- x$segments[, .(f = sum(length) / x$sequence_length), by = .(a, b)][x$pairs[ibd > 0], on = .(a, b)]
+  expect_false(anyNA(s$f))
+  expect_lt(max(abs(s$f - s$ibd)), 1e-12)
+  y <- ibd_pairs(r, ids = ids, segments = TRUE)
+  expect_identical(y$pairs$ibd, x$pairs$ibd)
+  t <- y$segments[, .(f = sum(length) / y$sequence_length), by = .(a, b)][y$pairs, on = .(a, b), nomatch = NULL]
+  expect_true(all(t$f <= t$ibd + 1e-12))
+})
+
+test_that("segment tables keep one schema, and a genome with itself is shared end to end", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture(); ev <- load_events(r)
+  ids <- classify_cases(ev)$pedigree_id
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
+  x <- ibd_pairs(r, ids = ids)
+  none <- x$pairs[ibd == 0][1]
+  s0 <- ibd_segments(r, none$a, none$b)
+  s1 <- ibd_segments(r, rel$pedigree_id, rel$parent1_pedigree_id)
+  expect_identical(nrow(s0), 0L)
+  cls <- function(d) vapply(d, function(v) class(v)[1], "")
+  expect_identical(cls(s0), cls(s1))
+  both <- data.table::rbindlist(list(s1, s0, s1))
+  expect_true(all(both$chrom %in% 1:14))
+  ## a clonal relapse shares every chromosome end to end with its origin, at depth 0
+  cm <- chrom_map(r)
+  expect_identical(s1$chrom, as.integer(cm$chrom))
+  expect_true(all(s1$depth == 0))
+  me <- ibd_segments(r, ids[1], ids[1])
+  expect_identical(c(nrow(me), unique(me$mrca_id), unique(me$depth)), c(nrow(cm), ids[1], 0))
+  expect_identical(me$length, cm$length)
+  ## pairs count from 1, a pair given twice has its rows twice
+  d <- ibd_segments(r, c(rel$pedigree_id, rel$pedigree_id), c(rel$parent1_pedigree_id, rel$parent1_pedigree_id))
+  expect_identical(unique(d$pair), 1:2)
+  expect_identical(nrow(d), 2L * nrow(s1))
+  expect_error(ibd_segments(r, 1:2, 1), "`ids_a` and `ids_b` must have the same length")
+})

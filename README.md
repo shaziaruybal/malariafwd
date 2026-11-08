@@ -49,7 +49,7 @@ from markers. Shared segments for pairs of known relationship:
 ## Requirements
 
 - **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`).
-- For the IBD and ARG functions: **Python with `tskit` (≥ 1.0), `pandas` and `numpy`**, through
+- For the IBD and ARG functions: **Python with `tskit` (≥ 1.0) and `numpy`**, through
   the `reticulate` package. Either route works. *Automatic*: with no Python chosen, reticulate
   sets up its own environment with these modules the first time an IBD function runs; this needs
   internet once and a few hundred MB in the user cache. *Your own Python*: set

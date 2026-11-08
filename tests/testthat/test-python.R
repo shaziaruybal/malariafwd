@@ -6,7 +6,7 @@
 mock_py <- function(has = TRUE, version = "1.46.0", started = FALSE, declare = function() invisible(),
                     start = function() list(python = "/opt/py/bin/python", version = "3.12",
                                             forced = "RETICULATE_PYTHON", ephemeral = FALSE),
-                    modules = c(tskit = "1.0.4", pandas = "2.2.0", numpy = "2.0.0"),
+                    modules = c(tskit = "1.0.4", numpy = "2.0.0"),
                     env = parent.frame()) {
   local_mocked_bindings(.py_cached = function() NULL, .has_reticulate = function() has,
                         .reticulate_version = function() version, .py_started = function() started,
@@ -14,7 +14,7 @@ mock_py <- function(has = TRUE, version = "1.46.0", started = FALSE, declare = f
                         .py_module_version = if (is.function(modules)) modules else function(m) as.character(unname(modules[m])),
                         .env = env)
 }
-problem <- function(modules = c("tskit", "pandas", "numpy"))
+problem <- function(modules = c("tskit", "numpy"))
   malariafwd:::.py_problem(malariafwd:::.python_status(), modules)
 
 test_that("without reticulate the check says to install it, and tskit_available() is FALSE quietly", {
@@ -41,19 +41,19 @@ test_that("a Python that does not start is quoted, with what to do", {
 })
 
 test_that("a chosen Python without the modules is named, with how it was chosen and how to fix it", {
-  mock_py(modules = c(tskit = NA, pandas = NA, numpy = NA))
+  mock_py(modules = c(tskit = NA, numpy = NA))
   p <- problem()
   expect_match(p, "The Python reticulate is using, /opt/py/bin/python (Python 3.12, chosen by RETICULATE_PYTHON)", fixed = TRUE)
-  expect_match(p, "cannot import tskit, pandas or numpy", fixed = TRUE)
-  expect_match(p, "/opt/py/bin/python -m pip install \"tskit>=1.0\" \"pandas\" \"numpy\"", fixed = TRUE)
+  expect_match(p, "cannot import tskit or numpy", fixed = TRUE)
+  expect_match(p, "/opt/py/bin/python -m pip install \"tskit>=1.0\" \"numpy\"", fixed = TRUE)
   expect_match(p, "restart R")
 })
 
 test_that("a tskit below 1.0 is refused, naming the floor", {
-  mock_py(modules = c(tskit = "0.5.6", pandas = "2.2.0", numpy = "2.0.0"))
+  mock_py(modules = c(tskit = "0.5.6", numpy = "2.0.0"))
   expect_match(problem(), "has tskit 0.5.6; malariafwd needs tskit >= 1.0")
   ## a development version reads as its leading numbers
-  mock_py(modules = c(tskit = "1.0.4.dev3", pandas = "2.2.0", numpy = "2.0.0"))
+  mock_py(modules = c(tskit = "1.0.4.dev3", numpy = "2.0.0"))
   expect_null(problem())
 })
 
@@ -62,7 +62,7 @@ test_that("reticulate's own environment gets the modules declared again, then re
   mock_py(declare = function() { n <<- n + 1L; invisible() },
           start = function() list(python = "/cache/env/bin/python", version = "3.13", forced = "py_require()",
                                   ephemeral = TRUE),
-          modules = function(m) if (n < 2L) NA_character_ else c(tskit = "1.0.4", pandas = "2.2.0", numpy = "2.0.0")[[m]])
+          modules = function(m) if (n < 2L) NA_character_ else c(tskit = "1.0.4", numpy = "2.0.0")[[m]])
   st <- malariafwd:::.python_status()
   expect_identical(n, 2L)
   expect_true(st$managed)
@@ -82,10 +82,10 @@ test_that("with every module present the check passes, and a function asks only 
   mock_py()
   expect_true(tskit_available())
   expect_silent(malariafwd:::.require_python("ibd_pairs()"))
-  mock_py(modules = c(tskit = "1.0.4", pandas = NA, numpy = "2.0.0"))
+  mock_py(modules = c(tskit = "1.0.4", numpy = NA))
   expect_false(tskit_available())
-  expect_silent(malariafwd:::.require_python("arg_summary()", c("tskit", "numpy")))
-  expect_error(malariafwd:::.require_python("ibd_pairs()"), "^ibd_pairs\\(\\) needs Python with tskit \\(>= 1.0\\), pandas and numpy\\. .*cannot import pandas")
+  expect_silent(malariafwd:::.require_python("a_tskit_only()", "tskit"))
+  expect_error(malariafwd:::.require_python("ibd_pairs()"), "^ibd_pairs\\(\\) needs Python with tskit \\(>= 1.0\\) and numpy\\. .*cannot import numpy")
 })
 
 test_that("each function that runs Python stops, naming itself, before it reads a file", {
@@ -114,10 +114,10 @@ test_that("check_setup() reports a missing SLiM and leaves Python unchecked when
   s <- check_setup(python = FALSE)
   expect_s3_class(s, "malariafwd_setup")
   expect_identical(s$component, c("malariafwd", "R", "SLiM", "model", "reticulate", "Python", "tskit",
-                                  "pandas", "numpy", "ggplot2", "patchwork"))
+                                  "numpy", "ggplot2", "patchwork"))
   expect_false(s$ok[s$component == "SLiM"])
   expect_match(s$advice[s$component == "SLiM"], "MALARIAFWD_SLIM")
-  expect_true(all(is.na(s$ok[s$component %in% c("Python", "tskit", "pandas", "numpy")])))
+  expect_true(all(is.na(s$ok[s$component %in% c("Python", "tskit", "numpy")])))
   out <- capture.output(print(s))
   expect_length(out, nrow(s) + sum(!is.na(s$advice)) + 1L)
   expect_true(all(grepl("^[ -~]*$", out)))
@@ -145,7 +145,7 @@ test_that("check_setup() finds this machine's SLiM, and its Python when tskit is
   expect_identical(s$version[s$component == "SLiM"], slim_version())
   skip_if_not(tskit_available(), "Python with tskit is not available")
   s <- check_setup()
-  expect_true(all(s$ok[s$component %in% c("reticulate", "Python", "tskit", "pandas", "numpy")]))
+  expect_true(all(s$ok[s$component %in% c("reticulate", "Python", "tskit", "numpy")]))
   expect_true(numeric_version(sub("^([0-9.]+).*", "\\1", s$version[s$component == "tskit"])) >= "1.0")
 })
 

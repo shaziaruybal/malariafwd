@@ -13,7 +13,7 @@ utils::globalVariables(c(
   "mean_ibd", "n_pairs",
   # IBD
   "node_a", "node_b", "ibd_fraction", "node_id", "a", "b", "ibd",
-  "left", "right", "mrca_node", "mrca_time",
+  "left", "right", "mrca_node", "mrca_time", "mrca_id", "node_time", "depth", "tract",
   # time-to-relapse / dormancy
   "t0", "tr", "time", "event", "act_tick", "est_tick", "nrel", "py",
   # moi / within-host trajectory

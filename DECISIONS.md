@@ -19,6 +19,44 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D74 — An IBD segment is a maximal stretch from one common ancestor, cut at the chromosome junctions; the pair fraction counts every shared stretch · 2026-11-08 · Accepted
+**Context.** `ibd_pairs(segments = TRUE)` returned tskit's segment rows as they came, which are
+pieces of the paths through the trees: how a pair's shared ancestry was split into rows depended on
+the genomes the tree was simplified to (4,154, 2,493 or 2,394 rows for one set of 400 case pairs),
+and 3% of them ran across a chromosome junction, since in the tree sequence a stretch continues
+across one when both genomes carry the same parent on both sides. `ibd_segments()` cut at the
+junctions but kept the path pieces, so the two functions gave different rows for one pair. Both
+applied `min_span` to tskit's rows, before any cut, and the pair fraction inherited that floor, so
+it too depended slightly on the other genomes passed. `ibd_segments()` numbered its pairs from 0,
+needed pandas, and gave a genome with itself one row over the whole concatenated genome (review
+M14, m32, m38, m39; Q17).
+**Decision.** A segment is a maximal stretch over which two genomes descend from one common
+ancestor genome, cut at each chromosome junction: abutting rows with one ancestor (the node, not
+its time) merge, and a change of ancestor starts a new segment even with no gap. `min_span` drops
+the pieces shorter than it after the cut, inclusively. A pair gets the same segments whatever other
+genomes are passed, and both functions give the same rows, with the chromosome, both coordinate
+systems, the length, the ancestor and its age. The pair fraction counts every shared stretch, of
+any age and any length, and `min_span` does not change it (the author's answer). `ibd_segments()`
+reads only its listed pairs, numbers them from 1, and gives a genome with itself one row per
+chromosome. Nothing imports pandas, so the Python requirement is tskit (>= 1.0) and numpy (the
+author's answer).
+**Rationale.** A segment that depends on which other genomes were asked for, or that runs across
+chromosomes, cannot be compared, drawn or counted.
+**Alternatives rejected.** *tskit's rows as they are* -- path-dependent. *Merging on the ancestor's
+time* -- two ancestors born on one tick would merge. *A floor on the pair fraction* -- tskit's floor
+depends on the other genomes passed, and the segments' floor costs 4-5 times the time and memory.
+**Consequences.** Runs are unchanged. On a 150-host 548-day run with co-transmission (seed 1),
+1,242 of 135,981 pair fractions move, by at most 3.6e-5. Segment rows are merged by ancestor, cut
+and floored after the cut; `chrom`, `start`, `end`, `gstart`, `gend` and `length` replace `left`
+and `right`, and `ibd_segments()$pair` counts from 1. `ibd_segments()` for 300 pairs of that run
+takes 0.06 s, against 0.66 s.
+**How to verify.** `tests/testthat/test-ibd.R`: merging, cutting and flooring on a synthetic table;
+on a run, the same segments from any set of genomes and from both functions; no segment across a
+junction or below `min_span`; the segments adding up to each pair's IBD; one schema for every
+pair; a genome with itself; pairs counted from 1.
+
+---
+
 ## D73 — Import classes come from the true transmission chain · 2026-11-08 · Accepted
 **Context.** The WHO terminology classes a case as imported, introduced or indigenous by where it
 was acquired and its chain of transmission from an imported infection. The package's only import
@@ -1865,7 +1903,7 @@ unchanged. Suites: `test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_para
 
 ---
 
-## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted; partly superseded by D63 (the shape of ibd_pairs()'s result)
+## D22 — IBD counts all ancestry; recency is the caller's filter over returned segments · 2026-10-21 · Accepted; partly superseded by D63 (the shape of ibd_pairs()'s result) and D74 (the segment definition)
 **Context.** `ibd_pairs(max_time=)` was documented as counting "only ancestry coalescing within
 this many time units (days)" -- a genealogical **depth**. It passed the value straight to tskit's
 `ibd_segments(max_time=)`, which compares against the common ancestor's **absolute node time**,
@@ -2350,7 +2388,7 @@ is the honest, complete representation; `core` is only for deliberately mimickin
 **Supersedes.** The initial `core` default (never released).
 **Consequences.** Runs cover the full 24.2 Mb (~9 s at prototype scale — negligible cost).
 
-## D2 — 14 chromosomes as ONE concatenated linkage group (Option B) · 2026-08-05 · Accepted; partly superseded by D34 (the concatenated map stands)
+## D2 — 14 chromosomes as ONE concatenated linkage group (Option B) · 2026-08-05 · Accepted; partly superseded by D34 (the concatenated map stands) and D74 (a shared stretch can run across a junction in the tree sequence; the IBD functions cut it there)
 **Context.** Extend the single 100 kb chromosome to all 14 PvP01 chromosomes. SLiM 5.2 supports
 explicit multiple chromosomes.
 **Decision.** Model the genome as ONE concatenated chromosome with recombination rate 0.5 at each of

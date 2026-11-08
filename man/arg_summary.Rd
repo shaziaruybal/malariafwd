@@ -26,7 +26,7 @@ result is a forest with roughly one root per surviving founder lineage.
 
 The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
 reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
-sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+sets up its own environment with tskit (>= 1.0) and numpy the first time one of these
 functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
 Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
 session. A function that cannot reach them stops with an error of class

@@ -6,7 +6,7 @@ suppressMessages({
   library(data.table); library(ggplot2); library(patchwork); library(reticulate)
 })
 if (!malariafwd::tskit_available())
-  stop("these checks need Python with tskit (>= 1.0), pandas and numpy; see malariafwd::check_setup()",
+  stop("these checks need Python with tskit (>= 1.0) and numpy; see malariafwd::check_setup()",
        call. = FALSE)
 invisible(py_run_string("import tskit"))
 FIGS <- Sys.getenv("MALARIAFWD_FIGS", file.path(tempdir(), "malariafwd-figs"))
@@ -96,42 +96,11 @@ ggsave(file.path(FIGS, "IBD_ladder.png"), p2, width = 10, height = 6, dpi = 140)
 ## one exemplar pair per class, with the actual IBD segments along the genome: the pair nearest
 ## the class median, which for same-oocyst sibs is a typical pair that is not a meiosis II sister
 ex <- P[, .SD[which.min(abs(ibd - median(ibd)))], by = cls][order(cls)]
-## NB ibd_pairs() simplifies the tree, which RENUMBERS nodes - its node_ids are not valid in a
-## freshly loaded tree. So resolve pedigree_id -> node from the original tree's metadata here.
-py$peds_a <- as.integer(ex$a); py$peds_b <- as.integer(ex$b)
-py$trees  <- trees_path(run)
-py_run_string("
-import tskit, pandas as pd, json
-ts = tskit.load(trees)
-def _md(x):
-    md = x.metadata
-    if isinstance(md, bytes):
-        try: md = json.loads(md.decode()) if md else {}
-        except Exception: md = {}
-    return md if isinstance(md, dict) else {}
-def vac(nd):
-    v = _md(nd).get('is_vacant'); return bool(v[0]) if v else False
-ped2node = {}
-for n in ts.samples():
-    nd = ts.node(n)
-    if nd.individual == tskit.NULL or vac(nd): continue
-    md = _md(ts.individual(nd.individual))
-    p = md.get('pedigree_id', md.get('pedigreeID'))
-    if p is not None: ped2node.setdefault(int(p), int(n))
-rows=[]
-for i,(pa,pb) in enumerate(zip(peds_a, peds_b)):
-    a, b = ped2node.get(int(pa)), ped2node.get(int(pb))
-    if a is None or b is None: continue
-    if a == b:
-        rows.append({'pair':i,'left':0.0,'right':float(ts.sequence_length)}); continue
-    res = ts.ibd_segments(within=[a,b], store_pairs=True, store_segments=True, min_span=1000)
-    for (_x,_y), segs in res.items():
-        for s in segs: rows.append({'pair':i,'left':float(s.left),'right':float(s.right)})
-segs_df = pd.DataFrame(rows, columns=['pair','left','right'])
-seqlen = float(ts.sequence_length)
-")
-segs <- as.data.table(py$segs_df); L <- py$seqlen
-ex[, pair := .I - 1L]
+## the exemplars' shared segments, as ibd_segments() gives them: cut at the chromosome junctions
+## and floored at 1 kb, a genome with itself shared end to end
+segs <- ibd_segments(run, ex$a, ex$b)[, .(pair, left = gstart, right = gend)]
+L <- sum(chrom_map(run)$length)
+ex[, pair := .I]
 segs <- merge(segs, ex[, .(pair, cls, ibd)], by = "pair")
 segs[, cls := factor(cls, LV)]
 lab <- ex[, .(cls = factor(cls, LV), txt = sprintf("IBD = %.2f", ibd))]

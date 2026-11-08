@@ -17,7 +17,7 @@ is nothing to do).
 \description{
 Reports each component the package uses, with its version and where it was found, and what to
 do about any that is missing. It never errors. SLiM and the model are needed to run; reticulate,
-Python, tskit, pandas and numpy for the IBD and ARG functions (see \code{\link[=tskit_available]{tskit_available()}}); ggplot2
+Python, tskit and numpy for the IBD and ARG functions (see \code{\link[=tskit_available]{tskit_available()}}); ggplot2
 and patchwork for the plots.
 }
 \examples{

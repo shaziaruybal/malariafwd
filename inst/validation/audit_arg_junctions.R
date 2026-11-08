@@ -13,7 +13,7 @@ suppressMessages({
   library(data.table); library(ggplot2); library(patchwork); library(reticulate)
 })
 if (!malariafwd::tskit_available())
-  stop("these checks need Python with tskit (>= 1.0), pandas and numpy; see malariafwd::check_setup()",
+  stop("these checks need Python with tskit (>= 1.0) and numpy; see malariafwd::check_setup()",
        call. = FALSE)
 invisible(py_run_string("import tskit"))
 FIGS <- Sys.getenv("MALARIAFWD_FIGS", file.path(tempdir(), "malariafwd-figs"))
@@ -87,12 +87,12 @@ prod <- merge(unique(inoc, by = c("oocyst_id", "lineage_id")),
               rec[unrelated_parents == TRUE, .(oocyst_id, parent = par1)], by = "oocyst_id")
 one <- prod[seq_len(min(.N, 120))]
 seg <- ibd_segments(run, one$ped, one$parent)
-## products are numbered from 0, as ibd_segments() numbers its pairs. On the full map every
+## products are numbered from 1, as ibd_segments() numbers its pairs. On the full map every
 ## product shares part of its genome with each parent; a product that is not in the tree
 ## sequence has no segments and is left out.
 used <- sort(unique(seg$pair))
 cat(sprintf("\nproducts of founder-parent oocysts used for the junction test: %d (from %d oocysts)\n",
-            length(used), uniqueN(one$oocyst_id[used + 1L])))
+            length(used), uniqueN(one$oocyst_id[used])))
 ## is product i IBD with its parent at position x?
 ibd_at <- function(i, x) {
   q <- data.table(pair = i, x = x, k = seq_along(x))
@@ -121,7 +121,7 @@ boot_se <- function(stat, rows, oocyst, B = 400) {
   sd(replicate(B, stat(unlist(by_o[sample(names(by_o), replace = TRUE)], use.names = FALSE))), na.rm = TRUE)
 }
 set.seed(1)
-cc[, oocyst := one$oocyst_id[pair + 1L]]
+cc[, oocyst := one$oocyst_id[pair]]
 res <- cc[, .(n = .N, pct_same = round(100 * mean(left == right), 1), phi = round(phi_of(left, right), 3),
               se = round(boot_se(function(k) phi_of(left[k], right[k]), seq_len(.N), oocyst), 3)), by = kind]
 res[, expected := round(fifelse(kind == "junction", 0, phi_w), 3)]
@@ -137,7 +137,7 @@ sw <- CJ(pair = used, x = junctions)
 sw[, switched := ibd_at(pair, x - 1) != ibd_at(pair, x)]
 nsw <- sw[, .(n = sum(switched)), by = pair]
 ns <- nsw$n
-ns_se <- boot_se(function(k) mean(ns[k]), seq_along(ns), one$oocyst_id[nsw$pair + 1L])
+ns_se <- boot_se(function(k) mean(ns[k]), seq_along(ns), one$oocyst_id[nsw$pair])
 cat(sprintf("parent switches per product at the 13 junctions: %.2f +/- %.2f | expected 13 x 1/2 = 6.5%s\n",
             mean(ns), ns_se, if (abs(mean(ns) - 6.5) <= 3 * ns_se) "  (consistent)" else "  <-- CHECK"))
 

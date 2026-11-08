@@ -9,9 +9,9 @@
 #   Rscript quickstart.R --github        # install from GitHub instead
 #   Rscript quickstart.R --outdir path   # where to put the run and the figures
 #
-# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps also need Python with tskit (>= 1.0),
-# pandas and numpy, through reticulate (with no Python chosen, reticulate sets one up on first
-# use). check_setup() reports what is found. Everything else degrades gracefully.
+# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps also need Python with tskit (>= 1.0)
+# and numpy, through reticulate (with no Python chosen, reticulate sets one up on first use).
+# check_setup() reports what is found. Everything else degrades gracefully.
 # ---------------------------------------------------------------------------------------
 
 args    <- commandArgs(trailingOnly = TRUE)

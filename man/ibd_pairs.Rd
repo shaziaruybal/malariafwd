@@ -7,12 +7,14 @@
 ibd_pairs(run, ids = NULL, min_span = 1000, segments = FALSE)
 }
 \arguments{
-\item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path.}
+\item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path (in its run directory, whose
+\code{params.tsv} gives the chromosome layout the segments need).}
 
 \item{ids}{the pedigree ids of the genomes to compare, every pair among them; \code{NULL} for every
 genome the tree sequence records, which warns when that is more than 1e6 pairs.}
 
-\item{min_span}{minimum shared-segment length (bp) to count (default 1000).}
+\item{min_span}{the shortest segment returned, in bp, after the cut at the junctions: a segment
+of exactly \code{min_span} is kept. It does not change \code{ibd}.}
 
 \item{segments}{if \code{TRUE}, also return every shared segment with its common ancestor and that
 ancestor's age.}
@@ -26,8 +28,10 @@ shares nothing;
 \item \code{samples}, one row per genome found, by pedigree id: \code{pedigree_id}, \code{node_time} (ticks
 before the end of the run) and \code{tick} (the day the genome arose, as in \code{events.tsv});
 \item \code{missing}, the requested ids the tree sequence does not hold;
-\item \code{segments}, \code{NULL} or a data.table of \code{a}, \code{b}, \code{left}, \code{right} (bp), \code{mrca_id} (the pedigree
-id of the common ancestor), \code{mrca_time} and \code{depth} (its age, see \emph{Segment ages});
+\item \code{segments}, \code{NULL} or a data.table, by pair and position: \code{a}, \code{b}, \code{chrom} (the PvP01
+chromosome), \code{start} and \code{end} (bp within the chromosome, \code{end} exclusive), \code{gstart} and
+\code{gend} (bp along the concatenated genome), \code{length} (bp), \code{mrca_id} (the pedigree id of the
+common ancestor), \code{mrca_time} and \code{depth} (its age, see \emph{Segment ages});
 \item \code{sequence_length}, \code{min_span}, \code{all_pairs} (\code{TRUE}: every pair of the genomes is in
 \code{pairs}), \code{end_tick} (the run's last tick) and \code{trees} (the file read).
 }
@@ -37,10 +41,24 @@ Read a pair's value with \code{\link[=ibd_lookup]{ibd_lookup()}}, or the table w
 \description{
 Computes genome-wide identity-by-descent (shared-segment length / sequence length) among a set
 of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model. The tree
-is simplified to the genomes asked for, and SLiM's vacant nodes are left out. \strong{All} shared
-ancestry is counted, however far back it goes; to impose a cutoff, ask for \code{segments} and filter
-them on their age (see \emph{Segment ages}).
+is simplified to the genomes asked for, and SLiM's vacant nodes are left out.
 }
+\section{What is counted}{
+
+A pair's \code{ibd} counts \strong{all} shared ancestry: every stretch over which the two genomes descend
+from a common ancestor genome, of any age and any length, over the sequence length. \code{min_span}
+does not change it. To impose a cutoff, ask for \code{segments} and filter them on their length or
+their age (see \emph{Segment ages}).
+}
+
+\section{Segments}{
+
+A segment is a maximal stretch over which two genomes descend from one common ancestor genome,
+cut at each chromosome junction: a change of ancestor starts a new segment even with no gap
+between them. A pair gets the same segments whatever other genomes are passed, the same as
+\code{\link[=ibd_segments]{ibd_segments()}} gives, and at \code{min_span = 0} they add up to its \code{ibd}.
+}
+
 \section{Ids that are not in the tree sequence}{
 
 A run written with \code{RETAIN_FULL_HISTORY = FALSE} keeps only a fraction of genomes in the tree
@@ -60,15 +78,15 @@ genomes are.
 
 \section{Cost}{
 
-One simplification and one pass over the pairs; \code{segments = TRUE} costs several times as long
-and gives one row per segment per pair, so restrict it with \code{ids} and \code{min_span}.
+One simplification and one pass over the pairs; \code{segments = TRUE} costs a few times as long and
+gives one row per segment per pair, so restrict it with \code{ids} and \code{min_span}.
 }
 
 \section{Python}{
 
 The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
 reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
-sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+sets up its own environment with tskit (>= 1.0) and numpy the first time one of these
 functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
 Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
 session. A function that cannot reach them stops with an error of class

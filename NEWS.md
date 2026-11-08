@@ -89,11 +89,12 @@ apart rather than choosing for you:
   `rc_by_origin()`, `transmission_links()` with each link's chain, plus reservoir, relapse,
   COI and dormancy helpers.
 
-* **Ground-truth IBD.** `ibd_pairs()` computes genome-wide IBD from the tree sequence and, with
-  `segments = TRUE`, returns the shared blocks themselves — each tagged with the common ancestor
-  it came from, keyed by pedigree id: `ibd_lookup()`, `as.matrix()` and `as.data.frame()` read it
-  (`NA` for a genome the run's tree sequence does not hold); `ibd_segments()` and
-  `plot_ibd_pair()` show *why* a pair's IBD is what it is, painted along the 14 chromosomes.
+* **Ground-truth IBD.** `ibd_pairs()` computes genome-wide IBD from the tree sequence, counting
+  every shared stretch, keyed by pedigree id: `ibd_lookup()`, `as.matrix()` and `as.data.frame()`
+  read it (`NA` for a genome the run's tree sequence does not hold). With `segments = TRUE` it
+  returns the shared blocks themselves — each a maximal stretch from one common ancestor, cut at
+  the chromosome junctions, the same rows `ibd_segments()` gives — and `plot_ibd_pair()` shows
+  *why* a pair's IBD is what it is, painted along the 14 chromosomes.
 
 * **ARG-native summaries.** `arg_summary()`, `arg_tmrca()`, `arg_diversity()`,
   `arg_divergence()`. The model is neutral, so every *site* statistic is zero and tskit's
@@ -171,5 +172,5 @@ validation status; `DECISIONS.md` records why each modelling choice was made.
 
 ## Requirements
 
-SLiM (≥ 5.2) on `PATH`; for the IBD and ARG functions, Python with `tskit` (≥ 1.0), `pandas` and
-`numpy`, through `reticulate`. `check_setup()` reports both. Everything else is R.
+SLiM (≥ 5.2) on `PATH`; for the IBD and ARG functions, Python with `tskit` (≥ 1.0) and `numpy`,
+through `reticulate`. `check_setup()` reports both. Everything else is R.

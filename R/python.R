@@ -1,9 +1,9 @@
-## python.R -- the one check that the tree-sequence functions can reach Python with tskit, pandas
-## and numpy (through reticulate), and check_setup(), which reports everything the package uses.
+## python.R -- the one check that the tree-sequence functions can reach Python with tskit and numpy
+## (through reticulate), and check_setup(), which reports everything the package uses.
 
 ## The modules those functions import, and the lowest version of each that works (NA: any).
-.py_floors <- c(tskit = "1.0", pandas = NA, numpy = NA)
-.py_requirements <- c("tskit>=1.0", "pandas", "numpy")
+.py_floors <- c(tskit = "1.0", numpy = NA)
+.py_requirements <- c("tskit>=1.0", "numpy")
 
 ## A check that found everything holds for the session, since a Python that has started cannot
 ## change; one that found a problem is not kept, since py_install() or a network can mend it.
@@ -125,14 +125,14 @@
 
 #' Can the tree-sequence functions reach Python with tskit?
 #'
-#' `TRUE` when Python with tskit (>= 1.0), pandas and numpy can be used through reticulate. It
+#' `TRUE` when Python with tskit (>= 1.0) and numpy can be used through reticulate. It
 #' never errors or warns, so it can guard examples, vignette chunks and tests. It may start
 #' Python, and with no Python chosen, reticulate then sets up its own environment.
 #'
 #' @section Python:
 #' The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
 #' reticulate package. Either of two routes works. *Automatic*: with no Python chosen, reticulate
-#' sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+#' sets up its own environment with tskit (>= 1.0) and numpy the first time one of these
 #' functions runs; this needs internet once. *Your own Python*: set `RETICULATE_PYTHON` to a
 #' Python that has those modules (in `~/.Renviron` to keep it) before the first such call of a
 #' session. A function that cannot reach them stops with an error of class
@@ -148,7 +148,7 @@ tskit_available <- function()
 #'
 #' Reports each component the package uses, with its version and where it was found, and what to
 #' do about any that is missing. It never errors. SLiM and the model are needed to run; reticulate,
-#' Python, tskit, pandas and numpy for the IBD and ARG functions (see [tskit_available()]); ggplot2
+#' Python, tskit and numpy for the IBD and ARG functions (see [tskit_available()]); ggplot2
 #' and patchwork for the plots.
 #' @param python if `FALSE`, Python is not started and its rows are not checked.
 #' @return a data.frame of class `malariafwd_setup`, one row per component, with columns

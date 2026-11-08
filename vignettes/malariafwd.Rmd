@@ -21,7 +21,7 @@ Python `tskit`); run them locally after checking your setup.
 ## Setup
 
 The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess. The IBD and ARG
-functions also need Python with `tskit` (≥ 1.0), `pandas` and `numpy`, through `reticulate`:
+functions also need Python with `tskit` (≥ 1.0) and `numpy`, through `reticulate`:
 with no Python chosen, reticulate sets up its own environment with them the first time one of
 these functions runs (this needs internet once), or set `RETICULATE_PYTHON` to a Python that has
 them. Nothing below runs without SLiM; without Python only the IBD and ARG sections stop. Check
@@ -76,11 +76,14 @@ new_infection_diversity(run)                        # relatedness of the transmi
 ```
 
 `ibd_pairs()` counts all shared ancestry, however far back it goes. Ask for `segments` to get
-the shared blocks themselves, each tagged with the common ancestor it was inherited from:
+the shared blocks themselves: each a maximal stretch inherited from one common ancestor, cut at
+the chromosome junctions, and tagged with that ancestor:
 
 ```{r}
 sg <- ibd_pairs(run, ids = cs$pedigree_id, segments = TRUE)
-head(sg$segments)                  # a, b, left, right, mrca_id, mrca_time, depth
+head(sg$segments)    # a, b, chrom, start, end, gstart, gend, length, mrca_id, mrca_time, depth
+## IBD from ancestors of the last six months only
+sg$segments[depth <= 180, .(ibd_180 = sum(length) / sg$sequence_length), by = .(a, b)]
 ```
 
 `mrca_time` is a tskit node time -- ticks before the **end of the run**, not an age. A "recent

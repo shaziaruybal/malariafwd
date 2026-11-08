@@ -541,9 +541,12 @@ at each of the 13 chromosome junctions:  r = 0.5   (independent assortment)
 The 14 chromosomes are concatenated into **one linkage group**, with `r = 0.5` in SLiM's map at
 each junction. `seedTetrad()` discards the junction draws and assorts the chromosomes itself, by
 meiosis I at each centromere, which gives every product exactly `r = 0.5` across each junction.
-This is genetically equivalent to explicit multi-chromosome simulation for all IBD metrics, and
-keeps a single `.trees` file — explicit SLiM multi-chromosome writes a *directory* of
-per-chromosome tree sequences, which would require rewriting the entire IBD pipeline.
+This is genetically equivalent to explicit multi-chromosome simulation for every IBD quantity the
+package reports, and keeps a single `.trees` file — explicit SLiM multi-chromosome writes a
+*directory* of per-chromosome tree sequences, which would require rewriting the entire IBD pipeline.
+In the tree sequence a shared stretch can continue across a junction, when both genomes carry the
+same parent on both sides of it; the IBD functions cut every segment at the junctions (D74), and
+code that reads tskit's segments directly must do the same, with `chrom_map()`.
 
 ---
 
@@ -552,8 +555,8 @@ per-chromosome tree sequences, which would require rewriting the entire IBD pipe
 - **PvP01 reference** (Auburn et al. 2016; GCA_900093555), 14 nuclear chromosomes.
 - Implemented as **one concatenated linkage group** with **7.4 × 10⁻⁷ /bp within chromosomes**
   (13.5 kb/cM, euchromatic core rate, Jiang 2011); the chromosomes assort independently at meiosis
-  (§6.3). Genetically equivalent to explicit multi-chromosome for all IBD metrics, and keeps a
-  single `.trees` file.
+  (§6.3). Genetically equivalent to explicit multi-chromosome for every IBD quantity the package
+  reports, and keeps a single `.trees` file.
 - `GENOME_MODE` is a pure **coordinate** switch: `"full"` (24.2 Mb, default) or `"core"`
   (subtelomere-masked, ~21.8 Mb). Both use the same recombination rate.
 - **`initializeMutationRate(0.0)` — the genome carries no mutation at all.** It is a neutral
@@ -568,7 +571,10 @@ per-chromosome tree sequences, which would require rewriting the entire IBD pipe
 **Gotcha for anyone writing new tskit code:** SLiM haploid individuals get **two** tskit nodes — the
 real haplosome (`is_vacant = [0]`) and a null placeholder (`is_vacant = [1]`, isolated, IBD 0 with
 everything). About half of `ts.samples()` are vacant and **must be filtered**. The package's IBD
-and ARG functions do this.
+and ARG functions do this. Second, tskit's `ibd_segments()` rows are pieces of the paths through
+the trees, so how a pair's shared ancestry is split into rows depends on the samples the tree was
+simplified to; merge abutting rows with the same ancestor, then cut at the junctions (§6.3), as
+`ibd_pairs()` and `ibd_segments()` do.
 
 ---
 
@@ -1398,6 +1404,9 @@ pool runs, sum the counts and the person-years rather than average the rates.
 | table | definition |
 |---|---|
 | episode | the clones that became patent in one host on one day, named by `episode_id` ("<host>:<day>"). `classify_cases()` gives one row per clone onset, founder seeding excluded; `episodes()` gives every clone's span, founders included |
+| pair IBD | `ibd_pairs()`: the fraction of the genome over which two genomes descend from a common ancestor, counting every shared stretch of any age and length |
+| IBD segment | a maximal stretch over which two genomes descend from one common ancestor genome, cut at each chromosome junction, the pieces shorter than `min_span` left out after the cut; the same whatever other genomes are passed, from `ibd_pairs(segments = TRUE)` and `ibd_segments()` alike |
+| segment age | `depth`: how long before the older of the two genomes the segment's common ancestor lived, in ticks |
 | recurrence | every episode of a host after its first. `recurrences()` pairs each of its clones with each clone of the earlier episodes (or of the latest), never with a clone of its own episode |
 | transmission link | a parent genome of an oocyst and a genome the oocyst's products infected: `direct` (a bite's blood stage) or `liver` (a relapse of the batch a bite left). Only local infections are targets; each parent of an outcrossed oocyst has weight 1/2. `transmission_links()` |
 | import class (WHO) | each case's class by its true chain from an imported infection: `imported` (an import, a relapse of an import's batch, or a recrudescence of either), `introduced` (one link from one), `indigenous (from an import)` (two or more) or `indigenous (local lineage)` (no import in its chain), through both routes; an outcrossed oocyst's shorter chain counts. `classify_chain()` |
@@ -1421,7 +1430,7 @@ md5 of the model, the versions, and the size of every file; `load_run()` reports
 `DONE` is missing or whose files have changed since. SLiM runs in the run's directory on its copy of
 the model, so running `slim` with the arguments in `cmdline.txt` from a directory holding
 `model.slim` repeats the run. Requires SLiM ≥ 5.2 on `PATH` and, for IBD and the ARG functions,
-Python with `tskit` (≥ 1.0), `pandas` and `numpy` through reticulate; `check_setup()` reports both.
+Python with `tskit` (≥ 1.0) and `numpy` through reticulate; `check_setup()` reports both.
 `RETAIN_FULL_HISTORY = T` is required for IBD to already-cleared infections — without it, most
 earlier genomes leave the tree, and `ibd_pairs()` warns about the ids it was asked for that are gone
 and gives them `NA`.
@@ -1460,6 +1469,8 @@ of sampled genomes grows (§16.6).
 The dominant expense is **pairwise IBD**, not the simulation. Tree-sequence loading is
 second. Simulation itself is cheap (a 150-host, 3-year run is tens of seconds). Budget accordingly
 when scaling the number of sampled genomes, and prefer cross-matrices over n² where possible.
+Segments cost more than the pair fractions: on a 50-host run, the 23,436 pairs among 217 cases
+with their 190,151 segments take about a second. `ibd_segments()` reads only the pairs it is given.
 
 ---
 
@@ -1499,9 +1510,14 @@ throughout; new parameters must too.
 
 **Empty-vector iteration.** Eidos errors on iterating an empty vector; guard with `if (size(x) > 0)`.
 
-**Chromosome-aware joins.** When splitting IBD segments by chromosome, cross-join per segment — a
-whole-group comparison against the 14-row chromosome table silently recycles for pairs with more
-than one segment.
+**Chromosome-aware joins.** When splitting IBD segments by chromosome, split each segment on its
+own — a whole-group comparison against the 14-row chromosome table silently recycles for pairs with
+more than one segment.
+
+**tskit's segments are path pieces.** Read straight from tskit, a pair's shared stretches come in
+pieces that depend on the samples the tree was simplified to, and a stretch can run across a
+chromosome junction. Merge abutting pieces with the same ancestor and cut at the junctions before
+counting or drawing them (§6.3, §7).
 
 ---
 
@@ -1526,7 +1542,8 @@ than one segment.
 | **FOI** | force of infection: new blood-stage clones from bites and imports, relapses **excluded**: `foi_per_py` |
 | **EIR** | entomological inoculation rate: infectious bites per person-year, `eir_per_py` (§4.1) |
 | **iIBD** | mean IBD among co-present strains within one host |
-| **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred |
+| **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred; every shared stretch counts, of any age and length |
+| **IBD segment** | a maximal stretch over which two genomes descend from one common ancestor, cut at the chromosome junctions (§6.3) |
 
 ---
 

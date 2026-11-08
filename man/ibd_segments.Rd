@@ -9,25 +9,33 @@ ibd_segments(run, ids_a, ids_b, min_span = 1000)
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
 
-\item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
+\item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared position by position.}
 
-\item{min_span}{minimum segment length in bp (the detection floor; below this a shared
-stretch is treated as noise, mirroring real IBD inference).}
+\item{min_span}{the shortest segment returned, in bp, after the cut at the junctions (a segment
+of exactly \code{min_span} is kept): below it a shared stretch is treated as noise, mirroring the
+detection floor of IBD inference.}
 }
 \value{
-a data.table of \code{pair}, \code{a}, \code{b}, \code{chrom}, \code{start}, \code{end} (within-chromosome bp),
-\code{gstart}, \code{gend} (concatenated bp) and \code{length}. A pair sharing nothing yields no rows.
+a data.table, by pair and position: \code{pair} (the position in \code{ids_a} and \code{ids_b}, from 1),
+\code{a} and \code{b} (as given), \code{chrom} (the PvP01 chromosome), \code{start} and \code{end} (bp within the
+chromosome, \code{end} exclusive), \code{gstart} and \code{gend} (bp along the concatenated genome), \code{length}
+(bp), \code{mrca_id} (the pedigree id of the common ancestor), \code{mrca_time} and \code{depth} (its age;
+see \code{\link[=ibd_pairs]{ibd_pairs()}}). A pair sharing nothing has no rows, and nor does a pair with a genome the
+tree sequence does not hold, which warns. A genome with itself is shared end to end: one row
+per chromosome, its own ancestor at depth 0. A pair given twice has its rows twice.
 }
 \description{
 The stretches of genome over which two parasites are identical by descent -- the detail
-behind the single IBD number from \code{\link[=ibd_pairs]{ibd_pairs()}}. Segments are split at chromosome
-boundaries and reported in both concatenated and within-chromosome coordinates.
+behind the single IBD number from \code{\link[=ibd_pairs]{ibd_pairs()}}. A segment is a maximal stretch over which the
+two genomes descend from one common ancestor genome, cut at each chromosome junction, the same
+rows as \code{ibd_pairs(segments = TRUE)} gives for the pair; each is in both concatenated and
+within-chromosome coordinates.
 }
 \section{Python}{
 
 The IBD and ARG functions read a run's tree sequence with Python's tskit, through the
 reticulate package. Either of two routes works. \emph{Automatic}: with no Python chosen, reticulate
-sets up its own environment with tskit (>= 1.0), pandas and numpy the first time one of these
+sets up its own environment with tskit (>= 1.0) and numpy the first time one of these
 functions runs; this needs internet once. \emph{Your own Python}: set \code{RETICULATE_PYTHON} to a
 Python that has those modules (in \verb{~/.Renviron} to keep it) before the first such call of a
 session. A function that cannot reach them stops with an error of class
@@ -39,4 +47,7 @@ session. A function that cannot reach them stops with an error of class
 rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
 }
+}
+\seealso{
+\code{\link[=plot_ibd_pair]{plot_ibd_pair()}}, \code{\link[=ibd_pairs]{ibd_pairs()}}
 }

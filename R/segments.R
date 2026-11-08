@@ -1,4 +1,4 @@
-## segments.R -- pairwise IBD SEGMENTS (where along the genome two genomes share ancestry)
+## segments.R -- pairwise IBD SEGMENTS (where along the genome two genomes share ancestry, D74)
 ## and the two diagnostic plots built on them.
 ##
 ## NB distinct from the planned founder-mosaic `extract_segments()` (which paints each sample
@@ -39,93 +39,58 @@ chrom_map <- function(run) {
 #' Pairwise IBD segments along the genome
 #'
 #' The stretches of genome over which two parasites are identical by descent -- the detail
-#' behind the single IBD number from [ibd_pairs()]. Segments are split at chromosome
-#' boundaries and reported in both concatenated and within-chromosome coordinates.
+#' behind the single IBD number from [ibd_pairs()]. A segment is a maximal stretch over which the
+#' two genomes descend from one common ancestor genome, cut at each chromosome junction, the same
+#' rows as `ibd_pairs(segments = TRUE)` gives for the pair; each is in both concatenated and
+#' within-chromosome coordinates.
 #'
 #' @param run a run directory or `vivax_run`.
-#' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
-#' @param min_span minimum segment length in bp (the detection floor; below this a shared
-#'   stretch is treated as noise, mirroring real IBD inference).
-#' @return a data.table of `pair`, `a`, `b`, `chrom`, `start`, `end` (within-chromosome bp),
-#'   `gstart`, `gend` (concatenated bp) and `length`. A pair sharing nothing yields no rows.
+#' @param ids_a,ids_b equal-length vectors of pedigree ids, compared position by position.
+#' @param min_span the shortest segment returned, in bp, after the cut at the junctions (a segment
+#'   of exactly `min_span` is kept): below it a shared stretch is treated as noise, mirroring the
+#'   detection floor of IBD inference.
+#' @return a data.table, by pair and position: `pair` (the position in `ids_a` and `ids_b`, from 1),
+#'   `a` and `b` (as given), `chrom` (the PvP01 chromosome), `start` and `end` (bp within the
+#'   chromosome, `end` exclusive), `gstart` and `gend` (bp along the concatenated genome), `length`
+#'   (bp), `mrca_id` (the pedigree id of the common ancestor), `mrca_time` and `depth` (its age;
+#'   see [ibd_pairs()]). A pair sharing nothing has no rows, and nor does a pair with a genome the
+#'   tree sequence does not hold, which warns. A genome with itself is shared end to end: one row
+#'   per chromosome, its own ancestor at depth 0. A pair given twice has its rows twice.
 #' @examples
 #' \dontrun{
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 #' ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
 #' }
+#' @seealso [plot_ibd_pair()], [ibd_pairs()]
 #' @inheritSection tskit_available Python
 #' @export
 ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
-  stopifnot(length(ids_a) == length(ids_b))
-  .require_python("ibd_segments()")
-  pymain <- reticulate::py
-  pymain$`_trees` <- trees_path(run)
-  pymain$`_a` <- as.integer(ids_a); pymain$`_b` <- as.integer(ids_b)
-  pymain$`_ms` <- as.integer(min_span)
-  reticulate::py_run_string('
-import tskit, pandas as pd, json
-def _md(x):
-    m = x.metadata
-    if isinstance(m, bytes):
-        try: m = json.loads(m.decode()) if m else {}
-        except Exception: m = {}
-    return m if isinstance(m, dict) else {}
-def _vac(nd):
-    v = _md(nd).get("is_vacant"); return bool(v[0]) if v else False
-def _lst(x):
-    if x is None: return []
-    try: return [int(v) for v in x]
-    except TypeError: return [int(x)]
-ts = tskit.load(_trees)
-# resolve pedigree_id -> node on the ORIGINAL tree (simplify would renumber nodes)
-p2n = {}
-for n in ts.samples():
-    nd = ts.node(n)
-    if nd.individual == tskit.NULL or _vac(nd): continue
-    m = _md(ts.individual(nd.individual))
-    p = m.get("pedigree_id", m.get("pedigreeID"))
-    if p is not None: p2n.setdefault(int(p), int(n))
-rows = []
-for i, (x, y) in enumerate(zip(_lst(_a), _lst(_b))):
-    na, nb = p2n.get(int(x)), p2n.get(int(y))
-    if na is None or nb is None: continue
-    if na == nb:                       # a genome is identical to itself end to end
-        rows.append({"pair": i, "a": int(x), "b": int(y),
-                     "gstart": 0.0, "gend": float(ts.sequence_length)}); continue
-    for (_i, _j), segs in ts.ibd_segments(within=[na, nb], store_pairs=True,
-                                          store_segments=True, min_span=_ms).items():
-        for s in segs:
-            rows.append({"pair": i, "a": int(x), "b": int(y),
-                         "gstart": float(s.left), "gend": float(s.right)})
-_seg = pd.DataFrame(rows, columns=["pair","a","b","gstart","gend"])
-')
-  seg <- data.table::as.data.table(reticulate::py$`_seg`)
-  ## A pair sharing NOTHING yields an empty frame, and pandas types empty columns as object,
-  ## which reticulate hands back as character. Every downstream join is on integer `pair`, so
-  ## the types are pinned here -- otherwise an unrelated pair (a legitimate and common case)
-  ## fails to merge in plot_ibd_pair() rather than drawing an empty karyotype.
-  seg[, `:=`(pair = as.integer(pair), a = as.integer(a), b = as.integer(b),
-             gstart = as.numeric(gstart), gend = as.numeric(gend))]
-  ## Return the columns in the SAME ORDER as the non-empty path below. Appending them with
-  ## `:=` left gstart/gend ahead of chrom/start/end, so a pair that shares nothing produced a
-  ## different column ORDER from one that shares something -- and rbindlist's default
-  ## use.names = "check" then binds by position, emitting only a message while pouring
-  ## `gstart` values into `chrom` (1021664 instead of 1). Plausible-looking silent corruption
-  ## in any loop over pairs or runs.
-  if (!nrow(seg))
-    return(seg[, .(pair, a, b, chrom = integer(), start = numeric(), end = numeric(),
-                   gstart, gend, length = numeric())][])
-  cm <- chrom_map(run)
-  ## Split each segment at chromosome boundaries (a segment can span a junction when the same
-  ## parent happens to continue across it). Done as a cross join + overlap filter, PER SEGMENT:
-  ## comparing the 14-row chromosome table against a whole group's segment vector would
-  ## silently recycle and mis-assign chromosomes for any pair with more than one segment.
-  seg[, segid := .I]
-  j <- seg[, cm[, .(chrom, cs = start, ce = end)], by = .(segid, pair, a, b, gstart, gend)]
-  j <- j[ce > gstart & cs < gend]
-  j[, `:=`(gs = pmax(gstart, cs), ge = pmin(gend, ce))]
-  j[, .(pair, a, b, chrom, start = gs - cs, end = ge - cs,
-        gstart = gs, gend = ge, length = ge - gs)][order(pair, gstart)]
+  ids_a <- .ibd_ids(ids_a, "ids_a"); ids_b <- .ibd_ids(ids_b, "ids_b")
+  if (length(ids_a) != length(ids_b))
+    stop("`ids_a` and `ids_b` must have the same length, one pair per position; they have ",
+         length(ids_a), " and ", length(ids_b), ".", call. = FALSE)
+  .ibd_check_min_span(min_span)
+  .require_python("ibd_segments()", c("tskit", "numpy"))
+  x <- .ibd_compute(run, pa = ids_a, pb = ids_b, min_span = min_span, segments = TRUE,
+                    absent = "their pairs have no rows.")
+  key <- data.table::data.table(pair = seq_along(ids_a), a = ids_a, b = ids_b,
+                                lo = pmin(ids_a, ids_b), hi = pmax(ids_a, ids_b))
+  sg <- data.table::copy(x$segments)
+  data.table::setnames(sg, c("a", "b"), c("lo", "hi"))
+  two <- sg[key[a != b], on = c("lo", "hi"), nomatch = NULL, allow.cartesian = TRUE]
+  ## a genome with itself: every chromosome, its own ancestor
+  self <- key[a == b & a %in% x$samples$pedigree_id]
+  cm <- if (nrow(self)) .ibd_layout(run, x$trees, x$sequence_length) else NULL
+  one <- if (nrow(self))
+    self[, .(chrom = as.integer(cm$chrom), start = 0, end = cm$length, gstart = cm$start, gend = cm$end,
+             length = cm$length, mrca_id = a,
+             mrca_time = x$samples$node_time[match(a, x$samples$pedigree_id)], depth = 0),
+         by = .(pair, a, b)]
+  cols <- c("pair", "a", "b", "chrom", "start", "end", "gstart", "gend", "length", "mrca_id", "mrca_time", "depth")
+  out <- data.table::rbindlist(list(two[, cols, with = FALSE], if (!is.null(one)) one[, cols, with = FALSE]),
+                               use.names = TRUE)
+  data.table::setorder(out, pair, gstart)
+  out[]
 }
 
 #' Plot the IBD "karyotype" of one or more pairs
@@ -155,12 +120,12 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
                           layout = c("chromosome", "concatenated"), fill = "#2166ac") {
   .need_ggplot()
   layout <- match.arg(layout)
-  .require_python("plot_ibd_pair()")
+  .require_python("plot_ibd_pair()", c("tskit", "numpy"))
   seg <- ibd_segments(run, ids_a, ids_b, min_span = min_span)
   cm <- chrom_map(run); L <- max(cm$end)
   if (is.null(labels)) labels <- sprintf("%s vs %s", ids_a, ids_b)
   lv <- unique(labels)
-  key <- data.table::data.table(pair = seq_along(ids_a) - 1L, lab = factor(labels, lv),
+  key <- data.table::data.table(pair = seq_along(ids_a), lab = factor(labels, lv),
                                 x0 = 0, x1 = L / 1e6)
   ibd <- merge(key, seg[, .(ibd = sum(length) / L), by = pair], by = "pair", all.x = TRUE)
   ibd[is.na(ibd), ibd := 0]
@@ -227,7 +192,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
 #' @inheritSection tskit_available Python
 #' @export
 ibd_truth_pairs <- function(run, max_per_class = 60) {
-  .require_python("ibd_truth_pairs()")
+  .require_python("ibd_truth_pairs()", c("tskit", "numpy"))
   ev <- data.table::as.data.table(load_events(run))
   cs <- classify_cases(ev)
   seeds <- ev[event_type == "vh_inoculation_seed"]
@@ -337,7 +302,7 @@ plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
     ggplot2::stat_summary(fun = mean, geom = "crossbar", width = .5,
                           linewidth = .5, colour = "grey15") +
     ggplot2::scale_colour_manual(values = pal, guide = "none") +
-    ggplot2::scale_y_continuous("IBD (fraction of genome shared from a recent common ancestor)",
+    ggplot2::scale_y_continuous("IBD (fraction of genome shared identical by descent; all ancestry counted)",
                                 breaks = rungs$y, labels = rungs$lab, limits = c(-0.02, 1.10)) +
     ggplot2::labs(x = NULL) +
     theme_malariafwd(base_size = 12) +
