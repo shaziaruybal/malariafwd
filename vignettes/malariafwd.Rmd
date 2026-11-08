@@ -70,7 +70,7 @@ cs <- classify_cases(ev)                           # each case by TRUE origin
 x  <- ibd_pairs(run, ids = cs$pedigree_id)
 x                                                  # genomes, pairs, and where they came from
 ibd_lookup(x, cs$pedigree_id[1], cs$pedigree_id[2])
-ibd_truth_pairs(run)[cls == "relapse vs its origin", summary(ibd)]   # each relapse vs its batch: 1
+ibd_truth_pairs(run)[cls == "relapse vs its origin", summary(ibd)]   # up to 60 relapses vs their batches: 1
 recurrences(ev, ibd = x)                           # each recurrence vs the host's earlier episodes
 new_infection_diversity(run)                        # relatedness of the transmitting population
 ```

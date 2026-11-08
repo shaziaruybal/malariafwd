@@ -223,12 +223,13 @@ audit_run <- function(tag, params, seed = 1) {
        sprintf("coalesced %.2f", mean(tf$coalesced, na.rm = TRUE)))
   }
 
-  ## the key biological invariant: a relapse is clonal to the batch it woke from
-  ro <- ibd_truth_pairs(run)[cls == "relapse vs its origin"]
-  if (nrow(ro)) {
-    ok("relapse-to-origin IBD == 1 (clonal)",
-       median(ro$ibd, na.rm = TRUE) > 0.99,
-       sprintf("median %.3f over %d relapses", median(ro$ibd, na.rm = TRUE), nrow(ro)))
+  ## the key biological invariant: every relapse is clonal to the batch it woke from
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
+  if (nrow(rel)) {
+    rv <- ibd_lookup(ibd_pairs(run, pairs = data.frame(a = rel$pedigree_id, b = rel$parent1_pedigree_id)),
+                     rel$pedigree_id, rel$parent1_pedigree_id)
+    ok("relapse-to-origin IBD == 1 (clonal)", !anyNA(rv) && min(rv) > 0.999,
+       sprintf("min %.3f over %d relapses", min(rv), length(rv)))
   }
 
   ## DISTINCT FOUNDER lineages are independent genome roots -> must be ~unrelated.
