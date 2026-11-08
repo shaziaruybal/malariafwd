@@ -95,3 +95,19 @@ test_that("classify_travel() gives the same columns without imports or cases, an
     expect_error(classify_travel(ev, window = w), "`window` must be a single whole number of days, 0 or more.",
                  fixed = TRUE)
 })
+
+test_that("classify_travel() counts an import once, on the day it arrived", {
+  ## host 4: an import (inoculation 7) on day 100, its hypnozoite batch logged on day 101, and the
+  ## batch's relapse on day 160
+  ev <- make_events(list(
+    list(tick = 100L, event_type = "vh_inoculation_import", human_id = 4L, lineage_id = 9L, pedigree_id = 41L,
+         inoculation_id = 7L, is_imported = 1L, detected = 1L),
+    list(tick = 101L, event_type = "vh_inoculation_import", human_id = 4L, lineage_id = 9L, pedigree_id = 42L,
+         inoculation_id = 7L, is_imported = 1L, is_dormant = 1L),
+    list(tick = 160L, event_type = "hypnozoite_activation", human_id = 4L, lineage_id = 9L, pedigree_id = 43L,
+         parent1_pedigree_id = 42L, is_imported = 1L, detected = 1L)))
+  relapse <- function(w) classify_travel(ev, window = w)[pedigree_id == 43L, surveillance]
+  expect_identical(relapse(60), "local (no recent travel)")   # days 101 to 160 leave out day 100
+  expect_identical(relapse(61), "imported (recent travel)")
+  expect_identical(classify_travel(ev, window = 1)[pedigree_id == 41L, surveillance], "imported (recent travel)")
+})

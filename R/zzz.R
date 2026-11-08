@@ -6,7 +6,7 @@ utils::globalVariables(c(
   # state / entity columns
   "entity_type", "entity_id", "tick", "moi_active", "moi_dormant", "hyp_reservoir_size",
   # event-log columns
-  "event_type", "is_dormant", "is_imported", "lineage_id", "oocyst_id", "pedigree_id",
+  "event_type", "is_dormant", "is_imported", "lineage_id", "oocyst_id", "pedigree_id", "inoculation_id",
   "parent1_pedigree_id", "parent2_pedigree_id", "human_id", "origin", "detected",
   # derived / aggregate columns
   "cls", "frac", "win", "chain_id", "chain_size", "chain", "hypnozoites_per_host",

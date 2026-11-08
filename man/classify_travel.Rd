@@ -10,8 +10,8 @@ classify_travel(events, window = 60)
 \item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 
 \item{window}{the look-back, a whole number of days, 0 or more: a case on day \code{tick} is flagged
-when its host had an import on a day from \code{tick - window + 1} to \code{tick}. An import's own case
-is flagged for any \code{window} of 1 or more; at 0 no case is.}
+when an import arrived in its host on a day from \code{tick - window + 1} to \code{tick}. An import's own
+case is flagged for any \code{window} of 1 or more; at 0 no case is.}
 }
 \value{
 a data.table, one row per row of \code{\link[=classify_cases]{classify_cases()}} and in its order: its columns, then
@@ -26,10 +26,11 @@ column of \code{\link[=classify_cases]{classify_cases()}} or the \code{who_class
 disagree: the disagreement is what a travel rule costs.
 }
 \details{
-The trip is recorded when an import establishes in the host, as a blood-stage infection or as
-hypnozoites only. The window decides most of the result, and for vivax no window is right: a
-relapse of an imported batch can come long after the trip, so a short window misses the late
-relapses, while a long one flags more of the cases the host acquired locally after the trip.
+The trip is recorded once, on the day an import arrives, whether it established a blood-stage
+infection, hypnozoites or both. The window decides most of the result, and for vivax no window
+is right: a relapse of an imported batch can come long after the trip, so a short window misses
+the late relapses, while a long one flags more of the cases the host acquired locally after the
+trip.
 }
 \examples{
 \dontrun{
