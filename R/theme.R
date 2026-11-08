@@ -1,17 +1,8 @@
 ## theme.R -- one place that controls how every malariafwd plot looks.
 
-#' malariafwd plot theme
-#'
-#' A `theme_bw()`-based theme applied by every `plot_*()` function in the package, so figures
-#' from different functions compose cleanly in a panel. Set it once here rather than per plot.
-#'
-#' @param base_size base font size.
-#' @param grid `TRUE` keeps light major gridlines; `FALSE` removes all gridlines (used by the
-#'   karyotype and other plots where the grid competes with the data).
-#' @return a ggplot2 theme object.
-#' @examples
-#' \dontrun{plot_relapse_km(time_to_relapse(run)) + theme_malariafwd(base_size = 13)}
-#' @export
+## The theme every plot_*() function applies, based on theme_bw(), so that figures from different
+## functions compose in a panel. `base_size` is the base font size; `grid = FALSE` removes all
+## gridlines, for the karyotype and other plots where the grid competes with the data.
 theme_malariafwd <- function(base_size = 11, grid = TRUE) {
   .need_ggplot()
   th <- ggplot2::theme_bw(base_size = base_size) +

@@ -33,6 +33,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `moi_vs_relapse()`, `plot_moi_vs_relapse()` | removed | one study's figure; a host's peak `moi_active` is in `load_state()`, its relapses in `classify_cases()` |
 | `pick_host()` | removed: `ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]`, the host with the most relapses | one line that picks a figure's host, and nothing in the package calls it; the vignette and `quickstart.R` write it out |
 | `as_slim_args()`, `slim_path()` | internal | plumbing: `run_sim()` builds SLiM's arguments, and `check_setup()` shows the SLiM path |
+| `theme_malariafwd()` | internal | every plot applies it; a user restyles a plot with ggplot2's own themes |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.

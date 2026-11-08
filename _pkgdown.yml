@@ -17,7 +17,7 @@ reference:
 - title: Diagnostics
   desc: Is this run healthy, and what is driving it?
   contents: [plot_diagnostics, summarise_run, force_of_infection,
-             plot_force_of_infection, theme_malariafwd]
+             plot_force_of_infection]
 
 - title: Genotype data
   desc: Marker genotypes painted on the run's genealogy, and their VCF.
