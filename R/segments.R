@@ -1,9 +1,9 @@
 ## segments.R -- pairwise IBD SEGMENTS (where along the genome two genomes share ancestry, D74)
 ## and the two diagnostic plots built on them.
 ##
-## NB distinct from the planned founder-mosaic `extract_segments()` (which paints each sample
-## by the FOUNDER each block descends from). This is the pairwise view: for a given PAIR,
-## which stretches are identical by descent.
+## This is the pairwise view: for a given PAIR, which stretches are identical by descent. The
+## per-genome view, which root genome each genome descends from at each locus of a panel, is the
+## `roots` matrix of simulate_genotypes() (genotypes.R).
 
 ## PvP01 chromosome lengths (bp), chr 1..14; GenBank LT635612.1..LT635625.1. Mirrors the
 ## PVP01_FULL constant in the SLiM model; "core" mode is 90% of each (see the model's GENOME

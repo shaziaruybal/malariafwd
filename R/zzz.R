@@ -25,6 +25,8 @@ utils::globalVariables(c(
   "rp", "rt", "pp", "pt",
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
+  # simulate_genotypes / write_vcf
+  "root_id", "locus", "pos", "position", "plaf", ".row", "INFO", "FORMAT",
   # classify_chain
   "from_import", "generation", "import_pedigree_id", "who_class", "src", "to",
   # rc_by_origin

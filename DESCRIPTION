@@ -11,14 +11,16 @@ Description: An R interface to a SLiM (Eidos) + tskit individual-based forward
     tskit tree sequence for ground-truth identity-by-descent. The package runs the
     model from R (single runs and parallel multi-seed / multi-parameter sweeps) and
     provides tidy loaders, epidemiological + genetic metrics, ground-truth IBD via
-    tskit, and plotting helpers.
+    tskit, marker genotypes painted on the genealogy and written as VCF, and
+    plotting helpers.
 URL: https://github.com/shaziaruybal/malariafwd, https://shaziaruybal.github.io/malariafwd/
 BugReports: https://github.com/shaziaruybal/malariafwd/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 SystemRequirements: SLiM (>= 5.2) on PATH; Python 3 with tskit (>= 1.0) and
-    numpy, through the reticulate package (for IBD and the ARG functions)
+    numpy, through the reticulate package (for IBD, the ARG functions and
+    simulate_genotypes())
 Depends:
     R (>= 4.1.0)
 Imports:

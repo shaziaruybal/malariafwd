@@ -49,7 +49,7 @@ from markers. Shared segments for pairs of known relationship:
 ## Requirements
 
 - **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`).
-- For the IBD and ARG functions: **Python with `tskit` (≥ 1.0) and `numpy`**, through
+- For the IBD and ARG functions and `simulate_genotypes()`: **Python with `tskit` (≥ 1.0) and `numpy`**, through
   the `reticulate` package. Either route works. *Automatic*: with no Python chosen, reticulate
   sets up its own environment with these modules the first time an IBD function runs; this needs
   internet once and a few hundred MB in the user cache. *Your own Python*: set
@@ -131,6 +131,11 @@ ibd_segments(run, a, b)                  # the shared stretches, split by chromo
 plot_ibd_pair(run, a, b)                 # IBD "karyotype" -- 14 chromosomes, shared blocks
 plot_relatedness_ladder(ibd_truth_pairs(run))   # IBD by known relationship vs the textbook rungs
 
+# marker genotypes painted on the genealogy, with the truth behind every call
+loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
+g <- simulate_genotypes(run, cs$pedigree_id, loci, error = 0.01, seed = 1)
+write_vcf(g, "cases.vcf")
+
 # ARG-native (time-domain) views. The model is neutral, so SITE statistics are all zero and
 # tskit BRANCH mode is the right tool -- but note the genealogy is a FOREST (see ?arg_summary).
 arg_summary(run)                         # trees, edges, roots per tree, oldest root
@@ -163,6 +168,9 @@ each, is in [`MODEL_DESCRIPTION.md`](MODEL_DESCRIPTION.md).
   on parasitaemia, and infectiousness is a per-clone property.
 * **The genome is neutral** (mutation rate 0): no selection, no drug resistance, no sequence
   divergence. IBD is exact because it is read from the genealogy rather than inferred.
+* **Genotypes are painted, not drawn from a real population.** `simulate_genotypes()` gives each
+  founder template and import independent alleles from the frequencies you supply, so there is
+  no background relatedness or linkage disequilibrium among them.
 * **Homogeneous mixing**, with no spatial structure or heterogeneous biting, and no
   post-treatment prophylaxis — so a treated host can be reinfected immediately.
 

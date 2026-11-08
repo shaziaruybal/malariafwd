@@ -19,6 +19,44 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D75 — Genotype data are painted on the root genomes of the tree sequence · 2026-11-08 · Accepted
+**Context.** The model is a mutation-free scaffold, so its tree sequence holds no sites, while the
+methods a run is meant to test read marker genotypes. Every genome descends, at each position, from
+exactly one root genome, a founder template or an import (D17, D18), and root genomes are unrelated
+(review M23, Q23).
+**Decision.** `simulate_genotypes()` takes biallelic loci as PvP01 chromosome, 1-based position and
+PLAF (the ALT frequency). Each root genome draws its allele at each locus independently, and each
+genome carries its root genome's allele; the truth is the root genome, by pedigree id, behind every
+genome's allele at every locus. Samples are clones (0/1) or host samples grouped by `sample_id`
+(0/1, 0.5 for both present). An error replaces a call (a clone call flips; a host call becomes one of
+the other two at random), then a missing call is `NA`. The root genomes' alleles are drawn first,
+with R's generator, for every root genome of the run, and `seed` seeds one call without touching the
+session's stream. `write_vcf()` writes VCF 4.2 with one contig per PvP01 chromosome, haploid clone
+calls, unphased diploid host calls and the painting frequency as `PLAF` in `INFO`. The author chose
+painting (Q23); the host-sample error model and the `sample_id` grouping are the design's defaults.
+**Rationale.** In a neutral, mutation-free model, painting the root genomes is exact; PLAF is what
+users have from a panel; pedigree ids survive simplification; drawing for every root genome makes a
+genome's alleles independent of the company it is asked for in.
+**Alternatives rejected.** *msprime.sim_mutations()* -- it never puts a mutation on a root, so no
+site separates two root genomes (0 of 1,657 and 0 of 16,806). *Recapitation, then mutations* -- a
+coalescent prior, not the panel's PLAF; pyslim refuses roots minted mid-run, and msprime needs a
+demography for 1,298 populations. *Painting in tskit and reading `genotype_matrix()`* -- by default
+it reads a genome alone under its root as missing wherever the root is REF (2% of case calls), and
+`ts.write_vcf()` writes one contig in concatenated coordinates. *Drawing only for the root genomes
+asked for* -- a genome's alleles would depend on the others asked for.
+**Consequences.** Runs are unchanged; two new exports. Painting has no background relatedness or
+linkage disequilibrium among root genomes, gives imports the local frequencies, and records which
+alleles a host holds, not their proportions. A run with `RETAIN_FULL_HISTORY = FALSE` limits the
+genomes to those alive at its end.
+**How to verify.** `tests/testthat/test-genotypes.R`: every genome carries its root genome's
+allele, by the bookkeeping, by painting the root nodes in tskit, and by walking the unsimplified
+genealogy; root genomes alone are their own roots; the same root genome exactly where
+`ibd_segments()` finds a common ancestor; the root genomes and their days; the seed's invariance;
+host samples; the VCF; refusals; the schema. `inst/validation/audit_events_and_ibd.R`: four checks on
+each audit run.
+
+---
+
 ## D74 — An IBD segment is a maximal stretch from one common ancestor, cut at the chromosome junctions; the pair fraction counts every shared stretch · 2026-11-08 · Accepted
 **Context.** `ibd_pairs(segments = TRUE)` returned tskit's segment rows as they came, which are
 pieces of the paths through the trees: how a pair's shared ancestry was split into rows depended on

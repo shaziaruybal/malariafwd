@@ -96,6 +96,11 @@ apart rather than choosing for you:
   the chromosome junctions, the same rows `ibd_segments()` gives — and `plot_ibd_pair()` shows
   *why* a pair's IBD is what it is, painted along the 14 chromosomes.
 
+* **Genotype data.** `simulate_genotypes()` paints biallelic marker genotypes on the root genomes
+  of a run's genealogy from the frequencies you supply, as clone or host samples with optional
+  error and missingness, and records the root genome behind every call; `write_vcf()` writes them
+  as VCF 4.2, one contig per PvP01 chromosome.
+
 * **ARG-native summaries.** `arg_summary()`, `arg_tmrca()`, `arg_diversity()`,
   `arg_divergence()`. The model is neutral, so every *site* statistic is zero and tskit's
   **branch** mode is the right tool. Two properties of a forward-simulated genealogy are
@@ -125,10 +130,10 @@ apart rather than choosing for you:
 
 Three suites ship with the package and run against a live model:
 
-* `inst/validation/audit_events_and_ibd.R` — 99 checks over the event log, state snapshots and
+* `inst/validation/audit_events_and_ibd.R` — 123 checks over the event log, state snapshots and
   the downstream ARG/IBD: event-type coverage, id uniqueness, hypnozoite and blood-stage
-  conservation against `state.tsv`, oocyst and tetrad structure, tree retention, and the IBD
-  ladder from clonal pairs down to unrelated founders.
+  conservation against `state.tsv`, oocyst and tetrad structure, tree retention, the transmission
+  links, the IBD ladder from clonal pairs down to unrelated founders, and genotype painting.
 * `inst/validation/check_parameters.R` — 40 checks over 34 configurations: structural
   invariants, directional parameter response, and seed reproducibility.
 * `audit_arg_recombination.R` and `audit_arg_junctions.R` verify that recombination breakpoints

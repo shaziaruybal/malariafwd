@@ -70,7 +70,8 @@ origin split — Rc from case counts included — inherits a bias it cannot see.
 **One SLiM individual = one parasite genome.** Humans and mosquitoes are SLiM subpopulations;
 the individuals inside them are parasite lineages, not hosts. The whole genealogy is recorded in a
 tree sequence, so **identity-by-descent is ground truth read from the ARG, never inferred from
-markers**.
+markers**. Marker genotypes can then be painted on that genealogy, with the truth behind every call
+(§16.7).
 
 That combination — genotype resolution *and* a hypnozoite reservoir — is what the model exists
 for. It is built to answer questions of the form *"what can genetic data recover about vivax
@@ -560,9 +561,11 @@ code that reads tskit's segments directly must do the same, with `chrom_map()`.
 - `GENOME_MODE` is a pure **coordinate** switch: `"full"` (24.2 Mb, default) or `"core"`
   (subtelomere-masked, ~21.8 Mb). Both use the same recombination rate.
 - **`initializeMutationRate(0.0)` — the genome carries no mutation at all.** It is a neutral
-  scaffold; all genetics come from the recorded genealogy, and alleles are painted on downstream
-  (PLAF/panel simulation). This is a strength for IBD (ground truth, no ascertainment) and a
-  limitation for anything needing sequence divergence or selection.
+  scaffold; all genetics come from the recorded genealogy. At every position each genome descends
+  from exactly one *root genome*, a founder template or an import, and `simulate_genotypes()`
+  paints alleles on the root genomes from a panel's PLAF, so each genome carries its root genome's
+  allele (§16.7). This is a strength for IBD (ground truth, no ascertainment) and a limitation for
+  anything needing sequence divergence or selection.
 
 > **The genealogy is a FOREST, not a tree.** Founder lineages have independent roots and ~93% of
 > pairs never coalesce. Consequently **tskit branch-mode divergence is not a relatedness measure
@@ -1034,7 +1037,7 @@ we do. Without genotypes the two are observationally identical, so there was not
 | IDM within-vector 2017 | ~3,000 spz/oocyst (Poisson), 20% reach glands, **10 sporozoites per bite drawn from the pool, duplicates retained** | no (Pf) |
 | EMOD genetics module | genotype-resolved Pf: chromosome structure, 25 loci, trackable recombination | vivax module unverified |
 | SIMPLEGEN / PlasmoSim | genetic-model docs still in development | — |
-| recombuddy | no mosquito stage; downstream block-mosaic painting (we use it this way) | — |
+| recombuddy | no mosquito stage; block-mosaic painting of genotypes, which `simulate_genotypes()` does on the recorded genealogy instead (its PLAF is the REF frequency: pass `1 - PLAF`) | — |
 
 **Our position:** we are, as far as this review found, the only model with **both** genotype
 resolution and a hypnozoite reservoir. That is the contribution, and it also means several
@@ -1074,7 +1077,7 @@ machinery.
 
 | script | checks | result |
 |---|---|---|
-| `audit_events_and_ibd.R` | 99 (20 event-log + 13 ARG/IBD checks on each of three configurations) | all pass |
+| `audit_events_and_ibd.R` | 123 (20 event-log, 4 transmission-link, 13 ARG/IBD and 4 genotype checks on each of three configurations) | all pass |
 | `check_parameters.R` | 40 | all pass |
 | `audit_arg_recombination.R` | numeric audit | see §13.1 |
 | `audit_arg_junctions.R` | numeric audit | see §13.1 |
@@ -1220,6 +1223,7 @@ Ordered by how much the answer is likely to move.
 |---|---|
 | **Co-transmission on by default**, and genotyping each hypnozoite independently of the inoculated primaries | at present a bite delivers one genotype and the reservoir is a subset of the blood-stage infection, so heterologous relapse can only arise across separate bites. Both changes make it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
+| Founder genomes from recombuddy | root genomes painted with background relatedness and linkage disequilibrium, which independent painting leaves out (§16.7) |
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Andolina 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
 | Origin-dependent detection | to separate active vs passive surveillance |
@@ -1323,8 +1327,8 @@ Consequently **recombinant ancestry is not reconstructable from `events.tsv`**: 
 created only by `vh_inoculation_seed`, `vh_inoculation_import`, and recombination, and the
 third of those does not report its output. Use `pedigree_id`, which is tskit-native and
 unique per genome, and take ancestry from the tree sequence — walking each sample's local-tree
-root across the genome gives its exact founder mosaic. Analyses keyed on `lineage_id` will
-silently drop every recombinant.
+root across the genome gives its exact founder mosaic, the `roots` matrix of
+`simulate_genotypes()` (§16.7). Analyses keyed on `lineage_id` will silently drop every recombinant.
 
 ### 16.2 `state.tsv` data dictionary
 
@@ -1471,6 +1475,29 @@ plot_relatedness_ladder(ibd_truth_pairs(run))
 Expect tens of seconds for the simulation and considerably longer for `ibd_pairs()` as the number
 of sampled genomes grows (§16.6).
 
+### 16.7 Genotype data
+
+`simulate_genotypes()` turns a run's genealogy into marker data with known truth.
+
+| term | definition |
+|---|---|
+| root genome | a genome with no recorded ancestry: a day-1 founder template or an imported genome. At every position each genome descends from exactly one, and root genomes are unrelated |
+| painting | each root genome draws its allele at each locus independently, ALT with probability `plaf`; each genome carries its root genome's allele there |
+| PLAF | the ALT frequency among the root genomes (recombuddy's PLAF is the REF frequency) |
+| clone sample | one genome: 0, 1 or missing |
+| host sample | the genomes grouped by `sample_id`: 0 (REF only), 1 (ALT only), 0.5 (both present) or missing |
+| truth | `roots`: the root genome behind each genome's allele at each locus. Two genomes share a root genome exactly where `ibd_segments()` finds them sharing a common ancestor |
+
+The root genomes' alleles are drawn first, for every root genome of the run, so with one seed a
+genome's alleles do not depend on which other genomes are asked for, their grouping, or the error
+and missingness laid over them. Painting leaves out background relatedness and linkage
+disequilibrium among root genomes, gives imports the local frequencies, never changes an allele
+along the genealogy, and records which alleles a host sample holds, not their proportions.
+`write_vcf()` writes VCF 4.2 with one contig per simulated PvP01 chromosome (named `PvP01_01_v2`
+...), each locus at its 1-based position within its chromosome, the painting frequency as `PLAF` in
+`INFO`, clone samples haploid and host samples unphased diploid (`0/1` for both alleles present),
+and placeholder REF and ALT alleles unless the loci give them.
+
 ### 16.6 Computational cost
 
 The dominant expense is **pairwise IBD**, not the simulation. Tree-sequence loading is
@@ -1479,6 +1506,9 @@ when scaling the number of sampled genomes, and prefer cross-matrices over n² w
 Segments cost more than the pair fractions: on a 50-host run, the 23,436 pairs among 217 cases
 with their 190,151 segments take about a second. For a few pairs among many genomes, list them:
 `ibd_pairs(pairs =)` and `ibd_segments()` compute only the pairs given, about 0.2 ms each.
+`simulate_genotypes()` paints 2,000 genomes at 5,000 loci in about a second on a 300-host 3-year
+run, and its matrices take about 24 bytes a genome and locus (240 MB there); give large sets of
+genomes in batches with one seed. `write_vcf()` writes that object in about a second.
 
 ---
 
@@ -1522,6 +1552,12 @@ throughout; new parameters must too.
 own — a whole-group comparison against the 14-row chromosome table silently recycles for pairs with
 more than one segment.
 
+**Painting alleles with tskit.** To paint the root genomes with tskit itself, simplify with
+`keep_input_roots=True` (otherwise the roots are the MRCAs of the genomes kept, and change with
+them), give each mutation `metadata={"mutation_list": []}` (SLiM's schema requires it), and read
+`genotype_matrix(isolated_as_missing=False)`: by default a genome alone under its root genome, such
+as an import that infected none of the genomes kept, reads as missing wherever its root is REF.
+
 **tskit's segments are path pieces.** Read straight from tskit, a pair's shared stretches come in
 pieces that depend on the samples the tree was simplified to, and a stretch can run across a
 chromosome junction. Merge abutting pieces with the same ancestor and cut at the junctions before
@@ -1552,6 +1588,8 @@ counting or drawing them (§6.3, §7).
 | **iIBD** | mean IBD among co-present strains within one host |
 | **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred; every shared stretch counts, of any age and length |
 | **IBD segment** | a maximal stretch over which two genomes descend from one common ancestor, cut at the chromosome junctions (§6.3) |
+| **root genome** | a genome with no recorded ancestry, a founder template or an import; every genome descends from exactly one at each position (§16.7) |
+| **PLAF** | population-level allele frequency; in `simulate_genotypes()` the ALT frequency among the root genomes |
 
 ---
 

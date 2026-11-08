@@ -167,6 +167,39 @@ audit_run <- function(tag, params, seed = 1) {
   ok("IBD is symmetric",
      isTRUE(all.equal(ibd_lookup(ibx, smp[1], smp[2]), ibd_lookup(ibx, smp[2], smp[1]))))
 
+  ## ---- genotype painting ----
+  cm <- chrom_map(run)
+  gl <- data.table(chrom = rep(cm$chrom, each = 15), plaf = 0.35,
+                   pos = as.integer(unlist(lapply(cm$length, function(l) round(seq(1, l, length.out = 17)[2:16])))))
+  relg <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][seq_len(min(.N, 30))]
+  rp <- suppressWarnings(ibd_pairs(run, pairs = relg[, .(a = pedigree_id, b = parent1_pedigree_id)]))
+  relg <- relg[pedigree_id %in% rp$samples$pedigree_id & parent1_pedigree_id %in% rp$samples$pedigree_id]
+  g <- simulate_genotypes(run, unique(c(ibx$samples$pedigree_id, relg$pedigree_id, relg$parent1_pedigree_id)),
+                          gl, seed = 1)
+  k <- match(g$roots, g$root_genomes$root_id)
+  ok("every genome carries its root genome's allele",
+     !anyNA(k) && all(as.vector(g$alleles) == g$root_alleles[cbind(k, as.vector(col(g$roots)))]),
+     sprintf("%d genomes x %d loci, %d root genomes", nrow(g$alleles), nrow(gl), nrow(g$root_genomes)))
+  ok("a relapse shares every root genome with its batch",
+     all(g$roots[as.character(relg$pedigree_id), , drop = FALSE] ==
+           g$roots[as.character(relg$parent1_pedigree_id), , drop = FALSE]), sprintf("%d relapses", nrow(relg)))
+  flp <- as.character(intersect(unique(ev[event_type == "vh_inoculation_seed"], by = "lineage_id")$pedigree_id,
+                                ibx$samples$pedigree_id))
+  cb <- if (length(flp) >= 2) utils::combn(length(flp), 2) else matrix(integer(), 2, 0)
+  ok("distinct founder lineages never share a root genome",
+     !any(vapply(seq_len(ncol(cb)), function(j) any(g$roots[flp[cb[1, j]], ] == g$roots[flp[cb[2, j]], ]), logical(1))),
+     sprintf("%d founder lineages", length(flp)))
+  set.seed(1)
+  pp <- rbind(ibx$pairs[ibd > 0 & ibd < 1][sample(.N, min(.N, 15))], ibx$pairs[sample(.N, min(.N, 15))])
+  sgp <- ibd_segments(run, pp$a, pp$b, min_span = 0)
+  agree <- vapply(seq_len(nrow(pp)), function(i) {
+    s <- sgp[pair == i]
+    identical(unname(g$roots[as.character(pp$a[i]), ] == g$roots[as.character(pp$b[i]), ]),
+              vapply(g$loci$position, function(x) any(s$gstart <= x & x < s$gend), logical(1)))
+  }, logical(1))
+  ok("two genomes share a root genome exactly where they share an IBD segment", all(agree),
+     sprintf("%d pairs", nrow(pp)))
+
   ## ---- ARG-native checks (tree/branch domain, complementing the IBD/segment domain) ----
   ag <- arg_summary(run, unique(c(cs$pedigree_id, founders)))
   ok("ARG recombines (>1 local tree)", ag$num_trees > 1, sprintf("%d trees", ag$num_trees))

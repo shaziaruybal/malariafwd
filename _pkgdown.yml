@@ -19,6 +19,10 @@ reference:
   contents: [plot_diagnostics, summarise_run, force_of_infection,
              plot_force_of_infection, theme_malariafwd]
 
+- title: Genotype data
+  desc: Marker genotypes painted on the run's genealogy, and their VCF.
+  contents: [simulate_genotypes, write_vcf]
+
 - title: Epidemiology
   desc: Cases by origin, transmission chains, and the surveillance view.
   contents: [classify_cases, episodes, recurrences, classify_chain, incidence_by_origin, host_state_prevalence,
