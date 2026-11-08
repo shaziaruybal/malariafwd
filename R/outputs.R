@@ -151,7 +151,7 @@
   tick = "the simulation day",
   entity_type = "`\"human\"` or `\"mosquito\"`",
   entity_id = "the host's or the mosquito's id",
-  tag = "hosts: 1 if the host carries a clone that can infect a mosquito (patent, or subpatent when `SUBPATENT_INFECTIVITY > 0`), 0 otherwise, hypnozoites alone included; mosquitoes: 1 if it carries a parasite product, inside or past the EIP",
+  tag = "hosts: 1 if the host carries a patent blood-stage clone, or a subpatent one when `SUBPATENT_INFECTIVITY > 0`, whether or not it carries gametocytes; 0 otherwise, hypnozoites alone included; mosquitoes: 1 if it carries a parasite product, inside or past the EIP",
   moi_active = "hosts: the distinct patent blood-stage lineages (the COI), suppressed clones excluded; mosquitoes: the distinct lineages it carries, inside the EIP included",
   moi_subpatent = "hosts: the distinct lineages suppressed below patency, present but undetectable; 0 unless `P_RECRUD_GIVEN_FAIL > 0`",
   moi_dormant = "hosts: the distinct genotypes in the hypnozoite reservoir",

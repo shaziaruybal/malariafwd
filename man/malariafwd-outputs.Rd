@@ -68,7 +68,7 @@ One row per host and per mosquito per day. \code{load_state()} gives the host ro
 \item{\code{tick} (integer)}{the simulation day}
 \item{\code{entity_type} (character)}{\code{"human"} or \code{"mosquito"}}
 \item{\code{entity_id} (integer)}{the host's or the mosquito's id}
-\item{\code{tag} (integer)}{hosts: 1 if the host carries a clone that can infect a mosquito (patent, or subpatent when \code{SUBPATENT_INFECTIVITY > 0}), 0 otherwise, hypnozoites alone included; mosquitoes: 1 if it carries a parasite product, inside or past the EIP}
+\item{\code{tag} (integer)}{hosts: 1 if the host carries a patent blood-stage clone, or a subpatent one when \code{SUBPATENT_INFECTIVITY > 0}, whether or not it carries gametocytes; 0 otherwise, hypnozoites alone included; mosquitoes: 1 if it carries a parasite product, inside or past the EIP}
 \item{\code{moi_active} (integer)}{hosts: the distinct patent blood-stage lineages (the COI), suppressed clones excluded; mosquitoes: the distinct lineages it carries, inside the EIP included}
 \item{\code{moi_subpatent} (integer)}{hosts: the distinct lineages suppressed below patency, present but undetectable; 0 unless \code{P_RECRUD_GIVEN_FAIL > 0}}
 \item{\code{moi_dormant} (integer)}{hosts: the distinct genotypes in the hypnozoite reservoir}
