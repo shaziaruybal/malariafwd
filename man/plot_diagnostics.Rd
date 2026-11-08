@@ -9,12 +9,10 @@ plot_diagnostics(run, bin = 30, burn_frac = 0.5)
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
 
-\item{bin}{window width in days.
-The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop to zero and stay
-there to the end of the run, and the subtitle says on which day it went extinct. A window with no
-case is drawn as zero.}
+\item{bin}{window width in days.}
 
-\item{burn_frac}{the fraction of \code{SIM_DAYS} marked as burn-in (a display and summary choice).}
+\item{burn_frac}{the share of the run's \code{SIM_DAYS} days marked as burn-in; the subtitle gives
+\code{\link[=summarise_run]{summarise_run()}}'s numbers for the rest.}
 }
 \value{
 a patchwork object (combined ggplot).
@@ -25,10 +23,15 @@ blood-stage infection by origin (FOI vs molFOB; see \code{\link[=force_of_infect
 the hypnozoite reservoir, and circulating-lineage richness -- all over time, with the
 burn-in marked. Surfaces the common failure modes at a glance: extinction (lines crash to
 zero), saturation (prevalence pinned near 100\%), and non-stationarity (metrics still
-trending at the burn-in). The two "by origin" panels share a palette: imported /
-local reinfection (= FOI) plus relapse (the extra molFOB contribution, Koepfli et al. 2013),
-plus recrudescence where a run produces any. Only the first three are clone ACQUISITIONS, so
-the FOI panel sums those and not the fourth.
+trending at the burn-in). The two "by origin" panels share a palette. The force panel stacks
+the new clones: imported and local reinfection (FOI), and relapse, which molFOB adds (Koepfli et
+al. 2013). A recrudescence, a new episode but not a new clone, appears in the incidence panel
+only. The subtitle gives \code{\link[=summarise_run]{summarise_run()}}'s numbers for the days after the burn-in.
+}
+\details{
+The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop to zero and stay
+there to the end of the run, and the subtitle says on which day it went extinct. A window with no
+case is drawn as zero.
 }
 \references{
 Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).

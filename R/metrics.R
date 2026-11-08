@@ -689,9 +689,10 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
   last <- if (nrow(hosts)) max(hosts$tick) else 0L
   ended <- if (!is.na(run$extinct_tick)) run$extinct_tick else if (isTRUE(run$never_started)) last else sim_days
   if (w$to > last && last < ended)
-    stop("state.tsv in ", .run_dir(run), " stops on day ", last, " of ", sim_days, ", and params.tsv ",
-         "records no extinction and no start failure, so the run did not finish: summarise the days it ",
-         "recorded with `to = ", last, "`.", call. = FALSE)
+    stop(structure(class = c("malariafwd_unfinished_run", "error", "condition"), list(message = paste0(
+      "state.tsv in ", .run_dir(run), " stops on day ", last, " of ", sim_days, ", and params.tsv ",
+      "records no extinction and no start failure, so the run did not finish: summarise the days it ",
+      "recorded with `to = ", last, "`."), call = NULL)))
   hw <- hosts[tick >= w$from & tick <= w$to]
   if (nrow(hw) != as.numeric(nh) * max(0L, min(w$to, last) - w$from + 1L))
     stop("state.tsv in ", .run_dir(run), " does not hold one row per host (N_HOSTS = ", nh,

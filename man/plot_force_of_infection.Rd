@@ -15,16 +15,17 @@ plot_force_of_infection(foi, smooth = 0.4)
 a ggplot object.
 }
 \description{
-Plots the compound force of blood-stage infection (\strong{molFOB} -- every new blood-stage
-episode, relapses included) against the mosquito-borne force of infection (\strong{FOI} -- new
-inoculations only). The distance between the lines is the relapse contribution, which in
-\emph{P. vivax} is typically the larger share and is invisible to any method that equates new
-episodes with new transmission.
+Plots the compound force of blood-stage infection (\strong{molFOB} -- every new blood-stage clone,
+relapses included, recrudescences excluded) against the force of infection (\strong{FOI} -- the new
+clones from bites and imports). The distance between the lines is the relapse contribution,
+which in \emph{P. vivax} is typically the larger share and is invisible to any method that equates
+new episodes with new transmission.
 }
 \details{
-Naming follows Koepfli et al. (2013): molFOB counts blood-stage infections however they arise,
-FOI counts mosquito-borne infections only. Both series are drawn in every window of the run, as
-zero where there was no case.
+Naming follows Koepfli et al. (2013): molFOB counts new blood-stage clones however they arise,
+FOI those a bite or an import brought. A recrudescence is a new episode but not a new clone, so
+it is in neither series. Both series are drawn in every window of the run, as zero where there
+was no case.
 }
 \examples{
 \dontrun{plot_force_of_infection(force_of_infection(run))}

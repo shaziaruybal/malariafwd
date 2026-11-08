@@ -27,11 +27,11 @@ relapses (circles) — and, on a run with treatment failure, recrudescences (dia
 *reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
 of relapses a host goes on to experience (boxes drawn only where there are enough hosts; every
 level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage **clone acquisition** against the
-mosquito-borne force alone; the distance between the lines is the relapse contribution. (A
+force from bites and imports alone; the distance between the lines is the relapse contribution. (A
 recrudescence is a new episode but not a new clone, so it enters neither series; see §9a.) **E** the
 realised IBD ladder, as the composition of each relationship class across relatedness bands.
 
-Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 episodes per person-year,
+Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 new clones per person-year,
 so 66% of blood-stage episodes are relapses**, and the gap widens through the run as the reservoir
 accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
 area as something it is not. (Panel E is deliberately a composition plot rather than a box: most

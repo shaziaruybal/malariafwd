@@ -137,24 +137,31 @@ plot_host_trajectory <- function(state, events, host_id,
 #' the hypnozoite reservoir, and circulating-lineage richness -- all over time, with the
 #' burn-in marked. Surfaces the common failure modes at a glance: extinction (lines crash to
 #' zero), saturation (prevalence pinned near 100%), and non-stationarity (metrics still
-#' trending at the burn-in). The two "by origin" panels share a palette: imported /
-#' local reinfection (= FOI) plus relapse (the extra molFOB contribution, Koepfli et al. 2013),
-#' plus recrudescence where a run produces any. Only the first three are clone ACQUISITIONS, so
-#' the FOI panel sums those and not the fourth.
-#' @param run a run directory or `vivax_run`.
-#' @param bin window width in days.
+#' trending at the burn-in). The two "by origin" panels share a palette. The force panel stacks
+#' the new clones: imported and local reinfection (FOI), and relapse, which molFOB adds (Koepfli et
+#' al. 2013). A recrudescence, a new episode but not a new clone, appears in the incidence panel
+#' only. The subtitle gives [summarise_run()]'s numbers for the days after the burn-in.
+#'
 #' The panels run to `SIM_DAYS`: a run that goes extinct shows lines that drop to zero and stay
 #' there to the end of the run, and the subtitle says on which day it went extinct. A window with no
 #' case is drawn as zero.
-#' @param burn_frac the fraction of `SIM_DAYS` marked as burn-in (a display and summary choice).
+#' @param run a run directory or `vivax_run`.
+#' @param bin window width in days.
+#' @param burn_frac the share of the run's `SIM_DAYS` days marked as burn-in; the subtitle gives
+#'   [summarise_run()]'s numbers for the rest.
 #' @return a patchwork object (combined ggplot).
 #' @references Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
 #' @export
 plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   .need_ggplot(); .need_patchwork()
-  st <- as.data.table(load_state(run)); ev <- as.data.table(load_events(run))
+  run <- load_run(run); ev <- load_events(run); h <- load_state(run)
   rp <- .params_of(run); nh <- as.numeric(rp$N_HOSTS); nm <- as.numeric(rp$N_MOSQ)
-  h <- st[entity_type == "human"]; endt <- .sim_days(run, "plot_diagnostics"); burn <- round(endt * burn_frac)
+  endt <- .sim_days(run, "plot_diagnostics")
+  ## the subtitle's numbers are summarise_run()'s, over the days after the burn-in
+  m <- tryCatch(.summary_row(run, ev, h, .run_window(endt, burn_frac), exclude_masked = FALSE),
+                malariafwd_unfinished_run = function(e)
+                  stop("plot_diagnostics() needs a finished run: ", conditionMessage(e), call. = FALSE))
+  burn <- m$from_tick
   ## every window of the run, to SIM_DAYS, with the days it covers; state.tsv stops at an extinction
   grid <- data.table::data.table(w = seq(0, (endt %/% bin) * bin, by = bin))
   grid[, days := pmin(w + bin - 1, endt) - pmax(w, 1) + 1]
@@ -176,23 +183,17 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   ## straight across, inventing cases in exactly the empty windows you look at to ask whether
   ## transmission stopped. plot_force_of_infection() below carries zeros for the same reason.
   ## Every window of the run is on the grid, so a window with no cases at all is a zero too.
-  fill0 <- function(d) {
-    d <- merge(data.table::CJ(w = keep(grid)$w, origin = olv), d, by = c("w", "origin"),
+  fill0 <- function(d, lv = olv) {
+    d <- merge(data.table::CJ(w = keep(grid)$w, origin = lv), d, by = c("w", "origin"),
                all.x = TRUE)[is.na(y), y := 0]
     d[, origin := factor(origin, olv)][order(w, origin)]
   }
   inc  <- fill0(keep(cs[, .(y = .N), by = .(w, origin)]))
-  fo   <- fill0(keep(cs[, .(y = .N / nh / (bin / 365)), by = .(w, origin)]))
+  ## new clones only: a recrudescence is a new episode but not a new clone
+  fo   <- fill0(keep(cs[origin %in% .ACQUISITIONS, .(y = .N / nh / (bin / 365)), by = .(w, origin)]), .ACQUISITIONS)
   lin  <- merge(keep(grid)[, .(w)], cs[, .(y = uniqueN(lineage_id)), by = w], by = "w", all.x = TRUE)[is.na(y), y := 0]
-  m    <- summarise_run(run)
-  r    <- if (inherits(run, "vivax_run")) run else load_run(run)
-  outcome <- if (!is.na(r$extinct_tick)) paste0(", extinct on day ", r$extinct_tick)
-             else if (isTRUE(r$never_started)) ", never started" else ""
-  py   <- max((endt - burn) / 365, .001)
-  ## a positive list, not a negation: `origin != "relapse"` silently admitted recrudescence,
-  ## which is a new episode but not a new clone and so belongs in neither FOI nor molFOB.
-  foi  <- nrow(cs[origin %in% c("imported", "local reinfection") & tick >= burn]) / nh / py
-  mol  <- nrow(cs[origin %in% .ACQUISITIONS & tick >= burn]) / nh / py
+  outcome <- if (!is.na(run$extinct_tick)) paste0(", extinct on day ", run$extinct_tick)
+             else if (isTRUE(run$never_started)) ", never started" else ""
 
   gg <- ggplot2::ggplot; ae <- ggplot2::aes
   vbl <- ggplot2::geom_vline(xintercept = burn, linetype = 2, colour = "grey65", linewidth = .3)
@@ -210,9 +211,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::guides(fill = "none") +   # one shared origin legend (kept on the force panel)
     ggplot2::labs(title = "Incidence by origin (new cases)", x = NULL, y = paste0("cases / ", bin, " d")) + th
   p3 <- gg(fo, ae(w, y, fill = origin)) + vbl + ggplot2::geom_area(alpha = .9) + fillsc +
-    ggplot2::labs(title = "Force of blood-stage infection by origin", x = NULL, y = "new clones / host-year") + th
+    ggplot2::labs(title = "Force of blood-stage infection (new clones)", x = NULL, y = "new clones / host-year") + th
   p4 <- lp(coi, "#8e6bbf", "Mean COI (infected hosts)", NULL, "MOI")
-  p5 <- lp(res, "#cc5500", "Hypnozoite reservoir", "day", "mean batch/host")
+  p5 <- lp(res, "#cc5500", "Hypnozoite reservoir", "day", "mean hypnozoites/host")
   p6 <- lp(lin, "#2e7d5b", "Circulating lineages", "day", "distinct / window")
 
   patchwork::wrap_plots(p1, p2, p3, p4, p5, p6, ncol = 2, guides = "collect") +
@@ -220,9 +221,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
       title = "malariafwd run diagnostics",
       subtitle = sprintf(
         paste0("%.0f hosts | %.0f mosquitoes | %d d (%.1f yr)%s | biting %.3g | founders %s | burn-in %d d (dashed)\n",
-               "prev %.0f%% | COI %.2f | FOI %.1f/py (import+local) | molFOB %.1f/py (+relapse) | relapse frac (episodes) %.2f"),
-        nh, nm, endt, endt / 365, outcome, as.numeric(rp$BITING_RATE), rp$N_FOUNDER_LINEAGES, burn,
-        100 * m$prevalence_frac, m$coi_mean, foi, mol, relapse_fraction(ev)$relapse_frac_episodes),
+               "days %d-%d: prevalence %.0f%% | COI %.2f | EIR %.1f/py | FOI %.1f/py | molFOB %.1f/py | relapse frac (episodes) %.2f"),
+        nh, nm, endt, endt / 365, outcome, as.numeric(rp$BITING_RATE), rp$N_FOUNDER_LINEAGES, m$from_tick - 1L,
+        m$from_tick, m$to_tick, 100 * m$prevalence_frac, m$coi_mean, m$eir_per_py, m$foi_per_py,
+        m$molfob_clones_per_py, m$relapse_frac_episodes),
       theme = ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 14))) &
     ggplot2::theme(legend.position = "bottom")
 }
@@ -281,15 +283,16 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 
 #' Force of blood-stage infection: molFOB vs FOI
 #'
-#' Plots the compound force of blood-stage infection (**molFOB** -- every new blood-stage
-#' episode, relapses included) against the mosquito-borne force of infection (**FOI** -- new
-#' inoculations only). The distance between the lines is the relapse contribution, which in
-#' *P. vivax* is typically the larger share and is invisible to any method that equates new
-#' episodes with new transmission.
+#' Plots the compound force of blood-stage infection (**molFOB** -- every new blood-stage clone,
+#' relapses included, recrudescences excluded) against the force of infection (**FOI** -- the new
+#' clones from bites and imports). The distance between the lines is the relapse contribution,
+#' which in *P. vivax* is typically the larger share and is invisible to any method that equates
+#' new episodes with new transmission.
 #'
-#' Naming follows Koepfli et al. (2013): molFOB counts blood-stage infections however they arise,
-#' FOI counts mosquito-borne infections only. Both series are drawn in every window of the run, as
-#' zero where there was no case.
+#' Naming follows Koepfli et al. (2013): molFOB counts new blood-stage clones however they arise,
+#' FOI those a bite or an import brought. A recrudescence is a new episode but not a new clone, so
+#' it is in neither series. Both series are drawn in every window of the run, as zero where there
+#' was no case.
 #'
 #' @param foi output of [force_of_infection()].
 #' @param smooth span for a loess trend through each series; `NA` draws the raw series.
@@ -311,7 +314,7 @@ plot_force_of_infection <- function(foi, smooth = 0.4) {
   mosq <- grep("^relapse", unique(acq$origin), value = TRUE, invert = TRUE)
   ## named ONCE: these strings are both the series labels and the factor levels, and writing
   ## them twice is how the molFOB series ended up factored to NA - drawn grey, no legend entry.
-  lv <- c("molFOB (all clone acquisitions)", "FOI (mosquito-borne only)")
+  lv <- c("molFOB (all clone acquisitions)", "FOI (bites and imports)")
   w <- rbind(
     acq[, .(rate = sum(rate), series = lv[1]), by = win],
     acq[origin %in% mosq, .(rate = sum(rate), series = lv[2]), by = win])

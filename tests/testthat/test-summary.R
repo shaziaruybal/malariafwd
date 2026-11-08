@@ -199,3 +199,38 @@ test_that("runs that went extinct or never started give the same typed row", {
   expect_true(n$never_started)
   expect_identical(classes(a), classes(n))
 })
+
+test_that("plot_diagnostics() gives summarise_run()'s numbers for the days after the burn-in", {
+  skip_if_not_installed("ggplot2"); skip_if_not_installed("patchwork")
+  r <- sm_main()
+  sub <- function(p) p$patches$annotation$subtitle
+  p <- plot_diagnostics(r)
+  expect_match(sub(p), paste("days 51-100: prevalence 50% | COI 1.26 | EIR 2.4/py | FOI 1.2/py | molFOB 1.2/py",
+                             "| relapse frac (episodes) 0.00"), fixed = TRUE)
+  expect_match(sub(p), "burn-in 50 d (dashed)", fixed = TRUE)
+  m <- summarise_run(r, burn_frac = 0)
+  line <- sprintf(paste("days %d-%d: prevalence %.0f%% | COI %.2f | EIR %.1f/py | FOI %.1f/py | molFOB %.1f/py",
+                        "| relapse frac (episodes) %.2f"), m$from_tick, m$to_tick, 100 * m$prevalence_frac,
+                  m$coi_mean, m$eir_per_py, m$foi_per_py, m$molfob_clones_per_py, m$relapse_frac_episodes)
+  expect_match(sub(plot_diagnostics(r, burn_frac = 0)), line, fixed = TRUE)
+  ## the day-22 recrudescence is a new episode, not a new clone
+  expect_true(any(p[[2]]$data[origin == "recrudescence"]$y > 0))
+  expect_false(any(p[[3]]$data[origin == "recrudescence"]$y > 0))
+  expect_identical(p[[5]]$labels$y, "mean hypnozoites/host")
+  for (x in list(extinct_fixture_run(), never_fixture_run())) {
+    s <- sub(plot_diagnostics(x, bin = 5))
+    expect_match(s, "days 11-20: prevalence 0% | COI NA", fixed = TRUE)
+    expect_match(s, "(episodes) NA", fixed = TRUE)
+  }
+  expect_error(plot_diagnostics(extinct_fixture_run(record = FALSE), bin = 5),
+               "plot_diagnostics() needs a finished run: state.tsv", fixed = TRUE)
+})
+
+test_that("on a run, plot_diagnostics() names its window and that window's numbers", {
+  skip_if_no_slim(); skip_if_not_installed("ggplot2"); skip_if_not_installed("patchwork")
+  r <- treated_run()
+  m <- summarise_run(r, burn_frac = 0.9)
+  s <- plot_diagnostics(r, burn_frac = 0.9)$patches$annotation$subtitle
+  expect_match(s, sprintf("days 361-400: prevalence %.0f%% | COI %.2f", 100 * m$prevalence_frac, m$coi_mean), fixed = TRUE)
+  expect_match(s, sprintf("relapse frac (episodes) %.2f", m$relapse_frac_episodes), fixed = TRUE)
+})
