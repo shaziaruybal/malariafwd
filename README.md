@@ -136,8 +136,8 @@ loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
 g <- simulate_genotypes(run, cs$pedigree_id, loci, error = 0.01, seed = 1)
 write_vcf(g, "cases.vcf")
 
-# ARG-native (time-domain) views. The model is neutral, so SITE statistics are all zero and
-# tskit BRANCH mode is the right tool -- but note the genealogy is a FOREST (see ?arg_summary).
+# ARG-native (time-domain) views. The genealogy is a FOREST (see ?arg_summary), so tskit's branch
+# statistics are no relatedness measure on it; arg_tmrca() is.
 arg_summary(run)                         # trees, edges, roots per tree, oldest root
 arg_tmrca(run, a, b)                     # genealogical DEPTH to the common ancestor, plus
                                          # `coalesced`: how much of the genome has one at all

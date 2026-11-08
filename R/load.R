@@ -112,7 +112,7 @@
 #' last import day, but not before tick 10, or on its last day if that comes first, and its
 #' `params.tsv` ends with a `NEVER_STARTED` row. It holds no parasite: its tree sequence has no
 #' nodes and its events are at most imports that did not take, so the readers that need a parasite,
-#' such as [arg_summary()] and [arg_diversity()], stop on it.
+#' such as [arg_summary()], stop on it.
 #'
 #' The functions that summarise a window of a run take its length from `SIM_DAYS`, so the days
 #' after an extinction count as days with no parasite.

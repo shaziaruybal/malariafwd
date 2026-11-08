@@ -93,7 +93,6 @@ test_that("each function that runs Python stops, naming itself, before it reads 
   d <- file.path(tempdir(), "no_such_run")
   calls <- list("ibd_pairs()" = function() ibd_pairs(d), "ibd_segments()" = function() ibd_segments(d, 1, 2),
                 "ibd_truth_pairs()" = function() ibd_truth_pairs(d), "arg_summary()" = function() arg_summary(d),
-                "arg_diversity()" = function() arg_diversity(d), "arg_divergence()" = function() arg_divergence(d, 1, 2),
                 "arg_tmrca()" = function() arg_tmrca(d, 1, 2))
   if (requireNamespace("ggplot2", quietly = TRUE))
     calls[["plot_ibd_pair()"]] <- function() plot_ibd_pair(d, 1, 2)

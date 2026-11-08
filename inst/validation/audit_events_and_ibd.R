@@ -207,7 +207,7 @@ audit_run <- function(tag, params, seed = 1) {
      sprintf("%.0f roots/tree, %.0f%% coalesced, depth %.0f ticks",
              ag$roots_median, ag$pct_trees_coalesced, ag$max_root_time))
   ## arg_tmrca is the relatedness measure that is valid on a forest (branch divergence is NOT:
-  ## it scores coalescing and non-coalescing pairs alike -- see ?arg_divergence)
+  ## it scores coalescing and non-coalescing pairs alike -- see the note at the top of R/arg.R)
   relp <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1:min(.N, 15)]
   if (nrow(relp)) {
     tm <- arg_tmrca(run, relp$pedigree_id, relp$parent1_pedigree_id)

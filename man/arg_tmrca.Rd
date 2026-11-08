@@ -19,7 +19,7 @@ a data.table with \code{a}, \code{b}, \code{coalesced} (0-1), \code{tmrca} and \
 For each pair, the span-weighted mean TMRCA \strong{over the part of the genome where a common
 ancestor exists}, plus \code{coalesced}, the fraction of the genome where it does. This is the
 time-domain complement to IBD: IBD asks \emph{how much} of the genome is shared,
-\code{arg_tmrca()} asks \emph{how far back} the sharing goes. Unlike \code{\link[=arg_divergence]{arg_divergence()}} it is
+\code{arg_tmrca()} asks \emph{how far back} the sharing goes. Unlike tskit's branch-mode divergence it is
 meaningful on a forest, because non-coalescing spans are excluded rather than scored as 0.
 }
 \details{

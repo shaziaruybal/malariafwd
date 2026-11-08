@@ -101,14 +101,12 @@ apart rather than choosing for you:
   error and missingness, and records the root genome behind every call; `write_vcf()` writes them
   as VCF 4.2, one contig per PvP01 chromosome.
 
-* **ARG-native summaries.** `arg_summary()`, `arg_tmrca()`, `arg_diversity()`,
-  `arg_divergence()`. The model is neutral, so every *site* statistic is zero and tskit's
-  **branch** mode is the right tool. Two properties of a forward-simulated genealogy are
-  documented and guarded here: it is a **forest** — each founder lineage and each import is an
-  independent root, so most pairs never coalesce — and on a forest **branch divergence is not a
-  relatedness measure** (measured: pairs that do coalesce scored 29.1, pairs that never coalesce
-  32.1, i.e. indistinguishable). Use `arg_tmrca()`, which reports a genealogical **depth**
-  together with `coalesced`, the fraction of the genome over which a common ancestor exists.
+* **ARG-native summaries.** `arg_summary()` and `arg_tmrca()`. A forward-simulated genealogy is
+  a **forest** — each founder lineage and each import is an independent root, so most pairs never
+  coalesce — and on a forest tskit's branch statistics are not a relatedness measure, since a
+  pair with no common ancestor accumulates branch length up to each genome's own root.
+  `arg_tmrca()` reports a genealogical **depth** together with `coalesced`, the fraction of the
+  genome over which a common ancestor exists.
 
 * **Plots.** `plot_diagnostics()` is a one-call run-health dashboard (prevalence, incidence and
   force of infection by origin, COI, reservoir, lineage richness) that surfaces extinction,

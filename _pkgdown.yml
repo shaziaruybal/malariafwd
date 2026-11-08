@@ -40,9 +40,9 @@ reference:
 
 - title: The ARG
   desc: >
-    Tree/branch-domain views. The model is neutral, so site statistics are all zero and
-    branch mode is the right tool - but the genealogy is a forest, so read ?arg_summary first.
-  contents: [arg_summary, arg_tmrca, arg_diversity, arg_divergence]
+    Tree-domain views of the genealogy, which is a forest: read ?arg_summary first, and use
+    arg_tmrca() for relatedness.
+  contents: [arg_summary, arg_tmrca]
 
 - title: Calibrating the uptake draws
   desc: LAMBDA_* is a pre-truncation rate, not a mean count.

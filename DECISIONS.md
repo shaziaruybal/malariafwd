@@ -19,6 +19,26 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D76 — The 0.1.0 API: one function per question, every reader takes a run, no plumbing · 2026-11-08 · Accepted
+**Context.** The pre-release review tabulated the 55 exports (Q24): some overlap (two functions
+answer one question), some are plumbing the user never needs, and some argue against themselves in
+their own help. The author accepted the table's proposals; each export change below is one commit.
+**Decision.** The changes, one row per commit:
+
+| was | is | why |
+|---|---|---|
+| `arg_diversity()`, `arg_divergence()` | removed | branch statistics are no relatedness measure on the forest the model records, as their own help said; `arg_tmrca()` is (the author's answer to question 12) |
+
+**Rationale.** A user looking for how to answer a question should find one function, and a function
+whose help tells the user not to use it should not be exported.
+**Alternatives rejected.** *Keeping removed functions internal behind `:::`* -- no caller exists, and
+internal copies would still need maintaining.
+**Consequences.** Runs are unchanged. Code that called a removed name stops with R's "could not find
+function"; the table above says what to use instead.
+**How to verify.** `tests/testthat/test-exports.R` lists the exports exactly.
+
+---
+
 ## D75 — Genotype data are painted on the root genomes of the tree sequence · 2026-11-08 · Accepted
 **Context.** The model is a mutation-free scaffold, so its tree sequence holds no sites, while the
 methods a run is meant to test read marker genotypes. Every genome descends, at each position, from

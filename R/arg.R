@@ -1,22 +1,12 @@
-## arg.R -- ARG-native (tree/branch) summaries of the recorded genealogy.
+## arg.R -- ARG-native (tree) summaries of the recorded genealogy.
 ##
-## The model is NEUTRAL (mutation rate 0), so every SITE-based statistic is identically zero.
-## tskit's BRANCH mode is the right tool: it measures the statistic on the genealogy itself
-## (in units of time), and equals the expected site value under any mutation rate. It is also
-## the natural complement to IBD -- IBD asks "how much of the genome is shared", branch mode
-## asks "how deep in time is the shared ancestry".
-##
-## IMPORTANT, and specific to a forward simulation like this one: the recorded genealogy is a
-## FOREST, not a single tree. Each founder lineage (and each import) is an independent genome
-## root, so most sample pairs never coalesce within the simulated period. tskit reports
-## branch statistics that do NOT behave as relatedness measures. Measured on a real run:
-## pairs that DO coalesce had mean branch divergence 29.1, pairs that never coalesce had 32.1
-## -- indistinguishable, because for a disconnected pair the statistic accumulates branch
-## length up to each sample's OWN root. So:
-##   * do NOT read branch divergence as relatedness on a forest; use [arg_tmrca()], which
-##     computes the time to the common ancestor explicitly and reports the fraction of the
-##     genome over which one exists;
-##   * every function here reports `coalesced` so the dilution is visible.
+## The recorded genealogy is a FOREST, not a single tree: each founder lineage and each import is
+## an independent root, so most pairs of genomes never coalesce within the simulated period. On a
+## forest, tskit's branch statistics are not a relatedness measure: for a pair with no common
+## ancestor they accumulate branch length up to each genome's own root, so pairs that coalesce and
+## pairs that never do score alike. arg_tmrca() is the relatedness measure here: the time to the
+## common ancestor where one exists, with `coalesced`, the fraction of the genome over which it
+## does. arg_summary() shows the forest itself.
 
 .arg_prelude <- '
 import tskit, json, numpy as np
@@ -42,31 +32,6 @@ def _aslist(x):
     if x is None: return None
     try: return [int(v) for v in x]
     except TypeError: return [int(x)]
-def _coalesced_frac(sts, A, B=None):
-    """Span-weighted fraction of PAIRS that share a common ancestor.
-
-    The genealogy is a forest, so many pairs never coalesce; tskit scores those as 0
-    divergence, which is why this fraction has to be reported next to any branch statistic.
-    Within a local tree, two samples coalesce iff they sit under the same root, so the
-    coalescing pairs are counted per root and span-weighted across trees.
-    """
-    A = set(A)
-    within = B is None
-    B = A if within else set(B)
-    total = (len(A) * (len(A) - 1) / 2) if within else (len(A) * len(B))
-    if total == 0: return float("nan")
-    tot = 0.0; acc = 0.0
-    for t in sts.trees():
-        span = t.interval.right - t.interval.left
-        tot += span
-        c = 0
-        for r in t.roots:
-            ss = set(t.samples(r))
-            a = len(ss & A)
-            if within: c += a * (a - 1) / 2
-            else:      c += a * len(ss & B)
-        acc += span * (c / total)
-    return acc / tot if tot else float("nan")
 '
 
 .arg_load <- function(run, ids = NULL, what) {
@@ -123,76 +88,12 @@ _out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
   data.table::as.data.table(reticulate::py$`_out`)
 }
 
-#' Branch-mode genetic diversity of the genealogy
-#'
-#' Mutation-free diversity from the ARG: `diversity` is the mean pairwise branch length
-#' separating two samples (= expected nucleotide diversity per unit mutation rate), and is
-#' reported with `tajimas_d` and branch-mode `segregating_sites`. Because the genealogy is a
-#' forest (see [arg_summary()]), these are diluted by pairs that never coalesce -- use
-#' [arg_divergence()] if you need the coalescing fraction made explicit.
-#'
-#' @param run a run directory or `vivax_run`.
-#' @param ids optional pedigree ids to restrict to.
-#' @return a one-row data.table of `n_samples`, `diversity`, `segregating_sites`, `tajimas_d`,
-#'   and `coalesced` (the fraction of sample pairs that share an ancestor at all).
-#' @examples
-#' \dontrun{arg_diversity(run, ids = classify_cases(load_events(run))$pedigree_id)}
-#' @inheritSection tskit_available Python
-#' @export
-arg_diversity <- function(run, ids = NULL) {
-  .arg_load(run, ids, "arg_diversity()")
-  reticulate::py_run_string('
-S = list(sts.samples())
-_out = dict(n_samples=int(sts.num_samples),
-            diversity=float(sts.diversity(mode="branch")),
-            segregating_sites=float(sts.segregating_sites(mode="branch")),
-            tajimas_d=float(sts.Tajimas_D(mode="branch")),
-            coalesced=float(_coalesced_frac(sts, S)))
-')
-  data.table::as.data.table(reticulate::py$`_out`)
-}
-
-#' Branch-mode divergence between two sets of genomes, with the coalescing fraction
-#'
-#' @section Warning:
-#' On a non-coalesced genealogy (this model, see [arg_summary()]) branch divergence is **not**
-#' a relatedness measure: for a pair with no common ancestor it accumulates branch length up
-#' to each sample's own root, so coalescing and non-coalescing pairs score alike (measured:
-#' 29.1 vs 32.1 on a real run). Use [arg_tmrca()] for relatedness in the time domain. This
-#' function is kept for comparison with coalescent-based work, and always reports `coalesced`.
-#'
-#' @param run a run directory or `vivax_run`.
-#' @param ids_a,ids_b pedigree ids of the two groups.
-#' @return a one-row data.table: `n_a`, `n_b`, `divergence` (branch mode) and
-#'   `coalesced` (0-1, the span-weighted fraction of A-B pairs sharing an ancestor).
-#' @examples
-#' \dontrun{arg_divergence(run, imported_ids, local_ids)}
-#' @inheritSection tskit_available Python
-#' @export
-arg_divergence <- function(run, ids_a, ids_b) {
-  .arg_load(run, unique(c(ids_a, ids_b)), "arg_divergence()")
-  pymain <- reticulate::py
-  pymain$`_a` <- as.integer(unique(ids_a)); pymain$`_b` <- as.integer(unique(ids_b))
-  reticulate::py_run_string('
-p2 = _ped2node(sts)
-A = sorted({p2[int(x)] for x in _aslist(_a) if int(x) in p2})
-B = sorted({p2[int(x)] for x in _aslist(_b) if int(x) in p2})
-if not A or not B:
-    _out = dict(n_a=len(A), n_b=len(B), divergence=float("nan"), coalesced=float("nan"))
-else:
-    _out = dict(n_a=len(A), n_b=len(B),
-                divergence=float(sts.divergence([A, B], mode="branch")),
-                coalesced=float(_coalesced_frac(sts, A, B)))
-')
-  data.table::as.data.table(reticulate::py$`_out`)
-}
-
 #' Pairwise time to the most recent common ancestor (the ARG-native relatedness measure)
 #'
 #' For each pair, the span-weighted mean TMRCA **over the part of the genome where a common
 #' ancestor exists**, plus `coalesced`, the fraction of the genome where it does. This is the
 #' time-domain complement to IBD: IBD asks *how much* of the genome is shared,
-#' `arg_tmrca()` asks *how far back* the sharing goes. Unlike [arg_divergence()] it is
+#' `arg_tmrca()` asks *how far back* the sharing goes. Unlike tskit's branch-mode divergence it is
 #' meaningful on a forest, because non-coalescing spans are excluded rather than scored as 0.
 #'
 #' Clonal pairs give `coalesced` = 1 with a very recent TMRCA; unrelated genomes give
