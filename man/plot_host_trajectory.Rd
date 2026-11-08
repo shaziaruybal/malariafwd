@@ -5,8 +5,7 @@
 \title{Within-host trajectory for one host}
 \usage{
 plot_host_trajectory(
-  state,
-  events,
+  run,
   host_id,
   layout = c("lineages", "summary"),
   palette = c("#3B9AB2", "#EBCC2A", "#F21A00", "#00A08A", "#F98400", "#5BBCD6",
@@ -15,11 +14,9 @@ plot_host_trajectory(
 )
 }
 \arguments{
-\item{state}{a state data.table.}
+\item{run}{a \code{vivax_run} or its directory.}
 
-\item{events}{an events data.table.}
-
-\item{host_id}{host to plot.}
+\item{host_id}{the host, one whole number (a run's hosts are 0 to \code{N_HOSTS - 1}).}
 
 \item{layout}{\code{"lineages"} (stacked per-lineage areas) or \code{"summary"} (COI + reservoir lines).}
 
@@ -34,5 +31,9 @@ own colour, so you can see which genotypes are present at any moment, when a lin
 and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
 \code{layout = "summary"} plots active COI and the reservoir as two lines instead. Each clone is
 drawn from \code{\link[=episodes]{episodes()}}: from its onset to its end, and to the last day of the state table if it
-was still patent when the run ended.
+was still patent when the run ended. The x axis runs to \code{SIM_DAYS}; on a run that went extinct the
+lines end where \code{state.tsv} does.
+}
+\details{
+Each call reads the run's \code{state.tsv} and \code{events.tsv}.
 }

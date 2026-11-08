@@ -92,7 +92,7 @@ active blood-stage lineages and hypnozoite reservoir through time:
 ```{r}
 st <- load_state(run)      # each host's state, day by day
 h  <- ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]
-plot_host_trajectory(st, ev, host_id = h)
+plot_host_trajectory(run, host_id = h)
 ```
 
 Hosts by state over time: uninfected, patent without or with hypnozoites, subpatent only, and

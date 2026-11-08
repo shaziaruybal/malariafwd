@@ -62,24 +62,38 @@ plot_host_state_prevalence <- function(hsp) {
 #' and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
 #' `layout = "summary"` plots active COI and the reservoir as two lines instead. Each clone is
 #' drawn from [episodes()]: from its onset to its end, and to the last day of the state table if it
-#' was still patent when the run ended.
+#' was still patent when the run ended. The x axis runs to `SIM_DAYS`; on a run that went extinct the
+#' lines end where `state.tsv` does.
 #'
-#' @param state a state data.table.
-#' @param events an events data.table.
-#' @param host_id host to plot.
+#' Each call reads the run's `state.tsv` and `events.tsv`.
+#' @param run a `vivax_run` or its directory.
+#' @param host_id the host, one whole number (a run's hosts are 0 to `N_HOSTS - 1`).
 #' @param layout `"lineages"` (stacked per-lineage areas) or `"summary"` (COI + reservoir lines).
 #' @param palette colours cycled across lineages.
 #' @return a ggplot object.
 #' @export
-plot_host_trajectory <- function(state, events, host_id,
+plot_host_trajectory <- function(run, host_id,
                                  layout = c("lineages", "summary"),
                                  palette = c("#3B9AB2","#EBCC2A","#F21A00","#00A08A","#F98400",
                                              "#5BBCD6","#046C9A","#D69C4E","#FD6467","#5B1A18",
                                              "#E6A0C4","#7294D4","#02401B","#972D15","#9986A5")) {
   .need_ggplot()
   layout <- match.arg(layout)
-  st <- as.data.table(state)[entity_type == "human" & as.integer(entity_id) == host_id]
-  if (layout == "lineages") return(.host_lineage_plot(st, events, host_id, palette))
+  if (!is.numeric(host_id) || length(host_id) != 1L || is.na(host_id) || host_id != round(host_id) ||
+      abs(host_id) > .Machine$integer.max)
+    stop("`host_id` must be one whole number.", call. = FALSE)
+  host_id <- as.integer(host_id)
+  run <- load_run(run)
+  sim_days <- .sim_days(run, "plot_host_trajectory")
+  hosts <- load_state(run)
+  st <- hosts[entity_id == host_id]
+  if (!nrow(st))
+    stop("host ", host_id, " is not a host of this run",
+         if (nrow(hosts)) paste0(": host ids run from ", min(hosts$entity_id), " to ", max(hosts$entity_id)), ".",
+         call. = FALSE)
+  events <- load_events(run)
+  if (layout == "lineages")
+    return(.host_lineage_plot(st, events, host_id, palette) + ggplot2::expand_limits(x = sim_days))
   ## the host's clone onsets, from episodes(), which takes them from the event dictionary
   ev <- episodes(events)[human_id == host_id, .(tick = onset_tick, kind = .onset_kind(onset_event))]
   ggplot2::ggplot() +
@@ -92,7 +106,9 @@ plot_host_trajectory <- function(state, events, host_id,
                                             "relapse" = "firebrick", "new infection" = "grey40",
                                             "recrudescence" = "#b4472e")) +
     ggplot2::labs(title = paste0("Within-host trajectory - host ", host_id),
-                  x = "day", y = "count", colour = NULL)
+                  x = "day", y = "count", colour = NULL) +
+    ggplot2::expand_limits(x = sim_days) +
+    theme_malariafwd()
 }
 
 .need_patchwork <- function() {
@@ -212,7 +228,6 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 .host_lineage_plot <- function(st, events, host_id, palette) {
   ep <- episodes(events)[human_id == host_id]
   if (!nrow(ep)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
-  if (!nrow(st)) stop("host ", host_id, " is not in the state table", call. = FALSE)
   last <- max(st$tick)
   seg <- ep[, .(pedigree_id, lineage_id, start = onset_tick, end = data.table::fifelse(is.na(end_tick), last, end_tick),
                 kind = .onset_kind(onset_event))]

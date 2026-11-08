@@ -40,6 +40,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `ibd_relapse_origin()` | removed: the `relapse vs its origin` rows of `ibd_truth_pairs()`, or `ibd_lookup()` on each relapse and its batch, `parent1_pedigree_id` | it checked a property that holds by construction, against an earlier primary of the lineage rather than the batch the relapse woke from |
 | `new_infection_diversity()$clonal_frac`, a percentage | a fraction, from 0 to 1 | every other `_frac` column is a fraction (D69) |
 | `ibd_trajectory()` | `new_infection_diversity(bin =)`, with `from`, `to` and `min_pairs`: a row for every window, its `days` and `n_pairs` | one question, over the run or by window; it counts new infections only, where the trajectory counted relapses too, and every window keeps its row |
+| `plot_host_trajectory(state, events, host_id)` | `plot_host_trajectory(run, host_id)`, its x axis to `SIM_DAYS` | it read both of a run's tables, so it takes the run, as the other plots do; its summary layout takes the package theme (review n11) |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.

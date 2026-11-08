@@ -147,7 +147,7 @@ test_that("plot_host_trajectory() draws each clone from episodes(), to the last 
   st <- data.table::data.table(tick = 1:100, entity_type = "human", entity_id = 1L, tag = 0L, moi_active = 0L,
                                moi_subpatent = 0L, moi_dormant = 0L, hyp_reservoir_size = 0L, lineage_ids = NA_character_,
                                n_transmissible = NA_integer_, mosq_age_days = NA_integer_, infectious_bites = 0L)
-  p <- plot_host_trajectory(st, episodes_fixture(), 1)
+  p <- plot_host_trajectory(episodes_fixture_run(state = st), 1)
   area <- p$layers[[1]]$data
   expect_identical(max(area$tick), 100L)
   d25 <- area[tick == 25L]
@@ -189,4 +189,23 @@ test_that("a clone's span covers the days it counts in moi_active", {
   m <- merge(st[, .(human_id = entity_id, tick, moi_active)], have, by = c("human_id", "tick"), all.x = TRUE)
   m[is.na(n), n := 0L]
   expect_identical(m$n, m$moi_active)
+})
+
+test_that("plot_host_trajectory() takes a run and a host, and runs to SIM_DAYS", {
+  skip_if_not_installed("ggplot2")
+  x_max <- function(p) max(ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x.range)
+  ## the extinct fixture: host 1's one clone, days 2 to 6, on a 20-day run
+  r <- extinct_fixture_run()
+  expect_gte(x_max(plot_host_trajectory(r, 1)), 20)
+  s <- plot_host_trajectory(r, 1, layout = "summary")
+  expect_gte(x_max(s), 20)
+  expect_equal(s$theme$panel.border, malariafwd:::theme_malariafwd()$panel.border)
+  ## host 2 had no clone: the lineages stop, the summary draws its lines
+  expect_error(plot_host_trajectory(r, 2), "host 2 has no blood-stage episodes")
+  expect_s3_class(plot_host_trajectory(r, 2, layout = "summary"), "ggplot")
+  expect_error(plot_host_trajectory(r, 1e6), "host 1000000 is not a host of this run: host ids run from 1 to 2.",
+               fixed = TRUE)
+  for (h in list(NA, 1.5, c(1, 2), "1"))
+    expect_error(plot_host_trajectory(r, h), "`host_id` must be one whole number.", fixed = TRUE)
+  expect_error(plot_host_trajectory(load_state(r), 1), "`run` must be a vivax_run")
 })

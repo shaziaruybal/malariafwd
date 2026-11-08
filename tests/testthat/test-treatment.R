@@ -273,5 +273,5 @@ test_that("MDA reaches subpatent clones and clones patent that day, as a case co
   ## such a one-day episode is drawn (classify_cases() counts one for any clone but a founder)
   skip_if_not_installed("ggplot2")
   h <- ev[pedigree_id == same_day[1], human_id][1]
-  expect_s3_class(plot_host_trajectory(st, ev, h), "ggplot")
+  expect_s3_class(plot_host_trajectory(run, h), "ggplot")
 })

@@ -1485,7 +1485,7 @@ cs  <- classify_cases(ev)                # truth labels, one row per clone onset
 x   <- ibd_pairs(run, ids = cs$pedigree_id)  # ground-truth IBD; as.matrix(x) for the matrix
 
 plot_diagnostics(run)                    # six-panel run-health dashboard
-plot_host_trajectory(st, ev, host_id = cs$human_id[1])
+plot_host_trajectory(run, host_id = cs$human_id[1])
 plot_ibd_pair(run, cs$pedigree_id[1], cs$pedigree_id[2])
 plot_relatedness_ladder(ibd_truth_pairs(run))
 ```
