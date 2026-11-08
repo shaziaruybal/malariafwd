@@ -94,7 +94,7 @@ The hypnozoite reservoir is the model's distinctive, otherwise-unobservable comp
 
 ```{r}
 reservoir_trajectory(st)                     # reservoir size over time
-relapse_fraction(ev)                         # two readings: per acquisition, and per episode
+relapse_fraction(ev)                         # two readings, per episode and per acquisition: equal unless recrudescence is on
 plot_relapse_km(time_to_relapse(ev)) # time to first relapse (Kaplan-Meier)
 coi_distribution(st)                         # complexity-of-infection distribution
 ```

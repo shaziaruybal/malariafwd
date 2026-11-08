@@ -65,9 +65,9 @@ apart rather than choosing for you:
 
 * `force_of_infection()` returns a recrudescence as its own row with `is_acquisition = FALSE`.
   Sum only the acquisition rows for FOI or molFOB.
-* `relapse_fraction()` reports both: `relapse_fraction` over acquisitions (the quantity the
-  published 0.55–0.85 vivax band refers to) and `relapse_frac_episodes` over every patent
-  episode.
+* `relapse_fraction()` reports both: `relapse_frac_acquisitions` over acquisitions (the unit of
+  the published 0.55–0.85 vivax band) and `relapse_frac_episodes` over every case, recrudescence
+  included.
 * `rc_by_origin(unit = "episode" | "acquisition")` credits onward transmission either to the
   recurrence itself or to the infection that originally brought the clone in. The second is the
   unit a reproduction number estimated from routine case counts refers to.

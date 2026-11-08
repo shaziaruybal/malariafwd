@@ -2,42 +2,48 @@
 % Please edit documentation in R/metrics.R
 \name{relapse_fraction}
 \alias{relapse_fraction}
-\title{Relapse fraction, in two units}
+\title{Relapse fraction, by episodes and by acquisitions}
 \usage{
 relapse_fraction(events, exclude_masked = FALSE)
 }
 \arguments{
-\item{events}{an events data.table (from \code{\link[=load_events]{load_events()}}).}
+\item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 
 \item{exclude_masked}{if \code{TRUE}, leave out the masked relapses.}
 }
 \value{
-a one-row data.table of \code{n_relapse}, \code{n_reinfection}, \code{n_recrudescence},
-\code{relapse_fraction} (over acquisitions) and \code{relapse_frac_episodes} (over every patent
-episode). \code{summarise_run()$relapse_frac} reports the acquisition reading.
+a one-row data.table: \code{n_relapse}, \code{n_new_infection} (imported and local reinfection),
+\code{n_recrudescence}, \code{relapse_frac_episodes} and \code{relapse_frac_acquisitions}, each fraction \code{NA}
+when its denominator is 0 (a run with no case).
 }
 \description{
-Relapses as a share of blood-stage episodes. Two readings are returned because a
-recrudescence is a new clinical \strong{episode} but not a newly \strong{acquired} parasite -- the
-genotype was already in the host (D25):
+Relapses as a share of a run's blood-stage cases, in two readings, both counted per clone onset
+(a row of \code{\link[=classify_cases]{classify_cases()}}, so a bite that delivers two genotypes counts twice):
 }
 \details{
 \itemize{
-\item \code{relapse_fraction} -- relapses over \strong{acquisitions} (imported + local reinfection +
-relapse). This is what the published 0.55-0.85 vivax band refers to, what \code{epi_summary()}
-in the analyses repo scores against, and what \code{summarise_run()$relapse_frac} reports.
-\item \code{relapse_frac_episodes} -- relapses over \strong{every patent episode}, recrudescence included.
+\item \code{relapse_frac_episodes} -- relapses over \strong{every} case: imported, local reinfection, relapse
+and recrudescence.
+\item \code{relapse_frac_acquisitions} -- relapses over the \strong{acquisitions}: imported, local reinfection
+and relapse. A recrudescence is a new clinical episode but not a newly acquired parasite (its
+genotype was already in the host), so it is left out. This is the unit of the published
+0.55-0.85 vivax band.
 }
 
-With the shipped default (\code{P_RECRUD_GIVEN_FAIL = 0}) there are no recrudescences and the two
-are identical; they separate only once treatment failure can suppress a clone.
+The two are equal when a run has no recrudescence, as at the default \code{P_RECRUD_GIVEN_FAIL = 0}.
+Both count each host's first case, which is not a recurrence; \code{\link[=recurrences]{recurrences()}} gives the
+recurrences alone.
 
-Both denominators include each host's first-ever episode, which is not a \emph{recurrence}. For a
-strict recurrences-only fraction, drop the first episode per host:
-\code{cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]}. That is a
-materially different quantity, so never compare it against either reading here.
-
-With \code{exclude_masked = TRUE} the masked relapses, into a patent clone of their own lineage
-(see \code{\link[=classify_cases]{classify_cases()}}), leave the numerator and both denominators, as in a study that sees
-only the relapses that bring a new clone.
+Masked relapses, into a patent clone of their own lineage (see \code{\link[=classify_cases]{classify_cases()}}), are counted
+unless \code{exclude_masked = TRUE} leaves them out of the numerator and both denominators, as a study
+that sees only the relapses that bring a new clone would. Neither is the band's own reading:
+\code{NU_HYPNOZOITE_BATCH} was fitted with every relapse counted (0.66 at its shipped value of 3,
+inside the band), and leaving the masked relapses out gives 0.39, below it (MODEL_DESCRIPTION.md,
+section 13).
+}
+\examples{
+\dontrun{relapse_fraction(load_events(run))}
+}
+\seealso{
+\code{\link[=classify_cases]{classify_cases()}}, \code{\link[=summarise_run]{summarise_run()}}
 }

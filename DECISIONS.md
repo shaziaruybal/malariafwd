@@ -19,6 +19,35 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D65 — relapse_fraction() gives relapse_frac_episodes and relapse_frac_acquisitions · 2026-11-08 · Accepted
+**Context.** `relapse_fraction()` returned `relapse_fraction` over acquisitions and
+`relapse_frac_episodes` over every case: one reading named for the function and one for its unit,
+where D25 had named both by unit. Its second count, `n_reinfection`, held imports too, and a run
+with no case gave 0 for both fractions, a value it had not measured (review M12, Q13).
+**Decision.** The fractions are `relapse_frac_episodes` (relapses over every case, recrudescence
+included) and `relapse_frac_acquisitions` (relapses over imported, local reinfection and relapse
+cases), both counted per clone onset, each `NA` when its denominator is 0; the second count is
+`n_new_infection`. The acquisitions reading is the unit of the published 0.55-0.85 band. Whether
+masked relapses are counted is the caller's choice (`exclude_masked`): the help says ν was fitted
+with every relapse counted (0.66 at ν = 3) and that leaving them out gives 0.39, below the band,
+and names neither as the band's own reading (the author's answer to OQ1). `summarise_run()`'s
+`relapse_frac` is the acquisitions reading; the `plot_diagnostics()` subtitle shows the episodes
+reading. This supersedes D23's clause that made `relapse_fraction()` one reading over every case.
+**Rationale.** Both readings are needed once recrudescence is on, and a name that says its unit
+keeps them from being swapped. A fraction with nothing to divide is not 0.
+**Alternatives rejected.** *Rename the per-onset readings `_cases`* -- the episode names stay, defined
+per clone onset (the author's answer). *Name the masked-out reading the band's* -- below the band at
+every ν tried, while the fit counted every relapse.
+**Consequences.** Runs are unchanged. Two columns are renamed and one count is renamed; values change
+only on a run with no case, which gives `NA` (and `summarise_run()$relapse_frac` `NA`). The two
+readings are equal on any run with no recrudescence, as at the defaults.
+**How to verify.** `tests/testthat/test-relapse-metrics.R`: names and values on the fixture, with and
+without the masked relapse; a run with no case; a run and its events table alike.
+`tests/testthat/test-treatment.R`: on a run with recrudescence, each reading equals the share of
+relapses among its cases, and the acquisitions reading is the larger.
+
+---
+
 ## D64 — A case is a clone; episodes and recurrences are built in the package · 2026-11-08 · Accepted
 **Context.** `classify_cases()` gave one row per clone onset without saying which rows belong to one
 episode, and every analysis paired recurrences with earlier episodes by hand, pairing rows: a bite
@@ -1423,7 +1452,7 @@ which is the check failing to reach the network in this sandbox).
 
 ---
 
-## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted (design; implementation pending); open item on MDA settled by D44
+## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the molFOB pair (molfob_clones / molfob_episodes) and the subpatent_clearance event; relapse-fraction names by D65; open item on MDA settled by D44
 **Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
 reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
 suppressed below patency and later re-expand. A scratch prototype
@@ -1517,7 +1546,7 @@ channel was unambiguous.
 
 ---
 
-## D23 — Metrics derive their vocabulary from classify_cases(), and output schemas do not depend on run content · 2026-10-22 · Accepted
+## D23 — Metrics derive their vocabulary from classify_cases(), and output schemas do not depend on run content · 2026-10-22 · Accepted; the relapse_fraction() clause superseded by D65
 **Context.** A verification pass over the four remaining downstream defects found them to be one
 bug class in two forms. **Vocabulary drift:** `new_infection_diversity()` matched
 `event_type == "vh_inoculation"` only, so imported genomes were excluded from the package's

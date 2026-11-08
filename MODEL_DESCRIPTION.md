@@ -736,9 +736,9 @@ easiest thing to get wrong:
 - It is **not** a newly acquired parasite — the genotype was already in the host — so it is
   excluded from the force-of-infection rates. `force_of_infection()` returns it as its own row
   with `is_acquisition = FALSE`; sum only the acquisition rows for FOI or molFOB.
-- `relapse_fraction()` therefore reports **two** readings: `relapse_fraction` over acquisitions
-  (the quantity the published 0.55–0.85 band refers to) and `relapse_frac_episodes` over every
-  patent episode.
+- `relapse_fraction()` therefore reports **two** readings, both counted per clone onset:
+  `relapse_frac_acquisitions`, relapses over acquisitions (the unit of the published 0.55–0.85
+  band), and `relapse_frac_episodes`, relapses over every case, recrudescence included.
 - `rc_by_origin(unit =)` likewise: `"episode"` credits onward transmission to the recurrence,
   `"acquisition"` walks it back to the infection that brought the clone in. The second is the unit
   a surveillance Rc estimated from routine case counts refers to (Champagne et al. 2022).
@@ -1375,7 +1375,7 @@ run went extinct.
 | prevalence | fraction of the window's host-days with `moi_active > 0`; a day after an extinction counts as a day with no infection |
 | COI / MOI | `moi_active` among infected hosts |
 | reservoir | mean `hyp_reservoir_size` per host-day of the window |
-| relapse fraction | two readings, by unit (§9a). `relapse_fraction` = relapses ÷ **acquisitions** — the quantity the published 0.55–0.85 band refers to, and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **all patent episodes**, recrudescence included. Both denominators include each host's first episode, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5), unless `exclude_masked = TRUE` |
+| relapse fraction | two readings, counted per clone onset (§9a). `relapse_frac_acquisitions` = relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **every case**, recrudescence included. The two are equal when a run has no recrudescence. Both denominators include each host's first case, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) unless `exclude_masked = TRUE`. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13). A run with no case gives `NA` |
 | relapses per person-year | activations ÷ (hosts × years) |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded, and with `exclude_masked = TRUE` so is a masked relapse, as a genotyping study would miss it |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
@@ -1499,7 +1499,7 @@ than one segment.
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
 | **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus, in two pairs of meiosis II sisters |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
-| **episode** | the clones that became **patent** in one host on one day: a primary (one per genotype a bite delivered), a relapse or a recrudescence, named by `episode_id`. A clone suppressed below patency is not part of an episode while it is suppressed |
+| **episode** | the clones that became **patent** in one host on one day: a primary (one per genotype a bite delivered), a relapse or a recrudescence, named by `episode_id`. A clone suppressed below patency is not part of an episode while it is suppressed. Readings named `_episodes` (`relapse_frac_episodes`) count clone onsets, each a row of `classify_cases()` |
 | **clone** | one blood-stage parasite genome in a host, from its onset (a bite, an import, founder seeding, a relapse or a recrudescence) to its end; `episodes()` lists them |
 | **recurrence** | any episode of a host after its first: relapse, reinfection or recrudescence, all represented (§9a). `recurrences()` pairs it with the earlier ones |
 | **recrudescence** | re-expansion to patency of a clone that survived a treatment course. Mints a new genome clonal to the holder it came from. A **case** but not an **acquisition**: no new parasite entered the host |

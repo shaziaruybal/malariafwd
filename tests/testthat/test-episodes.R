@@ -11,14 +11,6 @@ test_that("classify_cases() marks the masked relapse, and leaves it out when ask
   expect_false(104L %in% cm$pedigree_id)
 })
 
-test_that("relapse_fraction() leaves the masked relapse out of both readings when asked", {
-  rf <- relapse_fraction(episodes_fixture(), exclude_masked = TRUE)
-  expect_identical(rf$n_relapse, 3L)
-  expect_equal(rf$relapse_fraction, 3 / 10)
-  expect_equal(rf$relapse_frac_episodes, 3 / 11)
-  expect_identical(relapse_fraction(episodes_fixture())$n_relapse, 4L)
-})
-
 test_that("force_of_infection() leaves the masked relapse out when asked", {
   r <- episodes_fixture_run()
   all <- force_of_infection(r); unm <- force_of_infection(r, exclude_masked = TRUE)

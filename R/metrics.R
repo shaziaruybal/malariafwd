@@ -50,45 +50,47 @@ coi_distribution <- function(state, burn_in = 0) {
   sample(x, n)
 }
 
-#' Relapse fraction, in two units
+#' Relapse fraction, by episodes and by acquisitions
 #'
-#' Relapses as a share of blood-stage episodes. Two readings are returned because a
-#' recrudescence is a new clinical **episode** but not a newly **acquired** parasite -- the
-#' genotype was already in the host (D25):
+#' Relapses as a share of a run's blood-stage cases, in two readings, both counted per clone onset
+#' (a row of [classify_cases()], so a bite that delivers two genotypes counts twice):
 #'
-#' * `relapse_fraction` -- relapses over **acquisitions** (imported + local reinfection +
-#'   relapse). This is what the published 0.55-0.85 vivax band refers to, what `epi_summary()`
-#'   in the analyses repo scores against, and what `summarise_run()$relapse_frac` reports.
-#' * `relapse_frac_episodes` -- relapses over **every patent episode**, recrudescence included.
+#' * `relapse_frac_episodes` -- relapses over **every** case: imported, local reinfection, relapse
+#'   and recrudescence.
+#' * `relapse_frac_acquisitions` -- relapses over the **acquisitions**: imported, local reinfection
+#'   and relapse. A recrudescence is a new clinical episode but not a newly acquired parasite (its
+#'   genotype was already in the host), so it is left out. This is the unit of the published
+#'   0.55-0.85 vivax band.
 #'
-#' With the shipped default (`P_RECRUD_GIVEN_FAIL = 0`) there are no recrudescences and the two
-#' are identical; they separate only once treatment failure can suppress a clone.
+#' The two are equal when a run has no recrudescence, as at the default `P_RECRUD_GIVEN_FAIL = 0`.
+#' Both count each host's first case, which is not a recurrence; [recurrences()] gives the
+#' recurrences alone.
 #'
-#' Both denominators include each host's first-ever episode, which is not a *recurrence*. For a
-#' strict recurrences-only fraction, drop the first episode per host:
-#' `cs[order(tick)][, .SD[-1], by = human_id][, mean(origin == "relapse")]`. That is a
-#' materially different quantity, so never compare it against either reading here.
+#' Masked relapses, into a patent clone of their own lineage (see [classify_cases()]), are counted
+#' unless `exclude_masked = TRUE` leaves them out of the numerator and both denominators, as a study
+#' that sees only the relapses that bring a new clone would. Neither is the band's own reading:
+#' `NU_HYPNOZOITE_BATCH` was fitted with every relapse counted (0.66 at its shipped value of 3,
+#' inside the band), and leaving the masked relapses out gives 0.39, below it (MODEL_DESCRIPTION.md,
+#' section 13).
 #'
-#' With `exclude_masked = TRUE` the masked relapses, into a patent clone of their own lineage
-#' (see [classify_cases()]), leave the numerator and both denominators, as in a study that sees
-#' only the relapses that bring a new clone.
-#'
-#' @param events an events data.table (from [load_events()]).
+#' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
 #' @param exclude_masked if `TRUE`, leave out the masked relapses.
-#' @return a one-row data.table of `n_relapse`, `n_reinfection`, `n_recrudescence`,
-#'   `relapse_fraction` (over acquisitions) and `relapse_frac_episodes` (over every patent
-#'   episode). `summarise_run()$relapse_frac` reports the acquisition reading.
+#' @return a one-row data.table: `n_relapse`, `n_new_infection` (imported and local reinfection),
+#'   `n_recrudescence`, `relapse_frac_episodes` and `relapse_frac_acquisitions`, each fraction `NA`
+#'   when its denominator is 0 (a run with no case).
+#' @seealso [classify_cases()], [summarise_run()]
+#' @examples
+#' \dontrun{relapse_fraction(load_events(run))}
 #' @export
 relapse_fraction <- function(events, exclude_masked = FALSE) {
   cs <- classify_cases(events, exclude_masked)
   n_rel <- cs[origin == "relapse", .N]
   n_new <- cs[origin %in% c("imported", "local reinfection"), .N]
   n_rec <- cs[origin == "recrudescence", .N]
-  data.table(n_relapse = n_rel, n_reinfection = n_new, n_recrudescence = n_rec,
-             ## the band-comparable number: relapses over ACQUISITIONS
-             relapse_fraction = n_rel / max(n_rel + n_new, 1),
-             ## every patent episode, recrudescence included
-             relapse_frac_episodes = n_rel / max(n_rel + n_new + n_rec, 1))
+  frac <- function(n, d) if (d > 0) n / d else NA_real_
+  data.table(n_relapse = n_rel, n_new_infection = n_new, n_recrudescence = n_rec,
+             relapse_frac_episodes = frac(n_rel, n_rel + n_new + n_rec),
+             relapse_frac_acquisitions = frac(n_rel, n_rel + n_new))
 }
 
 #' Relapses per person-year among ever-infected hosts
@@ -496,6 +498,8 @@ pick_host <- function(events) {
 #'   are means over every host-day of the rest of the run, so a run that went extinct counts its
 #'   remaining days as days with no infected host.
 #' @return a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
+#'   `relapse_frac` is [relapse_fraction()]'s `relapse_frac_acquisitions` over the whole run, `NA`
+#'   for a run with no case.
 #' @export
 summarise_run <- function(run, burn_frac = 0.5) {
   st <- load_state(run); ev <- load_events(run)
@@ -511,7 +515,7 @@ summarise_run <- function(run, burn_frac = 0.5) {
     COI = round(if (nrow(cd)) sum(cd$moi_active * cd$pct/100) else NA_real_, 2),
     poly = round(if (nrow(cd)) sum(cd[moi_active > 1]$pct) else NA_real_, 1),
     mean_res = round(sum(h$hyp_reservoir_size) / host_days, 1),
-    relapse_frac = round(relapse_fraction(ev)$relapse_fraction, 3),
+    relapse_frac = round(relapse_fraction(ev)$relapse_frac_acquisitions, 3),
     relapses_py = relapses_per_person_year(ev)$relapses_per_py,
     ## courses GIVEN, not clones cleared: one course clears every clone in the host, and a
     ## clone can survive it (bloodcure_persist), so counting clearances is wrong in both

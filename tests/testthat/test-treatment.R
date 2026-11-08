@@ -174,7 +174,9 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   expect_true("is_acquisition" %in% names(fo))
   expect_false(any(fo[origin == "recrudescence"]$is_acquisition))
   rf <- relapse_fraction(ev)
-  expect_gt(rf$relapse_fraction, rf$relapse_frac_episodes)   # bigger denominator, smaller value
+  expect_gt(rf$relapse_frac_acquisitions, rf$relapse_frac_episodes)   # bigger denominator, smaller value
+  expect_equal(rf$relapse_frac_episodes, mean(cs$origin == "relapse"))
+  expect_equal(rf$relapse_frac_acquisitions, mean(cs[origin != "recrudescence"]$origin == "relapse"))
 
   ## episode conservation: both sides of the vocabulary are derived, so nothing is orphaned
   onsets <- ev[event_type %in% .onset_events() & is_dormant == 0, pedigree_id]
