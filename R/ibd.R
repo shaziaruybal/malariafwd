@@ -21,19 +21,23 @@
 
 ## The IBD module: the tree sequence simplified once to the genomes asked for, then one
 ## ibd_segments() call over every pair among them, or, for listed pairs, one call per genome with
-## its partners. min_span is 0 throughout: every shared stretch counts in a pair's fraction, and
+## its partners, or, for groups of genomes, one call over the pairs within each group. min_span is 0 throughout: every shared stretch counts in a pair's fraction, and
 ## the segments are floored in R once merged and cut (D74). Returns numpy arrays, keyed by
 ## pedigree id.
 .ibd_py_src <- '
-def mfw_ibd(trees, ids, pa, pb, want_segments):
+def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
     ts = tskit.load(trees)
     md = ts.metadata
     end_tick = int(md["SLiM"]["tick"]) if isinstance(md, dict) and "SLiM" in md else -1
     p2n, _ = _ped_nodes(ts)
     listed = pa is not None
+    grouped = groups is not None
     if listed:
         pa = [int(x) for x in np.atleast_1d(pa)]; pb = [int(x) for x in np.atleast_1d(pb)]
         req = sorted(set(pa) | set(pb))
+    elif grouped:
+        groups = [[int(x) for x in np.atleast_1d(g)] for g in groups]
+        req = sorted({x for g in groups for x in g})
     elif ids is None:
         req = sorted(p2n)
     else:
@@ -72,6 +76,13 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
         for u in sorted(grp):
             take(sts.ibd_segments(between=[[node[u]], [node[v] for v in sorted(grp[u])]], min_span=0,
                                   store_pairs=True, store_segments=bool(want_segments)))
+    elif grouped:
+        node = {int(sped[n]): int(n) for n in samp}
+        for g in groups:
+            within = sorted({node[x] for x in g if x in node})
+            if len(within) >= 2:
+                take(sts.ibd_segments(within=within, min_span=0, store_pairs=True,
+                                      store_segments=bool(want_segments)))
     else:
         take(sts.ibd_segments(within=list(samp), min_span=0, store_pairs=True,
                               store_segments=bool(want_segments)))
@@ -92,19 +103,23 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
   as.integer(x)
 }
 
-## The tree sequence's IBD for every pair of `ids`, or for the listed pairs (pa[i], pb[i]), with the
-## segments when asked: the work ibd_pairs() and ibd_segments() share. The segments are the same
+## The tree sequence's IBD for every pair of `ids`, for the listed pairs (pa[i], pb[i]), or for the
+## pairs within each of the `groups` (a list of id vectors), with the segments when asked: the work
+## ibd_pairs(), ibd_segments() and new_infection_diversity() share. The segments are the same
 ## whatever other genomes are passed. With `none_ok`, none of the genomes being in the tree sequence
-## gives an object with no genome rather than an error.
+## gives an object with no genome rather than an error. `got` holds only the pairs that share a
+## segment.
 .ibd_compute <- function(run, ids = NULL, pa = NULL, pb = NULL, min_span = 0, segments = FALSE,
-                         absent = "they are listed in `missing` and look up as NA.", none_ok = FALSE) {
+                         absent = "they are listed in `missing` and look up as NA.", none_ok = FALSE,
+                         groups = NULL) {
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
   m <- .py_module("_malariafwd_ibd", .ibd_py_src)
   arg <- function(x) if (is.null(x)) NULL else as.list(x)
-  r <- reticulate::py_to_r(m$mfw_ibd(tf, arg(ids), arg(pa), arg(pb), segments))
+  r <- reticulate::py_to_r(m$mfw_ibd(tf, arg(ids), arg(pa), arg(pb), segments,
+                                     if (is.null(groups)) NULL else unname(lapply(groups, as.list))))
   missing <- as.integer(r$missing)
-  req <- if (is.null(pa)) ids else unique(c(pa, pb))
+  req <- if (!is.null(groups)) unique(unlist(groups)) else if (is.null(pa)) ids else unique(c(pa, pb))
   if (!none_ok && !is.null(req) && length(req) && length(missing) == length(unique(req)))
     stop("none of the ", length(unique(req)), " requested ids is in the tree sequence",
          .absent_reason(tf), ".", call. = FALSE)

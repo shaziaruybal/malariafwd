@@ -286,3 +286,21 @@ test_that("new_infection_diversity() gives one row for the window, or one for ev
   expect_error(new_infection_diversity(r, burn_frac = 0.2, from = 10), "give `burn_frac` or `from`, not both.",
                fixed = TRUE)
 })
+
+test_that("new_infection_diversity() compares only the pairs within a window, each as ibd_pairs() reads it", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture()
+  cs <- classify_cases(load_events(r))[origin %in% c("imported", "local reinfection") & tick >= 126L]
+  g <- split(cs$pedigree_id, (cs$tick %/% 60) * 60)
+  x <- malariafwd:::.ibd_compute(r, groups = g)
+  ## every pair it holds is of one window
+  grp <- rep(seq_along(g), lengths(g)); names(grp) <- unlist(g)
+  expect_gt(nrow(x$got), 0L)
+  expect_identical(unname(grp[as.character(x$got$a)]), unname(grp[as.character(x$got$b)]))
+  by60 <- new_infection_diversity(r, cap = 1e6, bin = 60)
+  for (k in seq_along(g)) {
+    row <- by60[win == as.integer(names(g)[k])]
+    if (row$n_pairs >= 15L) expect_equal(row$mean_ibd, mean(ibd_pairs(r, ids = g[[k]])$pairs$ibd), label = names(g)[k])
+    else expect_true(is.na(row$mean_ibd))
+  }
+})

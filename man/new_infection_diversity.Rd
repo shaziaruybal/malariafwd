@@ -26,7 +26,7 @@ new_infection_diversity(
 for every window of the run's grid (days \code{0} to \code{bin - 1}, \code{bin} to \code{2 * bin - 1}, ..., as in
 \code{\link[=force_of_infection]{force_of_infection()}}) that meets it.}
 
-\item{cap}{the most acquisitions drawn from a window.}
+\item{cap}{the most new infections drawn from a window.}
 
 \item{clonal}{the IBD at or above which a pair is clonal.}
 
@@ -42,18 +42,19 @@ without, the window's first day), \code{days} (its days inside the window asked 
 genomes compared: those drawn that the tree sequence holds, or all those drawn when it is not
 read), \code{n_pairs} (\code{n * (n - 1) / 2}), \code{mean_ibd}, \code{clonal_frac} (the share of the pairs with IBD
 at least \code{clonal}, from 0 to 1) and \code{n_lineages}, the last three \code{NA} below \code{min_pairs}. A
-window with no acquisition has \code{n = 0}.
+window with no new infection has \code{n = 0}.
 }
 \description{
-The relatedness of the genomes newly acquired in a window of days, the infections from bites and
-imports: their mean pairwise IBD, the share of their pairs that are clonal and how many lineages
-they carry. Relapses and recrudescences are left out, since neither brings a newly acquired
-genome. As transmission falls, the clonal share rises and the lineages fall. With \code{bin}, each
-window of the run's grid gets a row.
+The relatedness of the new infections of a window of days, those from bites and imports: their
+mean pairwise IBD, the share of their pairs that are clonal and how many lineages they carry.
+Relapses and recrudescences are left out: their genomes come from parasites already in the host.
+As transmission falls, the clonal share rises and the lineages fall. With \code{bin}, each window of
+the run's grid gets a row.
 }
 \details{
-Each window draws at most \code{cap} of its acquisitions, and the tree sequence is read once for all
-of them, only when a window has the \code{min_pairs} pairs its measures need.
+Each window draws at most \code{cap} of its new infections. The tree sequence is read once for every
+window, and only the pairs within a window are compared; it is not read at all when no window
+has the \code{min_pairs} pairs its measures need.
 }
 \section{Python}{
 

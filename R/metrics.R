@@ -629,21 +629,22 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
 
 #' Genetic diversity of new infections, over the run or by window
 #'
-#' The relatedness of the genomes newly acquired in a window of days, the infections from bites and
-#' imports: their mean pairwise IBD, the share of their pairs that are clonal and how many lineages
-#' they carry. Relapses and recrudescences are left out, since neither brings a newly acquired
-#' genome. As transmission falls, the clonal share rises and the lineages fall. With `bin`, each
-#' window of the run's grid gets a row.
+#' The relatedness of the new infections of a window of days, those from bites and imports: their
+#' mean pairwise IBD, the share of their pairs that are clonal and how many lineages they carry.
+#' Relapses and recrudescences are left out: their genomes come from parasites already in the host.
+#' As transmission falls, the clonal share rises and the lineages fall. With `bin`, each window of
+#' the run's grid gets a row.
 #'
-#' Each window draws at most `cap` of its acquisitions, and the tree sequence is read once for all
-#' of them, only when a window has the `min_pairs` pairs its measures need.
+#' Each window draws at most `cap` of its new infections. The tree sequence is read once for every
+#' window, and only the pairs within a window are compared; it is not read at all when no window
+#' has the `min_pairs` pairs its measures need.
 #' @inheritParams load_events
 #' @param burn_frac,from,to the window, as [summarise_run()] takes it: the days after the first
 #'   `burn_frac` of `SIM_DAYS`, or days `from` to `to` (`to = NULL` is `SIM_DAYS`).
 #' @param bin `NULL` for one row over the window, or a whole number of days, at least 1, for a row
 #'   for every window of the run's grid (days `0` to `bin - 1`, `bin` to `2 * bin - 1`, ..., as in
 #'   [force_of_infection()]) that meets it.
-#' @param cap the most acquisitions drawn from a window.
+#' @param cap the most new infections drawn from a window.
 #' @param clonal the IBD at or above which a pair is clonal.
 #' @param min_pairs the fewest pairs of genomes a window needs for its measures, a whole number, at
 #'   least 1; 15 pairs are 6 genomes.
@@ -654,7 +655,7 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
 #'   genomes compared: those drawn that the tree sequence holds, or all those drawn when it is not
 #'   read), `n_pairs` (`n * (n - 1) / 2`), `mean_ibd`, `clonal_frac` (the share of the pairs with IBD
 #'   at least `clonal`, from 0 to 1) and `n_lineages`, the last three `NA` below `min_pairs`. A
-#'   window with no acquisition has `n = 0`.
+#'   window with no new infection has `n = 0`.
 #' @examples
 #' \dontrun{
 #' new_infection_diversity(run)                     # the second half of the run
@@ -685,21 +686,25 @@ new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL
   ## the k-th window draws with seed + k - 1, so a single window draws as `seed` does
   drawn <- lapply(seq_len(nrow(grid)), function(k)
     .sample_fixed(cs[win == grid$win[k], unique(pedigree_id)], cap, seed + k - 1L))
-  ## one read of the tree sequence for every window's genomes, and none when no window can reach
-  ## min_pairs; a pair's IBD does not depend on the other genomes asked for (D63)
+  ## one read of the tree sequence for every window's genomes, comparing only the pairs within a
+  ## window, and none when no window can reach min_pairs; a pair's IBD does not depend on the other
+  ## genomes asked for (D63). The pairs of the union would grow with the square of the windows.
   x <- NULL
   if (any(vapply(drawn, function(p) choose(length(p), 2) >= min_pairs, logical(1)))) {
     .require_python("new_infection_diversity()", c("tskit", "numpy"))
-    x <- suppressWarnings(.ibd_pairs(run, ids = unique(unlist(drawn)), none_ok = TRUE))
+    x <- suppressWarnings(.ibd_compute(run, groups = drawn, none_ok = TRUE))
   }
   rows <- lapply(drawn, function(p) {
     vp <- if (is.null(x)) p else sort(intersect(p, x$samples$pedigree_id))
-    np <- as.integer(choose(length(vp), 2))
+    n <- length(vp); np <- as.integer(choose(n, 2))
     if (is.null(x) || np < min_pairs)
-      return(data.table(n = length(vp), n_pairs = np, mean_ibd = NA_real_, clonal_frac = NA_real_,
+      return(data.table(n = n, n_pairs = np, mean_ibd = NA_real_, clonal_frac = NA_real_,
                         n_lineages = NA_integer_))
-    di <- x$pairs[a %in% vp & b %in% vp, ibd]
-    data.table(n = length(vp), n_pairs = np, mean_ibd = mean(di), clonal_frac = mean(di >= clonal),
+    ## every pair of the window, in order, at 0 where the pair shares no segment
+    pr <- data.table(a = rep(vp[-n], (n - 1):1), b = vp[sequence((n - 1):1, from = 2:n)])
+    di <- x$got[pr, on = c("a", "b"), ibd]
+    di[is.na(di)] <- 0
+    data.table(n = n, n_pairs = np, mean_ibd = mean(di), clonal_frac = mean(di >= clonal),
                n_lineages = uniqueN(ev[pedigree_id %in% vp, lineage_id]))
   })
   cbind(grid, rbindlist(rows))
