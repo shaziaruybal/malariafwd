@@ -32,5 +32,7 @@ a ggplot object.
 \code{layout = "lineages"} (the default) stacks the individual blood-stage lineages, each in its
 own colour, so you can see which genotypes are present at any moment, when a lineage clears
 and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
-\code{layout = "summary"} plots active COI and the reservoir as two lines instead.
+\code{layout = "summary"} plots active COI and the reservoir as two lines instead. Each clone is
+drawn from \code{\link[=episodes]{episodes()}}: from its onset to its end, and to the last day of the state table if it
+was still patent when the run ended.
 }

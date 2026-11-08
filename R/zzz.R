@@ -32,6 +32,10 @@ utils::globalVariables(c(
   "grp", "band",
   # classify_cases imported-origin and masked-relapse flags
   "imported", "into_patent_lineage",
+  # episodes / recurrences
+  "episode_id", "onset_tick", "onset_event", "end_tick", "end_reason", "prev_tick", "prior_episode_id",
+  "prior_tick", "prior_pedigree_id", "prior_lineage_id", "prior_origin", "prior_imported", "prior_detected",
+  "days_since", "x.prior_tick", "i.tick", "is_imported",
   # segments / ladder
   "gstart", "gend", "segid", "cs", "ce", "gs", "ge", "chrom", "x0", "x1", "lab", "cls", "ped",
   # data.table columns that shadow stats::start / stats::end

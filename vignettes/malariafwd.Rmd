@@ -71,6 +71,7 @@ x  <- ibd_pairs(run, ids = cs$pedigree_id)
 x                                                  # genomes, pairs, and where they came from
 ibd_lookup(x, cs$pedigree_id[1], cs$pedigree_id[2])
 ibd_relapse_origin(ev, x)                          # IBD of each relapse vs its origin (~1)
+recurrences(ev, ibd = x)                           # each recurrence vs the host's earlier episodes
 new_infection_diversity(run)                        # relatedness of the transmitting population
 ```
 

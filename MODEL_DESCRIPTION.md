@@ -1291,7 +1291,7 @@ it first (`mda_subpatent_clear`).
 
 > **Derive filters from `event_types()`; do not restate them.** `is_onset` and `ends_episode`
 > mark every way a patent episode begins and ends, so a filter derived from them stays correct as
-> event types are added.
+> event types are added; `episodes()` applies them to give every clone's span.
 
 **`lineage_id` does not identify a genome.** Two properties of the column catch people out,
 and both are deliberate:
@@ -1381,6 +1381,13 @@ run went extinct.
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
 | EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |
 
+**Truth tables.** Read from the event log, so exact.
+
+| table | definition |
+|---|---|
+| episode | the clones that became patent in one host on one day, named by `episode_id` ("<host>:<day>"). `classify_cases()` gives one row per clone onset, founder seeding excluded; `episodes()` gives every clone's span, founders included |
+| recurrence | every episode of a host after its first. `recurrences()` pairs each of its clones with each clone of the earlier episodes (or of the latest), never with a clone of its own episode |
+
 ### 16.4 Reproducibility
 
 `SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the derived
@@ -1421,7 +1428,7 @@ ev <- load_events(run)
 st <- load_state(run)
 summarise_run(run)                       # prevalence, COI, reservoir, relapse fraction
 
-cs  <- classify_cases(ev)                # episode-level truth labels
+cs  <- classify_cases(ev)                # truth labels, one row per clone onset
 x   <- ibd_pairs(run, ids = cs$pedigree_id)  # ground-truth IBD; as.matrix(x) for the matrix
 
 plot_diagnostics(run)                    # six-panel run-health dashboard
@@ -1492,8 +1499,9 @@ than one segment.
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
 | **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus, in two pairs of meiosis II sisters |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
-| **episode** | one **patent** blood-stage infection event: primary, relapse or recrudescence. A clone suppressed below patency is not an episode while it is suppressed |
-| **recurrence** | any new episode after a prior one in the same host — relapse, reinfection or recrudescence. All three are represented (§9a) |
+| **episode** | the clones that became **patent** in one host on one day: a primary (one per genotype a bite delivered), a relapse or a recrudescence, named by `episode_id`. A clone suppressed below patency is not part of an episode while it is suppressed |
+| **clone** | one blood-stage parasite genome in a host, from its onset (a bite, an import, founder seeding, a relapse or a recrudescence) to its end; `episodes()` lists them |
+| **recurrence** | any episode of a host after its first: relapse, reinfection or recrudescence, all represented (§9a). `recurrences()` pairs it with the earlier ones |
 | **recrudescence** | re-expansion to patency of a clone that survived a treatment course. Mints a new genome clonal to the holder it came from. A **case** but not an **acquisition**: no new parasite entered the host |
 | **subpatent** | present in the blood but below the detection threshold — not counted in `moi_active`, not detectable, not reached by a case course (an MDA round reaches it), but still transmissible at `SUBPATENT_INFECTIVITY` |
 | **holder** | the suppressed clone a recrudescence comes from; it is retired when its replacement is minted, which keeps the pair MOI-neutral, or cleared by an MDA round (`mda_subpatent_clear`), which cancels the recrudescence |

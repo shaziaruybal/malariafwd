@@ -2,25 +2,33 @@
 % Please edit documentation in R/metrics.R
 \name{classify_cases}
 \alias{classify_cases}
-\title{Classify each new blood-stage episode ("case") by TRUE origin}
+\title{Classify each blood-stage clone onset ("case") by its true origin}
 \usage{
 classify_cases(events, exclude_masked = FALSE)
 }
 \arguments{
-\item{events}{an events data.table.}
+\item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 
 \item{exclude_masked}{if \code{TRUE}, leave out the masked relapses. It needs the flag on every
 relapse, which runs made before it was recorded lack.}
 }
 \value{
-a data.table of \code{tick}, \code{human_id}, \code{lineage_id}, \code{oocyst_id}, \code{pedigree_id},
-\code{origin}, \code{imported}, \code{detected} and \code{into_patent_lineage} (\code{TRUE} for a masked relapse,
-\code{FALSE} for every other row, \code{NA} for a relapse whose run does not record the flag) -- one
-row per blood-stage episode. Founder seeding (\code{vh_inoculation_seed}) is excluded: it is
-burn-in, not an acquired case.
+a data.table, one row per clone onset: \code{tick} (the day it became patent), \code{human_id},
+\code{episode_id}, \code{lineage_id}, \code{oocyst_id}, \code{pedigree_id}, \code{origin}, \code{imported}, \code{detected} (1
+or 0) and \code{into_patent_lineage} (\code{TRUE} for a masked relapse, \code{FALSE} for every other row,
+\code{NA} for a relapse whose run does not record the flag).
 }
 \description{
-\code{origin} gives the mechanism by which the episode arose, and takes \strong{four} values:
+One row per clone that became patent in a host, in the order of the event log: a bite or an
+import that gave a blood-stage primary, a relapse, or a recrudescence. Clones that became patent
+in one host on one day are one episode, sharing an \code{episode_id} (\code{"<human_id>:<tick>"}, the same
+in every function and subset); a bite that delivered two genotypes gives two rows of one
+episode. Founder seeding (\code{vh_inoculation_seed}) is not a case: the founders are where the run
+starts. Detection is drawn per bite, activation, recrudescence or import, so the clones of one
+episode can differ in \code{detected}.
+}
+\details{
+\code{origin} gives the mechanism by which the clone arose, and takes \strong{four} values:
 \code{relapse} = a hypnozoite activated; \code{imported} = a new infection that arrived via
 importation; \verb{local reinfection} = a new local mosquito-borne infection; and
 \code{recrudescence} = a clone that survived a treatment course, was suppressed below patency,
@@ -32,9 +40,12 @@ relapses} (a relapse of an imported genotype), a key vivax truth category that \
 alone ("relapse") does not expose. So the four truth classes are: imported new infection
 (\code{origin == "imported"}), local reinfection, imported relapse (\code{origin == "relapse"} &
 \code{imported}), and local relapse (\code{origin == "relapse"} & \code{!imported}).
-}
-\details{
+
 A relapse into a patent clone of its own lineage, born on an earlier day, is \emph{masked}: a study
 that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). \code{into_patent_lineage}
 marks it, and \code{exclude_masked = TRUE} leaves it out.
+}
+\seealso{
+\code{\link[=episodes]{episodes()}} for every clone's span, \code{\link[=recurrences]{recurrences()}} for each episode against the
+earlier ones.
 }

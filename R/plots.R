@@ -75,7 +75,9 @@ plot_host_state_prevalence <- function(hsp) {
 #' `layout = "lineages"` (the default) stacks the individual blood-stage lineages, each in its
 #' own colour, so you can see which genotypes are present at any moment, when a lineage clears
 #' and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
-#' `layout = "summary"` plots active COI and the reservoir as two lines instead.
+#' `layout = "summary"` plots active COI and the reservoir as two lines instead. Each clone is
+#' drawn from [episodes()]: from its onset to its end, and to the last day of the state table if it
+#' was still patent when the run ended.
 #'
 #' @param state a state data.table.
 #' @param events an events data.table.
@@ -93,16 +95,8 @@ plot_host_trajectory <- function(state, events, host_id,
   layout <- match.arg(layout)
   st <- as.data.table(state)[entity_type == "human" & as.integer(entity_id) == host_id]
   if (layout == "lineages") return(.host_lineage_plot(st, events, host_id, palette))
-  ## DERIVED from the dictionary, not restated. A hard-coded list here has gone stale twice:
-  ## once dropping imported onsets, and it would have dropped recrudescent ones too.
-  ev <- as.data.table(events)[human_id == host_id & event_type %in% .onset_events()]
-  ## is_dormant == 0 across ALL routes, not just vh_inoculation: a dormant row is a hypnozoite
-  ## being seeded, which is not an episode onset, and keying the exclusion to one event type
-  ## let dormant IMPORT inoculations through as onsets (5 spurious marks on one host).
-  ev <- ev[is_dormant == 0]
-  ev[, kind := data.table::fcase(event_type == "hypnozoite_activation", "relapse",
-                                 event_type == "recrudescence", "recrudescence",
-                                 default = "new infection")]
+  ## the host's clone onsets, from episodes(), which takes them from the event dictionary
+  ev <- episodes(events)[human_id == host_id, .(tick = onset_tick, kind = .onset_kind(onset_event))]
   ggplot2::ggplot() +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, hyp_reservoir_size, colour = "hypnozoite reservoir"), linewidth = .7) +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, moi_active, colour = "active COI"), linewidth = .7) +
@@ -219,25 +213,19 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 }
 
 ## Stacked per-lineage blood-stage areas for one host, reservoir overlaid on a second axis.
-## Spans come from each episode's onset event and its matching clearance (any of the three
-## ways an episode can end); episodes still active at the end run to the last tick. The
-## per-tick grid is completed with zeros so the areas drop to zero between episodes rather
-## than being interpolated across the gap.
+## Spans are the host's clones from episodes(), from onset to their first end (every way a patent
+## episode can end, event_types()$ends_episode); a clone still patent when the run ended runs to
+## the last day of state. An MDA round can end a clone on its first patent day (D44), a one-day
+## span. The per-tick grid is completed with zeros so the areas drop to zero between episodes
+## rather than being interpolated across the gap.
 .host_lineage_plot <- function(st, events, host_id, palette) {
-  ev <- as.data.table(events)
-  last <- max(ev$tick)
-  onset <- ev[human_id == host_id & is_dormant == 0 & event_type %in% .onset_events(),
-              .(pedigree_id, lineage_id = as.character(lineage_id), start = tick,
-                kind = data.table::fcase(event_type == "hypnozoite_activation", "relapse",
-                                         event_type == "recrudescence", "recrudescence",
-                                         default = "new infection"))]
-  if (!nrow(onset)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
-  stopifnot(all(onset$kind %in% names(.KIND_SHAPE)))   # an unlisted kind would draw as shape NA
-  clears <- event_types()$event_type[event_types()$ends_episode]
-  ends <- ev[event_type %in% clears, .(pedigree_id, end = tick)]
-  ## end >= start: an MDA round can clear a clone on its first patent day (D44), a one-day
-  ## episode that classify_cases() counts as a case too
-  seg <- merge(onset, ends, by = "pedigree_id", all.x = TRUE)[is.na(end), end := last][end >= start]
+  ep <- episodes(events)[human_id == host_id]
+  if (!nrow(ep)) stop("host ", host_id, " has no blood-stage episodes", call. = FALSE)
+  if (!nrow(st)) stop("host ", host_id, " is not in the state table", call. = FALSE)
+  last <- max(st$tick)
+  seg <- ep[, .(pedigree_id, lineage_id, start = onset_tick, end = data.table::fifelse(is.na(end_tick), last, end_tick),
+                kind = .onset_kind(onset_event))]
+  stopifnot(all(seg$kind %in% names(.KIND_SHAPE)))   # an unlisted kind would draw as shape NA
 
   lv <- seg[order(start), unique(lineage_id)]
   grid <- seg[, .(tick = seq(start, end)), by = .(pedigree_id, lineage_id)]

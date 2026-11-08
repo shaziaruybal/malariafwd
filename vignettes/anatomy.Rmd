@@ -44,7 +44,8 @@ ev <- load_events(run)                 # a data.table
 ev[, .N, by = event_type][order(-N)]   # how many of each event type
 ```
 
-Classify each blood-stage episode ("case") by its true origin. There are **four**: `relapse`
+Classify each blood-stage clone onset ("case") by its true origin: one row per clone, and the
+clones that became patent in one host on one day share an `episode_id`. There are **four** origins: `relapse`
 (a hypnozoite activated), `imported`, `local reinfection`, and `recrudescence` (a clone that
 survived a treatment course, was suppressed below patency, and re-expanded). The fourth only
 appears when treatment can fail *and* `P_RECRUD_GIVEN_FAIL > 0`; at the shipped defaults there
@@ -53,6 +54,14 @@ is no treatment at all, so you will see three:
 ```{r}
 cs <- classify_cases(ev)
 cs[, .N, by = origin]
+```
+
+Every episode of a host after its first is a recurrence. `recurrences()` pairs each with the
+host's earlier episodes, with both sides' true origins; `episodes()` gives every clone's span.
+
+```{r}
+rec <- recurrences(ev)
+rec[, .N, by = .(origin, prior_origin)]
 ```
 
 ## Epidemiology over time

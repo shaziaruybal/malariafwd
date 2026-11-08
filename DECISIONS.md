@@ -19,6 +19,37 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D64 — A case is a clone; episodes and recurrences are built in the package · 2026-11-08 · Accepted
+**Context.** `classify_cases()` gave one row per clone onset without saying which rows belong to one
+episode, and every analysis paired recurrences with earlier episodes by hand, pairing rows: a bite
+that delivered two genotypes gave two rows on one day, which a row-based pairing paired with each
+other. Clone spans were rebuilt in three places (the trajectory plot, two analysis scripts), each
+missing some way an episode can begin or end (review M10, Q18).
+**Decision.** An episode is the clones that became patent in one host on one day, named by
+`episode_id` (`"<human_id>:<tick>"`). `classify_cases()` gives it on every clone row. `episodes()`
+gives every blood-stage clone's span from its onset to its first end, founder seeding included, from
+the event dictionary's onset and end types. `recurrences()` pairs each clone of every episode after
+a host's first with each clone of the earlier episodes (`prior = "all"`) or the latest
+(`"previous"`), never within one episode, and reads IBD from the run's `vivax_ibd` object; founder
+seeding is not an episode (the author's answer to OQ4). The host trajectory plot is drawn from
+`episodes()`.
+**Rationale.** The unit a recurrence study compares is the episode, and the pairing is where
+hand-written analyses went wrong; one implementation, tested against `state.tsv`, removes the
+copies.
+**Alternatives rejected.** *One row per episode* -- the genotypes of one episode differ in origin
+and in IBD, which a classifier needs. *Founder seeding as an earlier episode* -- every founder
+host's first acquired episode would become a recurrence, paired with an unrelated founder genome.
+**Consequences.** Runs are unchanged. `classify_cases()` gains `episode_id`. In a 100-host run 1.5%
+of clone rows share a host and a day, 15% with `LAMBDA_SPOROZOITES = 2`, and a row-based pairing
+loses 7 of 5,619 pairs, 67 of 3,286 with co-transmission. The trajectory plot draws a clone still
+patent at the end of the run to the last day of the state table.
+**How to verify.** `tests/testthat/test-episodes.R`: the fixture's episodes, spans and pairings; IBD
+from the object; tables, runs and directories alike; typed empty tables; with co-transmission,
+several clones to an episode, never paired with each other; and on a run, every clone's span covers
+exactly the days it counts in `moi_active`.
+
+---
+
 ## D63 — ibd_pairs() returns a pedigree-keyed vivax_ibd object; unknown ids read NA · 2026-11-08 · Accepted
 **Context.** `ibd_pairs()` returned a bare list keyed by the node ids of a tree it had simplified
 and did not return, so every lookup went through `ibd_index()`, a list holding a closure that

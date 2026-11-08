@@ -56,6 +56,20 @@
   inherits(run, "vivax_run") && inherits(run$params, "vivax_params") &&
     identical(names(run$params), names(.malariafwd_defaults))
 
+## An events table, from a table or from a run (a vivax_run or its directory).
+.as_events <- function(x) {
+  if (inherits(x, "vivax_run") || (is.character(x) && length(x) == 1L)) return(load_events(x))
+  if (is.data.frame(x)) return(data.table::as.data.table(x))
+  stop("`events` must be an events table from load_events(), a vivax_run or a run directory.", call. = FALSE)
+}
+
+## A day argument `name`: a single whole number of days, 0 or more.
+.check_day <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) || x < 0 || x != round(x))
+    stop("`", name, "` must be a single whole number of days, 0 or more.", call. = FALSE)
+  invisible(as.integer(x))
+}
+
 ## A function's flag argument `name`: a single TRUE or FALSE.
 .check_flag <- function(x, name) {
   if (!isTRUE(x) && !isFALSE(x)) stop("`", name, "` must be TRUE or FALSE.", call. = FALSE)

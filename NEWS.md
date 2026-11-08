@@ -51,9 +51,11 @@ recorded genealogy rather than inferred from markers: **IBD here is ground truth
   control, seasonality, and resurgence triggers that switch on biting, activation, batch size
   or import rate at a chosen tick. All off by default, so a bare run is a clean closed system.
 
-* **Truth labels.** `classify_cases()` labels every blood-stage episode by its true origin:
+* **Truth labels.** `classify_cases()` labels every blood-stage clone onset by its true origin:
   `imported`, `local reinfection`, `relapse` or `recrudescence`. A separate `imported` flag
   marks import-derived genotypes, so an **imported relapse** is directly identifiable.
+  `episodes()` gives every clone's span, and `recurrences()` pairs each recurrence with the
+  earlier episodes of its host, with ground-truth IBD.
 
 ## Episodes and acquisitions are different units
 
@@ -78,7 +80,7 @@ apart rather than choosing for you:
   `future`/`furrr`, reporting any failed cell with its error.
 
 * **Loaders and metrics.** `load_events()`, `load_state()`, `load_params()`; `summarise_run()`,
-  `classify_cases()`, `incidence_by_origin()`, `force_of_infection()`, `relapse_fraction()`,
+  `classify_cases()`, `episodes()`, `recurrences()`, `incidence_by_origin()`, `force_of_infection()`, `relapse_fraction()`,
   `rc_by_origin()`, `transmission_links()`, `transmission_chains()`, plus reservoir, relapse,
   COI and dormancy helpers.
 

@@ -127,9 +127,17 @@ dormancy_durations <- function(events) {
   m[act_tick >= est_tick, .(duration = act_tick - est_tick)]
 }
 
-#' Classify each new blood-stage episode ("case") by TRUE origin
+#' Classify each blood-stage clone onset ("case") by its true origin
 #'
-#' `origin` gives the mechanism by which the episode arose, and takes **four** values:
+#' One row per clone that became patent in a host, in the order of the event log: a bite or an
+#' import that gave a blood-stage primary, a relapse, or a recrudescence. Clones that became patent
+#' in one host on one day are one episode, sharing an `episode_id` (`"<human_id>:<tick>"`, the same
+#' in every function and subset); a bite that delivered two genotypes gives two rows of one
+#' episode. Founder seeding (`vh_inoculation_seed`) is not a case: the founders are where the run
+#' starts. Detection is drawn per bite, activation, recrudescence or import, so the clones of one
+#' episode can differ in `detected`.
+#'
+#' `origin` gives the mechanism by which the clone arose, and takes **four** values:
 #' `relapse` = a hypnozoite activated; `imported` = a new infection that arrived via
 #' importation; `local reinfection` = a new local mosquito-borne infection; and
 #' `recrudescence` = a clone that survived a treatment course, was suppressed below patency,
@@ -145,20 +153,20 @@ dormancy_durations <- function(events) {
 #' A relapse into a patent clone of its own lineage, born on an earlier day, is *masked*: a study
 #' that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). `into_patent_lineage`
 #' marks it, and `exclude_masked = TRUE` leaves it out.
-#' @param events an events data.table.
+#' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
 #' @param exclude_masked if `TRUE`, leave out the masked relapses. It needs the flag on every
 #'   relapse, which runs made before it was recorded lack.
-#' @return a data.table of `tick`, `human_id`, `lineage_id`, `oocyst_id`, `pedigree_id`,
-#'   `origin`, `imported`, `detected` and `into_patent_lineage` (`TRUE` for a masked relapse,
-#'   `FALSE` for every other row, `NA` for a relapse whose run does not record the flag) -- one
-#'   row per blood-stage episode. Founder seeding (`vh_inoculation_seed`) is excluded: it is
-#'   burn-in, not an acquired case.
+#' @return a data.table, one row per clone onset: `tick` (the day it became patent), `human_id`,
+#'   `episode_id`, `lineage_id`, `oocyst_id`, `pedigree_id`, `origin`, `imported`, `detected` (1
+#'   or 0) and `into_patent_lineage` (`TRUE` for a masked relapse, `FALSE` for every other row,
+#'   `NA` for a relapse whose run does not record the flag).
+#' @seealso [episodes()] for every clone's span, [recurrences()] for each episode against the
+#'   earlier ones.
 #' @export
 classify_cases <- function(events, exclude_masked = FALSE) {
   .check_flag(exclude_masked, "exclude_masked")
-  ev <- as.data.table(events)
-  cases <- ev[(event_type %in% c("vh_inoculation","vh_inoculation_import") & is_dormant == 0) |
-                event_type %in% c("hypnozoite_activation", "recrudescence")]
+  ev <- .as_events(events)
+  cases <- ev[event_type %in% setdiff(.onset_events(), "vh_inoculation_seed") & is_dormant == 0]
   cases[, origin := fcase(
     event_type == "recrudescence", "recrudescence",
     event_type == "hypnozoite_activation", "relapse",
@@ -175,8 +183,11 @@ classify_cases <- function(events, exclude_masked = FALSE) {
            " of these events' activation rows lack it.", call. = FALSE)
     cases <- cases[into_patent_lineage == FALSE]
   }
-  cases[, .(tick, human_id, lineage_id = as.character(lineage_id), oocyst_id, pedigree_id,
-            origin, imported, detected, into_patent_lineage)]
+  cases[, .(tick = as.integer(tick), human_id = as.integer(human_id),
+            episode_id = paste0(human_id, ":", tick), lineage_id = as.character(lineage_id),
+            oocyst_id = as.integer(oocyst_id), pedigree_id = as.integer(pedigree_id),
+            origin = as.character(origin), imported = as.logical(imported),
+            detected = as.integer(detected), into_patent_lineage = as.logical(into_patent_lineage))]
 }
 
 #' Binned incidence by origin

@@ -27,10 +27,12 @@ genome, so a question about transmission can be answered with genetics against a
 
 Recurrence is **three-state** — relapse, reinfection and recrudescence — and every episode
 carries a ground-truth label, so a method that tries to tell them apart can be scored against
-the answer. Case management is modelled at the level of the **patient**: a course clears every
-patent clone the host carries, radical cure is nested inside it, and a clone that survives can
-be suppressed below patency and recrudesce later. All of it is off by default, so a bare run is
-an untreated closed system.
+the answer. `recurrences()` pairs each recurrence with the earlier episodes of its host, with
+their true origins and ground-truth IBD: the table such a method is scored against. Case
+management is modelled at the level of the **patient**: a course clears every patent clone the
+host carries, radical cure is nested inside it, and a clone that survives can be suppressed
+below patency and recrudesce later. All of it is off by default, so a bare run is an untreated
+closed system.
 
 **How the model fits together.** Host states and the mosquito cycle on the left; what happens to
 a parasite lineage inside a human and inside a mosquito on the right — the hypnozoite reservoir,
@@ -97,6 +99,7 @@ summarise_run(run)                                  # prevalence, COI, relapse f
 # ground-truth IBD (tskit)
 cs  <- classify_cases(ev)
 x   <- ibd_pairs(run, ids = cs$pedigree_id)       # keyed by pedigree id; read with ibd_lookup()
+recurrences(ev, ibd = x)                          # each recurrence vs its host's earlier episodes
 ibd_relapse_origin(ev, x)                         # relapses are clonal to their origin (IBD = 1)
 new_infection_diversity(run)                       # relatedness of the transmitting population
 
