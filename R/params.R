@@ -73,7 +73,8 @@
 #' `N_FOUNDER_HOSTS` leaves `N_FOUNDER_LINEAGES` as it was.
 #'
 #' @evalRd .param_rd()
-#' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`.
+#' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`; ignored by
+#'   `as.data.frame()`.
 #' @return a named list of every model parameter (class `vivax_params`): the defaults with your
 #'   overrides, checked. `print()` shows the values that differ from the defaults, and
 #'   `as.data.frame()` gives the table: `name`, `value` (as SLiM is given it), `default`,
@@ -638,7 +639,7 @@ print.vivax_params <- function(x, ...) {
 
 #' @rdname vivax_params
 #' @param x a `vivax_params` object.
-#' @param row.names,optional,... ignored.
+#' @param row.names,optional ignored.
 #' @export
 as.data.frame.vivax_params <- function(x, row.names = NULL, optional = FALSE, ...) {
   v <- tryCatch(.slim_values(x), error = function(e) NULL)

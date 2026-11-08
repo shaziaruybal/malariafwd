@@ -10,11 +10,12 @@ vivax_params(...)
 \method{as.data.frame}{vivax_params}(x, row.names = NULL, optional = FALSE, ...)
 }
 \arguments{
-\item{...}{named parameter overrides, e.g. \verb{N_HOSTS = 300, BITING_RATE = 0.09}.}
+\item{...}{named parameter overrides, e.g. \verb{N_HOSTS = 300, BITING_RATE = 0.09}; ignored by
+\code{as.data.frame()}.}
 
 \item{x}{a \code{vivax_params} object.}
 
-\item{row.names, optional, ...}{ignored.}
+\item{row.names, optional}{ignored.}
 }
 \value{
 a named list of every model parameter (class \code{vivax_params}): the defaults with your
