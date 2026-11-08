@@ -64,7 +64,6 @@ test_that("ibd_lookup() gives the IBD a genome pair has", {
   m <- as.matrix(x)
   expect_identical(m[cbind(as.character(rel$pedigree_id), as.character(rel$parent1_pedigree_id))],
                    ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id))
-  expect_true(all(ibd_relapse_origin(ev, ibd_pairs(r, ids = classify_cases(ev)$pedigree_id))$ibd > 0.999))
 })
 
 test_that("segments carry their common ancestor and its age", {

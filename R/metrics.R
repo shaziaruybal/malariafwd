@@ -629,26 +629,6 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
     person_years = py, person_years_at_risk = risk$person_years)
 }
 
-#' Relapse-vs-origin IBD: each relapse paired to a same-lineage prior primary
-#' @param events an events data.table.
-#' @param ibd a `vivax_ibd` object from [ibd_pairs()] holding the relapses and their origins.
-#' @return a data.table with an `ibd` column (should be ~1, clonal).
-#' @export
-ibd_relapse_origin <- function(events, ibd) {
-  ev <- as.data.table(events); x <- ibd; nm <- x$samples
-  rel <- ev[event_type == "hypnozoite_activation",
-            .(lineage_id = as.character(lineage_id), human_id, rp = pedigree_id, rt = tick)]
-  ## every inoculation route, not just local bites: a relapse whose origin was an IMPORT
-  ## was dropped by the merge below without warning, which silently excluded the pairs
-  ## that are now the cleanest clonal check in the model.
-  prm <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_import",
-                              "vh_inoculation_seed") & is_dormant == 0,
-            .(lineage_id = as.character(lineage_id), human_id, pp = pedigree_id, pt = tick)]
-  prm <- prm[pp %in% nm$pedigree_id][order(pt)][, .SD[1], by = .(lineage_id, human_id)]
-  pr <- merge(rel[rp %in% nm$pedigree_id], prm, by = c("lineage_id","human_id"))[pt <= rt]
-  pr[, ibd := ibd_lookup(x, rp, pp)][]
-}
-
 #' New-infection genetic diversity (relatedness of the transmitting population)
 #'
 #' Pairwise IBD among non-relapse blood-stage infections in the steady-state window;

@@ -35,7 +35,7 @@ reference:
 - title: Relatedness (IBD)
   desc: Ground-truth identity-by-descent from the recorded genealogy.
   contents: [ibd_pairs, ibd_lookup, ibd_segments, chrom_map, ibd_truth_pairs,
-             ibd_trajectory, ibd_relapse_origin, new_infection_diversity]
+             ibd_trajectory, new_infection_diversity]
 
 - title: The ARG
   desc: >

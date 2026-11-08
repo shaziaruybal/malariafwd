@@ -21,8 +21,6 @@ utils::globalVariables(c(
   "kind",
   # classify_travel
   "imp_tick", "recent", "recent_travel", "surveillance",
-  # ibd_relapse_origin
-  "rp", "rt", "pp", "pt",
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
   # simulate_genotypes / write_vcf

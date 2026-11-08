@@ -41,12 +41,9 @@ test_that("relapse-to-origin IBD is clonal (= 1)", {
   run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
                               LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
                  seed = 3, outdir = tempfile("mfwd_test_ibd"))
-  ev <- load_events(run)
-  cs <- classify_cases(ev)
-  x <- ibd_pairs(run, ids = cs$pedigree_id)
-  roi <- ibd_relapse_origin(ev, x)
-  skip_if(nrow(roi) < 10, "too few relapse-origin pairs")
-  expect_equal(median(roi$ibd), 1, tolerance = 0.001)
+  ro <- ibd_truth_pairs(run)[cls == "relapse vs its origin"]
+  skip_if(nrow(ro) < 10, "too few relapse-origin pairs")
+  expect_equal(median(ro$ibd), 1, tolerance = 0.001)
 })
 
 test_that("run_sim() works with an apostrophe and a space in the output path and SIM_ID", {

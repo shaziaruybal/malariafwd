@@ -106,10 +106,12 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
   ids <- unique(data.table::as.data.table(classify_cases(ev))$pedigree_id)
   skip_if(length(ids) < 10, "too few cases in this run")
 
-  ## D22: no time cutoff is offered, so a clonal relapse reads 1 however old its ancestor is
-  x <- ibd_pairs(run, ids = ids)
-  ro  <- data.table::as.data.table(ibd_relapse_origin(ev, x))
-  if (nrow(ro)) expect_true(all(ro$ibd > 0.999))
+  ## D22: no time cutoff is offered, so a relapse reads 1 against its batch however long it slept
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
+  if (nrow(rel)) {
+    x <- ibd_pairs(run, ids = c(rel$pedigree_id, rel$parent1_pedigree_id))
+    expect_true(all(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id) > 0.999))
+  }
 
   sg <- ibd_pairs(run, ids = ids, segments = TRUE)
   expect_gt(sg$sequence_length, 0)

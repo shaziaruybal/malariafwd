@@ -100,7 +100,6 @@ summarise_run(run)                                  # prevalence, COI, EIR, FOI,
 cs  <- classify_cases(ev)
 x   <- ibd_pairs(run, ids = cs$pedigree_id)       # keyed by pedigree id; read with ibd_lookup()
 recurrences(ev, ibd = x)                          # each recurrence vs its host's earlier episodes
-ibd_relapse_origin(ev, x)                         # relapses are clonal to their origin (IBD = 1)
 new_infection_diversity(run)                       # relatedness of the transmitting population
 
 # parallel sweep (see ?run_grid; use future::plan() for a cluster). Calling it again resumes:

@@ -223,9 +223,9 @@ audit_run <- function(tag, params, seed = 1) {
        sprintf("coalesced %.2f", mean(tf$coalesced, na.rm = TRUE)))
   }
 
-  ## the key biological invariant: a relapse is clonal to its origin
-  ro <- ibd_relapse_origin(ev, ibx)
-  if (!is.null(ro) && nrow(ro)) {
+  ## the key biological invariant: a relapse is clonal to the batch it woke from
+  ro <- ibd_truth_pairs(run)[cls == "relapse vs its origin"]
+  if (nrow(ro)) {
     ok("relapse-to-origin IBD == 1 (clonal)",
        median(ro$ibd, na.rm = TRUE) > 0.99,
        sprintf("median %.3f over %d relapses", median(ro$ibd, na.rm = TRUE), nrow(ro)))
