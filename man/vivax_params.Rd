@@ -167,8 +167,8 @@ Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package websi
 
 \subsection{Detection and case management}{A case is detected, decided where it arises and treated later, on the host; radical cure is nested in a blood-stage course. Off by default.
 \describe{
-\item{\code{P_DETECT_PRIMARY}}{A primary infection or an import is detected, drawn once per episode. Unit: probability. Default 1; number in [0, 1].}
-\item{\code{P_DETECT_RELAPSE}}{A relapse is detected, drawn once per episode. Relapses are often subpatent, so a realistic value is lower. Unit: probability. Default 1; number in [0, 1].}
+\item{\code{P_DETECT_PRIMARY}}{A primary infection or an import is detected, drawn once per bite (for all the genotypes it delivers) or per import. Unit: probability. Default 1; number in [0, 1].}
+\item{\code{P_DETECT_RELAPSE}}{A relapse is detected, drawn once per activation. Relapses are often subpatent, so a realistic value is lower. Unit: probability. Default 1; number in [0, 1].}
 \item{\code{BLOODCURE_COVERAGE}}{A detected case is treated: a course clears each patent clone the host carries, unless the clone survives. 0 turns the whole treatment path off. Unit: probability. Default 0; number in [0, 1].}
 \item{\code{P_BLOODCURE_SURVIVAL}}{A clone survives a course: a patent one, or under MDA a subpatent one too. Unit: probability. Default 0; number in [0, 1]. Source: about 0.10 in the literature.}
 \item{\code{RADCURE_COVERAGE}}{A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. Unit: probability. Default 0; number in [0, 1].}

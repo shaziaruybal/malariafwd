@@ -918,8 +918,8 @@ A case is detected, decided where it arises and treated later, on the host; radi
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `P_DETECT_PRIMARY` | 1 | probability | number in [0, 1] | A primary infection or an import is detected, drawn once per episode. |
-| `P_DETECT_RELAPSE` | 1 | probability | number in [0, 1] | A relapse is detected, drawn once per episode. Relapses are often subpatent, so a realistic value is lower. |
+| `P_DETECT_PRIMARY` | 1 | probability | number in [0, 1] | A primary infection or an import is detected, drawn once per bite (for all the genotypes it delivers) or per import. |
+| `P_DETECT_RELAPSE` | 1 | probability | number in [0, 1] | A relapse is detected, drawn once per activation. Relapses are often subpatent, so a realistic value is lower. |
 | `BLOODCURE_COVERAGE` | 0 | probability | number in [0, 1] | A detected case is treated: a course clears each patent clone the host carries, unless the clone survives. 0 turns the whole treatment path off. |
 | `P_BLOODCURE_SURVIVAL` | 0 | probability | number in [0, 1] | A clone survives a course: a patent one, or under MDA a subpatent one too. Source: about 0.10 in the literature. |
 | `RADCURE_COVERAGE` | 0 | probability | number in [0, 1] | A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. |
