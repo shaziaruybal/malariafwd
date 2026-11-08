@@ -105,13 +105,14 @@ def gt_roots(path, ids, positions):
     j <- dup[1]; i <- which(num == num[j] & pos == pos[j])[1]
     stop("loci rows ", i, " and ", j, " are both chromosome ", num[j], ", pos ", .slim_num(pos[j]), ".", call. = FALSE)
   }
-  lo[, `:=`(chrom = as.integer(num), pos = as.integer(pos), plaf = pl)]
-  if (!"locus" %in% names(lo)) lo[, locus := paste0(chrom, ":", pos)]
-  lo[, locus := as.character(locus)]
+  ## set() rather than `[`: a column of `loci` named num, pos, pl, k or cm would take the place of
+  ## these values inside `[`, and other columns are the user's to keep
+  data.table::set(lo, j = c("chrom", "pos", "plaf"), value = list(as.integer(num), as.integer(pos), pl))
+  data.table::set(lo, j = "locus", value = if ("locus" %in% names(lo)) as.character(lo$locus) else paste0(lo$chrom, ":", lo$pos))
   dup <- which(duplicated(lo$locus))
   if (length(dup)) stop("loci rows ", match(lo$locus[dup[1]], lo$locus), " and ", dup[1], " have the same locus id ",
                         lo$locus[dup[1]], ".", call. = FALSE)
-  lo[, position := cm$start[k] + pos - 1]
+  data.table::set(lo, j = "position", value = cm$start[k] + pos - 1)
   data.table::setcolorder(lo, c("locus", "chrom", "pos", "position", "plaf"))
   lo[]
 }

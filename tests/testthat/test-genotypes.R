@@ -45,6 +45,13 @@ test_that("loci are read as PvP01 chromosome, 1-based position and ALT frequency
   expect_error(gl(cm, data.frame(chrom = 1, pos = 1, PLAF = 0.2)), "use plaf = 1 - PLAF", fixed = TRUE)
   expect_error(gl(cm, data.frame(chrom = 1, plaf = 0.2)), "`loci` lacks the column\\(s\\) pos")
   expect_identical(nrow(gl(cm, data.frame(chrom = integer(), pos = integer(), plaf = numeric()))), 0L)
+  ## other columns are kept, whatever their names
+  ex <- gl(cm, data.frame(chrom = 1:3, pos = c(100, 200, 300), plaf = c(0.1, 0.2, 0.3), k = 3L, num = 7, pl = 2,
+                          cm = c(0.5, 1.2, 3.4)))
+  expect_identical(ex$position, c(99, 1021863, 1978290))
+  expect_identical(c(ex$chrom, ex$plaf), c(1:3, 0.1, 0.2, 0.3))
+  expect_identical(ex$locus, c("1:100", "2:200", "3:300"))
+  expect_identical(c(ex$k, ex$num, ex$pl, ex$cm), c(3, 3, 3, 7, 7, 7, 2, 2, 2, 0.5, 1.2, 3.4))
 })
 
 test_that("host calls pool their clones: 0, 1, or 0.5 for both", {
