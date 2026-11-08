@@ -27,10 +27,14 @@ disagree: the disagreement is what a travel rule costs.
 }
 \details{
 The trip is recorded once, on the day an import arrives, whether it established a blood-stage
-infection, hypnozoites or both. The window decides most of the result, and for vivax no window
-is right: a relapse of an imported batch can come long after the trip, so a short window misses
-the late relapses, while a long one flags more of the cases the host acquired locally after the
-trip.
+infection, hypnozoites or both. An import that established nothing
+(\code{vh_inoculation_import_no_take}) is not a trip: the model's only travel is the import of a
+parasite, and travellers who bring none back are not modelled, so counting the imports that
+failed would add a few of them and leave out the rest.
+
+The window decides most of the result, and for vivax no window is right: a relapse of an
+imported batch can come long after the trip, so a short window misses the late relapses, while
+a long one flags more of the cases the host acquired locally after the trip.
 }
 \examples{
 \dontrun{

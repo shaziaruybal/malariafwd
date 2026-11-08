@@ -111,3 +111,15 @@ test_that("classify_travel() counts an import once, on the day it arrived", {
   expect_identical(relapse(61), "imported (recent travel)")
   expect_identical(classify_travel(ev, window = 1)[pedigree_id == 41L, surveillance], "imported (recent travel)")
 })
+
+test_that("classify_travel() does not count an import that established nothing as a trip", {
+  ## host 4: an import that took nowhere on day 100, then a local bite's case on day 120
+  ev <- make_events(list(
+    list(tick = 100L, event_type = "vh_inoculation_import_no_take", human_id = 4L, inoculation_id = 7L,
+         is_imported = 1L, is_dormant = -1L),
+    list(tick = 120L, event_type = "vh_inoculation", human_id = 4L, mosq_id = 101L, lineage_id = 3L,
+         pedigree_id = 50L, inoculation_id = 8L, detected = 1L)))
+  tr <- classify_travel(ev, window = 60)
+  expect_identical(tr$pedigree_id, 50L)
+  expect_identical(tr$surveillance, "local (no recent travel)")
+})

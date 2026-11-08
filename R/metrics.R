@@ -343,10 +343,14 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
 #' disagree: the disagreement is what a travel rule costs.
 #'
 #' The trip is recorded once, on the day an import arrives, whether it established a blood-stage
-#' infection, hypnozoites or both. The window decides most of the result, and for vivax no window
-#' is right: a relapse of an imported batch can come long after the trip, so a short window misses
-#' the late relapses, while a long one flags more of the cases the host acquired locally after the
-#' trip.
+#' infection, hypnozoites or both. An import that established nothing
+#' (`vh_inoculation_import_no_take`) is not a trip: the model's only travel is the import of a
+#' parasite, and travellers who bring none back are not modelled, so counting the imports that
+#' failed would add a few of them and leave out the rest.
+#'
+#' The window decides most of the result, and for vivax no window is right: a relapse of an
+#' imported batch can come long after the trip, so a short window misses the late relapses, while
+#' a long one flags more of the cases the host acquired locally after the trip.
 #'
 #' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
 #' @param window the look-back, a whole number of days, 0 or more: a case on day `tick` is flagged
@@ -372,10 +376,10 @@ classify_travel <- function(events, window = 60) {
   ## truth flag, was present exactly where it is trivially FALSE and absent on the one run
   ## where it carries signal. Safe because pedigree_id is already unique per case row.
   keys <- names(cases)
-  ## Any import establishment marks the trip, dormant or not. Requiring is_dormant == 0 meant a
-  ## traveller who returned carrying only hypnozoites never registered as having travelled --
-  ## 43 of 91 import-exposed hosts on the audit run. A surveillance system records the journey,
-  ## not which compartment the parasite ended up in.
+  ## Any import establishment marks the trip, dormant or not; a no-take import established
+  ## nothing and is not one. Requiring is_dormant == 0 meant a traveller who returned carrying only
+  ## hypnozoites never registered as having travelled -- 43 of 91 import-exposed hosts on the audit
+  ## run. A surveillance system records the journey, not which compartment the parasite ended in.
   ## one trip per import, on its arrival day: an import that also lays down hypnozoites logs the
   ## batch the next day under the same inoculation_id (D17). A row without an id is a trip of its own.
   imports <- ev[event_type == "vh_inoculation_import", .(human_id, inoculation_id, imp_tick = tick)]
