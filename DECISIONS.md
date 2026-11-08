@@ -19,6 +19,32 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D73 — Import classes come from the true transmission chain · 2026-11-08 · Accepted
+**Context.** The WHO terminology classes a case as imported, introduced or indigenous by where it
+was acquired and its chain of transmission from an imported infection. The package's only import
+classification, `classify_who()`, applies a travel rule, what surveillance sees, and has no truth
+to score it against. The analysis repository's `chain_classify()` walked each case's parents by
+hand and lost the chain at a recrudescence, so every recrudescence and every case downstream of
+one came out of a local lineage (review m16).
+**Decision.** `classify_chain()` gives every case (a row of `classify_cases()`) its generation, the
+fewest transmission links from a clone acquired by importation, through both routes (D70), a
+recrudescence counted as the clone it came from and an outcrossed oocyst's shorter chain counting;
+the import row the chain starts from (the batch, for an imported relapse; the smaller id on a
+tie); and its class: `imported` (generation 0), `introduced` (1), `indigenous (from an import)` (2
+or more) or `indigenous (local lineage)` (no import in the chain). It searches breadth first from
+every import at once.
+**Rationale.** The true class is what a travel rule, or a genetic classifier, is scored against.
+**Alternatives rejected.** *A walk up each case's parents* -- the same classes once fixed, slower,
+and where the recrudescence bug lived.
+**Consequences.** Runs are unchanged. A new export. On a 150-host 548-day run with imports and
+recrudescence (seed 2), 61 of 698 cases are classed differently from the analysis repository's
+walk: 26 recrudescences and 35 cases downstream of one.
+**How to verify.** `tests/testthat/test-imports.R`: the fixture's classes, generations and import
+rows, an imported relapse from its batch and an import's recrudescence; an empty log; on a run,
+the imported class exactly the imported cases, and every generation one link from the one before.
+
+---
+
 ## D72 — Transmission chains follow both routes, keep a recrudescence with its clone, and are columns of the links · 2026-11-08 · Accepted
 **Context.** `transmission_chains()` took the components of the direct links only, so a relapse in
 another host never joined its infector's chain; it started a new chain at every transmitting

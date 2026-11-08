@@ -5,7 +5,7 @@ test_that("the package exports these functions", {
   exports <- sub("^export\\((.*)\\)$", "\\1", grep("^export\\(", ns, value = TRUE))
   expect_setequal(exports, c(
   "arg_divergence", "arg_diversity", "arg_summary", "arg_tmrca", "as_slim_args", "check_setup",
-  "chrom_map", "classify_cases", "classify_who", "coi_distribution", "dormancy_durations", "episodes",
+  "chrom_map", "classify_cases", "classify_chain", "classify_who", "coi_distribution", "dormancy_durations", "episodes",
   "event_types", "force_of_infection", "host_state_prevalence", "ibd_lookup", "ibd_pairs",
   "ibd_relapse_origin", "ibd_segments", "ibd_trajectory", "ibd_truth_pairs", "incidence_by_origin",
   "load_events", "load_grid", "load_params", "load_run", "load_state", "model_version", "moi_vs_relapse",

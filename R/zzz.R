@@ -24,6 +24,8 @@ utils::globalVariables(c(
   "rp", "rt", "pp", "pt",
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
+  # classify_chain
+  "from_import", "generation", "import_pedigree_id", "who_class", "src", "to",
   # rc_by_origin
   "n_cases", "n_secondary", "n_onward", "Rc", "onward_frac",
   # transmission_links

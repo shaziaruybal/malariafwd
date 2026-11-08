@@ -1,6 +1,6 @@
 ## transmission.R -- who infected whom, read from the event log (D70): the links from each parent
-## genome of an oocyst to each genome its products infected, the chains they form (D72), and the
-## case reproduction number by true origin (D71).
+## genome of an oocyst to each genome its products infected, the chains they form (D72), the case
+## reproduction number by true origin (D71), and each case's WHO class from its chain (D73).
 
 ## The link table's columns and classes, which every path returns (D23).
 .links0 <- function() data.table(
@@ -226,4 +226,57 @@ rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all"
              onward_frac = fifelse(n_cases > 0L, n_onward / n_cases, NA_real_))]
   out[, origin := factor(origin, levels = lv)]
   out[, .(origin, n_cases, n_secondary, Rc, onward_frac)][]
+}
+
+#' Classify each case by its transmission chain from an import (the WHO classes)
+#'
+#' Each blood-stage case, a row of [classify_cases()], with the class the WHO malaria terminology
+#' gives it by where it was acquired and its chain of transmission from an imported infection:
+#' `"imported"` (acquired abroad: an import, a relapse of an import's batch, or a recrudescence of
+#' either), `"introduced"` (infected locally by an imported case), `"indigenous (from an import)"`
+#' (two or more links from one) and `"indigenous (local lineage)"` (no import in its chain).
+#'
+#' The chain follows [transmission_links()] through both routes, so a relapse is linked to the
+#' infector of the bite that laid its batch. A recrudescence is the same infection as the clone it
+#' came from. An outcrossed oocyst has two infectors: a case is from an import when either is, and
+#' the shorter chain counts. Masked relapses are classed like any case; `into_patent_lineage` leaves
+#' them out.
+#' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
+#' @return a data.table, one row per row of [classify_cases()] in its order, with its columns and
+#'   `from_import` (logical), `generation` (the fewest links from a clone acquired by importation,
+#'   0 for an imported case, `NA` with no import in the chain), `import_pedigree_id` (the genome of
+#'   the import row the shortest chain starts from: an imported infection's blood-stage genome, or
+#'   the batch of an imported relapse; the smaller id on a tie; `NA` with no import) and
+#'   `who_class`.
+#' @references World Health Organization (2021) WHO malaria terminology, 2021 update. Geneva: World
+#'   Health Organization.
+#' @seealso [classify_who()], [transmission_links()], [classify_cases()]
+#' @examples
+#' \dontrun{classify_chain(load_events(run))[, .N, by = who_class]}
+#' @export
+classify_chain <- function(events) {
+  ev <- .as_events(events)
+  cs <- classify_cases(ev)
+  lk <- .links(ev, "all")
+  edges <- unique(data.table(from = .acquisition_root(lk$source_pedigree_id, ev), to = lk$target_pedigree_id))
+  ## generation 0: the clones acquired by importation, each with the import row it began from
+  g0 <- unique(data.table(ped = .acquisition_root(cs[imported == TRUE]$pedigree_id, ev)))
+  act <- ev[event_type == "hypnozoite_activation",
+            .(ped = as.integer(pedigree_id), batch = as.integer(parent1_pedigree_id))]
+  g0[, src := fifelse(ped %in% act$ped, act$batch[match(ped, act$ped)], ped)]
+  seen <- g0[, .(ped, generation = 0L, src)]
+  frontier <- seen
+  ## breadth first from every import at once: a genome's generation is its fewest links from one
+  repeat {
+    nx <- edges[frontier, on = .(from = ped), nomatch = NULL][, .(ped = to, generation = generation + 1L, src)]
+    nx <- nx[!ped %in% seen$ped]
+    if (!nrow(nx)) break
+    nx <- unique(nx[order(ped, src)], by = "ped")
+    seen <- rbind(seen, nx); frontier <- nx
+  }
+  i <- match(.acquisition_root(cs$pedigree_id, ev), seen$ped)
+  cs[, `:=`(from_import = !is.na(i), generation = seen$generation[i], import_pedigree_id = seen$src[i])]
+  cs[, who_class := fcase(generation == 0L, "imported", generation == 1L, "introduced",
+                          generation >= 2L, "indigenous (from an import)", default = "indigenous (local lineage)")]
+  cs[]
 }
