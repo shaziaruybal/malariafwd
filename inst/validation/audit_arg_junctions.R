@@ -141,6 +141,30 @@ ns_se <- boot_se(function(k) mean(ns[k]), seq_along(ns), one$oocyst_id[nsw$pair]
 cat(sprintf("parent switches per product at the 13 junctions: %.2f +/- %.2f | expected 13 x 1/2 = 6.5%s\n",
             mean(ns), ns_se, if (abs(mean(ns) - 6.5) <= 3 * ns_se) "  (consistent)" else "  <-- CHECK"))
 
+## ---------- segments two products of one oocyst share ----------
+## Two products of unrelated parents carry the same parent with probability 1/3 at every locus,
+## pooled over the six pairs of an oocyst's four products. Where they share a parent they carry
+## its two chromatids, so every chiasma (rate 2r) ends the stretch; where they differ, one begins at
+## rate r. A chromosome of length l then has l/3 shared bp in 1/3 + 2rl/3 segments a pair, a mean
+## length of L/(14 + 2rL) over the genome. Segments as ibd_segments() defines them, with no floor;
+## one genome per product lineage of an oocyst, since a product inoculated twice shares the same.
+L <- sum(PVP01); rL <- R_WITHIN * L
+one_per <- unique(tet, by = c("oocyst_id", "lineage_id"))
+sp <- one_per[, if (.N > 1) as.data.table(t(combn(.N, 2)))[, .(a = ped[V1], b = ped[V2])], by = oocyst_id]
+sp <- sp[oocyst_id %in% rec[unrelated_parents == TRUE, oocyst_id]][inN(a) & inN(b)]
+if (nrow(sp)) {
+  ss <- ibd_segments(run, sp$a, sp$b, min_span = 0)
+  ss[, oocyst := sp$oocyst_id[pair]]
+  exp_len <- L / (14 + 2 * rL); exp_n <- (14 + 2 * rL) / 3
+  set.seed(2)
+  len_se <- boot_se(function(k) mean(ss$length[k]), seq_len(nrow(ss)), ss$oocyst)
+  cat(sprintf(paste0("\nsegments two products of one oocyst share (%d pairs from %d oocysts whose parents are\n",
+                     "distinct founders; %d segments):\n"), nrow(sp), uniqueN(sp$oocyst_id), nrow(ss)))
+  cat(sprintf("  mean %.3f +/- %.3f Mb   median %.3f Mb   %.1f a pair | expected L/(14 + 2rL) = %.3f Mb, %.1f a pair%s\n",
+              mean(ss$length) / 1e6, len_se / 1e6, median(ss$length) / 1e6, nrow(ss) / nrow(sp), exp_len / 1e6,
+              exp_n, if (abs(mean(ss$length) - exp_len) <= 3 * len_se) "  (consistent)" else "  <-- CHECK"))
+}
+
 ## ---------------- figure ----------------
 facet_lab <- sib[, setNames(fifelse(parents == "unrelated founders",
                                     sprintf("two founder parents (unrelated): %d pairs", n),

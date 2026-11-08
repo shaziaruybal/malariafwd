@@ -1144,6 +1144,13 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | within-chromosome breakpoint position uniform | KS p > 0.05 | **D = 0.004, p = 0.289** |
 | a product's parent across a junction (independent assortment) | φ ≈ 0 | **φ = 0.08 ± 0.03** at 53.8% the same (−0.01 to 0.00 at three other seeds) |
 | a product's parent across 200 kb within a chromosome | φ = e^(−2r × 200 kb) = 0.744 | **φ = 0.724** at 86.2% the same |
+| IBD segments two products of one oocyst share (two unrelated founder parents) | mean L/(14 + 2rL) = 0.49 Mb, 16.6 a pair | **0.48 ± 0.02 Mb**, 16.8 a pair (85 pairs from 45 oocysts) |
+| IBD segments a product shares with its parent | mean L/(14 + rL) = 0.76 Mb, 16.0 a product | **0.78 Mb**, 15.9 a product (100 products; KS p = 0.07 against the map) |
+
+Segments are counted as §16.3 defines them, with no length floor. Where two products of one oocyst
+carry the same parent they carry its two chromatids, so every chiasma (rate 2r) ends a shared
+stretch, and where they differ one begins at rate r; a product against its parent changes only at a
+crossover (rate r).
 
 The junction-vs-control contrast, measured on each product against its parent (φ about 0 against
 0.72), is the direct evidence that independent assortment is working: a product's parent at the

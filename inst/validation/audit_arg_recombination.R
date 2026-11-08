@@ -89,7 +89,7 @@ fp <- ev[event_type == "hv_uptake_recombinant" &
 pp <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id %in% fp$oocyst_id,
          .(product = pedigree_id[1]), by = oocyst_id]
 pp <- head(merge(pp, fp, by = "oocyst_id"), 100)
-segs <- if (nrow(pp)) ibd_segments(run, pp$product, pp$parent) else data.table()
+segs <- if (nrow(pp)) ibd_segments(run, pp$product, pp$parent, min_span = 0) else data.table()
 if (nrow(segs)) {
   ## expected lengths: the same process simulated on the map. On each chromosome a product
   ## starts on either parent with probability 1/2 and switches parent at rate r; keep the
@@ -119,6 +119,11 @@ if (nrow(segs)) {
               mean(expected_len) / 1e6, median(expected_len) / 1e6))
   cat(sprintf("  (expected = exponential with mean 1/r = %.2f Mb, cut short at the chromosome ends; simulated on the map)\n",
               1 / R_WITHIN / 1e6))
+  ## closed form: a product carries a given parent half the genome, starting on it with probability
+  ## 1/2 on each chromosome and switching at rate r, so (14 + rL)/2 segments of mean L/(14 + rL)
+  Lg <- sum(PVP01); rLg <- R_WITHIN * Lg
+  cat(sprintf("  %.1f segments a product, mean %.3f Mb | closed form %.1f, L/(14 + rL) = %.3f Mb\n",
+              nrow(segs) / nrow(xo), mean(segs$length) / 1e6, (14 + rLg) / 2, Lg / (14 + rLg) / 1e6))
   cat(sprintf("  KS test against the expected lengths: D = %.3f, p = %.3f%s\n", ks_c$statistic, ks_c$p.value,
               if (ks_c$p.value > 0.01) "  (consistent with the map)" else "  <-- CHECK"))
   cat(sprintf("  crossovers per product: %.2f +/- %.2f | expected r x genome length = %.2f%s\n",
