@@ -75,3 +75,23 @@ test_that("the tree-sequence readers take a run with no parasite", {
   expect_identical(arg_summary(rs$a)$num_samples, 0L)
   expect_identical(arg_summary(rs$b)$num_samples, 0L)
 })
+
+test_that("on a run whose tree sequence holds none of its cases, the readers give their NA row or empty table", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  ## w_run()'s set with RETAIN_FULL_HISTORY = FALSE, extinct on day 227 (`dur` 20) or 43 (`dur` 10)
+  nr <- function(dur) suppressMessages(run_sim(vivax_params(
+    N_HOSTS = 60, N_MOSQ = 240, BITING_RATE = 0.12, SIM_DAYS = 400, N_FOUNDER_HOSTS = 12, NU_HYPNOZOITE_BATCH = 0,
+    MEAN_BLOOD_STAGE_DURATION = dur, CHROMOSOMES = "1", RETAIN_FULL_HISTORY = FALSE), seed = 1,
+    outdir = tempfile("mfwd_np_noretain_")))
+  r <- nr(20)
+  quiet(d <- new_infection_diversity(r, burn_frac = 0.1))
+  expect_identical(d$n, 0L)
+  expect_identical(c(d$mean_ibd, d$clonal_frac), c(NA_real_, NA_real_))
+  quiet(tp <- ibd_truth_pairs(nr(10)))
+  expect_identical(nrow(tp), 0L)
+  expect_error(ibd_pairs(r, ids = classify_cases(load_events(r))$pedigree_id),
+               "with RETAIN_FULL_HISTORY = FALSE most earlier genomes leave the tree sequence")
+  expect_error(ibd_segments(np_runs()$a, 1, 2),
+               "none of the 2 requested ids is in the tree sequence; the run never started, so it holds no genome.",
+               fixed = TRUE)
+})

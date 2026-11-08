@@ -229,7 +229,7 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
     return(data.table::data.table(cls = factor(character(), .LADDER), a = integer(), b = integer(),
                                   ibd = numeric()))
   out <- data.table::rbindlist(P)
-  x <- suppressWarnings(ibd_pairs(run, pairs = out[, .(a, b)]))
+  x <- suppressWarnings(.ibd_pairs(run, pairs = out[, .(a, b)], none_ok = TRUE))
   out[, ibd := ibd_lookup(x, a, b)]
   out[!is.na(ibd)][, cls := factor(cls, .LADDER)][]
 }

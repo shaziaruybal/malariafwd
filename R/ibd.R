@@ -87,9 +87,10 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 
 ## The tree sequence's IBD for every pair of `ids`, or for the listed pairs (pa[i], pb[i]), with the
 ## segments when asked: the work ibd_pairs() and ibd_segments() share. The segments are the same
-## whatever other genomes are passed.
+## whatever other genomes are passed. With `none_ok`, none of the genomes being in the tree sequence
+## gives an object with no genome rather than an error.
 .ibd_compute <- function(run, ids = NULL, pa = NULL, pb = NULL, min_span = 0, segments = FALSE,
-                         absent = "they are listed in `missing` and look up as NA.") {
+                         absent = "they are listed in `missing` and look up as NA.", none_ok = FALSE) {
   tf <- .trees_of(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
   m <- .py_module("_malariafwd_ibd", .ibd_py_src)
@@ -97,9 +98,9 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
   r <- reticulate::py_to_r(m$mfw_ibd(tf, arg(ids), arg(pa), arg(pb), segments))
   missing <- as.integer(r$missing)
   req <- if (is.null(pa)) ids else unique(c(pa, pb))
-  if (!is.null(req) && length(req) && length(missing) == length(unique(req)))
-    stop("none of the ", length(unique(req)), " requested ids is in the tree sequence; a run with ",
-         "RETAIN_FULL_HISTORY = FALSE keeps only a fraction of genomes.", call. = FALSE)
+  if (!none_ok && !is.null(req) && length(req) && length(missing) == length(unique(req)))
+    stop("none of the ", length(unique(req)), " requested ids is in the tree sequence",
+         .absent_reason(tf), ".", call. = FALSE)
   if (length(missing))
     warning(length(missing), " of the requested ids are not in the tree sequence (such as ",
             paste(utils::head(missing, 3), collapse = ", "), "): ", absent, call. = FALSE)
@@ -121,6 +122,15 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
   }
   list(got = got, samples = smp, missing = missing, segments = sg, sequence_length = L,
        end_tick = end_tick, trees = tf)
+}
+
+## Why a tree sequence can hold none of the genomes asked for, as the params.tsv beside it records.
+.absent_reason <- function(tf) {
+  p <- tryCatch(.read_params_tsv(file.path(dirname(tf), "params.tsv")), error = function(e) NULL)
+  if (!is.null(p$record$NEVER_STARTED)) return("; the run never started, so it holds no genome")
+  if (isFALSE(p$params$RETAIN_FULL_HISTORY))
+    return("; with RETAIN_FULL_HISTORY = FALSE most earlier genomes leave the tree sequence")
+  ""
 }
 
 ## tskit's segment rows, which are pieces of the paths through the trees and so depend on the
@@ -247,7 +257,12 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #' @seealso [ibd_lookup()], [ibd_segments()]
 #' @inheritSection tskit_available Python
 #' @export
-ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE) {
+ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE)
+  .ibd_pairs(run, ids, pairs, min_span, segments)
+
+## ibd_pairs(); with `none_ok`, an object with no genome when none of the ids is in the tree
+## sequence, for the readers that then give their NA row or empty table.
+.ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE, none_ok = FALSE) {
   if (!is.null(ids) && !is.null(pairs)) stop("give `ids` or `pairs`, not both.", call. = FALSE)
   if (!is.null(ids)) ids <- sort(unique(.ibd_ids(ids, "ids")))
   if (!is.null(pairs)) {
@@ -259,7 +274,7 @@ ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments =
   .check_flag(segments, "segments")
   .require_python("ibd_pairs()", c("tskit", "numpy"))
   if (is.null(pairs)) {
-    x <- .ibd_compute(run, ids = ids, min_span = min_span, segments = segments)
+    x <- .ibd_compute(run, ids = ids, min_span = min_span, segments = segments, none_ok = none_ok)
     p <- x$samples$pedigree_id; n <- length(p)
     if (is.null(ids) && n * (n - 1) / 2 > 1e6)
       warning("ibd_pairs() of every genome gave ", format(n * (n - 1) / 2, big.mark = ","), " pairs; pass ",
@@ -267,7 +282,7 @@ ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments =
     all <- if (n >= 2) data.table::data.table(a = rep(p[-n], (n - 1):1), b = p[sequence((n - 1):1, from = 2:n)])
            else data.table::data.table(a = integer(), b = integer())
   } else {
-    x <- .ibd_compute(run, pa = pa, pb = pb, min_span = min_span, segments = segments)
+    x <- .ibd_compute(run, pa = pa, pb = pb, min_span = min_span, segments = segments, none_ok = none_ok)
     p <- x$samples$pedigree_id
     all <- unique(data.table::data.table(a = pmin(pa, pb), b = pmax(pa, pb)))[a != b & a %in% p & b %in% p]
     data.table::setorder(all, a, b)

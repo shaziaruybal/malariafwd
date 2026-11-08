@@ -715,7 +715,7 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   peds <- .sample_fixed(peds, cap, seed)
   .require_python("new_infection_diversity()", c("tskit", "numpy"))
-  x <- suppressWarnings(ibd_pairs(run, ids = peds))
+  x <- suppressWarnings(.ibd_pairs(run, ids = peds, none_ok = TRUE))
   vp <- x$samples$pedigree_id
   if (length(vp) < 2)
     return(data.table(n = length(vp), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))

@@ -93,7 +93,7 @@ test_that("ids not in the tree sequence are listed, look up NA, and are named in
   expect_warning(x <- ibd_pairs(r, ids = c(ids, 99999999L)), "1 of the requested ids are not in the tree sequence")
   expect_identical(x$missing, 99999999L)
   expect_identical(ibd_lookup(x, ids[1], 99999999L), NA_real_)
-  expect_error(ibd_pairs(r, ids = 99999999L), "RETAIN_FULL_HISTORY")
+  expect_error(ibd_pairs(r, ids = 99999999L), "none of the 1 requested ids is in the tree sequence.", fixed = TRUE)
   expect_error(ibd_pairs(r, ids = c(ids, NA)), "`ids` must be pedigree ids")
   expect_error(ibd_pairs(r, ids = ids, min_span = -1), "`min_span` must be")
   expect_error(ibd_pairs(r, ids = ids, min_span = NA), "`min_span` must be")

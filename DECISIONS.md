@@ -436,8 +436,10 @@ The Python ran as code pasted into `__main__`, with tables passed through CSV fi
 (with `mrca_id`, the common ancestor's pedigree id, and `depth`, its age measured from the pair),
 and the run's `end_tick`. `ibd_lookup()` reads pairs (1 for a genome with itself, `NA` for one not
 in the object), and `as.matrix()` and `as.data.frame()` give the table. Requested ids the tree
-sequence does not hold warn and are listed; asking only for such ids is an error. `ibd_index()` is
-removed. The Python side is one private module, called with arguments and returning arrays.
+sequence does not hold warn and are listed; asking only for such ids is an error, which gives the
+reason the run's record holds (it never started, or `RETAIN_FULL_HISTORY = FALSE`), and the readers
+built on it, `new_infection_diversity()` and `ibd_truth_pairs()`, give their `NA` row or empty table
+instead. `ibd_index()` is removed. The Python side is one private module, called with arguments and returning arrays.
 **Rationale.** An object keyed by what callers hold, pedigree ids, needs no translation, and `NA`
 for an unknown genome cannot be mistaken for an unrelated one.
 **Alternatives rejected.** *A deprecated `ibd_index()` wrapper* -- nothing has been released. *A
