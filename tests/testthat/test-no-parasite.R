@@ -51,7 +51,11 @@ test_that("every reader takes a run with no parasite", {
       quiet(ggplot2::ggplot_build(plot_force_of_infection(force_of_infection(r), smooth = NA)))
       quiet(ggplot2::ggplot_build(plot_host_state_prevalence(host_state_prevalence(st))))
       if (k %in% c("a", "b", "c")) expect_error(plot_relapse_km(time_to_relapse(r)), "no hypnozoite batch was established")
-      if (requireNamespace("patchwork", quietly = TRUE)) quiet(print(plot_diagnostics(r)))
+      if (requireNamespace("patchwork", quietly = TRUE)) {
+        grDevices::pdf(NULL)                       # draw it, without leaving a file
+        quiet(print(plot_diagnostics(r)))
+        grDevices::dev.off()
+      }
     }
   }
 })
