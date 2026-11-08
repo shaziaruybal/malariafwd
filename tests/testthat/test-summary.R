@@ -117,7 +117,7 @@ test_that("a run that never started gives zeros and NA, without a warning", {
                      m$n_bloodstage_courses), rep(0L, 6))
 })
 
-test_that("a run that stopped without a record is summarised only up to its last day", {
+test_that("a run that stopped without a record is refused past its last day", {
   r <- extinct_fixture_run(record = FALSE)
   expect_error(summarise_run(r), "stops on day 6 of 20")
   expect_error(summarise_run(r), "`to = 6`", fixed = TRUE)

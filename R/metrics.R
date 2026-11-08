@@ -530,8 +530,8 @@ pick_host <- function(events) {
 #' **The window.** The first `burn_frac` of the run's `SIM_DAYS` days are burn-in, so the window is
 #' days `round(SIM_DAYS * burn_frac) + 1` to `SIM_DAYS`; `from` and `to` set it directly. A run that
 #' went extinct, or never started, is summarised over the same days, the days after its last state
-#' row counting as days with no parasite. A run that stopped early without either record is
-#' summarised only up to its last recorded day.
+#' row counting as days with no parasite. A run that stopped early without either record is refused
+#' unless `to` is at most its last recorded day.
 #'
 #' **What is counted.** Cases are the clone onsets in the window, as [classify_cases()] gives them:
 #' a bite that delivers two genotypes is two new clones, though one infectious bite, and founder

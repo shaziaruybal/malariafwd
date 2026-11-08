@@ -54,8 +54,8 @@ column covers the same days, so the rows of different runs, or of a grid, mean t
 \strong{The window.} The first \code{burn_frac} of the run's \code{SIM_DAYS} days are burn-in, so the window is
 days \code{round(SIM_DAYS * burn_frac) + 1} to \code{SIM_DAYS}; \code{from} and \code{to} set it directly. A run that
 went extinct, or never started, is summarised over the same days, the days after its last state
-row counting as days with no parasite. A run that stopped early without either record is
-summarised only up to its last recorded day.
+row counting as days with no parasite. A run that stopped early without either record is refused
+unless \code{to} is at most its last recorded day.
 
 \strong{What is counted.} Cases are the clone onsets in the window, as \code{\link[=classify_cases]{classify_cases()}} gives them:
 a bite that delivers two genotypes is two new clones, though one infectious bite, and founder

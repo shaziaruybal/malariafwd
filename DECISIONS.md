@@ -253,7 +253,7 @@ person-year at risk (D66); the EIR, FOI and molFOB are per person-year of every 
 the new clones from bites and imports. molFOB has both D25 readings, and both relapse fractions are
 given (D65). `exclude_masked` leaves D40's masked relapses out of every relapse column, and
 `n_relapse_masked` counts them either way. The row records its window, its reading and how the run
-ended. A run that stopped early without a record is summarised only up to its last day.
+ended. A run that stopped early without a record is refused unless `to` is at most its last day.
 `plot_diagnostics()` takes its subtitle's numbers and its burn-in line from the same row, and its
 force panel stacks the new clones only (review m17, m30, n10, n25). `new_infection_diversity()`
 starts on the same first day for a given `burn_frac`.
