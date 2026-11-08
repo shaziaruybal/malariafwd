@@ -7,7 +7,7 @@
 coi_distribution(state, burn_in = 0)
 }
 \arguments{
-\item{state}{a state data.table (from \code{\link[=load_state]{load_state()}}).}
+\item{state}{a state table from \code{\link[=load_state]{load_state()}}, or a run (a \code{vivax_run} or its directory).}
 
 \item{burn_in}{drop ticks before this (steady-state).}
 }

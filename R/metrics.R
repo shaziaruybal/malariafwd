@@ -29,12 +29,12 @@
 ## run-level helpers). See DECISIONS.md for the identity model (pedigree/lineage/oocyst).
 
 #' Distribution of complexity-of-infection (active MOI) across hosts
-#' @param state a state data.table (from [load_state()]).
+#' @inheritParams host_state_prevalence
 #' @param burn_in drop ticks before this (steady-state).
 #' @return a data.table of `moi_active` counts and percentages.
 #' @export
 coi_distribution <- function(state, burn_in = 0) {
-  h <- as.data.table(state)[entity_type == "human" & tick >= burn_in & moi_active > 0]
+  h <- .as_state(state)[entity_type == "human" & tick >= burn_in & moi_active > 0]
   h[, .N, by = moi_active][order(moi_active)][, pct := 100 * N / sum(N)][]
 }
 
@@ -143,7 +143,7 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
 #' batch. These are the durations of the hypnozoites that activated before the run ended, so their
 #' mean is shorter than the mean time to activation; [time_to_relapse()] gives the censored view,
 #' one row per batch.
-#' @param events an events data.table.
+#' @inheritParams classify_cases
 #' @return a data.table, one row per relapse, by `batch_tick`, `batch_pedigree_id` and `tick`, every
 #'   column an integer: `human_id`, `batch_pedigree_id` (the batch it woke from), `pedigree_id` (the
 #'   relapse's genome), `batch_tick` (the day the batch was laid down), `tick` (the day it
@@ -151,7 +151,7 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
 #' @seealso [time_to_relapse()]
 #' @export
 dormancy_durations <- function(events) {
-  ev <- as.data.table(events)
+  ev <- .as_events(events)
   batch <- ev[event_type %in% .inoculation_events() & is_dormant == 1,
               .(batch_pedigree_id = as.integer(pedigree_id), batch_tick = as.integer(tick))]
   act <- ev[event_type == "hypnozoite_activation",
@@ -449,7 +449,7 @@ time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked
 #' blood-stage clones, without or with hypnozoites; subpatent clones and no patent one, with or
 #' without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see. Each day also
 #' carries its mean number of hypnozoites per host.
-#' @param state a state table from [load_state()].
+#' @param state a state table from [load_state()], or a run (a `vivax_run` or its directory).
 #' @return a data.table, one row per day of the state table and state, by day and state: `tick`,
 #'   `cls` (a factor with levels `"uninfected"`, `"active only"`, `"active + reservoir"`,
 #'   `"subpatent"` and `"reservoir only (invisible)"`), `n` (hosts, 0 when none), `frac` (`n`
@@ -460,7 +460,7 @@ time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked
 #' @export
 host_state_prevalence <- function(state) {
   lv <- names(.HOST_STATE_FILL)
-  st <- as.data.table(state)[entity_type == "human"]
+  st <- .as_state(state)[entity_type == "human"]
   subp <- if ("moi_subpatent" %in% names(st)) fcoalesce(as.integer(st$moi_subpatent), 0L) else integer(nrow(st))
   st[, cls := fcase(moi_active > 0 & moi_dormant > 0, lv[3], moi_active > 0, lv[2],
                     subp > 0, lv[4], moi_dormant > 0, lv[5], default = lv[1])]

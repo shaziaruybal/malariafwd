@@ -7,7 +7,7 @@
 host_state_prevalence(state)
 }
 \arguments{
-\item{state}{a state table from \code{\link[=load_state]{load_state()}}.}
+\item{state}{a state table from \code{\link[=load_state]{load_state()}}, or a run (a \code{vivax_run} or its directory).}
 }
 \value{
 a data.table, one row per day of the state table and state, by day and state: \code{tick},

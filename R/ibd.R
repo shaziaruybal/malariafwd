@@ -12,6 +12,13 @@
   stop("`run` must be a vivax_run, a run directory, or a .trees path.", call. = FALSE)
 }
 
+## The tree sequence of `run`, which must exist.
+.trees_file <- function(run) {
+  tf <- .trees_of(run)
+  if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
+  tf
+}
+
 ## The IBD module: the tree sequence simplified once to the genomes asked for, then one
 ## ibd_segments() call over every pair among them, or, for listed pairs, one call per genome with
 ## its partners. min_span is 0 throughout: every shared stretch counts in a pair's fraction, and

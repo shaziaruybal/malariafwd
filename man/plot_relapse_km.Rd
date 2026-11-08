@@ -4,10 +4,10 @@
 \alias{plot_relapse_km}
 \title{Kaplan-Meier curve of the time to first relapse, per hypnozoite batch}
 \usage{
-plot_relapse_km(ttr, title = NULL)
+plot_relapse_km(x, title = NULL)
 }
 \arguments{
-\item{ttr}{the table \code{\link[=time_to_relapse]{time_to_relapse()}} returns.}
+\item{x}{a run, or the table \code{\link[=time_to_relapse]{time_to_relapse()}} returns.}
 
 \item{title}{plot title.}
 }

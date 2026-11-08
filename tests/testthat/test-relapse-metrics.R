@@ -123,7 +123,7 @@ test_that("a run with no batch gives no row, and the plot says why it cannot dra
   expect_error(time_to_relapse(episodes_fixture()), "needs the run for its length")
   skip_if_not_installed("ggplot2")
   expect_error(plot_relapse_km(tt), "no hypnozoite batch was established in this run")
-  expect_error(plot_relapse_km(data.frame(x = 1)), "with `time` and `event`")
+  expect_error(plot_relapse_km(data.frame(x = 1)), "it has no `time` or `event`.", fixed = TRUE)
 })
 
 test_that("on an import cohort every batch is timed from its establishment, and radical cure empties batches", {

@@ -79,7 +79,7 @@ def arg_tmrca(trees, ids_a, ids_b):
 #' genealogy has one root; this model seeds independent founder lineages, so the expected
 #' result is a forest with roughly one root per surviving founder lineage.
 #'
-#' @param run a run directory or `vivax_run`.
+#' @param run a `vivax_run`, its directory, or the path of its `.trees` file.
 #' @param ids optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
 #'   genomes in the tree sequence are left out, and none being one is an error.
 #' @return a one-row data.table: `num_trees`, `num_nodes`, `num_edges`, `num_samples`,
@@ -95,7 +95,7 @@ arg_summary <- function(run, ids = NULL) {
   if (!is.null(ids)) ids <- .ibd_ids(ids, "ids")
   .require_python("arg_summary()", c("tskit", "numpy"))
   m <- .py_module("_malariafwd_arg", .arg_py_src)
-  r <- reticulate::py_to_r(m$arg_summary(trees_path(run), if (is.null(ids)) NULL else as.list(unique(ids))))
+  r <- reticulate::py_to_r(m$arg_summary(.trees_file(run), if (is.null(ids)) NULL else as.list(unique(ids))))
   .arg_none_found(r, ids, "arg_summary()")
   got <- !is.null(r$roots_min)
   data.table::data.table(num_trees = as.integer(r$num_trees), num_nodes = as.integer(r$num_nodes),
@@ -119,7 +119,7 @@ arg_summary <- function(run, ids = NULL) {
 #' Clonal pairs give `coalesced` = 1 with a very recent TMRCA; unrelated genomes give
 #' `coalesced` = 0 and `tmrca` = `NA`.
 #'
-#' @param run a run directory or `vivax_run`.
+#' @param run a `vivax_run`, its directory, or the path of its `.trees` file.
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
 #' @return a data.table, one row per pair: `a`, `b`, `coalesced` (0-1), `tmrca` and
 #'   `tmrca_node_time` (both ticks; `NA` if the pair never coalesces or a genome is not in the tree
@@ -151,7 +151,7 @@ arg_tmrca <- function(run, ids_a, ids_b) {
                                 tmrca_node_time = rep(NA_real_, n))
   if (!n) return(out)
   m <- .py_module("_malariafwd_arg", .arg_py_src)
-  r <- reticulate::py_to_r(m$arg_tmrca(trees_path(run), as.list(ids_a), as.list(ids_b)))
+  r <- reticulate::py_to_r(m$arg_tmrca(.trees_file(run), as.list(ids_a), as.list(ids_b)))
   .arg_none_found(r, c(ids_a, ids_b), "arg_tmrca()")
   out[, `:=`(coalesced = .na_nan(r$coalesced), tmrca = .na_nan(r$tmrca), tmrca_node_time = .na_nan(r$tmrca_node_time))]
   out[]

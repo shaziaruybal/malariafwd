@@ -246,7 +246,7 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
 #' around 0.2, a third on average for unrelated parents and more when the parents are related. On
 #' the full map none shares nothing.
 #'
-#' @param pairs output of [ibd_truth_pairs()].
+#' @param x a run, or the table [ibd_truth_pairs()] returns.
 #' @param style `"points"` plots every pair against the theoretical rungs; `"bars"` shows the
 #'   composition of each class across relatedness bands, which reads better when classes are
 #'   point masses (relapses are always clonal, distinct founders always unrelated). Both label
@@ -255,10 +255,10 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
 #' @examples
 #' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}
 #' @export
-plot_relatedness_ladder <- function(pairs, style = c("points", "bars")) {
+plot_relatedness_ladder <- function(x, style = c("points", "bars")) {
   .need_ggplot()
   style <- match.arg(style)
-  pairs <- data.table::as.data.table(pairs)
+  pairs <- .as_result(x, ibd_truth_pairs, c("cls", "ibd"))
   n_by <- pairs[, .(n = .N), by = cls]
 
   if (style == "bars") {

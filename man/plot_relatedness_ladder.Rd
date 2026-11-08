@@ -4,10 +4,10 @@
 \alias{plot_relatedness_ladder}
 \title{Plot the relatedness ladder}
 \usage{
-plot_relatedness_ladder(pairs, style = c("points", "bars"))
+plot_relatedness_ladder(x, style = c("points", "bars"))
 }
 \arguments{
-\item{pairs}{output of \code{\link[=ibd_truth_pairs]{ibd_truth_pairs()}}.}
+\item{x}{a run, or the table \code{\link[=ibd_truth_pairs]{ibd_truth_pairs()}} returns.}
 
 \item{style}{\code{"points"} plots every pair against the theoretical rungs; \code{"bars"} shows the
 composition of each class across relatedness bands, which reads better when classes are

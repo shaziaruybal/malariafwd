@@ -4,10 +4,10 @@
 \alias{plot_force_of_infection}
 \title{Force of blood-stage infection: molFOB vs FOI}
 \usage{
-plot_force_of_infection(foi, smooth = 0.4)
+plot_force_of_infection(x, smooth = 0.4)
 }
 \arguments{
-\item{foi}{output of \code{\link[=force_of_infection]{force_of_infection()}}.}
+\item{x}{a run, or the table \code{\link[=force_of_infection]{force_of_infection()}} returns (for a run, with its defaults).}
 
 \item{smooth}{span for a loess trend through each series; \code{NA} draws the raw series.}
 }
@@ -28,7 +28,10 @@ it is in neither series. Both series are drawn in every window of the run, as ze
 was no case.
 }
 \examples{
-\dontrun{plot_force_of_infection(force_of_infection(run))}
+\dontrun{
+plot_force_of_infection(run)
+plot_force_of_infection(force_of_infection(run, bin = 60))
+}
 }
 \seealso{
 \code{\link[=force_of_infection]{force_of_infection()}}

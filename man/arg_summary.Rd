@@ -7,7 +7,7 @@
 arg_summary(run, ids = NULL)
 }
 \arguments{
-\item{run}{a run directory or \code{vivax_run}.}
+\item{run}{a \code{vivax_run}, its directory, or the path of its \code{.trees} file.}
 
 \item{ids}{optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
 genomes in the tree sequence are left out, and none being one is an error.}

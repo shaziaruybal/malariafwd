@@ -7,7 +7,7 @@
 transmission_links(events, kind = c("all", "direct", "liver"))
 }
 \arguments{
-\item{events}{an events table from \code{\link[=load_events]{load_events()}}.}
+\item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 
 \item{kind}{\code{"all"}, \code{"direct"} or \code{"liver"}.}
 }
@@ -51,7 +51,7 @@ rows of the feed, the bite and the source's onset, which can lie long before its
 }
 \examples{
 \dontrun{
-links <- transmission_links(load_events(run))
+links <- transmission_links(run)
 unique(links[, .(chain_id, chain_size)])     # one row per chain
 }
 }

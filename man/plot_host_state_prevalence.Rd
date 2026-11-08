@@ -4,10 +4,10 @@
 \alias{plot_host_state_prevalence}
 \title{Host-state prevalence over time (stacked area)}
 \usage{
-plot_host_state_prevalence(hsp)
+plot_host_state_prevalence(x)
 }
 \arguments{
-\item{hsp}{the table \code{\link[=host_state_prevalence]{host_state_prevalence()}} returns.}
+\item{x}{a run, a state table from \code{\link[=load_state]{load_state()}}, or the table \code{\link[=host_state_prevalence]{host_state_prevalence()}} returns.}
 }
 \value{
 a ggplot object.

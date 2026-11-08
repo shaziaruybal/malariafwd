@@ -7,7 +7,7 @@
 dormancy_durations(events)
 }
 \arguments{
-\item{events}{an events data.table.}
+\item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 }
 \value{
 a data.table, one row per relapse, by \code{batch_tick}, \code{batch_pedigree_id} and \code{tick}, every

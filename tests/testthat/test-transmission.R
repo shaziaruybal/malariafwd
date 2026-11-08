@@ -75,14 +75,14 @@ test_that("a log with no transmission gives no link, in the same columns", {
   }
 })
 
-test_that("a cut event log warns, and a run or a table without the columns is refused", {
+test_that("a cut event log warns, a run gives its log's links, and a table without the columns is refused", {
   r <- transmission_fixture_run(); ev <- load_events(r)
   expect_warning(l <- transmission_links(ev[tick >= 20]),
                  "3 infected genomes have no feed, 2 links lack a bite or onset day): pass the whole event log",
                  fixed = TRUE)
   expect_false(31L %in% l$target_pedigree_id)
   expect_no_warning(transmission_links(ev))
-  expect_error(transmission_links(r), "for a run, pass load_events(run)", fixed = TRUE)
+  expect_identical(transmission_links(r), transmission_links(ev))
   expect_error(transmission_links(data.table::copy(ev)[, oocyst_id := NULL]), "lacks the column(s) oocyst_id",
                fixed = TRUE)
 })

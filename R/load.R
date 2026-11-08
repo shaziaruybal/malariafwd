@@ -8,8 +8,15 @@
     .warn_if_incomplete(x)
     return(x)
   }
-  stop("`run` must be a vivax_run (from run_sim() or load_run()) or the path of a run directory, ",
-       "got an object of class ", class(x)[1], ".", call. = FALSE)
+  stop("`run` must be a vivax_run (from run_sim() or load_run()) or the path of a run directory, got ",
+       .what_table(x), ".", call. = FALSE)
+}
+
+## What a table `x` is, for the messages that refuse it.
+.what_table <- function(x) {
+  if (is.data.frame(x) && "event_type" %in% names(x)) return("an events table (from load_events())")
+  if (is.data.frame(x) && "entity_type" %in% names(x)) return("a state table (from load_state())")
+  paste("an object of class", class(x)[1])
 }
 
 ## Warnings given once per directory per session, keyed by class and path. Each also has the
@@ -57,10 +64,32 @@
     identical(names(run$params), names(.malariafwd_defaults))
 
 ## An events table, from a table or from a run (a vivax_run or its directory).
-.as_events <- function(x) {
+.as_events <- function(x, arg = "events") {
   if (inherits(x, "vivax_run") || (is.character(x) && length(x) == 1L)) return(load_events(x))
-  if (is.data.frame(x)) return(data.table::as.data.table(x))
-  stop("`events` must be an events table from load_events(), a vivax_run or a run directory.", call. = FALSE)
+  if (is.data.frame(x) && "event_type" %in% names(x)) return(data.table::as.data.table(x))
+  stop("`", arg, "` must be an events table from load_events(), a vivax_run or a run directory",
+       if (is.data.frame(x) && "entity_type" %in% names(x)) "; this is a state table (from load_state())", ".",
+       call. = FALSE)
+}
+
+## A state table, from a run or its directory, or as given.
+.as_state <- function(x, arg = "state") {
+  if (inherits(x, "vivax_run") || (is.character(x) && length(x) == 1L)) return(load_state(x))
+  if (is.data.frame(x) && "entity_type" %in% names(x)) return(data.table::as.data.table(x))
+  stop("`", arg, "` must be a state table from load_state(), a vivax_run or a run directory",
+       if (is.data.frame(x) && "event_type" %in% names(x)) "; this is an events table (from load_events())", ".",
+       call. = FALSE)
+}
+
+## The table `fun()` returns: `x` itself when it is such a table, with the columns `cols` a plot
+## reads, or fun() of `x`, a run or its directory.
+.as_result <- function(x, fun, cols, arg = "x") {
+  if (!is.data.frame(x)) return(fun(x))
+  miss <- setdiff(cols, names(x))
+  if (length(miss))
+    stop("`", arg, "` must be a run, or the table ", deparse(substitute(fun)), "() returns; it has no ",
+         paste0("`", miss, "`", collapse = " or "), ".", call. = FALSE)
+  data.table::as.data.table(x)
 }
 
 ## A day argument `name`: a single whole number of days, 0 or more.

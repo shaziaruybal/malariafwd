@@ -11,16 +11,14 @@
 #' The fraction of hypnozoite batches not yet relapsed against the days since the infection that
 #' laid each down, from [time_to_relapse()]. No survival-package dependency:
 #' `S(t) = prod(1 - d_i/n_i)`.
-#' @param ttr the table [time_to_relapse()] returns.
+#' @param x a run, or the table [time_to_relapse()] returns.
 #' @param title plot title.
 #' @return a ggplot object.
 #' @seealso [time_to_relapse()]
 #' @export
-plot_relapse_km <- function(ttr, title = NULL) {
+plot_relapse_km <- function(x, title = NULL) {
   .need_ggplot()
-  d <- as.data.table(ttr)
-  if (!all(c("time", "event") %in% names(d)))
-    stop("`ttr` must be the table time_to_relapse() returns, with `time` and `event`.", call. = FALSE)
+  d <- .as_result(x, time_to_relapse, c("time", "event"))
   if (!nrow(d))
     stop("no hypnozoite batch was established in this run, so there is no time to relapse to plot.", call. = FALSE)
   N <- nrow(d)
@@ -40,13 +38,14 @@ plot_relapse_km <- function(ttr, title = NULL) {
 #'
 #' The share of hosts in each state, day by day, stacked; subpatent carriers and the hosts with
 #' hypnozoites alone are bands of their own.
-#' @param hsp the table [host_state_prevalence()] returns.
+#' @param x a run, a state table from [load_state()], or the table [host_state_prevalence()] returns.
 #' @return a ggplot object.
 #' @seealso [host_state_prevalence()]
 #' @export
-plot_host_state_prevalence <- function(hsp) {
+plot_host_state_prevalence <- function(x) {
   .need_ggplot()
-  hsp <- copy(as.data.table(hsp))
+  hsp <- if (is.data.frame(x) && "entity_type" %in% names(x)) host_state_prevalence(x)
+         else copy(.as_result(x, host_state_prevalence, c("tick", "cls", "frac")))
   stopifnot(all(as.character(hsp$cls) %in% names(.HOST_STATE_FILL)))   # an unlisted state would draw unfilled
   hsp[, cls := factor(cls, levels = names(.HOST_STATE_FILL))]
   ggplot2::ggplot(hsp, ggplot2::aes(tick, frac, fill = cls)) + ggplot2::geom_area() +
@@ -283,16 +282,19 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #' it is in neither series. Both series are drawn in every window of the run, as zero where there
 #' was no case.
 #'
-#' @param foi output of [force_of_infection()].
+#' @param x a run, or the table [force_of_infection()] returns (for a run, with its defaults).
 #' @param smooth span for a loess trend through each series; `NA` draws the raw series.
 #' @return a ggplot object.
 #' @examples
-#' \dontrun{plot_force_of_infection(force_of_infection(run))}
+#' \dontrun{
+#' plot_force_of_infection(run)
+#' plot_force_of_infection(force_of_infection(run, bin = 60))
+#' }
 #' @seealso [force_of_infection()]
 #' @export
-plot_force_of_infection <- function(foi, smooth = 0.4) {
+plot_force_of_infection <- function(x, smooth = 0.4) {
   .need_ggplot()
-  d <- as.data.table(foi)
+  d <- .as_result(x, force_of_infection, c("win", "origin", "rate", "is_acquisition"))
   ## POSITIVE lists, not negations. Two things have to be excluded for different reasons and
   ## a negation gets one of them wrong: force_of_infection() relabels relapses as
   ## "relapse (local)" / "relapse (imported)" by default (split_imported = TRUE), so an exact

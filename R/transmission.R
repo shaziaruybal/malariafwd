@@ -37,7 +37,7 @@
 #' Pass the whole event log, as [load_events()] gives it, and filter the result: a link needs the
 #' rows of the feed, the bite and the source's onset, which can lie long before its target.
 #'
-#' @param events an events table from [load_events()].
+#' @inheritParams classify_cases
 #' @param kind `"all"`, `"direct"` or `"liver"`.
 #' @return a data.table, one row per (source genome, target genome), by `target_tick`,
 #'   `target_pedigree_id` and `source_pedigree_id`: `source_pedigree_id` (the infector genome),
@@ -50,15 +50,16 @@
 #' @seealso [rc_by_origin()], [classify_cases()]
 #' @examples
 #' \dontrun{
-#' links <- transmission_links(load_events(run))
+#' links <- transmission_links(run)
 #' unique(links[, .(chain_id, chain_size)])     # one row per chain
 #' }
 #' @export
 transmission_links <- function(events, kind = c("all", "direct", "liver")) {
   kind <- match.arg(kind)
-  out <- .links(events, kind)
+  ev <- .as_events(events)
+  out <- .links(ev, kind)
   ## the chains: components of the links, each source taken as the clone it came from
-  src <- .acquisition_root(out$source_pedigree_id, as.data.table(events))
+  src <- .acquisition_root(out$source_pedigree_id, ev)
   comp <- .link_components(src, out$target_pedigree_id)
   ch <- comp$chain[match(src, comp$node)]
   size <- comp[, .(n = .N), by = chain]
