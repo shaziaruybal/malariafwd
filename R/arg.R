@@ -8,55 +8,69 @@
 ## common ancestor where one exists, with `coalesced`, the fraction of the genome over which it
 ## does. arg_summary() shows the forest itself.
 
-.arg_prelude <- '
-import tskit, json, numpy as np
-def _md(x):
-    md = x.metadata
-    if isinstance(md, bytes):
-        try: md = json.loads(md.decode()) if md else {}
-        except Exception: md = {}
-    return md if isinstance(md, dict) else {}
-def _vac(nd):
-    v = _md(nd).get("is_vacant"); return bool(v[0]) if v else False
-def _ped2node(ts):
-    d = {}
-    for n in ts.samples():
-        nd = ts.node(n)
-        if nd.individual == tskit.NULL or _vac(nd): continue
-        m = _md(ts.individual(nd.individual))
-        p = m.get("pedigree_id", m.get("pedigreeID"))
-        if p is not None: d.setdefault(int(p), int(n))
-    return d
-def _aslist(x):
-    # a length-1 R vector arrives as a python scalar, not a list
-    if x is None: return None
-    try: return [int(v) for v in x]
-    except TypeError: return [int(x)]
+## The ARG module. Each function loads the tree sequence, simplifies it to the genomes asked for
+## (every genome when `ids` is None), and says how many genomes the run recorded and how many it kept,
+## so that R can give a run with no genome its empty result. Ids are passed as arguments.
+.arg_py_src <- '
+def _arg_load(trees, ids):
+    ts = tskit.load(trees)
+    p2n, _ = _ped_nodes(ts)
+    keep = sorted(p2n.values()) if ids is None else sorted({p2n[int(p)] for p in np.atleast_1d(ids) if int(p) in p2n})
+    sts = ts.simplify(samples=keep) if keep else None
+    return ts, sts, len(p2n), len(keep)
+
+def arg_summary(trees, ids):
+    ts, sts, genomes, kept = _arg_load(trees, ids)
+    out = dict(genomes=genomes, kept=kept, num_trees=int(ts.num_trees), num_nodes=int(ts.num_nodes),
+               num_edges=int(ts.num_edges), num_samples=0, seq_length_mb=float(ts.sequence_length) / 1e6)
+    if sts is None:
+        return out
+    nr = np.array([t.num_roots for t in sts.trees()])
+    out.update(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes), num_edges=int(sts.num_edges),
+               num_samples=int(sts.num_samples), seq_length_mb=float(sts.sequence_length) / 1e6,
+               roots_min=int(nr.min()), roots_median=float(np.median(nr)), roots_max=int(nr.max()),
+               pct_trees_coalesced=float(100 * np.mean(nr == 1)), max_root_time=float(sts.max_root_time))
+    return out
+
+def arg_tmrca(trees, ids_a, ids_b):
+    ids = sorted({int(x) for x in list(np.atleast_1d(ids_a)) + list(np.atleast_1d(ids_b))})
+    ts, sts, genomes, kept = _arg_load(trees, ids)
+    n = len(np.atleast_1d(ids_a))
+    co = np.full(n, np.nan); tm = np.full(n, np.nan); nt = np.full(n, np.nan)
+    if sts is not None:
+        p2, _ = _ped_nodes(sts)
+        for i, (x, y) in enumerate(zip(np.atleast_1d(ids_a), np.atleast_1d(ids_b))):
+            a, b = p2.get(int(x)), p2.get(int(y))
+            if a is None or b is None:
+                continue
+            if a == b:
+                co[i] = 1.0; tm[i] = 0.0; nt[i] = float(sts.node(a).time); continue
+            # t.tmrca() gives the ancestor node time, ticks before the end of the run; less the
+            # older genome own node time, a depth, which is never negative
+            base = max(sts.node(a).time, sts.node(b).time)
+            tot = 0.0; c = 0.0; acc = 0.0
+            for t in sts.trees():
+                span = t.interval.right - t.interval.left
+                tot += span
+                try:
+                    m = t.tmrca(a, b)
+                except ValueError:
+                    continue
+                c += span; acc += span * m
+            co[i] = c / tot if tot else np.nan
+            if c > 0:
+                tm[i] = acc / c - base; nt[i] = acc / c
+    return dict(genomes=genomes, kept=kept, coalesced=co, tmrca=tm, tmrca_node_time=nt)
 '
 
-.arg_load <- function(run, ids = NULL, what) {
-  .require_python(what, c("tskit", "numpy"))
-  reticulate::py_run_string(.arg_prelude)
-  ## NB bind the python main module locally: `reticulate::py$x <- v` cannot assign into a
-  ## namespace-qualified object.
-  pymain <- reticulate::py
-  pymain$`_trees` <- trees_path(run)
-  pymain$`_ids` <- if (is.null(ids)) NULL else as.integer(unique(ids))
-  reticulate::py_run_string('
-ts = tskit.load(_trees)
-p2n = _ped2node(ts)
-if _ids is None:
-    keep = sorted(p2n.values())
-else:
-    keep = sorted({p2n[int(p)] for p in _aslist(_ids) if int(p) in p2n})
-sts = ts.simplify(samples=keep) if keep else None
-n2p = {}
-if sts is not None:
-    q = _ped2node(sts)
-    n2p = {v: k for k, v in q.items()}
-')
-  invisible(TRUE)
-}
+## A NaN from Python as NA.
+.na_nan <- function(x) { x <- as.numeric(x); x[is.nan(x)] <- NA_real_; x }
+
+## Stops when `ids` were given and none of them is a genome in a run that recorded some.
+.arg_none_found <- function(r, ids, what)
+  if (!is.null(ids) && length(ids) && r$genomes > 0 && r$kept == 0)
+    stop(what, ": none of the ", length(unique(ids)), " ids given is a genome in this run's tree sequence (a run ",
+         "with RETAIN_FULL_HISTORY = FALSE keeps only some genomes).", call. = FALSE)
 
 #' Structure of the recorded ARG
 #'
@@ -66,26 +80,32 @@ if sts is not None:
 #' result is a forest with roughly one root per surviving founder lineage.
 #'
 #' @param run a run directory or `vivax_run`.
-#' @param ids optional pedigree ids to restrict to (default: all recorded genomes).
+#' @param ids optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
+#'   genomes in the tree sequence are left out, and none being one is an error.
 #' @return a one-row data.table: `num_trees`, `num_nodes`, `num_edges`, `num_samples`,
 #'   `seq_length_mb`, `roots_min`/`roots_median`/`roots_max`, `pct_trees_coalesced`,
-#'   `max_root_time` (ticks before the end of the run).
+#'   `max_root_time` (ticks before the end of the run). A run that recorded no genome, such as
+#'   one that never started, gives the tree sequence's counts, no samples, 0 roots, and `NA` for
+#'   `pct_trees_coalesced` and `max_root_time`.
 #' @examples
 #' \dontrun{arg_summary(run)}
 #' @inheritSection tskit_available Python
 #' @export
 arg_summary <- function(run, ids = NULL) {
-  .arg_load(run, ids, "arg_summary()")
-  reticulate::py_run_string('
-nr = np.array([t.num_roots for t in sts.trees()])
-_out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
-            num_edges=int(sts.num_edges), num_samples=int(sts.num_samples),
-            seq_length_mb=float(sts.sequence_length)/1e6,
-            roots_min=int(nr.min()), roots_median=float(np.median(nr)), roots_max=int(nr.max()),
-            pct_trees_coalesced=float(100*np.mean(nr == 1)),
-            max_root_time=float(sts.max_root_time))
-')
-  data.table::as.data.table(reticulate::py$`_out`)
+  if (!is.null(ids)) ids <- .ibd_ids(ids, "ids")
+  .require_python("arg_summary()", c("tskit", "numpy"))
+  m <- .py_module("_malariafwd_arg", .arg_py_src)
+  r <- reticulate::py_to_r(m$arg_summary(trees_path(run), if (is.null(ids)) NULL else as.list(unique(ids))))
+  .arg_none_found(r, ids, "arg_summary()")
+  got <- !is.null(r$roots_min)
+  data.table::data.table(num_trees = as.integer(r$num_trees), num_nodes = as.integer(r$num_nodes),
+                         num_edges = as.integer(r$num_edges), num_samples = as.integer(r$num_samples),
+                         seq_length_mb = as.numeric(r$seq_length_mb),
+                         roots_min = if (got) as.integer(r$roots_min) else 0L,
+                         roots_median = if (got) as.numeric(r$roots_median) else 0,
+                         roots_max = if (got) as.integer(r$roots_max) else 0L,
+                         pct_trees_coalesced = if (got) .na_nan(r$pct_trees_coalesced) else NA_real_,
+                         max_root_time = if (got) .na_nan(r$max_root_time) else NA_real_)
 }
 
 #' Pairwise time to the most recent common ancestor (the ARG-native relatedness measure)
@@ -101,8 +121,10 @@ _out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
 #'
 #' @param run a run directory or `vivax_run`.
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
-#' @return a data.table with `a`, `b`, `coalesced` (0-1), `tmrca` and `tmrca_node_time`
-#'   (both ticks; `NA` if the pair never coalesces).
+#' @return a data.table, one row per pair: `a`, `b`, `coalesced` (0-1), `tmrca` and
+#'   `tmrca_node_time` (both ticks; `NA` if the pair never coalesces or a genome is not in the tree
+#'   sequence). A run that recorded no genome gives an `NA` row per pair, and none of the ids being a
+#'   genome of a run that recorded some is an error.
 #' @section Which TMRCA you get:
 #' `tmrca` is a **depth**: ticks from the older of the two sampled genomes back to their
 #' common ancestor, so an identical relationship returns an identical number wherever in the
@@ -119,39 +141,18 @@ _out = dict(num_trees=int(sts.num_trees), num_nodes=int(sts.num_nodes),
 #' @inheritSection tskit_available Python
 #' @export
 arg_tmrca <- function(run, ids_a, ids_b) {
-  stopifnot(length(ids_a) == length(ids_b))
-  .arg_load(run, unique(c(ids_a, ids_b)), "arg_tmrca()")
-  pymain <- reticulate::py
-  pymain$`_a` <- as.integer(ids_a); pymain$`_b` <- as.integer(ids_b)
-  reticulate::py_run_string('
-p2 = _ped2node(sts)
-rows = []
-for x, y in zip(_aslist(_a), _aslist(_b)):
-    a, b = p2.get(int(x)), p2.get(int(y))
-    if a is None or b is None:
-        rows.append(dict(a=int(x), b=int(y), coalesced=float("nan"),
-                         tmrca=float("nan"), tmrca_node_time=float("nan"))); continue
-    if a == b:
-        rows.append(dict(a=int(x), b=int(y), coalesced=1.0,
-                         tmrca=0.0, tmrca_node_time=float(sts.node(a).time))); continue
-    # NOTE: no apostrophes in this block -- it is an R single-quoted string.
-    # t.tmrca() returns the ancestor NODE TIME: ticks before the end of the run. Reported
-    # raw, that makes an identical relationship look different depending on when it was
-    # sampled, so subtract the older samples own node time to get a genealogical depth.
-    # The ancestor is at least as old as both descendants, so this is never negative.
-    base = max(sts.node(a).time, sts.node(b).time)
-    tot = 0.0; co = 0.0; acc = 0.0
-    for t in sts.trees():
-        span = t.interval.right - t.interval.left
-        tot += span
-        try: tm = t.tmrca(a, b)          # raises if the pair has no common ancestor here
-        except ValueError: continue
-        co += span; acc += span * tm
-    rows.append(dict(a=int(x), b=int(y),
-                     coalesced=(co / tot) if tot else float("nan"),
-                     tmrca=(acc / co - base) if co > 0 else float("nan"),
-                     tmrca_node_time=(acc / co) if co > 0 else float("nan")))
-_tm = rows
-')
-  data.table::rbindlist(lapply(reticulate::py$`_tm`, data.table::as.data.table))
+  ids_a <- .ibd_ids(ids_a, "ids_a"); ids_b <- .ibd_ids(ids_b, "ids_b")
+  if (length(ids_a) != length(ids_b))
+    stop("`ids_a` and `ids_b` must have the same length, one pair per position; they have ", length(ids_a),
+         " and ", length(ids_b), ".", call. = FALSE)
+  .require_python("arg_tmrca()", c("tskit", "numpy"))
+  n <- length(ids_a)
+  out <- data.table::data.table(a = ids_a, b = ids_b, coalesced = rep(NA_real_, n), tmrca = rep(NA_real_, n),
+                                tmrca_node_time = rep(NA_real_, n))
+  if (!n) return(out)
+  m <- .py_module("_malariafwd_arg", .arg_py_src)
+  r <- reticulate::py_to_r(m$arg_tmrca(trees_path(run), as.list(ids_a), as.list(ids_b)))
+  .arg_none_found(r, c(ids_a, ids_b), "arg_tmrca()")
+  out[, `:=`(coalesced = .na_nan(r$coalesced), tmrca = .na_nan(r$tmrca), tmrca_node_time = .na_nan(r$tmrca_node_time))]
+  out[]
 }

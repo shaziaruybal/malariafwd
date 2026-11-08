@@ -9,12 +9,15 @@ arg_summary(run, ids = NULL)
 \arguments{
 \item{run}{a run directory or \code{vivax_run}.}
 
-\item{ids}{optional pedigree ids to restrict to (default: all recorded genomes).}
+\item{ids}{optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
+genomes in the tree sequence are left out, and none being one is an error.}
 }
 \value{
 a one-row data.table: \code{num_trees}, \code{num_nodes}, \code{num_edges}, \code{num_samples},
 \code{seq_length_mb}, \code{roots_min}/\code{roots_median}/\code{roots_max}, \code{pct_trees_coalesced},
-\code{max_root_time} (ticks before the end of the run).
+\code{max_root_time} (ticks before the end of the run). A run that recorded no genome, such as
+one that never started, gives the tree sequence's counts, no samples, 0 roots, and \code{NA} for
+\code{pct_trees_coalesced} and \code{max_root_time}.
 }
 \description{
 Whole-genealogy summary: how many local trees and edges, how deep it goes, and -- the key

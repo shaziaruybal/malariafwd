@@ -12,8 +12,10 @@ arg_tmrca(run, ids_a, ids_b)
 \item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
 }
 \value{
-a data.table with \code{a}, \code{b}, \code{coalesced} (0-1), \code{tmrca} and \code{tmrca_node_time}
-(both ticks; \code{NA} if the pair never coalesces).
+a data.table, one row per pair: \code{a}, \code{b}, \code{coalesced} (0-1), \code{tmrca} and
+\code{tmrca_node_time} (both ticks; \code{NA} if the pair never coalesces or a genome is not in the tree
+sequence). A run that recorded no genome gives an \code{NA} row per pair, and none of the ids being a
+genome of a run that recorded some is an error.
 }
 \description{
 For each pair, the span-weighted mean TMRCA \strong{over the part of the genome where a common
