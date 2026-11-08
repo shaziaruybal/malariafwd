@@ -265,7 +265,7 @@ vivax_params <- function(...) {
 ## once the populations exist.
 .peak_biting <- function(p) .peak_rate(p, p$BITING_RATE, p$BITING_RATE_BOOST, 2, max(2, p$SIM_DAYS))
 
-#' @keywords internal
+#' @noRd
 validate_params <- function(p) {
   ## functions, symbols and calls are left for the type check, which names what was given
   bad <- names(p)[!vapply(p, function(v) !(is.atomic(v) || is.list(v)) ||
@@ -574,7 +574,7 @@ validate_params <- function(p) {
 #' the window needs a day from `max(1, IMPORT_START)` to `min(IMPORT_END - 1, SIM_DAYS)`.
 #' @param p a parameter list.
 #' @return `TRUE` if at least one importation can occur.
-#' @keywords internal
+#' @noRd
 has_import_path <- function(p) {
   d <- .import_days(p)
   !is.null(d$pulse) ||
@@ -585,30 +585,12 @@ has_import_path <- function(p) {
 ## or an apostrophe in OUTDIR or SIM_ID reaches the model unchanged.
 .eidos_quote <- function(s) paste0("'", gsub("'", "\\'", gsub("\\", "\\\\", s, fixed = TRUE), fixed = TRUE), "'")
 
-#' Convert a parameter set into SLiM `-d` command-line arguments
-#'
-#' Logicals become `T`/`F`, strings are wrapped in Eidos single quotes (with quotes and
-#' backslashes escaped, so Windows paths and apostrophes survive), and numbers are
-#' written so that Eidos infers the type the model expects. Returned as a flat character
-#' vector `c("-d","NAME=val", ...)` suitable for a shell-free process launch.
-#'
-#' @section Why float-typed parameters always carry a decimal point:
-#' Eidos types `-d P=0` as an **integer** and does not promote it, so a probability set to
-#' exactly 0 or 1 crashed the model mid-run in at least two different ways:
-#' `rbinom()` rejecting an integer `prob` (reached by `P_RAD_SURVIVAL` with radical cure or
-#' MDA on), and `min()` refusing mixed types (reached by `ALPHA_ACTIVATE = 0`). Both are
-#' latent: the same parameter set completes if the code path
-#' never fires, so a sweep fails in only some cells. "Perfect radical cure" and
-#' "no relapses" are the two most natural settings in that space, and `validate_params()`
-#' explicitly admits `[0, 1]`.
-#'
-#' The decision is keyed on the **default's** type, not the supplied value's, so
-#' `N_HOSTS = 100` stays integral while `vivax_params(P_RAD_SURVIVAL = 0L)` — an integer
-#' supplied by the user for a float parameter — is still emitted as `0.0`.
-#'
-#' @param params a `vivax_params` object (or named list).
-#' @return character vector of `-d NAME=value` tokens.
-#' @export
+## A parameter set as SLiM's command-line arguments, c("-d", "NAME=value", ...), for a launch with no
+## shell: logicals as T or F, strings as Eidos single-quoted literals (.eidos_quote()), numbers with 15
+## significant digits. A parameter whose default is a double always carries a decimal point, because
+## Eidos types `-d P=0` as an integer and does not promote it. The rule is keyed on the default's
+## type, not the value's, so `P_RAD_SURVIVAL = 0L` is given as 0.0 while `N_HOSTS = 100` stays an
+## integer.
 as_slim_args <- function(params) {
   ## 15 significant digits, not format()'s default 7: the old setting silently rounded
   ## ALPHA_ACTIVATE = 1/170 to 0.005882353, and params.tsv then recorded the rounded value.

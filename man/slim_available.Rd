@@ -7,8 +7,9 @@
 slim_available()
 }
 \value{
-\code{TRUE} if SLiM is found on PATH (or via \code{MALARIAFWD_SLIM}).
+\code{TRUE} if that binary is found.
 }
 \description{
-Is a SLiM binary available?
+The binary is the one the \code{MALARIAFWD_SLIM} environment variable names if it is set, otherwise
+\code{slim} on the PATH. \code{\link[=check_setup]{check_setup()}} shows the path it found.
 }

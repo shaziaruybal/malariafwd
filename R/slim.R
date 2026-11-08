@@ -1,10 +1,7 @@
 ## slim.R -- locating and checking the SLiM binary + the bundled model template.
 
-#' Path to the SLiM binary
-#'
-#' Uses the `MALARIAFWD_SLIM` environment variable if set, otherwise `"slim"` on PATH.
-#' @return the resolved path (or the bare name if not found on PATH).
-#' @export
+## The SLiM binary: the one the MALARIAFWD_SLIM environment variable names if it is set, otherwise
+## slim on the PATH; the name as given when it is not found.
 slim_path <- function() {
   p <- Sys.getenv("MALARIAFWD_SLIM", unset = "slim")
   found <- Sys.which(p)
@@ -12,7 +9,10 @@ slim_path <- function() {
 }
 
 #' Is a SLiM binary available?
-#' @return `TRUE` if SLiM is found on PATH (or via `MALARIAFWD_SLIM`).
+#'
+#' The binary is the one the `MALARIAFWD_SLIM` environment variable names if it is set, otherwise
+#' `slim` on the PATH. [check_setup()] shows the path it found.
+#' @return `TRUE` if that binary is found.
 #' @export
 slim_available <- function() nzchar(Sys.which(slim_path()))
 
