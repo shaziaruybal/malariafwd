@@ -242,3 +242,18 @@ test_that("ibd_truth_pairs() computes only its pairs, with the values of every p
   expect_equal(tp$ibd, ibd_lookup(z, tp$a, tp$b))
   expect_gt(nrow(tp), 0)
 })
+
+test_that("new_infection_diversity()'s clonal_frac is the share of pairs at or above `clonal`", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture()
+  d <- new_infection_diversity(r, cap = 20)
+  ## the same sample of the acquisitions after the burn-in (days 126 to 250), and its pairs
+  pool <- classify_cases(load_events(r))[origin %in% c("imported", "local reinfection") & tick >= 126L,
+                                         unique(pedigree_id)]
+  x <- suppressWarnings(ibd_pairs(r, ids = malariafwd:::.sample_fixed(pool, 20, 1)))
+  share <- mean(x$pairs$ibd >= 0.5)
+  expect_gt(share, 0)
+  expect_identical(d$n, length(x$samples$pedigree_id))
+  expect_equal(d$clonal_frac, share)
+  expect_identical(new_infection_diversity(r, cap = 20, clonal = 1.01)$clonal_frac, 0)
+})

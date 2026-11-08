@@ -25,7 +25,8 @@ new_infection_diversity(
 run agree. The caller's RNG stream is left untouched.}
 }
 \value{
-a one-row data.table of \code{n}, \code{mean_ibd}, \code{clonal_frac}, \code{n_lineages}.
+a one-row data.table: \code{n} (the genomes compared), \code{mean_ibd}, \code{clonal_frac} (the share of
+their pairs with IBD at least \code{clonal}, from 0 to 1) and \code{n_lineages}.
 }
 \description{
 Pairwise IBD among non-relapse blood-stage infections in the steady-state window;

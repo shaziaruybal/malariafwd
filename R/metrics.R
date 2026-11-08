@@ -640,7 +640,8 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
 #' @param clonal IBD threshold for a "clonal" pair.
 #' @param seed seed for the subsample when the pool exceeds `cap`, so repeat calls on the same
 #'   run agree. The caller's RNG stream is left untouched.
-#' @return a one-row data.table of `n`, `mean_ibd`, `clonal_frac`, `n_lineages`.
+#' @return a one-row data.table: `n` (the genomes compared), `mean_ibd`, `clonal_frac` (the share of
+#'   their pairs with IBD at least `clonal`, from 0 to 1) and `n_lineages`.
 #' @inheritSection tskit_available Python
 #' @export
 new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
@@ -666,6 +667,6 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   if (length(vp) < 2)
     return(data.table(n = length(vp), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
   di <- x$pairs$ibd
-  data.table(n = length(vp), mean_ibd = mean(di), clonal_frac = 100 * mean(di >= clonal),
+  data.table(n = length(vp), mean_ibd = mean(di), clonal_frac = mean(di >= clonal),
              n_lineages = uniqueN(ev[pedigree_id %in% vp, lineage_id]))
 }

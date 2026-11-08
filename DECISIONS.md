@@ -38,6 +38,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `incidence_by_origin()` | `force_of_infection(detected_only =)`: its `n` is the incidence, in every window and origin | two functions counted the same cases by window and origin; the merged one has D62's rows and `rate` (review n57) |
 | `reservoir_trajectory()` | `host_state_prevalence()$hypnozoites_per_host`, the day's mean on each of its rows | one table of the hosts' states by day, the reservoir among them, named as `summarise_run()` names it |
 | `ibd_relapse_origin()` | removed: the `relapse vs its origin` rows of `ibd_truth_pairs()`, or `ibd_lookup()` on each relapse and its batch, `parent1_pedigree_id` | it checked a property that holds by construction, against an earlier primary of the lineage rather than the batch the relapse woke from |
+| `new_infection_diversity()$clonal_frac`, a percentage | a fraction, from 0 to 1 | every other `_frac` column is a fraction (D69) |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.
