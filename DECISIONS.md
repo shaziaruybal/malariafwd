@@ -255,7 +255,8 @@ given (D65). `exclude_masked` leaves D40's masked relapses out of every relapse 
 `n_relapse_masked` counts them either way. The row records its window, its reading and how the run
 ended. A run that stopped early without a record is summarised only up to its last day.
 `plot_diagnostics()` takes its subtitle's numbers and its burn-in line from the same row, and its
-force panel stacks the new clones only (review m17, m30, n10, n25).
+force panel stacks the new clones only (review m17, m30, n10, n25). `new_infection_diversity()`
+starts on the same first day for a given `burn_frac`.
 **Rationale.** A summary pooled over a grid must mean the same thing in every column and every
 cell. The bite count is exact, where the Ross-Macdonald formula needs a correction that depends on
 mosquito mortality and the season.

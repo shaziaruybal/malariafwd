@@ -96,3 +96,11 @@ test_that("an extinct run's windows after its extinction are zeros", {
   expect_identical(nrow(fo), (400L %/% 30L + 1L) * 5L)
   expect_true(all(fo[win > r$extinct_tick]$n == 0L))
 })
+
+test_that("new_infection_diversity() starts on summarise_run()'s first day", {
+  r <- episodes_fixture_run(state = fixture_state())
+  ## burn_frac 0.45 of 100 days: day 45, with acquisition 404, is the last burn-in day
+  expect_identical(summarise_run(r, burn_frac = 0.45)$from_tick, 46L)
+  expect_identical(new_infection_diversity(r, burn_frac = 0.45)$n, 1L)
+  expect_identical(new_infection_diversity(r, burn_frac = 0.44)$n, 2L)
+})

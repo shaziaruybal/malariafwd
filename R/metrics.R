@@ -700,7 +700,8 @@ ibd_relapse_origin <- function(events, ibd) {
 #' @export
 new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
   ev <- load_events(run)
-  endt <- .sim_days(run, "new_infection_diversity"); burn <- round(endt * burn_frac)
+  ## the window summarise_run() gives the same burn_frac: from the day after the burn-in
+  from <- .run_window(.sim_days(run, "new_infection_diversity"), burn_frac)$from
   ## Every non-relapse acquisition route, derived from classify_cases() rather than from a
   ## literal event type. Matching "vh_inoculation" alone dropped imported genomes, which
   ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%
@@ -709,7 +710,7 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   ## acquisitions only. `origin != "relapse"` would now admit recrudescences, which are not
   ## newly acquired genomes - they were already in the host - and would bias this toward the
   ## clonality it exists to measure.
-  peds <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= burn,
+  peds <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= from,
                              unique(pedigree_id)]
   if (length(peds) < 6)
     return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
