@@ -36,6 +36,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `theme_malariafwd()` | internal | every plot applies it; a user restyles a plot with ggplot2's own themes |
 | `relapses_per_person_year()` | internal: `summarise_run()$relapses_per_py_at_risk`, over its window | one summary of a run; `?summarise_run` defines the person-years at risk |
 | `incidence_by_origin()` | `force_of_infection(detected_only =)`: its `n` is the incidence, in every window and origin | two functions counted the same cases by window and origin; the merged one has D62's rows and `rate` (review n57) |
+| `reservoir_trajectory()` | `host_state_prevalence()$hypnozoites_per_host`, the day's mean on each of its rows | one table of the hosts' states by day, the reservoir among them, named as `summarise_run()` names it |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.

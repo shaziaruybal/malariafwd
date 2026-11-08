@@ -2,7 +2,7 @@
 % Please edit documentation in R/metrics.R
 \name{host_state_prevalence}
 \alias{host_state_prevalence}
-\title{Host-state prevalence over time}
+\title{Host-state prevalence and the hypnozoite reservoir over time}
 \usage{
 host_state_prevalence(state)
 }
@@ -12,13 +12,16 @@ host_state_prevalence(state)
 \value{
 a data.table, one row per day of the state table and state, by day and state: \code{tick},
 \code{cls} (a factor with levels \code{"uninfected"}, \code{"active only"}, \code{"active + reservoir"},
-\code{"subpatent"} and \code{"reservoir only (invisible)"}), \code{n} (hosts, 0 when none) and \code{frac} (\code{n}
-over the day's hosts). A state table without \code{moi_subpatent} counts no subpatent host.
+\code{"subpatent"} and \code{"reservoir only (invisible)"}), \code{n} (hosts, 0 when none), \code{frac} (\code{n}
+over the day's hosts) and \code{hypnozoites_per_host} (the day's mean \code{hyp_reservoir_size} over its
+hosts, the same on each of its rows, so \code{unique(x[, .(tick, hypnozoites_per_host)])} is the
+reservoir's trajectory). A state table without \code{moi_subpatent} counts no subpatent host.
 }
 \description{
 The share of hosts in each of five states on each day of the state table: no parasite; patent
 blood-stage clones, without or with hypnozoites; subpatent clones and no patent one, with or
-without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see.
+without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see. Each day also
+carries its mean number of hypnozoites per host.
 }
 \seealso{
 \code{\link[=plot_host_state_prevalence]{plot_host_state_prevalence()}}

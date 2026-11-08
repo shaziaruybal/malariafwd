@@ -135,14 +135,6 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
              relapses_per_py = if (py > 0) n_rel / py else NA_real_)
 }
 
-#' Mean hypnozoite reservoir per host over time
-#' @param state a state data.table.
-#' @return a data.table of `tick`, `mean_res`.
-#' @export
-reservoir_trajectory <- function(state) {
-  as.data.table(state)[entity_type == "human", .(mean_res = mean(hyp_reservoir_size)), by = tick][order(tick)]
-}
-
 #' Hypnozoite dormancy durations (establishment -> activation, in days)
 #' @param events an events data.table.
 #' @return a data.table with a `duration` column.
@@ -465,16 +457,19 @@ time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked
   m[order(batch_tick, batch_pedigree_id)]
 }
 
-#' Host-state prevalence over time
+#' Host-state prevalence and the hypnozoite reservoir over time
 #'
 #' The share of hosts in each of five states on each day of the state table: no parasite; patent
 #' blood-stage clones, without or with hypnozoites; subpatent clones and no patent one, with or
-#' without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see.
+#' without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see. Each day also
+#' carries its mean number of hypnozoites per host.
 #' @param state a state table from [load_state()].
 #' @return a data.table, one row per day of the state table and state, by day and state: `tick`,
 #'   `cls` (a factor with levels `"uninfected"`, `"active only"`, `"active + reservoir"`,
-#'   `"subpatent"` and `"reservoir only (invisible)"`), `n` (hosts, 0 when none) and `frac` (`n`
-#'   over the day's hosts). A state table without `moi_subpatent` counts no subpatent host.
+#'   `"subpatent"` and `"reservoir only (invisible)"`), `n` (hosts, 0 when none), `frac` (`n`
+#'   over the day's hosts) and `hypnozoites_per_host` (the day's mean `hyp_reservoir_size` over its
+#'   hosts, the same on each of its rows, so `unique(x[, .(tick, hypnozoites_per_host)])` is the
+#'   reservoir's trajectory). A state table without `moi_subpatent` counts no subpatent host.
 #' @seealso [plot_host_state_prevalence()]
 #' @export
 host_state_prevalence <- function(state) {
@@ -486,8 +481,10 @@ host_state_prevalence <- function(state) {
   cnt <- st[, .(n = .N), by = .(tick = as.integer(tick), cls)]
   out <- cnt[CJ(tick = unique(cnt$tick), cls = lv), on = .(tick, cls)][is.na(n), n := 0L]
   out[, frac := n / sum(n), by = tick]
+  res <- st[, .(hypnozoites_per_host = mean(hyp_reservoir_size)), by = .(tick = as.integer(tick))]
+  out <- res[out, on = "tick"]
   out[, cls := factor(cls, levels = lv)]
-  out[order(tick, cls)]
+  out[order(tick, cls), .(tick, cls, n, frac, hypnozoites_per_host)]
 }
 
 #' A run's epidemiology over one window of days

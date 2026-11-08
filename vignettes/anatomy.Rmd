@@ -107,7 +107,7 @@ plot_host_state_prevalence(host_state_prevalence(st))
 The hypnozoite reservoir is the model's distinctive, otherwise-unobservable compartment:
 
 ```{r}
-reservoir_trajectory(st)                     # reservoir size over time
+unique(host_state_prevalence(st)[, .(tick, hypnozoites_per_host)])   # mean hypnozoites per host, by day
 relapse_fraction(ev)                         # two readings, per episode and per acquisition: equal unless recrudescence is on
 plot_relapse_km(time_to_relapse(run))        # time to each batch's first relapse (Kaplan-Meier)
 coi_distribution(st)                         # complexity-of-infection distribution
