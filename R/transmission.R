@@ -184,7 +184,7 @@ transmission_links <- function(events, kind = c("all", "direct", "liver")) {
 #' imports sustain transmission. To compare runs, choose `from` and `followup` inside a stretch that
 #' [plot_diagnostics()] shows to be steady; `followup` alone keeps a growing run's early cases.
 #'
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param unit `"episode"` or `"acquisition"`: what a case is (see Details).
 #' @param kind `"all"`, `"direct"` or `"liver"`: the links counted, as in [transmission_links()].
 #' @param from count the cases that began on day `from` or later.

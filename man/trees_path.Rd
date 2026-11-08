@@ -7,7 +7,7 @@
 trees_path(run)
 }
 \arguments{
-\item{run}{a \code{vivax_run} or a run directory path.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 }
 \value{
 the path to \code{plasmo.trees}.

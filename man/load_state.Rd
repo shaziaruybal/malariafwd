@@ -7,7 +7,7 @@
 load_state(run, entity = c("human", "mosquito", "all"))
 }
 \arguments{
-\item{run}{a \code{vivax_run} or a run directory path.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{entity}{the rows to give: \code{"human"} (the hosts), \code{"mosquito"}, or \code{"all"}, both in the
 order of the file.}

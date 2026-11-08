@@ -1,13 +1,69 @@
-#' malariafwd: forward simulation of P. vivax transmission and genetics
+#' malariafwd: concepts and terms
 #'
-#' An R interface to a SLiM (Eidos) + tskit individual-based forward simulator of
-#' Plasmodium vivax. Run the model from R ([run_sim()], [run_grid()]) and analyse the
-#' outputs (loaders, epidemiological + genetic metrics, ground-truth IBD via tskit).
+#' malariafwd simulates *Plasmodium vivax* transmission and genetics forward in time in SLiM, one
+#' host, mosquito and parasite genome at a time, and reads what a run records from R. This page
+#' defines the terms the help pages share.
 #'
-#' The model itself is bundled at `inst/slim/malariafwd_vivax.slim` (see [slim_model()]);
-#' design decisions are recorded in `DECISIONS.md`.
+#' @section Start here:
+#' `vignette("malariafwd")` runs a simulation and reads it, and `vignette("anatomy")` walks through
+#' what a run records; [event_types()] lists every event a run logs. The model is described in full
+#' in [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), and the
+#' reasons for its choices are in [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
 #'
-#' @keywords internal
+#' @section Runs and their tables:
+#' A *run* is one simulation: [run_sim()] writes it to a directory, and [load_run()] reads that
+#' directory back as a `vivax_run`. Every function that reads a run takes either. A run holds four
+#' files, each with its reader: `params.tsv`, the parameter set it was made from ([load_params()]);
+#' `events.tsv`, one row per event ([load_events()], described in [events.tsv][malariafwd-outputs]);
+#' `state.tsv`, every host and mosquito on every day ([load_state()], hosts by default); and
+#' `plasmo.trees`, the genealogy of every genome as a tree sequence ([trees_path()]). An argument
+#' named `events` takes an events table or a run, one named `state` a state table or a run, and a
+#' plot takes a run or the table its function returns.
+#'
+#' @section Time:
+#' A *tick* is one day. A run's days are 1 to `SIM_DAYS`, and every column named `*_tick` is a day.
+#' Durations are geometric: a state with a mean duration of `D` days ends on each day with
+#' probability `1/D`. A year is 365 days, so a rate per person-year divides by person-days over 365.
+#'
+#' @section Genomes and identifiers:
+#' Each parasite genome is one individual of the simulation. A bite, an import, a relapse and a
+#' recrudescence each make a new genome, and a batch of hypnozoites is one genome that stands for
+#' its count. `pedigree_id` names a genome, uniquely within a run; it is 0 or more, and -1 means
+#' none. `lineage_id` names a clonal group: a genome keeps its parent's lineage through clonal and
+#' selfed descent, and a recombinant starts a new one. In this package *lineage* always means this
+#' group; the genealogy itself is the tree sequence. `oocyst_id` names one meiosis in a mosquito,
+#' `human_id` and `mosq_id` a host and a mosquito, and `entity_id` either of them in `state.tsv`.
+#'
+#' @section Cases, episodes and acquisitions:
+#' A *case* is a clone onset, one row of [classify_cases()]: a bite or an import that gave a
+#' blood-stage infection, a relapse, or a recrudescence. Founder seeding, where a run starts, is not
+#' a case. An *episode* is the clones that became patent in one host on one day, named by
+#' `episode_id`, `"<human_id>:<tick>"`, so a bite that delivered two genotypes is two cases of one
+#' episode ([episodes()], [recurrences()]). An *acquisition* is a case that brought a new genome
+#' into its host: an import, a local reinfection or a relapse. A recrudescence is a case but not an
+#' acquisition. A relapse into a patent clone of its own lineage is flagged by
+#' `into_patent_lineage`, and `exclude_masked = TRUE` leaves such relapses out of a reader's counts.
+#'
+#' @section COI and MOI:
+#' Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:
+#' the distinct patent blood-stage lineages in a host, `moi_active` in `state.tsv`. `MAX_MOI` caps
+#' the blood-stage lineages a host can carry, suppressed ones included.
+#'
+#' @section Transmission:
+#' A *transmission link* joins a parent genome of an oocyst to a genome its products infected:
+#' `direct`, through a bite's blood stage, or `liver`, through a relapse of the batch a bite left.
+#' [transmission_links()] lists them, each with its *chain*, a connected group of links. *Rc*, the
+#' case reproduction number, is the mean number of secondary cases per case, by true origin
+#' ([rc_by_origin()]). [classify_chain()] classes each case by its true chain from an import, and
+#' [classify_travel()] by what a rule that knows only travel history would conclude.
+#'
+#' @section Relatedness:
+#' Every genome descends from root genomes, the founders and the imports, which are unrelated, so
+#' the genealogy is a forest. Identity by descent (IBD) is read from it exactly: [ibd_pairs()] for
+#' pairs, [ibd_segments()] for the stretches behind them, and [ibd_lookup()] to read a pair.
+#' [arg_tmrca()] gives how far back two genomes share an ancestor, and [arg_summary()] the shape of
+#' the forest.
+#'
 #' @import data.table
 #' @importFrom stats setNames
 #' @importFrom utils combn

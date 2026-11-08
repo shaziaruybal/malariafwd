@@ -256,7 +256,7 @@ classify_cases <- function(events, exclude_masked = FALSE) {
 #' clone acquisitions. Worth noting that a real molFOB, measured by comparing genotypes between
 #' study visits, would often count a recrudescence as a new clone, because the clone was
 #' undetectable at the previous visit; the gap between the two sums here estimates that bias.
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @param bin window width in days.
 #' @param split_imported split relapses by the provenance of the genotype. `TRUE` (default)
 #'   gives five origin levels, `FALSE` gives four.
@@ -402,7 +402,7 @@ classify_travel <- function(events, window = 60) {
 #' [classify_cases()]), does not stop the clock, although its hypnozoites leave the batch: the
 #' first relapse is the first a study could see as a recurrence.
 #'
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param emptied `"censor"` (stop the clock on the day a batch empties without relapsing) or
 #'   `"follow"` (follow it to `SIM_DAYS`).
 #' @param exclude_masked if `TRUE`, the first relapse is the first that is not masked.
@@ -512,7 +512,7 @@ host_state_prevalence <- function(state) {
 #' **Pooling.** To pool runs, sum the counts and the person-years and divide, or weight each rate by
 #' its person-years: an average of rates weights a short or small run as much as a long one.
 #'
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param burn_frac the share of `SIM_DAYS` left out as burn-in, at least 0 and below 1: the window
 #'   starts on day `round(SIM_DAYS * burn_frac) + 1`. Not with `from`.
 #' @param from,to the window's first and last days, both included: `from = 0` is day 1, and
@@ -637,7 +637,7 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
 #'
 #' Each window draws at most `cap` of its acquisitions, and the tree sequence is read once for all
 #' of them, only when a window has the `min_pairs` pairs its measures need.
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param burn_frac,from,to the window, as [summarise_run()] takes it: the days after the first
 #'   `burn_frac` of `SIM_DAYS`, or days `from` to `to` (`to = NULL` is `SIM_DAYS`).
 #' @param bin `NULL` for one row over the window, or a whole number of days, at least 1, for a row

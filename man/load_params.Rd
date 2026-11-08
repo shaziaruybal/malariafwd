@@ -7,7 +7,7 @@
 load_params(run)
 }
 \arguments{
-\item{run}{a \code{vivax_run} or a run directory path.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 }
 \value{
 a \code{\link[=vivax_params]{vivax_params()}} object.

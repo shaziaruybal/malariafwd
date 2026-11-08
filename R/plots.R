@@ -65,7 +65,7 @@ plot_host_state_prevalence <- function(x) {
 #' lines end where `state.tsv` does.
 #'
 #' Each call reads the run's `state.tsv` and `events.tsv`.
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param host_id the host, one whole number (a run's hosts are 0 to `N_HOSTS - 1`).
 #' @param layout `"lineages"` (stacked per-lineage areas) or `"summary"` (COI + reservoir lines).
 #' @param palette colours cycled across lineages.
@@ -130,7 +130,7 @@ plot_host_trajectory <- function(run, host_id,
 #' The panels run to `SIM_DAYS`: a run that goes extinct shows lines that drop to zero and stay
 #' there to the end of the run, and the subtitle says on which day it went extinct. A window with no
 #' case is drawn as zero.
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @param bin window width in days.
 #' @param burn_frac the share of the run's `SIM_DAYS` days marked as burn-in; the subtitle gives
 #'   [summarise_run()]'s numbers for the rest.

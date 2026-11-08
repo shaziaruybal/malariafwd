@@ -14,7 +14,7 @@ plot_host_trajectory(
 )
 }
 \arguments{
-\item{run}{a \code{vivax_run} or its directory.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{host_id}{the host, one whole number (a run's hosts are 0 to \code{N_HOSTS - 1}).}
 

@@ -15,7 +15,7 @@ plot_ibd_pair(
 )
 }
 \arguments{
-\item{run}{a run directory or \code{vivax_run}.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
 

@@ -7,7 +7,7 @@
 plot_diagnostics(run, bin = 30, burn_frac = 0.5)
 }
 \arguments{
-\item{run}{a run directory or \code{vivax_run}.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{bin}{window width in days.}
 

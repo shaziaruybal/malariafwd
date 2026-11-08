@@ -13,7 +13,7 @@ summarise_run(
 )
 }
 \arguments{
-\item{run}{a \code{vivax_run} or its directory.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{burn_frac}{the share of \code{SIM_DAYS} left out as burn-in, at least 0 and below 1: the window
 starts on day \code{round(SIM_DAYS * burn_frac) + 1}. Not with \code{from}.}

@@ -13,7 +13,7 @@ rc_by_origin(
 )
 }
 \arguments{
-\item{run}{a \code{vivax_run} or its directory.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{unit}{\code{"episode"} or \code{"acquisition"}: what a case is (see Details).}
 

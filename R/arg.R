@@ -79,7 +79,8 @@ def arg_tmrca(trees, ids_a, ids_b):
 #' genealogy has one root; this model seeds independent founder lineages, so the expected
 #' result is a forest with roughly one root per surviving founder lineage.
 #'
-#' @param run a `vivax_run`, its directory, or the path of its `.trees` file.
+#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
+#'   or of a `.trees` file.
 #' @param ids optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
 #'   genomes in the tree sequence are left out, and none being one is an error.
 #' @return a one-row data.table: `num_trees`, `num_nodes`, `num_edges`, `num_samples`,
@@ -119,7 +120,8 @@ arg_summary <- function(run, ids = NULL) {
 #' Clonal pairs give `coalesced` = 1 with a very recent TMRCA; unrelated genomes give
 #' `coalesced` = 0 and `tmrca` = `NA`.
 #'
-#' @param run a `vivax_run`, its directory, or the path of its `.trees` file.
+#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
+#'   or of a `.trees` file.
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
 #' @return a data.table, one row per pair: `a`, `b`, `coalesced` (0-1), `tmrca` and
 #'   `tmrca_node_time` (both ticks; `NA` if the pair never coalesces or a genome is not in the tree

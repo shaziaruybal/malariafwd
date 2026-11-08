@@ -7,7 +7,7 @@
 chrom_map(run)
 }
 \arguments{
-\item{run}{a run directory or \code{vivax_run}.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 }
 \value{
 a data.table of \code{chrom} (PvP01 number), \code{start}, \code{end}, \code{length} in concatenated bp.

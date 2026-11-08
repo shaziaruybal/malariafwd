@@ -199,7 +199,7 @@ load_run <- function(outdir) {
 #' writes them ([events.tsv][malariafwd-outputs] describes them), whatever the run holds: a run with no event gives
 #' a table with no rows. A column the file lacks is `NA`, a column it adds follows the 21, and a
 #' value that does not fit its column stops with the column named.
-#' @param run a `vivax_run` or a run directory path.
+#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory.
 #' @return a `data.table` with one row per event, in the order they were logged.
 #' @export
 load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OUTPUT_RENAMES$events)
@@ -211,7 +211,7 @@ load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OU
 #' columns, in the order and classes the model writes them ([state.tsv][malariafwd-outputs]
 #' describes them),
 #' whatever the run holds; a column the file lacks is `NA`.
-#' @param run a `vivax_run` or a run directory path.
+#' @inheritParams load_events
 #' @param entity the rows to give: `"human"` (the hosts), `"mosquito"`, or `"all"`, both in the
 #'   order of the file.
 #' @return a `data.table` with one row per host (or mosquito, or both) per day, from day 1 to the
@@ -225,7 +225,7 @@ load_state <- function(run, entity = c("human", "mosquito", "all")) {
 }
 
 #' Path to a run's tree-sequence file
-#' @param run a `vivax_run` or a run directory path.
+#' @inheritParams load_events
 #' @return the path to `plasmo.trees`.
 #' @seealso [plasmo.trees][malariafwd-outputs]
 #' @export
@@ -241,7 +241,7 @@ trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 #' A file from another version of the package can lack some parameters, which take their
 #' defaults, or hold rows that are not parameters, which are left out. Either warns, once per
 #' directory per session, with class `malariafwd_params_mismatch`.
-#' @param run a `vivax_run` or a run directory path.
+#' @inheritParams load_events
 #' @return a [vivax_params()] object.
 #' @examples
 #' \dontrun{

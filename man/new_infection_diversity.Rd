@@ -17,7 +17,7 @@ new_infection_diversity(
 )
 }
 \arguments{
-\item{run}{a \code{vivax_run} or its directory.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{burn_frac, from, to}{the window, as \code{\link[=summarise_run]{summarise_run()}} takes it: the days after the first
 \code{burn_frac} of \code{SIM_DAYS}, or days \code{from} to \code{to} (\code{to = NULL} is \code{SIM_DAYS}).}

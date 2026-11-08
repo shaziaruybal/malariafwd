@@ -7,8 +7,9 @@
 ibd_pairs(run, ids = NULL, pairs = NULL, min_span = 1000, segments = FALSE)
 }
 \arguments{
-\item{run}{a \code{vivax_run}, a run directory, or a \code{.trees} file path (in its run directory, whose
-\code{params.tsv} gives the chromosome layout the segments need).}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory,
+or of a \code{.trees} file in its run directory, whose \code{params.tsv} gives the chromosome layout the
+segments need.}
 
 \item{ids}{the pedigree ids of the genomes to compare, every pair among them; \code{NULL} for every
 genome the tree sequence records, which warns when that is more than 1e6 pairs.}
@@ -77,7 +78,7 @@ up as \code{NA}, not as 0; asking only for such ids is an error.
 \code{depth} is how long before the older of the two genomes its common ancestor lived,
 \code{mrca_time - max(node_time[a], node_time[b])}, in ticks. A recency filter is written against it, for
 example \code{x$segments[depth <= 180]} for ancestry within about six months: filtering on
-\code{mrca_time} alone scores a pair by when its lineage last branched, not by how related the two
+\code{mrca_time} alone scores a pair by when its ancestry last branched, not by how related the two
 genomes are.
 }
 

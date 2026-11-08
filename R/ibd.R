@@ -215,8 +215,9 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #' between them. A pair gets the same segments whatever other genomes are passed, the same as
 #' [ibd_segments()] gives, and at `min_span = 0` they add up to its `ibd`.
 #'
-#' @param run a `vivax_run`, a run directory, or a `.trees` file path (in its run directory, whose
-#'   `params.tsv` gives the chromosome layout the segments need).
+#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
+#'   or of a `.trees` file in its run directory, whose `params.tsv` gives the chromosome layout the
+#'   segments need.
 #' @param ids the pedigree ids of the genomes to compare, every pair among them; `NULL` for every
 #'   genome the tree sequence records, which warns when that is more than 1e6 pairs.
 #' @param pairs instead of `ids`, a data frame of pairs to compare, with the pedigree ids in columns
@@ -251,7 +252,7 @@ def mfw_ibd(trees, ids, pa, pb, want_segments):
 #' `depth` is how long before the older of the two genomes its common ancestor lived,
 #' `mrca_time - max(node_time[a], node_time[b])`, in ticks. A recency filter is written against it, for
 #' example `x$segments[depth <= 180]` for ancestry within about six months: filtering on
-#' `mrca_time` alone scores a pair by when its lineage last branched, not by how related the two
+#' `mrca_time` alone scores a pair by when its ancestry last branched, not by how related the two
 #' genomes are.
 #' @section Cost:
 #' One simplification and one pass over the pairs; `segments = TRUE` costs a few times as long and

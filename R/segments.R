@@ -17,7 +17,7 @@
 #' recovers the chromosome boundaries in those concatenated coordinates, from the genome
 #' parameters the run itself recorded (`GENOME_MODE`, `CHROMOSOMES`), and stops if they do not
 #' add up to the genome length the run recorded.
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @return a data.table of `chrom` (PvP01 number), `start`, `end`, `length` in concatenated bp.
 #' @examples
 #' \dontrun{chrom_map(run)}
@@ -44,7 +44,7 @@ chrom_map <- function(run) {
 #' rows as `ibd_pairs(segments = TRUE)` gives for the pair; each is in both concatenated and
 #' within-chromosome coordinates.
 #'
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared position by position.
 #' @param min_span the shortest segment returned, in bp, after the cut at the junctions (a segment
 #'   of exactly `min_span` is kept): below it a shared stretch is treated as noise, mirroring the
@@ -105,7 +105,7 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
 #' whether shared blocks respect chromosome boundaries. `layout = "concatenated"` draws the
 #' single linkage group the model actually simulates, with chromosome dividers marked.
 #'
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
 #' @param labels optional labels, one per pair (defaults to `a vs b`).
 #' @param min_span detection floor in bp, passed to [ibd_segments()].
@@ -182,7 +182,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
 #' lineages -- and attaches the ground-truth IBD of each. Feed it to
 #' [plot_relatedness_ladder()] to check the genealogy against the textbook values.
 #'
-#' @param run a run directory or `vivax_run`.
+#' @inheritParams load_events
 #' @param max_per_class cap on pairs sampled per relationship class.
 #' @return a data.table of `cls` (a factor of the six classes), `a` and `b` (integer pedigree ids)
 #'   and `ibd` (double), one row per pair. A class with no pair in the run has no rows, and a run

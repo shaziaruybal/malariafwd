@@ -7,7 +7,8 @@
 arg_tmrca(run, ids_a, ids_b)
 }
 \arguments{
-\item{run}{a \code{vivax_run}, its directory, or the path of its \code{.trees} file.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory,
+or of a \code{.trees} file.}
 
 \item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
 }

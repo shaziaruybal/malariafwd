@@ -4,16 +4,88 @@
 \name{malariafwd-package}
 \alias{malariafwd}
 \alias{malariafwd-package}
-\title{malariafwd: forward simulation of P. vivax transmission and genetics}
+\title{malariafwd: concepts and terms}
 \description{
-An R interface to a SLiM (Eidos) + tskit individual-based forward simulator of
-Plasmodium vivax. Run the model from R (\code{\link[=run_sim]{run_sim()}}, \code{\link[=run_grid]{run_grid()}}) and analyse the
-outputs (loaders, epidemiological + genetic metrics, ground-truth IBD via tskit).
+malariafwd simulates \emph{Plasmodium vivax} transmission and genetics forward in time in SLiM, one
+host, mosquito and parasite genome at a time, and reads what a run records from R. This page
+defines the terms the help pages share.
 }
-\details{
-The model itself is bundled at \code{inst/slim/malariafwd_vivax.slim} (see \code{\link[=slim_model]{slim_model()}});
-design decisions are recorded in \code{DECISIONS.md}.
+\section{Start here}{
+
+\code{vignette("malariafwd")} runs a simulation and reads it, and \code{vignette("anatomy")} walks through
+what a run records; \code{\link[=event_types]{event_types()}} lists every event a run logs. The model is described in full
+in \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{MODEL_DESCRIPTION}, and the
+reasons for its choices are in \href{https://shaziaruybal.github.io/malariafwd/DECISIONS.html}{DECISIONS}.
 }
+
+\section{Runs and their tables}{
+
+A \emph{run} is one simulation: \code{\link[=run_sim]{run_sim()}} writes it to a directory, and \code{\link[=load_run]{load_run()}} reads that
+directory back as a \code{vivax_run}. Every function that reads a run takes either. A run holds four
+files, each with its reader: \code{params.tsv}, the parameter set it was made from (\code{\link[=load_params]{load_params()}});
+\code{events.tsv}, one row per event (\code{\link[=load_events]{load_events()}}, described in \link[=malariafwd-outputs]{events.tsv});
+\code{state.tsv}, every host and mosquito on every day (\code{\link[=load_state]{load_state()}}, hosts by default); and
+\code{plasmo.trees}, the genealogy of every genome as a tree sequence (\code{\link[=trees_path]{trees_path()}}). An argument
+named \code{events} takes an events table or a run, one named \code{state} a state table or a run, and a
+plot takes a run or the table its function returns.
+}
+
+\section{Time}{
+
+A \emph{tick} is one day. A run's days are 1 to \code{SIM_DAYS}, and every column named \verb{*_tick} is a day.
+Durations are geometric: a state with a mean duration of \code{D} days ends on each day with
+probability \code{1/D}. A year is 365 days, so a rate per person-year divides by person-days over 365.
+}
+
+\section{Genomes and identifiers}{
+
+Each parasite genome is one individual of the simulation. A bite, an import, a relapse and a
+recrudescence each make a new genome, and a batch of hypnozoites is one genome that stands for
+its count. \code{pedigree_id} names a genome, uniquely within a run; it is 0 or more, and -1 means
+none. \code{lineage_id} names a clonal group: a genome keeps its parent's lineage through clonal and
+selfed descent, and a recombinant starts a new one. In this package \emph{lineage} always means this
+group; the genealogy itself is the tree sequence. \code{oocyst_id} names one meiosis in a mosquito,
+\code{human_id} and \code{mosq_id} a host and a mosquito, and \code{entity_id} either of them in \code{state.tsv}.
+}
+
+\section{Cases, episodes and acquisitions}{
+
+A \emph{case} is a clone onset, one row of \code{\link[=classify_cases]{classify_cases()}}: a bite or an import that gave a
+blood-stage infection, a relapse, or a recrudescence. Founder seeding, where a run starts, is not
+a case. An \emph{episode} is the clones that became patent in one host on one day, named by
+\code{episode_id}, \code{"<human_id>:<tick>"}, so a bite that delivered two genotypes is two cases of one
+episode (\code{\link[=episodes]{episodes()}}, \code{\link[=recurrences]{recurrences()}}). An \emph{acquisition} is a case that brought a new genome
+into its host: an import, a local reinfection or a relapse. A recrudescence is a case but not an
+acquisition. A relapse into a patent clone of its own lineage is flagged by
+\code{into_patent_lineage}, and \code{exclude_masked = TRUE} leaves such relapses out of a reader's counts.
+}
+
+\section{COI and MOI}{
+
+Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:
+the distinct patent blood-stage lineages in a host, \code{moi_active} in \code{state.tsv}. \code{MAX_MOI} caps
+the blood-stage lineages a host can carry, suppressed ones included.
+}
+
+\section{Transmission}{
+
+A \emph{transmission link} joins a parent genome of an oocyst to a genome its products infected:
+\code{direct}, through a bite's blood stage, or \code{liver}, through a relapse of the batch a bite left.
+\code{\link[=transmission_links]{transmission_links()}} lists them, each with its \emph{chain}, a connected group of links. \emph{Rc}, the
+case reproduction number, is the mean number of secondary cases per case, by true origin
+(\code{\link[=rc_by_origin]{rc_by_origin()}}). \code{\link[=classify_chain]{classify_chain()}} classes each case by its true chain from an import, and
+\code{\link[=classify_travel]{classify_travel()}} by what a rule that knows only travel history would conclude.
+}
+
+\section{Relatedness}{
+
+Every genome descends from root genomes, the founders and the imports, which are unrelated, so
+the genealogy is a forest. Identity by descent (IBD) is read from it exactly: \code{\link[=ibd_pairs]{ibd_pairs()}} for
+pairs, \code{\link[=ibd_segments]{ibd_segments()}} for the stretches behind them, and \code{\link[=ibd_lookup]{ibd_lookup()}} to read a pair.
+\code{\link[=arg_tmrca]{arg_tmrca()}} gives how far back two genomes share an ancestor, and \code{\link[=arg_summary]{arg_summary()}} the shape of
+the forest.
+}
+
 \seealso{
 Useful links:
 \itemize{
@@ -32,4 +104,3 @@ Authors:
 }
 
 }
-\keyword{internal}

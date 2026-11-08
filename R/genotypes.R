@@ -191,7 +191,7 @@ def gt_roots(path, ids, positions):
 #' run with `RETAIN_FULL_HISTORY = FALSE` records only the genomes alive at its end; a run that never
 #' started holds none.
 #'
-#' @param run a `vivax_run` or its directory.
+#' @inheritParams load_events
 #' @param ids the pedigree ids of the genomes to genotype.
 #' @param loci a data frame, one row per biallelic locus: `chrom` (the PvP01 chromosome, as a number or
 #'   a name such as `PvP01_03_v2`), `pos` (1-based, within the chromosome as this run simulated it) and

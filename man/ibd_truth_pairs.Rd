@@ -7,7 +7,7 @@
 ibd_truth_pairs(run, max_per_class = 60)
 }
 \arguments{
-\item{run}{a run directory or \code{vivax_run}.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{max_per_class}{cap on pairs sampled per relationship class.}
 }

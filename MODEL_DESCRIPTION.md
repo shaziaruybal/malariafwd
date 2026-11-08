@@ -1587,11 +1587,17 @@ counting or drawing them (§6.3, §7).
 
 | term | meaning |
 |---|---|
-| **lineage** | a genetic identity / clonal group. Propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a new one. **COI counts distinct lineages.** |
+| **run** / **vivax_run** | one simulation: the directory `run_sim()` writes (`params.tsv`, `events.tsv`, `state.tsv`, `plasmo.trees`), which `load_run()` reads back as a `vivax_run`; every reader takes either |
+| **tick** | one day; a run's days are 1 to `SIM_DAYS`, and every `*_tick` column is a day |
+| **genome** | one parasite genome, one individual of the simulation: a bite, an import, a relapse and a recrudescence each make a new one, and a batch is one genome standing for its count |
+| **pedigree id** | `pedigree_id`, a genome's id, unique within a run and the key of every genetic table; 0 is a genome and -1 means none |
+| **founder** / **import** | the two kinds of root genome: a founder seeds a host at the start of a run, an import arrives in a host from outside the population |
+| **lineage** | a genetic identity / clonal group. Propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a new one. **COI counts distinct lineages.** In the package *lineage* always means this clonal group, `lineage_id`; the genealogy is the tree sequence |
 | **brood** | one blood meal's co-hatching group of oocysts (≥ 1 oocyst) |
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |
 | **tetrad** | the four products of one meiosis: for an outcrossed oocyst, four mosaics of the two parents, two carrying each parent's allele at every locus, in two pairs of meiosis II sisters |
 | **batch** | the hypnozoites deposited by one bite, stored as a single object with a count |
+| **case** | a clone onset, one row of `classify_cases()`: a bite or an import that gave a blood-stage infection, a relapse or a recrudescence; founder seeding is not a case |
 | **episode** | the clones that became **patent** in one host on one day: a primary (one per genotype a bite delivered), a relapse or a recrudescence, named by `episode_id`. A clone suppressed below patency is not part of an episode while it is suppressed. Readings named `_episodes` (`relapse_frac_episodes`) count clone onsets, each a row of `classify_cases()` |
 | **clone** | one blood-stage parasite genome in a host, from its onset (a bite, an import, founder seeding, a relapse or a recrudescence) to its end; `episodes()` lists them |
 | **recurrence** | any episode of a host after its first: relapse, reinfection or recrudescence, all represented (§9a). `recurrences()` pairs it with the earlier ones |
@@ -1603,6 +1609,10 @@ counting or drawing them (§6.3, §7).
 | **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone): `molfob_clones_per_py`; `molfob_episodes_per_py` counts recrudescences too |
 | **FOI** | force of infection: new blood-stage clones from bites and imports, relapses **excluded**: `foi_per_py` |
 | **EIR** | entomological inoculation rate: infectious bites per person-year, `eir_per_py` (§4.1) |
+| **COI** / **MOI** | one quantity here: the distinct patent blood-stage lineages in a host, `moi_active`. `MAX_MOI` caps the blood-stage lineages a host can carry, suppressed ones included |
+| **transmission link** | a parent genome of an oocyst and a genome the oocyst's products infected: `direct` (a bite's blood stage) or `liver` (a relapse of the batch a bite left); a host's own relapses are not links |
+| **Rc** | the case reproduction number: the mean number of secondary cases per case, by true origin, from `rc_by_origin()` (§16.3) |
+| **transmission chain** | a connected group of transmission links: `chain_id` and `chain_size` on `transmission_links()` |
 | **iIBD** | mean IBD among co-present strains within one host |
 | **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred; every shared stretch counts, of any age and length |
 | **IBD segment** | a maximal stretch over which two genomes descend from one common ancestor, cut at the chromosome junctions (§6.3) |

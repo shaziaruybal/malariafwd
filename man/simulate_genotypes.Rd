@@ -18,7 +18,7 @@ simulate_genotypes(
 \method{print}{vivax_genotypes}(x, ...)
 }
 \arguments{
-\item{run}{a \code{vivax_run} or its directory.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{ids}{the pedigree ids of the genomes to genotype.}
 
