@@ -9,7 +9,8 @@
     if (dir.exists(run)) return(trees_path(run))
     return(run)  # assume a .trees path
   }
-  stop("`run` must be a vivax_run, a run directory, or a .trees path.", call. = FALSE)
+  stop("`run` must be a vivax_run, a run directory, or a .trees path, got ", .what_table(run), ".",
+       call. = FALSE)
 }
 
 ## The tree sequence of `run`, which must exist.

@@ -37,3 +37,17 @@ test_that("every plot takes a run, or the table its function returns", {
     expect_identical(plot_host_state_prevalence(x)$data, plot_host_state_prevalence(host_state_prevalence(st))$data)
   expect_error(plot_relatedness_ladder(st), "the table ibd_truth_pairs() returns; it has no `cls` or `ibd`.", fixed = TRUE)
 })
+
+test_that("the readers that need the run or its tree sequence say which table they got", {
+  r <- episodes_fixture_run(state = fixture_state())
+  expect_error(time_to_relapse(load_state(r)),
+               "needs the run for its length, SIM_DAYS: pass the vivax_run or its directory, got a state table (from load_state()).",
+               fixed = TRUE)
+  expect_error(time_to_relapse(load_events(r)), "got an events table (from load_events()).", fixed = TRUE)
+  expect_error(malariafwd:::.trees_of(load_state(r)),
+               "`run` must be a vivax_run, a run directory, or a .trees path, got a state table (from load_state()).",
+               fixed = TRUE)
+  skip_if_no_tskit()
+  expect_error(ibd_pairs(load_events(r), ids = 1:3), "got an events table (from load_events()).", fixed = TRUE)
+  expect_error(arg_summary(load_state(r)), "got a state table (from load_state()).", fixed = TRUE)
+})

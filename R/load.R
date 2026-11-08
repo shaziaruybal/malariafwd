@@ -109,8 +109,8 @@
 ## end, so that the days after an extinction count as days with no parasite (D61).
 .sim_days <- function(run, fun = "this function") {
   if (is.data.frame(run))
-    stop(fun, "() needs the run for its length, SIM_DAYS: pass the vivax_run or its directory, not its ",
-         "events.", call. = FALSE)
+    stop(fun, "() needs the run for its length, SIM_DAYS: pass the vivax_run or its directory, got ",
+         .what_table(run), ".", call. = FALSE)
   n <- .params_of(run)$SIM_DAYS
   if (length(n) != 1L || is.na(n) || n < 1 || n != round(n))
     stop("the run's params.tsv gives no SIM_DAYS: ", .run_dir(run), call. = FALSE)
