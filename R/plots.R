@@ -36,36 +36,6 @@ plot_relapse_km <- function(ttr, title = NULL) {
     theme_malariafwd()
 }
 
-#' Peak COI vs relapse count
-#'
-#' Boxes are drawn only for COI levels with at least `min_n` hosts; sparser levels show their
-#' raw points alone. Every level is labelled with its host count.
-#'
-#' @param mvr output of [moi_vs_relapse()].
-#' @param min_n minimum hosts in a COI level before a box is drawn over it.
-#' @return a ggplot object.
-#' @export
-plot_moi_vs_relapse <- function(mvr, min_n = 5) {
-  .need_ggplot()
-  d <- as.data.table(mvr)[peak_moi <= 12]
-  n_by <- d[, .(n = .N), by = peak_moi]
-  ## A box drawn over two hosts is not a distribution. Sparse COI levels (the tail is always
-  ## thin) are shown as the raw points only, and every level carries its n, so the reader can
-  ## see what the box is built on.
-  d <- merge(d, n_by, by = "peak_moi")
-  d[, grp := factor(peak_moi)]
-  ggplot2::ggplot(d, ggplot2::aes(grp, n_relapse)) +
-    ggplot2::geom_boxplot(data = d[n >= min_n], outlier.shape = NA, fill = "grey88",
-                          colour = "grey35", width = .6, linewidth = .4) +
-    ggplot2::geom_jitter(width = .14, height = .15, alpha = .35, size = .9, colour = "grey20") +
-    ggplot2::geom_text(data = n_by, ggplot2::aes(factor(peak_moi), Inf, label = paste0("n = ", n)),
-                       inherit.aes = FALSE, vjust = 1.4, size = 3, colour = "grey30") +
-    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(.04, .14))) +
-    ggplot2::labs(x = "peak COI (distinct lineages ever co-active in host)",
-                  y = "relapses in host") +
-    theme_malariafwd()
-}
-
 #' Host-state prevalence over time (stacked area)
 #'
 #' The share of hosts in each state, day by day, stacked; subpatent carriers and the hosts with

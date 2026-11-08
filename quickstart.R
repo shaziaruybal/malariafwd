@@ -94,7 +94,6 @@ host <- pick_host(ev)
 sv("02-host-trajectory", plot_host_trajectory(st, ev, host_id = host), w = 9, h = 4)
 sv("03-host-states",     plot_host_state_prevalence(host_state_prevalence(st)))
 sv("04-time-to-relapse", plot_relapse_km(time_to_relapse(run)))
-sv("05-moi-vs-relapse",  plot_moi_vs_relapse(moi_vs_relapse(st, ev)))
 
 # 5c. genetic output (needs tskit)
 if (has_py) {
@@ -103,10 +102,10 @@ if (has_py) {
   cat("\nIBD by known relationship:\n")
   print(pairs[, .(n = .N, median_ibd = round(median(ibd), 3)), by = cls][order(cls)])
 
-  sv("06-relatedness-ladder", plot_relatedness_ladder(pairs), w = 9, h = 5.5)
+  sv("05-relatedness-ladder", plot_relatedness_ladder(pairs), w = 9, h = 5.5)
 
   ex <- pairs[, .SD[which.min(abs(ibd - median(ibd)))], by = cls]
-  sv("07-ibd-karyotype",
+  sv("06-ibd-karyotype",
      plot_ibd_pair(run, ex$a, ex$b, labels = as.character(ex$cls)), w = 12, h = 4.5)
 
   cat("\nARG structure:\n"); print(arg_summary(run, cs$pedigree_id))

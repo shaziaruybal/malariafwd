@@ -17,8 +17,8 @@ utils::globalVariables(c(
   # time-to-relapse / dormancy
   "t0", "tr", "time", "event", "act_tick", "est_tick", "nrel", "py", "batch_pedigree_id", "batch_tick",
   "n_hypnozoites", "masked", "relapse", "t_relapse", "t_empty",
-  # moi / within-host trajectory
-  "peak_moi", "n_relapse", "kind",
+  # within-host trajectory
+  "kind",
   # classify_travel
   "imp_tick", "recent", "recent_travel", "surveillance",
   # ibd_relapse_origin
@@ -36,8 +36,8 @@ utils::globalVariables(c(
   "uptake_tick", "inoculation_tick", "target_tick", "source_tick", "weight", "p1", "p2", "batch",
   # plot_diagnostics / force_of_infection
   "w", "y", "rate", "n", "days", "series", "is_acquisition", "recrud_tick", "inf", "hyp",
-  # plot_moi_vs_relapse / plot_relatedness_ladder
-  "grp", "band",
+  # plot_relatedness_ladder
+  "band",
   # classify_cases imported-origin and masked-relapse flags
   "imported", "into_patent_lineage",
   # episodes / recurrences

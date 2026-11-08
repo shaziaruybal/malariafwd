@@ -31,7 +31,7 @@ reference:
 - title: Hypnozoites and relapses
   desc: The latent reservoir and the recurrences it drives.
   contents: [reservoir_trajectory, relapse_fraction, relapses_per_person_year,
-             dormancy_durations, time_to_relapse, moi_vs_relapse]
+             dormancy_durations, time_to_relapse]
 
 - title: Relatedness (IBD)
   desc: Ground-truth identity-by-descent from the recorded genealogy.
@@ -50,7 +50,7 @@ reference:
 
 - title: Plots
   contents: [plot_ibd_pair, plot_relatedness_ladder, plot_host_trajectory,
-             plot_host_state_prevalence, plot_relapse_km, plot_moi_vs_relapse]
+             plot_host_state_prevalence, plot_relapse_km]
 
 - title: Package
   contents: [malariafwd-package]

@@ -483,19 +483,6 @@ time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked
   m[order(batch_tick, batch_pedigree_id)]
 }
 
-#' Peak COI vs relapse count per host
-#' @param state a state data.table.
-#' @param events an events data.table.
-#' @return a data.table of `human_id`, `peak_moi`, `n_relapse`.
-#' @export
-moi_vs_relapse <- function(state, events) {
-  st <- as.data.table(state)[entity_type == "human"]
-  peak <- st[, .(peak_moi = max(moi_active)), by = .(human_id = as.integer(entity_id))]
-  rel <- as.data.table(events)[event_type == "hypnozoite_activation", .(n_relapse = .N), by = human_id]
-  m <- merge(peak, rel, by = "human_id", all.x = TRUE)
-  m[is.na(n_relapse), n_relapse := 0][peak_moi > 0]
-}
-
 #' Host-state prevalence over time
 #'
 #' The share of hosts in each of five states on each day of the state table: no parasite; patent

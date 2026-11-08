@@ -41,12 +41,11 @@ test_that("every reader takes a run with no parasite", {
       incidence_by_origin = function() incidence_by_origin(ev), force_of_infection = function() force_of_infection(r),
       transmission_links = function() transmission_links(ev), rc_episode = function() rc_by_origin(r),
       rc_acquisition = function() rc_by_origin(r, unit = "acquisition"), time_to_relapse = function() time_to_relapse(r),
-      moi_vs_relapse = function() moi_vs_relapse(st, ev), pick_host = function() pick_host(ev),
+      pick_host = function() pick_host(ev),
       summarise_run = function() summarise_run(r), chrom_map = function() chrom_map(r))
     for (nm in names(readers)) quiet(readers[[nm]]())
     if (k != "d") expect_identical(nrow(classify_cases(ev)), 0L, label = k)
     expect_identical(nrow(summarise_run(r)), 1L, label = k)
-    if (k %in% c("a", "b")) expect_identical(nrow(moi_vs_relapse(st, ev)), 0L, label = k)
     if (requireNamespace("ggplot2", quietly = TRUE)) {
       quiet(ggplot2::ggplot_build(plot_force_of_infection(force_of_infection(r), smooth = NA)))
       quiet(ggplot2::ggplot_build(plot_host_state_prevalence(host_state_prevalence(st))))

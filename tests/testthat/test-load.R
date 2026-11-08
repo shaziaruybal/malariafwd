@@ -73,8 +73,6 @@ test_that("normal, extinct and never-started runs load with the same columns and
   ## the files' own headers are the loaders' columns
   expect_identical(names(data.table::fread(file.path(runs[[1]]$outdir, "events.tsv"), nrows = 0)), ev_cols)
   expect_identical(names(data.table::fread(file.path(runs[[1]]$outdir, "state.tsv"), nrows = 0)), st_cols)
-  ## a run with no event joins as any other
-  expect_equal(nrow(moi_vs_relapse(load_state(runs[[3]]), load_events(runs[[3]]))), 0L)
 })
 
 test_that("load_params() reads each parameter into its type, and text as it is", {
