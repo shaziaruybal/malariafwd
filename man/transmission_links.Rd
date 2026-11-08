@@ -18,8 +18,8 @@ a data.table, one row per (source genome, target genome), by \code{target_tick},
 \code{source_human_id} (the host the mosquito fed on), \code{target_human_id} (the host it bit),
 \code{mosq_id}, \code{oocyst_id}, \code{source_tick} (the day the source's blood stage began), \code{uptake_tick}
 (the feed), \code{inoculation_tick} (the bite), \code{target_tick} (the bite, or for a liver link the
-relapse) and \code{weight} (1, or 1/2 for each parent of an outcrossed oocyst). Ids and days are
-integer.
+relapse), \code{weight} (1, or 1/2 for each parent of an outcrossed oocyst), \code{chain_id} and
+\code{chain_size}. Ids, days and chains are integer.
 }
 \description{
 One row per link from a parent genome of an oocyst to a genome the oocyst's products infected. A
@@ -38,12 +38,23 @@ linked with \code{weight} 1/2 and every other link has weight 1, so a target's w
 infected it. Join \code{\link[=classify_cases]{classify_cases()}} on \code{target_pedigree_id = pedigree_id} for a target's
 detection and whether a relapse was masked.
 
+\strong{Chains.} \code{chain_id} numbers the chains of transmission, the connected components of the
+links returned, each taken in either direction, in the order of their first link; \code{chain_size}
+counts a chain's genomes, founders included, a recrudescence counted as the clone it came from.
+The chains follow \code{kind}. An outcrossed oocyst joins its two parents' chains, and a genome with
+no link is in no chain. In an endemic run seeded with founders most genomes end in a few large
+chains: chain sizes describe separate introductions only where chains stay apart, as at low
+transmission sustained by imports. A chain still growing at the end of the run is cut there.
+
 Pass the whole event log, as \code{\link[=load_events]{load_events()}} gives it, and filter the result: a link needs the
 rows of the feed, the bite and the source's onset, which can lie long before its target.
 }
 \examples{
-\dontrun{transmission_links(load_events(run), kind = "liver")}
+\dontrun{
+links <- transmission_links(load_events(run))
+unique(links[, .(chain_id, chain_size)])     # one row per chain
+}
 }
 \seealso{
-\code{\link[=rc_by_origin]{rc_by_origin()}}, \code{\link[=transmission_chains]{transmission_chains()}}
+\code{\link[=rc_by_origin]{rc_by_origin()}}, \code{\link[=classify_cases]{classify_cases()}}
 }

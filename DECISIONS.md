@@ -19,6 +19,35 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D72 — Transmission chains follow both routes, keep a recrudescence with its clone, and are columns of the links · 2026-11-08 · Accepted
+**Context.** `transmission_chains()` took the components of the direct links only, so a relapse in
+another host never joined its infector's chain; it started a new chain at every transmitting
+recrudescence, which is the same infection as the clone it came from (D25); and its union-find,
+without path compression, was quadratic in a chain's length, while liver links make chains of
+thousands of genomes. It returned sizes alone, which the link table could not be joined to (review
+M9; Q15, and the export table's merge of chains into the links).
+**Decision.** A chain is a connected component of the links, each taken in either direction, with
+each source taken as the clone it came from through repeated recrudescences. `transmission_links()`
+gives each link its `chain_id`, numbered in the order of the chains' first links, and the chain's
+`chain_size`, its genomes, founders included. Chains follow `kind`. A genome with no link is in no
+chain. The components come from a union-find over `match()` indices with path halving.
+`transmission_chains()` is removed: `unique(links[, .(chain_id, chain_size)])` gives its table.
+**Rationale.** Liver links are two-thirds of transmission, and a recrudescence's onward
+transmission belongs to its clone's chain. On the links, a chain can be followed and joined.
+**Alternatives rejected.** *Label propagation with pointer jumping* -- it hooks nodes, not roots,
+so it needs about as many passes as a chain is long: 292 s for a shuffled path of 100,000 genomes,
+against 0.04 s. *Singleton chains for unlinked genomes* -- an edge table cannot hold them;
+`classify_chain()` labels every case with its introduction.
+**Consequences.** Runs are unchanged. In a 5-year run of 200 hosts (seed 1), 466 chains (the
+largest 40 genomes) become 3 (the largest 3,886); the direct links alone give the earlier 466.
+The links of that run take 0.02 s.
+**How to verify.** `tests/testthat/test-transmission.R`: the fixture's chains for each kind, the
+recrudescence kept with its clone and the outcrossed oocyst joining two chains; `.link_components()`
+on a long path, disjoint and star graphs and 200 random graphs against a reference union-find; an
+empty log; on a run, chains partitioning the linked genomes.
+
+---
+
 ## D71 — Rc is the case reproduction number by true origin, each secondary case counted once · 2026-11-08 · Accepted
 **Context.** `rc_by_origin()` counted only the direct links, so the relapses a case's bites caused
 in other hosts, two-thirds of all transmission in a 5-year run, were not its secondary cases. It

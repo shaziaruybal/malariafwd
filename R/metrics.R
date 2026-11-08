@@ -399,23 +399,6 @@ classify_who <- function(events, window = 60) {
   flag[, surveillance := fifelse(recent_travel, "Imported", "Indigenous")][]
 }
 
-#' Transmission-chain sizes (connected components of the source->target graph)
-#' @param events an events data.table.
-#' @return a data.table with a `chain_size` column.
-#' @export
-transmission_chains <- function(events) {
-  links <- transmission_links(as.data.table(events), kind = "direct")[, .(source = source_pedigree_id,
-                                                                       target = target_pedigree_id)]
-  if (nrow(links) == 0) return(data.table(chain_size = integer(0)))
-  nodes <- unique(c(links$source, links$target)); id <- setNames(seq_along(nodes), as.character(nodes))
-  p <- seq_along(nodes)
-  root <- function(x) { while (p[x] != x) x <- p[x]; x }
-  s <- id[as.character(links$source)]; t <- id[as.character(links$target)]
-  for (i in seq_along(s)) { ra <- root(s[i]); rb <- root(t[i]); if (ra != rb) p[ra] <- rb }
-  comp <- vapply(seq_along(nodes), root, integer(1))
-  data.table(node = nodes, comp = comp)[, .(chain_size = .N), by = comp][, .(chain_size)]
-}
-
 #' Time from an infection to the first relapse of its hypnozoite batch
 #'
 #' One row per hypnozoite batch: the hypnozoites one genotype of a bite or an import laid down in a

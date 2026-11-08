@@ -20,8 +20,8 @@ source_pedigree_id,target_pedigree_id,kind,source_human_id,target_human_id,mosq_
 15,18,liver,6,2,101,2,48,70,85,130,0.5
 16,18,liver,6,2,101,2,48,70,85,130,0.5
 7,11,liver,3,4,102,3,30,35,50,140,1", colClasses = c(rep("integer", 2), "character", rep("integer", 8), "numeric"))
-  expect_equal(l, want, ignore_attr = TRUE)
-  expect_identical(tl_classes(l), tl_classes(want))
+  expect_equal(l[, 1:12], want, ignore_attr = TRUE)
+  expect_identical(tl_classes(l)[1:12], tl_classes(want))
 })
 
 test_that("only local infections are targets, and no host's relapse is linked to its own infection", {
@@ -49,8 +49,9 @@ test_that("kind keeps the direct or the liver links", {
   ev <- load_events(transmission_fixture_run())
   a <- transmission_links(ev)
   d <- transmission_links(ev, kind = "direct"); v <- transmission_links(ev, kind = "liver")
-  expect_equal(d, a[kind == "direct"], ignore_attr = TRUE)
-  expect_equal(v, a[kind == "liver"], ignore_attr = TRUE)
+  ## the same links; their chains follow kind
+  expect_equal(d[, 1:12], a[kind == "direct", 1:12], ignore_attr = TRUE)
+  expect_equal(v[, 1:12], a[kind == "liver", 1:12], ignore_attr = TRUE)
   expect_identical(nrow(d) + nrow(v), nrow(a))
   expect_true(all(v$inoculation_tick < v$target_tick))
   expect_true(all(d$inoculation_tick == d$target_tick))
@@ -196,4 +197,61 @@ test_that("on a run, Rc's counts are the links' weights, and a window only remov
   expect_true(all(diff(n) <= 0))
   n <- vapply(c(0, 50, 100), function(f) sum(rc_by_origin(r, from = f)$n_cases), 0L)
   expect_true(all(diff(n) <= 0))
+})
+
+## transmission_links()'s chains.
+
+## a plain union-find with path halving, as a reference; each node's root, in the order of
+## unique(c(a, b))
+ref_components <- function(a, b) {
+  node <- unique(c(a, b)); p <- seq_along(node)
+  find <- function(x) { while (p[x] != x) { p[x] <<- p[p[x]]; x <- p[x] }; x }
+  ia <- match(a, node); ib <- match(b, node)
+  for (k in seq_along(ia)) { ra <- find(ia[k]); rb <- find(ib[k]); if (ra != rb) p[max(ra, rb)] <- min(ra, rb) }
+  vapply(seq_along(node), find, integer(1))
+}
+
+test_that("the links carry their chains, which follow kind and keep a recrudescence with its clone", {
+  ev <- load_events(transmission_fixture_run())
+  l <- transmission_links(ev)
+  expect_identical(names(l)[13:14], c("chain_id", "chain_size"))
+  ch <- function(k) unique(transmission_links(ev, kind = k)[, .(chain_id, chain_size)])
+  ## the outcrossed oocyst joins 15's chain and 16's, and the recrudescence 12 is in 6's
+  expect_identical(ch("all")$chain_id, 1:2); expect_identical(ch("all")$chain_size, c(12L, 2L))
+  expect_identical(ch("direct")$chain_size, c(8L, 2L))
+  expect_identical(ch("liver")$chain_id, 1:3); expect_identical(ch("liver")$chain_size, c(3L, 3L, 2L))
+  expect_identical(l[target_pedigree_id == 31L]$chain_id, 2L)
+  expect_true(all(l[target_pedigree_id != 31L]$chain_id == 1L))
+  e <- transmission_links(make_events())
+  expect_identical(c(nrow(e), class(e$chain_id), class(e$chain_size)), c("0", "integer", "integer"))
+})
+
+test_that(".link_components() finds the components of long and of random graphs", {
+  lc <- malariafwd:::.link_components
+  set.seed(1)
+  n <- 100000; ord <- sample(n)
+  t0 <- proc.time()[["elapsed"]]
+  expect_identical(data.table::uniqueN(lc(ord[-n], ord[-1])$chain), 1L)
+  expect_lt(proc.time()[["elapsed"]] - t0, 10)
+  expect_identical(data.table::uniqueN(lc(c(1, 2, 10, 11), c(2, 3, 11, 12))$chain), 2L)
+  expect_identical(data.table::uniqueN(lc(c(1, 2, 10, 11, 3), c(2, 3, 11, 12, 10))$chain), 1L)
+  expect_identical(data.table::uniqueN(lc(rep(0, 5), 1:5)$chain), 1L)
+  for (g in 1:200) {
+    k <- sample(2:300, 1); a <- sample(0:(k - 1), k, TRUE); b <- sample(0:(k - 1), k, TRUE)
+    x <- lc(a, b)$chain; y <- ref_components(a, b)
+    expect_identical(match(x, unique(x)), match(y, unique(y)))
+  }
+})
+
+test_that("on a run, the chains partition the linked genomes, a recrudescence with its clone", {
+  skip_if_no_slim()
+  ev <- load_events(links_run()); l <- transmission_links(ev)
+  src <- malariafwd:::.acquisition_root(l$source_pedigree_id, ev)
+  node <- unique(c(src, l$target_pedigree_id))
+  ch <- unique(l[, .(chain_id, chain_size)])
+  expect_identical(sum(ch$chain_size), length(node))
+  expect_true(all(ch$chain_size >= 2L))
+  expect_false(any(node %in% ev[event_type == "recrudescence", pedigree_id]))
+  y <- ref_components(src, l$target_pedigree_id)[match(src, node)]
+  expect_identical(l$chain_id, match(y, unique(y)))
 })

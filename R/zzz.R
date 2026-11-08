@@ -9,7 +9,7 @@ utils::globalVariables(c(
   "event_type", "is_dormant", "is_imported", "lineage_id", "oocyst_id", "pedigree_id",
   "parent1_pedigree_id", "parent2_pedigree_id", "human_id", "origin", "detected",
   # derived / aggregate columns
-  "pct", "cls", "frac", "win", "source", "target", "chain_size", "node", "comp",
+  "pct", "cls", "frac", "win", "chain_id", "chain_size", "chain",
   "mean_ibd", "n_pairs",
   # IBD
   "node_a", "node_b", "ibd_fraction", "node_id", "a", "b", "ibd",

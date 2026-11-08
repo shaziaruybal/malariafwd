@@ -1,5 +1,6 @@
 ## transmission.R -- who infected whom, read from the event log (D70): the links from each parent
-## genome of an oocyst to each genome its products infected.
+## genome of an oocyst to each genome its products infected, the chains they form (D72), and the
+## case reproduction number by true origin (D71).
 
 ## The link table's columns and classes, which every path returns (D23).
 .links0 <- function() data.table(
@@ -25,6 +26,14 @@
 #' infected it. Join [classify_cases()] on `target_pedigree_id = pedigree_id` for a target's
 #' detection and whether a relapse was masked.
 #'
+#' **Chains.** `chain_id` numbers the chains of transmission, the connected components of the
+#' links returned, each taken in either direction, in the order of their first link; `chain_size`
+#' counts a chain's genomes, founders included, a recrudescence counted as the clone it came from.
+#' The chains follow `kind`. An outcrossed oocyst joins its two parents' chains, and a genome with
+#' no link is in no chain. In an endemic run seeded with founders most genomes end in a few large
+#' chains: chain sizes describe separate introductions only where chains stay apart, as at low
+#' transmission sustained by imports. A chain still growing at the end of the run is cut there.
+#'
 #' Pass the whole event log, as [load_events()] gives it, and filter the result: a link needs the
 #' rows of the feed, the bite and the source's onset, which can lie long before its target.
 #'
@@ -36,14 +45,29 @@
 #'   `source_human_id` (the host the mosquito fed on), `target_human_id` (the host it bit),
 #'   `mosq_id`, `oocyst_id`, `source_tick` (the day the source's blood stage began), `uptake_tick`
 #'   (the feed), `inoculation_tick` (the bite), `target_tick` (the bite, or for a liver link the
-#'   relapse) and `weight` (1, or 1/2 for each parent of an outcrossed oocyst). Ids and days are
-#'   integer.
-#' @seealso [rc_by_origin()], [transmission_chains()]
+#'   relapse), `weight` (1, or 1/2 for each parent of an outcrossed oocyst), `chain_id` and
+#'   `chain_size`. Ids, days and chains are integer.
+#' @seealso [rc_by_origin()], [classify_cases()]
 #' @examples
-#' \dontrun{transmission_links(load_events(run), kind = "liver")}
+#' \dontrun{
+#' links <- transmission_links(load_events(run))
+#' unique(links[, .(chain_id, chain_size)])     # one row per chain
+#' }
 #' @export
 transmission_links <- function(events, kind = c("all", "direct", "liver")) {
   kind <- match.arg(kind)
+  out <- .links(events, kind)
+  ## the chains: components of the links, each source taken as the clone it came from
+  src <- .acquisition_root(out$source_pedigree_id, as.data.table(events))
+  comp <- .link_components(src, out$target_pedigree_id)
+  ch <- comp$chain[match(src, comp$node)]
+  size <- comp[, .(n = .N), by = chain]
+  out[, `:=`(chain_id = match(ch, unique(ch)), chain_size = size$n[match(ch, size$chain)])]
+  out[]
+}
+
+## The links without their chains, for the functions that need no chains.
+.links <- function(events, kind) {
   if (!is.data.frame(events))
     stop("`events` must be an events table from load_events(); for a run, pass load_events(run).", call. = FALSE)
   need <- c("tick", "event_type", "mosq_id", "human_id", "pedigree_id", "parent1_pedigree_id",
@@ -96,6 +120,23 @@ transmission_links <- function(events, kind = c("all", "direct", "liver")) {
   ## the template's types, so that pooled tables bind
   for (nm in setdiff(names(out), c("kind", "weight"))) set(out, j = nm, value = as.integer(out[[nm]]))
   out[]
+}
+
+## The components of an undirected graph given as the edges a[k]-b[k]: a union-find over match()
+## indices (pedigree 0 is a real genome, so ids are never indices), each root the smallest index
+## in its tree, with path halving in the finds and a last pass that points every node at its root.
+## Linear in practice: a path of 300,000 genomes in random order takes 0.04 s.
+.link_components <- function(a, b) {
+  node <- unique(c(a, b))
+  ia <- match(a, node); ib <- match(b, node)
+  p <- seq_along(node)
+  for (k in seq_along(ia)) {
+    x <- ia[k]; while (p[x] != x) { p[x] <- p[p[x]]; x <- p[x] }
+    y <- ib[k]; while (p[y] != y) { p[y] <- p[p[y]]; y <- p[y] }
+    if (x < y) p[y] <- x else if (y < x) p[x] <- y
+  }
+  repeat { q <- p[p]; if (identical(q, p)) break; p <- q }
+  data.table(node = node, chain = p)
 }
 
 ## A genome as the clone it re-expanded from, walked back through repeated recrudescences: a
@@ -168,7 +209,7 @@ rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all"
   if (max(from, 1L) > last)
     stop("no case can be counted: onsets from day ", max(from, 1L), " to day ", last,
          " (SIM_DAYS - followup) leave none.", call. = FALSE)
-  links <- transmission_links(ev, kind)
+  links <- .links(ev, kind)
   cases <- classify_cases(ev)[, .(pedigree_id, origin, tick)]
   lv <- if (unit == "episode") .ORIGINS else .ACQUISITIONS
   if (unit == "acquisition") {

@@ -14,6 +14,6 @@ test_that("the package exports these functions", {
   "plot_relapse_km", "plot_relatedness_ladder", "rc_by_origin", "recurrences", "relapse_fraction",
   "relapses_per_person_year", "reservoir_trajectory", "run_grid", "run_sim", "slim_available",
   "slim_model", "slim_path", "slim_version", "summarise_run", "theme_malariafwd",
-  "time_to_relapse", "transmission_chains", "transmission_links", "trees_path", "tskit_available",
+  "time_to_relapse", "transmission_links", "trees_path", "tskit_available",
   "uptake_calibrate", "uptake_moments", "vivax_params"))
 })
