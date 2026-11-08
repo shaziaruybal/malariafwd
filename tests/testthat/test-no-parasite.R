@@ -38,7 +38,7 @@ test_that("every reader takes a run with no parasite", {
       relapses_per_person_year = function() relapses_per_person_year(r),
       dormancy_durations = function() dormancy_durations(ev), reservoir_trajectory = function() reservoir_trajectory(st),
       coi_distribution = function() coi_distribution(st), host_state_prevalence = function() host_state_prevalence(st),
-      incidence_by_origin = function() incidence_by_origin(ev), force_of_infection = function() force_of_infection(r),
+      force_of_infection = function() force_of_infection(r),
       transmission_links = function() transmission_links(ev), rc_episode = function() rc_by_origin(r),
       rc_acquisition = function() rc_by_origin(r, unit = "acquisition"), time_to_relapse = function() time_to_relapse(r),
       summarise_run = function() summarise_run(r), chrom_map = function() chrom_map(r))

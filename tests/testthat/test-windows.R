@@ -104,3 +104,22 @@ test_that("new_infection_diversity() starts on summarise_run()'s first day", {
   expect_identical(new_infection_diversity(r, burn_frac = 0.45)$n, 1L)
   expect_identical(new_infection_diversity(r, burn_frac = 0.44)$n, 2L)
 })
+
+test_that("force_of_infection() counts every case, or with detected_only the reported ones", {
+  r <- episodes_fixture_run()
+  cs <- classify_cases(episodes_fixture())
+  for (det in c(FALSE, TRUE)) {
+    fo <- force_of_infection(r, split_imported = FALSE, detected_only = det)
+    want <- (if (det) cs[detected == 1L] else cs)[, .(n = .N), by = .(win = as.integer((tick %/% 30) * 30), origin)]
+    got <- fo[n > 0, .(win, origin = as.character(origin), n)]
+    data.table::setorder(want, win, origin); data.table::setorder(got, win, origin)
+    expect_identical(as.data.frame(got), as.data.frame(want), label = paste("detected_only =", det))
+  }
+  every <- force_of_infection(r, split_imported = FALSE)
+  shown <- force_of_infection(r, split_imported = FALSE, detected_only = TRUE)
+  ## days 30-59 hold relapses 502, 403 and 105; 105 was not detected
+  expect_identical(every[win == 30L & origin == "relapse", n], 3L)
+  expect_identical(shown[win == 30L & origin == "relapse", n], 2L)
+  expect_identical(shown[, .(win, origin, days, is_acquisition)], every[, .(win, origin, days, is_acquisition)])
+  expect_error(force_of_infection(r, detected_only = NA), "`detected_only` must be TRUE or FALSE.", fixed = TRUE)
+})

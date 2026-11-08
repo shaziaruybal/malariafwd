@@ -2,13 +2,14 @@
 % Please edit documentation in R/metrics.R
 \name{force_of_infection}
 \alias{force_of_infection}
-\title{Force of blood-stage infection, by origin (per host-year)}
+\title{Incidence and force of blood-stage infection, by origin}
 \usage{
 force_of_infection(
   run,
   bin = 30,
   split_imported = TRUE,
-  exclude_masked = FALSE
+  exclude_masked = FALSE,
+  detected_only = FALSE
 )
 }
 \arguments{
@@ -21,11 +22,16 @@ gives five origin levels, \code{FALSE} gives four.}
 
 \item{exclude_masked}{if \code{TRUE}, leave out the masked relapses, into a patent clone of their
 own lineage (see \code{\link[=classify_cases]{classify_cases()}}): molFOB as a genotyping study measures it.}
+
+\item{detected_only}{if \code{TRUE}, count only the reported cases (\code{detected == 1}). Detection is
+drawn once per bite, import, activation or recrudescence (\code{P_DETECT_PRIMARY},
+\code{P_DETECT_RELAPSE}, \code{P_DETECT_RECRUD}).}
 }
 \value{
 a data.table with one row for every window of the run and every origin, by window:
 \code{win} (the window's first day, an integer: 0, \code{bin}, \code{2 * bin}, ...), \code{origin}, \code{n} (the
-cases, 0 where there are none), \code{days} (the days the window covers within the run, which is
+cases, clone onsets as rows of \code{\link[=classify_cases]{classify_cases()}}, 0 where there are none; \code{\link[=episodes]{episodes()}}
+groups them by host and day), \code{days} (the days the window covers within the run, which is
 \code{SIM_DAYS} days long whether or not it went extinct: \code{bin - 1} for the first window, which
 starts on day 1, and fewer for the last when the run ends inside it),
 \code{rate} (per host-year, scaled by \code{days}) and \code{is_acquisition}. Sum only the
@@ -33,11 +39,12 @@ starts on day 1, and fewer for the last when the run ends inside it),
 incidence stays complete, but it is not a newly acquired clone.
 }
 \description{
-New blood-stage clone acquisitions per host per year, split by origin.
-\code{imported} + \verb{local reinfection} give the mosquito-borne \strong{force of infection (FOI)};
-adding \code{relapse} gives the \strong{molecular force of blood-stage infection (molFOB)} -- a
-compound measure that is elevated in \emph{P. vivax} because relapses contribute new
-blood-stage clones (Koepfli et al. 2013).
+The cases of each window of the run, by origin, as counts (\code{n}, the incidence) and per host-year
+(\code{rate}). Among the new clones, \code{imported} + \verb{local reinfection} give the mosquito-borne \strong{force
+of infection (FOI)}; adding \code{relapse} gives the \strong{molecular force of blood-stage infection
+(molFOB)} -- a compound measure that is elevated in \emph{P. vivax} because relapses contribute new
+blood-stage clones (Koepfli et al. 2013). With \code{detected_only = TRUE} only the cases the
+observation layer reported are counted: the incidence, FOI and molFOB of a line list.
 Relapses are split into \code{relapse (imported)} and \code{relapse (local)} -- a relapse of an
 imported genotype is a distinct truth category. Set \code{split_imported = FALSE} for a single
 \code{relapse} class. Either way \code{origin} comes back as a factor with \strong{all} levels present, so

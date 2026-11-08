@@ -220,26 +220,14 @@ classify_cases <- function(events, exclude_masked = FALSE) {
             detected = as.integer(detected), into_patent_lineage = as.logical(into_patent_lineage))]
 }
 
-#' Binned incidence by origin
-#' @param events an events data.table.
-#' @param bin window width in days.
-#' @param detected_only restrict to the reported line list.
-#' @return a data.table of counts per (window, origin).
-#' @export
-incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
-  cs <- classify_cases(events)
-  if (detected_only) cs <- cs[detected == 1]
-  cs[, win := (tick %/% bin) * bin]
-  cs[, .N, by = .(win, origin)]
-}
-
-#' Force of blood-stage infection, by origin (per host-year)
+#' Incidence and force of blood-stage infection, by origin
 #'
-#' New blood-stage clone acquisitions per host per year, split by origin.
-#' `imported` + `local reinfection` give the mosquito-borne **force of infection (FOI)**;
-#' adding `relapse` gives the **molecular force of blood-stage infection (molFOB)** -- a
-#' compound measure that is elevated in *P. vivax* because relapses contribute new
-#' blood-stage clones (Koepfli et al. 2013).
+#' The cases of each window of the run, by origin, as counts (`n`, the incidence) and per host-year
+#' (`rate`). Among the new clones, `imported` + `local reinfection` give the mosquito-borne **force
+#' of infection (FOI)**; adding `relapse` gives the **molecular force of blood-stage infection
+#' (molFOB)** -- a compound measure that is elevated in *P. vivax* because relapses contribute new
+#' blood-stage clones (Koepfli et al. 2013). With `detected_only = TRUE` only the cases the
+#' observation layer reported are counted: the incidence, FOI and molFOB of a line list.
 #' Relapses are split into `relapse (imported)` and `relapse (local)` -- a relapse of an
 #' imported genotype is a distinct truth category. Set `split_imported = FALSE` for a single
 #' `relapse` class. Either way `origin` comes back as a factor with **all** levels present, so
@@ -257,9 +245,13 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #'   gives five origin levels, `FALSE` gives four.
 #' @param exclude_masked if `TRUE`, leave out the masked relapses, into a patent clone of their
 #'   own lineage (see [classify_cases()]): molFOB as a genotyping study measures it.
+#' @param detected_only if `TRUE`, count only the reported cases (`detected == 1`). Detection is
+#'   drawn once per bite, import, activation or recrudescence (`P_DETECT_PRIMARY`,
+#'   `P_DETECT_RELAPSE`, `P_DETECT_RECRUD`).
 #' @return a data.table with one row for every window of the run and every origin, by window:
 #'   `win` (the window's first day, an integer: 0, `bin`, `2 * bin`, ...), `origin`, `n` (the
-#'   cases, 0 where there are none), `days` (the days the window covers within the run, which is
+#'   cases, clone onsets as rows of [classify_cases()], 0 where there are none; [episodes()]
+#'   groups them by host and day), `days` (the days the window covers within the run, which is
 #'   `SIM_DAYS` days long whether or not it went extinct: `bin - 1` for the first window, which
 #'   starts on day 1, and fewer for the last when the run ends inside it),
 #'   `rate` (per host-year, scaled by `days`) and `is_acquisition`. Sum only the
@@ -270,11 +262,14 @@ incidence_by_origin <- function(events, bin = 30, detected_only = FALSE) {
 #'   Trop Dis 7(9):e2403.
 #' @seealso [plot_force_of_infection()]
 #' @export
-force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_masked = FALSE) {
+force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_masked = FALSE,
+                               detected_only = FALSE) {
   bin <- .check_bin(bin)
   .check_flag(exclude_masked, "exclude_masked")
+  .check_flag(detected_only, "detected_only")
   nh <- as.numeric(.params_of(run)$N_HOSTS)
   cs <- classify_cases(load_events(run), exclude_masked)
+  if (detected_only) cs <- cs[detected == 1L]
   ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
   ## contained imports, so the returned vocabulary depended on run CONTENT: `baseline` came
   ## back with `relapse` and `imports` with `relapse (local)` for the same thing, and a pooled

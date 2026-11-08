@@ -85,7 +85,7 @@ apart rather than choosing for you:
   `future`/`furrr`, reporting any failed cell with its error.
 
 * **Loaders and metrics.** `load_events()`, `load_state()`, `load_params()`; `summarise_run()`,
-  `classify_cases()`, `episodes()`, `recurrences()`, `incidence_by_origin()`, `force_of_infection()`, `relapse_fraction()`,
+  `classify_cases()`, `episodes()`, `recurrences()`, `force_of_infection()`, `relapse_fraction()`,
   `rc_by_origin()`, `transmission_links()` with each link's chain, plus reservoir, relapse,
   COI and dormancy helpers.
 

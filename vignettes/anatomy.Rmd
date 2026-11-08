@@ -70,7 +70,7 @@ rec[, .N, by = .(origin, prior_origin)]
 
 ```{r}
 summarise_run(run)                       # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
-incidence_by_origin(ev, bin = 30)      # monthly case counts by origin
+force_of_infection(run, split_imported = FALSE)[, .(win, origin, n)]   # new cases a month, by origin
 ```
 
 ## Who infected whom
