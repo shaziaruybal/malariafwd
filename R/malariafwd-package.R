@@ -8,22 +8,26 @@
 #' `vignette("malariafwd")` runs a simulation and reads it, and `vignette("anatomy")` walks through
 #' what a run records; [event_types()] lists every event a run logs. The model is described in full
 #' in [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), and the
-#' reasons for its choices are in [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
+#' reasons for its choices are in
+#' [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
 #'
 #' @section Runs and their tables:
 #' A *run* is one simulation: [run_sim()] writes it to a directory, and [load_run()] reads that
-#' directory back as a `vivax_run`. Every function that reads a run takes either. A run holds four
-#' files, each with its reader: `params.tsv`, the parameter set it was made from ([load_params()]);
-#' `events.tsv`, one row per event ([load_events()], described in [events.tsv][malariafwd-outputs]);
-#' `state.tsv`, every host and mosquito on every day ([load_state()], hosts by default); and
-#' `plasmo.trees`, the genealogy of every genome as a tree sequence ([trees_path()]). An argument
-#' named `events` takes an events table or a run, one named `state` a state table or a run, and a
-#' plot takes a run or the table its function returns.
+#' directory back as a `vivax_run`. Every function that reads a run takes either. A run's outputs
+#' are four files, each with its reader: `params.tsv`, the parameter set it was made from
+#' ([load_params()]); `events.tsv`, one row per event ([load_events()], described in
+#' [events.tsv][malariafwd-outputs]); `state.tsv`, every host and mosquito on every day
+#' ([load_state()], hosts by default); and `plasmo.trees`, the genealogy of every genome as a tree
+#' sequence ([trees_path()]). An argument named `events` takes an events table or a run, one named
+#' `state` a state table or a run, and a plot takes a run or the table its function returns.
 #'
 #' @section Time:
 #' A *tick* is one day. A run's days are 1 to `SIM_DAYS`, and every column named `*_tick` is a day.
-#' Durations are geometric: a state with a mean duration of `D` days ends on each day with
-#' probability `1/D`. A year is 365 days, so a rate per person-year divides by person-days over 365.
+#' Most durations are geometric: a state with a mean duration of `D` days ends on each day with
+#' probability `1/D`. `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays, `RECRUD_DELAY_DIST` sets
+#' the shape of a recrudescence's delay, and with `K_LATENCY` above 0 a batch's latency is a
+#' sequence of geometric stages. A year is 365 days, so a rate per person-year divides by
+#' person-days over 365.
 #'
 #' @section Genomes and identifiers:
 #' Each parasite genome is one individual of the simulation. A bite, an import, a relapse and a
@@ -39,10 +43,11 @@
 #' blood-stage infection, a relapse, or a recrudescence. Founder seeding, where a run starts, is not
 #' a case. An *episode* is the clones that became patent in one host on one day, named by
 #' `episode_id`, `"<human_id>:<tick>"`, so a bite that delivered two genotypes is two cases of one
-#' episode ([episodes()], [recurrences()]). An *acquisition* is a case that brought a new genome
-#' into its host: an import, a local reinfection or a relapse. A recrudescence is a case but not an
-#' acquisition. A relapse into a patent clone of its own lineage is flagged by
-#' `into_patent_lineage`, and `exclude_masked = TRUE` leaves such relapses out of a reader's counts.
+#' episode ([episodes()], [recurrences()]). An *acquisition* is a case that began a new blood-stage
+#' clone in its host: an import, a local reinfection or a relapse. A recrudescence is a case but not
+#' an acquisition, since it re-expands a clone already counted. A relapse into a patent clone of its
+#' own lineage is flagged by `into_patent_lineage`, and `exclude_masked = TRUE` leaves such relapses
+#' out of a reader's counts.
 #'
 #' @section COI and MOI:
 #' Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:

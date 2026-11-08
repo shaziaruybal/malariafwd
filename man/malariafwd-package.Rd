@@ -15,26 +15,30 @@ defines the terms the help pages share.
 \code{vignette("malariafwd")} runs a simulation and reads it, and \code{vignette("anatomy")} walks through
 what a run records; \code{\link[=event_types]{event_types()}} lists every event a run logs. The model is described in full
 in \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{MODEL_DESCRIPTION}, and the
-reasons for its choices are in \href{https://shaziaruybal.github.io/malariafwd/DECISIONS.html}{DECISIONS}.
+reasons for its choices are in
+\href{https://shaziaruybal.github.io/malariafwd/DECISIONS.html}{DECISIONS}.
 }
 
 \section{Runs and their tables}{
 
 A \emph{run} is one simulation: \code{\link[=run_sim]{run_sim()}} writes it to a directory, and \code{\link[=load_run]{load_run()}} reads that
-directory back as a \code{vivax_run}. Every function that reads a run takes either. A run holds four
-files, each with its reader: \code{params.tsv}, the parameter set it was made from (\code{\link[=load_params]{load_params()}});
-\code{events.tsv}, one row per event (\code{\link[=load_events]{load_events()}}, described in \link[=malariafwd-outputs]{events.tsv});
-\code{state.tsv}, every host and mosquito on every day (\code{\link[=load_state]{load_state()}}, hosts by default); and
-\code{plasmo.trees}, the genealogy of every genome as a tree sequence (\code{\link[=trees_path]{trees_path()}}). An argument
-named \code{events} takes an events table or a run, one named \code{state} a state table or a run, and a
-plot takes a run or the table its function returns.
+directory back as a \code{vivax_run}. Every function that reads a run takes either. A run's outputs
+are four files, each with its reader: \code{params.tsv}, the parameter set it was made from
+(\code{\link[=load_params]{load_params()}}); \code{events.tsv}, one row per event (\code{\link[=load_events]{load_events()}}, described in
+\link[=malariafwd-outputs]{events.tsv}); \code{state.tsv}, every host and mosquito on every day
+(\code{\link[=load_state]{load_state()}}, hosts by default); and \code{plasmo.trees}, the genealogy of every genome as a tree
+sequence (\code{\link[=trees_path]{trees_path()}}). An argument named \code{events} takes an events table or a run, one named
+\code{state} a state table or a run, and a plot takes a run or the table its function returns.
 }
 
 \section{Time}{
 
 A \emph{tick} is one day. A run's days are 1 to \code{SIM_DAYS}, and every column named \verb{*_tick} is a day.
-Durations are geometric: a state with a mean duration of \code{D} days ends on each day with
-probability \code{1/D}. A year is 365 days, so a rate per person-year divides by person-days over 365.
+Most durations are geometric: a state with a mean duration of \code{D} days ends on each day with
+probability \code{1/D}. \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are fixed delays, \code{RECRUD_DELAY_DIST} sets
+the shape of a recrudescence's delay, and with \code{K_LATENCY} above 0 a batch's latency is a
+sequence of geometric stages. A year is 365 days, so a rate per person-year divides by
+person-days over 365.
 }
 
 \section{Genomes and identifiers}{
@@ -54,10 +58,11 @@ A \emph{case} is a clone onset, one row of \code{\link[=classify_cases]{classify
 blood-stage infection, a relapse, or a recrudescence. Founder seeding, where a run starts, is not
 a case. An \emph{episode} is the clones that became patent in one host on one day, named by
 \code{episode_id}, \code{"<human_id>:<tick>"}, so a bite that delivered two genotypes is two cases of one
-episode (\code{\link[=episodes]{episodes()}}, \code{\link[=recurrences]{recurrences()}}). An \emph{acquisition} is a case that brought a new genome
-into its host: an import, a local reinfection or a relapse. A recrudescence is a case but not an
-acquisition. A relapse into a patent clone of its own lineage is flagged by
-\code{into_patent_lineage}, and \code{exclude_masked = TRUE} leaves such relapses out of a reader's counts.
+episode (\code{\link[=episodes]{episodes()}}, \code{\link[=recurrences]{recurrences()}}). An \emph{acquisition} is a case that began a new blood-stage
+clone in its host: an import, a local reinfection or a relapse. A recrudescence is a case but not
+an acquisition, since it re-expands a clone already counted. A relapse into a patent clone of its
+own lineage is flagged by \code{into_patent_lineage}, and \code{exclude_masked = TRUE} leaves such relapses
+out of a reader's counts.
 }
 
 \section{COI and MOI}{
