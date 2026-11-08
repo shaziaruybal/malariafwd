@@ -399,50 +399,6 @@ classify_who <- function(events, window = 60) {
   flag[, surveillance := fifelse(recent_travel, "Imported", "Indigenous")][]
 }
 
-#' Effective reproduction number by true origin
-#'
-#' @details
-#' `unit` chooses what a "source" is, and the two readings answer different questions.
-#' `"episode"` credits onward transmission to the clinical episode it came from, so a
-#' recrudescence is its own source -- the surveillance-targeting reading. `"acquisition"`
-#' walks each transmitting genome back to the infection that originally brought it into the
-#' host, so one acquisition gets one R -- the classic reading, and the one comparable to an
-#' Rc estimated from routine case counts (Champagne et al. 2022). They differ substantially:
-#' measured on a prototype run, local-reinfection Rc was 0.520 per acquisition against 0.116
-#' per episode, with the difference re-attributed to a recrudescence class at 1.464.
-#' @param events an events data.table.
-#' @param unit `"episode"` (default) or `"acquisition"`; see Details.
-#' @return a data.table of `origin`, `n_sources`, `Rc`, `pct_onward`.
-#' @export
-rc_by_origin <- function(events, unit = c("episode", "acquisition")) {
-  unit <- match.arg(unit)
-  ev <- as.data.table(events)
-  links <- transmission_links(ev, kind = "direct")[, .(source = as.numeric(source_pedigree_id),
-                                                     target = target_pedigree_id)]
-  cases <- classify_cases(ev)[, .(pedigree_id, origin)]
-  if (unit == "acquisition") {
-    ## Walk each transmitting genome back to the ACQUISITION it descends from, so a clone
-    ## that was suppressed and recrudesced is credited to the infection that brought it in
-    ## rather than to the recurrence. This is the unit a surveillance Rc estimated from
-    ## routine case counts refers to (Champagne et al. 2022, Swiss TPH), so it is the one to
-    ## compare against published values.
-    rec <- ev[event_type == "recrudescence", .(ped = pedigree_id, holder = parent1_pedigree_id)]
-    if (nrow(rec)) {
-      m <- stats::setNames(rec$holder, as.character(rec$ped))
-      root <- function(p) { k <- 0L
-        while (!is.na(m[as.character(p)]) && k < 100L) { p <- unname(m[as.character(p)]); k <- k + 1L }
-        p }
-      links[, source := vapply(source, root, numeric(1))]
-      cases <- cases[origin != "recrudescence"]
-    }
-  }
-  outdeg <- links[, .(secondary = .N), by = source]
-  rc <- merge(cases, outdeg, by.x = "pedigree_id", by.y = "source", all.x = TRUE)
-  rc[is.na(secondary), secondary := 0]
-  rc[, .(n_sources = .N, Rc = round(mean(secondary), 3),
-         pct_onward = round(100 * mean(secondary > 0), 1)), by = origin]
-}
-
 #' Transmission-chain sizes (connected components of the source->target graph)
 #' @param events an events data.table.
 #' @return a data.table with a `chain_size` column.

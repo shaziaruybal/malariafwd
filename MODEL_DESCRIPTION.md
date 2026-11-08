@@ -743,8 +743,8 @@ easiest thing to get wrong:
   `relapse_frac_acquisitions`, relapses over acquisitions (the unit of the published 0.55–0.85
   band), and `relapse_frac_episodes`, relapses over every case, recrudescence included.
 - `rc_by_origin(unit =)` likewise: `"episode"` credits onward transmission to the recurrence,
-  `"acquisition"` walks it back to the infection that brought the clone in. The second is the unit
-  a surveillance Rc estimated from routine case counts refers to (Champagne et al. 2022).
+  `"acquisition"` walks it back to the infection that brought the clone in. Onward transmission
+  includes the relapses an infector's bites cause in other hosts (`transmission_links()`).
 
 Worth noting that a *real* molFOB, measured by comparing genotypes between study visits, would
 often count a recrudescence as a new clone — the clone was undetectable at the previous visit. The
@@ -1390,6 +1390,7 @@ pool runs, sum the counts and the person-years rather than average the rates.
 | relapses per person-year | relapses ÷ person-years at risk: each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to the window's end, also after an extinction. §13's band table states its own definition | `relapses_per_py_at_risk` |
 | relapse fraction | two readings, counted per clone onset (§9a): relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band, and relapses ÷ **every case**, recrudescence included; equal when a run has no recrudescence. Both include each host's first case, which is not a recurrence. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13) | `relapse_frac_acquisitions`, `relapse_frac_episodes` |
 | imported share | imports among the new clones from bites and imports | `imported_frac` |
+| Rc | the case reproduction number (Fraser 2007), by the case's true origin: secondary cases per case, through bites and the relapses they leave; each secondary case counts once, 1/2 to each parent of an outcrossed oocyst. Cases near the end are right-censored, above all through relapses; `from` and `followup` choose the onsets counted (`rc_by_origin()`) | — |
 | time to first relapse | per hypnozoite batch, from the day it was established (for an import that also brought a blood-stage infection, the day after) to its first relapse; censored on the day it empties without relapsing, or at `SIM_DAYS` (`time_to_relapse()`, `emptied = "follow"` to follow emptied batches to the end) | — |
 
 **Truth tables.** Read from the event log, so exact.

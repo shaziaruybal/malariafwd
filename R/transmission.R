@@ -97,3 +97,92 @@ transmission_links <- function(events, kind = c("all", "direct", "liver")) {
   for (nm in setdiff(names(out), c("kind", "weight"))) set(out, j = nm, value = as.integer(out[[nm]]))
   out[]
 }
+
+## A genome as the clone it re-expanded from, walked back through repeated recrudescences: a
+## recrudescence row's parent1_pedigree_id is the clone it came from.
+.acquisition_root <- function(ped, events) {
+  rec <- events[event_type == "recrudescence",
+                .(pedigree_id = as.integer(pedigree_id), parent = as.integer(parent1_pedigree_id))]
+  ped <- as.integer(ped)
+  for (k in seq_len(nrow(rec))) {
+    i <- match(ped, rec$pedigree_id)
+    if (all(is.na(i))) break
+    ped[!is.na(i)] <- rec$parent[i[!is.na(i)]]
+  }
+  ped
+}
+
+#' Case reproduction number (Rc) by true origin
+#'
+#' The mean number of secondary cases each case caused, by the case's true origin. A case is a
+#' blood-stage clone onset, a row of [classify_cases()]; its secondary cases are the targets of its
+#' links in [transmission_links()], infected by a bite's blood stage or by a relapse of the batch
+#' the bite left.
+#'
+#' @details
+#' **Cases.** With `unit = "episode"` every clone onset is a case, a recrudescence included. With
+#' `unit = "acquisition"` a recrudescence is not a case: its onward transmission is credited to the
+#' clone it re-expanded from, through repeated recrudescences, so each acquisition has one count. A
+#' subpatent holder's transmission is credited to the case that began it. Founders infect, but are
+#' not cases.
+#'
+#' **Secondary cases.** Each secondary case counts once: one from an outcrossed oocyst credits 1/2
+#' to each parent. A bite that delivers two genotypes gives two secondary cases. Masked relapses
+#' count like any other; join [classify_cases()] on the links to leave them out. `kind = "direct"`
+#' and `kind = "liver"` add up to `kind = "all"`.
+#'
+#' **The end of the run.** A case near the end has had less time to transmit, above all through
+#' relapses: a hypnozoite stays dormant `1 / (ALPHA_ACTIVATE + MU_HYPNOZOITE)` days on average,
+#' about four months at the defaults, and more than a year for 1 in 20. `followup` counts only the
+#' cases that began at least that many days before `SIM_DAYS`. A run that went extinct is not
+#' censored.
+#'
+#' **The phase of the epidemic.** Rc reflects the phase the counted cases began in: above 1 while
+#' an epidemic grows from its founders, near 1 at a self-sustaining steady state, and lower where
+#' imports sustain transmission. To compare runs, choose `from` and `followup` inside a stretch that
+#' [plot_diagnostics()] shows to be steady; `followup` alone keeps a growing run's early cases.
+#'
+#' @param run a `vivax_run` or its directory.
+#' @param unit `"episode"` or `"acquisition"`: what a case is (see Details).
+#' @param kind `"all"`, `"direct"` or `"liver"`: the links counted, as in [transmission_links()].
+#' @param from count the cases that began on day `from` or later.
+#' @param followup count the cases that began on day `SIM_DAYS - followup` or earlier.
+#' @return a data.table, one row per origin, every origin present: `origin` (a factor of the
+#'   origins [classify_cases()] gives, without `"recrudescence"` for `unit = "acquisition"`),
+#'   `n_cases` (integer), `n_secondary` (the sum of the cases' link weights), `Rc`
+#'   (`n_secondary / n_cases`) and `onward_frac` (the share of cases with a secondary case), the
+#'   last two `NA` with no case. To pool runs, divide the summed `n_secondary` by the summed
+#'   `n_cases`.
+#' @references Fraser C (2007) Estimating individual and household reproduction numbers in an
+#'   emerging epidemic. PLoS ONE 2(8): e758. \doi{10.1371/journal.pone.0000758}
+#' @seealso [transmission_links()], [classify_cases()]
+#' @examples
+#' \dontrun{rc_by_origin(run, from = 365, followup = 365)}
+#' @export
+rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all", "direct", "liver"),
+                         from = 0, followup = 0) {
+  unit <- match.arg(unit); kind <- match.arg(kind)
+  from <- .check_day(from, "from"); followup <- .check_day(followup, "followup")
+  ev <- load_events(run)
+  last <- if (from > 0L || followup > 0L) .sim_days(run, "rc_by_origin") - followup else Inf
+  if (max(from, 1L) > last)
+    stop("no case can be counted: onsets from day ", max(from, 1L), " to day ", last,
+         " (SIM_DAYS - followup) leave none.", call. = FALSE)
+  links <- transmission_links(ev, kind)
+  cases <- classify_cases(ev)[, .(pedigree_id, origin, tick)]
+  lv <- if (unit == "episode") .ORIGINS else .ACQUISITIONS
+  if (unit == "acquisition") {
+    links[, source_pedigree_id := .acquisition_root(source_pedigree_id, ev)]
+    cases <- cases[origin != "recrudescence"]
+  }
+  cases <- cases[tick >= from & tick <= last]
+  sec <- links[, .(n_secondary = sum(weight)), by = .(pedigree_id = source_pedigree_id)]
+  rc <- sec[cases, on = "pedigree_id"][is.na(n_secondary), n_secondary := 0]
+  out <- rc[, .(n_cases = .N, n_secondary = sum(n_secondary), n_onward = sum(n_secondary > 0)), by = origin]
+  out <- out[data.table(origin = lv), on = "origin"]
+  out[is.na(n_cases), `:=`(n_cases = 0L, n_secondary = 0, n_onward = 0L)]
+  out[, `:=`(Rc = fifelse(n_cases > 0L, n_secondary / n_cases, NA_real_),
+             onward_frac = fifelse(n_cases > 0L, n_onward / n_cases, NA_real_))]
+  out[, origin := factor(origin, levels = lv)]
+  out[, .(origin, n_cases, n_secondary, Rc, onward_frac)][]
+}

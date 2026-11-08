@@ -71,9 +71,10 @@ apart rather than choosing for you:
   included.
 * `summarise_run()` reports both molFOB readings, `molfob_clones_per_py` and
   `molfob_episodes_per_py`, and both relapse fractions, over one window of the run.
-* `rc_by_origin(unit = "episode" | "acquisition")` credits onward transmission either to the
-  recurrence itself or to the infection that originally brought the clone in. The second is the
-  unit a reproduction number estimated from routine case counts refers to.
+* `rc_by_origin()` gives the case reproduction number by true origin, counting the secondary
+  cases each case caused through bites and the relapses they leave. `unit = "episode"` credits
+  onward transmission to a recrudescence itself and `unit = "acquisition"` to the infection that
+  brought the clone in; `from` and `followup` choose the onsets counted.
 
 ## The R interface
 

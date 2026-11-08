@@ -71,6 +71,17 @@ summarise_run(run)                       # prevalence, COI, EIR, FOI, molFOB, re
 incidence_by_origin(ev, bin = 30)      # monthly case counts by origin
 ```
 
+## Who infected whom
+
+Every local infection has a true infector: the genome a mosquito took up before the bite. A bite can
+also leave hypnozoites, so a link runs to each relapse the bite causes later, often months on.
+
+```{r, eval = FALSE}
+links <- transmission_links(ev)
+links[, .(infected = sum(weight)), by = kind]     # through a bite's blood stage, or a relapse
+rc_by_origin(run, from = 365, followup = 365)    # secondary cases per case, by true origin
+```
+
 ## A single host's trajectory
 
 `state.tsv` records every host each tick. Pick a host with an interesting history and plot

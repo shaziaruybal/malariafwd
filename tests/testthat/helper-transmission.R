@@ -91,3 +91,14 @@ transmission_fixture <- function() {
 transmission_fixture_run <- function(events = transmission_fixture())
   load_run(fake_run(params = list(N_HOSTS = 9L, N_MOSQ = 7L, SIM_DAYS = 150L, N_FOUNDER_HOSTS = 2L),
                     events = events))
+
+## A run with co-transmission, imports, recrudescence and batch-only bites, made once a session.
+.links_runs <- new.env()
+links_run <- function() {
+  if (is.null(.links_runs$run))
+    .links_runs$run <- suppressMessages(run_sim(vivax_params(
+      N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.16, SIM_DAYS = 300, LAMBDA_SPOROZOITES = 2, IMPORT_START = 1L,
+      IMPORT_END = 300L, IMPORT_RATE_PER_TICK = 0.1, BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
+      P_RECRUD_GIVEN_FAIL = 0.7, P_PRIMARY = 0.8, CHROMOSOMES = "1"), seed = 2, outdir = tempfile("mfwd_links_")))
+  .links_runs$run
+}

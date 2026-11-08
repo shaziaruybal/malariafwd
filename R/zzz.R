@@ -9,7 +9,7 @@ utils::globalVariables(c(
   "event_type", "is_dormant", "is_imported", "lineage_id", "oocyst_id", "pedigree_id",
   "parent1_pedigree_id", "parent2_pedigree_id", "human_id", "origin", "detected",
   # derived / aggregate columns
-  "pct", "cls", "frac", "win", "secondary", "source", "target", "chain_size", "node", "comp",
+  "pct", "cls", "frac", "win", "source", "target", "chain_size", "node", "comp",
   "mean_ibd", "n_pairs",
   # IBD
   "node_a", "node_b", "ibd_fraction", "node_id", "a", "b", "ibd",
@@ -24,6 +24,8 @@ utils::globalVariables(c(
   "rp", "rt", "pp", "pt",
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
+  # rc_by_origin
+  "n_cases", "n_secondary", "n_onward", "Rc", "onward_frac",
   # transmission_links
   "source_pedigree_id", "target_pedigree_id", "source_human_id", "target_human_id", "mosq_id",
   "uptake_tick", "inoculation_tick", "target_tick", "source_tick", "weight", "p1", "p2", "batch",

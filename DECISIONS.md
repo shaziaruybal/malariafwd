@@ -19,6 +19,42 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D71 — Rc is the case reproduction number by true origin, each secondary case counted once · 2026-11-08 · Accepted
+**Context.** `rc_by_origin()` counted only the direct links, so the relapses a case's bites caused
+in other hosts, two-thirds of all transmission in a 5-year run, were not its secondary cases. It
+credited both parents of an outcrossed oocyst in full, so a target counted twice, gave rounded
+values under an undefined percentage, could not leave out the cases near the end of the run that
+had not had time to transmit, and compared itself with an Rc that is not the same quantity (review
+M9, m41, m82, m88; Q15).
+**Decision.** Rc is the case reproduction number (Fraser 2007): the mean number of secondary cases
+each case caused, by the case's true origin. A case is a clone onset (a row of `classify_cases()`);
+its secondary cases are the targets of its links through both routes (D70), each counted once, 1/2
+to each parent of an outcrossed oocyst (the author's answer). `kind` chooses the routes. The
+function takes the run: `from` and `followup` choose the onsets counted, from day `from` to
+`SIM_DAYS - followup`, both 0 by default. Every origin has a row; the columns are `n_cases`,
+`n_secondary`, `Rc` and `onward_frac`, unrounded, `NA` with no case. `unit = "acquisition"` walks a
+recrudescence back to its clone through repeated recrudescences. The help cites Fraser (2007) and
+no longer compares the acquisition reading with Champagne et al. (2022), whose Rc is a model's
+next-generation number under case management (the author's answer); this supersedes D25 item 3's
+Champagne sentence.
+**Rationale.** A case reproduction number counts what each case actually caused. Half credit keeps
+each secondary case once, so that Rc is near 1 at a steady state.
+**Alternatives rejected.** *Full credit to both parents* -- it counts an outcrossed secondary case
+twice. *A default follow-up* -- the right one depends on the run's phase, which the help explains.
+*An events table and a separate run length* -- the run gives both.
+**Consequences.** Runs are unchanged. Rc roughly triples: in a 5-year run of 200 hosts (seed 1)
+local reinfection goes from 0.355 to 0.966 and relapse from 0.354 to 0.994; over a steady window
+(`from = 730, followup = 365`) the pooled Rc is 1.056, and 0.344 through direct links alone.
+`followup` alone keeps the growing phase: 0.98, 1.07, 1.14 and 1.22 at 0, 180, 365 and 730 days.
+The signature is `rc_by_origin(run, ...)`; `n_sources` is `n_cases`, and `pct_onward` (0-100) is
+`onward_frac` (0-1).
+**How to verify.** `tests/testthat/test-transmission.R`: the fixture's values for both units, half
+credit and the recrudescence walked back; the routes add up; a run with no case; `from` and
+`followup`, and their refusals; on a run, the weights of the links from cases and every case
+counted.
+
+---
+
 ## D70 — Transmission links include the relapses a bite causes in another host · 2026-11-08 · Accepted
 **Context.** `transmission_links()` linked an oocyst's parents only to the blood-stage infections
 its products started, so a relapse in the bitten host, from the batch the same bite left, had no
@@ -1611,7 +1647,7 @@ which is the check failing to reach the network in this sandbox).
 
 ---
 
-## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the subpatent_clearance event; relapse-fraction names by D65, the molFOB pair by D69; open item on MDA settled by D44
+## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the subpatent_clearance event; relapse-fraction names by D65, the molFOB pair by D69; item 3's Champagne sentence superseded by D71; open item on MDA settled by D44
 **Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
 reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
 suppressed below patency and later re-expand. A scratch prototype
