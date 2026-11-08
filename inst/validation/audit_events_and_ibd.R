@@ -121,6 +121,27 @@ audit_run <- function(tag, params, seed = 1) {
        sprintf("%.1f%% recombinant", 100 * mean(up$event_type == "hv_uptake_recombinant")))
   }
 
+  ## ---- transmission links ----
+  cs0 <- classify_cases(ev)
+  links <- transmission_links(ev)
+  local <- cs0[origin == "local reinfection" | (origin == "relapse" & !imported), pedigree_id]
+  ok("every local case is the target of one transmission, and only they are",
+     setequal(local, links$target_pedigree_id) && uniqueN(links$target_pedigree_id) == length(local),
+     sprintf("%d local cases, %d links (%d liver)", length(local), nrow(links), sum(links$kind == "liver")))
+  batch <- ev[grepl("^vh_inoculation", event_type) & is_dormant == 1,
+              .(batch = pedigree_id, b_oocyst = oocyst_id, b_imported = is_imported, b_mosq = mosq_id)]
+  acts <- batch[ev[event_type == "hypnozoite_activation", .(batch = parent1_pedigree_id, target_pedigree_id = pedigree_id,
+                                                            oocyst_id)], on = "batch"]
+  ok("each relapse carries its batch's oocyst, -1 only for an import's batch",
+     all(acts$oocyst_id == acts$b_oocyst) && all((acts$oocyst_id == -1) == (acts$b_imported == 1)),
+     sprintf("%d relapses", nrow(acts)))
+  ok("each link's days run feed after onset, bite after feed, target from the bite",
+     all(links$source_tick <= links$uptake_tick & links$uptake_tick < links$inoculation_tick &
+           links$inoculation_tick <= links$target_tick))
+  bit <- rbind(ev[event_type == "vh_inoculation" & is_dormant == 0, .(target_pedigree_id = pedigree_id, bit = mosq_id)],
+               acts[, .(target_pedigree_id, bit = b_mosq)])
+  ok("the mosquito that fed is the one that bit", all(bit[links, on = "target_pedigree_id"][, bit == mosq_id]))
+
   ## ---------------- B. ARG / IBD ----------------
   cat("-- B. ARG / IBD --\n")
   ts <- py$tskit$load(trees_path(run))

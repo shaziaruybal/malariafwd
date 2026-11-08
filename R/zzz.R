@@ -25,7 +25,8 @@ utils::globalVariables(c(
   # Kaplan-Meier
   "d_i", "c_i", "n_i", "surv",
   # transmission_links
-  "A1", "A2", "C",
+  "source_pedigree_id", "target_pedigree_id", "source_human_id", "target_human_id", "mosq_id",
+  "uptake_tick", "inoculation_tick", "target_tick", "source_tick", "weight", "p1", "p2", "batch",
   # plot_diagnostics / force_of_infection
   "w", "y", "rate", "n", "days", "series", "is_acquisition", "recrud_tick", "inf", "hyp",
   # plot_moi_vs_relapse / plot_relatedness_ladder

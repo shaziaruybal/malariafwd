@@ -19,6 +19,37 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D70 — Transmission links include the relapses a bite causes in another host · 2026-11-08 · Accepted
+**Context.** `transmission_links()` linked an oocyst's parents only to the blood-stage infections
+its products started, so a relapse in the bitten host, from the batch the same bite left, had no
+infector. Such links are most of them: 2,658 of 4,053 in a 5-year run of 200 hosts, with a median
+lag from the infector's onset of 156 days against 59 for a direct link. The function returned bare
+`source` and `target` pairs, without hosts, days or route, and counted both parents of an
+outcrossed oocyst in full (review M9, n29; Q15).
+**Decision.** A link joins each parent genome of an oocyst to each genome the oocyst's products
+infected: `direct`, the bite's blood stage, or `liver`, each relapse of the batch the bite left,
+which carries the batch's oocyst. Only local infections are targets, and a host's own relapse is
+never linked to its earlier infection (the author's answer to Q15). Each row names both genomes and
+hosts, the mosquito, the oocyst and four days (the source's onset, the feed, the bite and the
+target), and a weight: 1/2 for each parent of an outcrossed oocyst (the author's answer), so a
+target's weights sum to 1. `kind` keeps either route. A log cut short of the rows a link needs
+gives one warning. In this commit `rc_by_origin()` and `transmission_chains()` read the direct
+links with full credit, as before.
+**Rationale.** A relapse in another host is a transmission delayed by the liver; leaving it out
+undercounts onward transmission most for the infections whose batches relapse.
+**Alternatives rejected.** *One row per target* -- it loses the second parent of an outcrossed
+oocyst. *Carrying `detected` or `into_patent_lineage`* -- `classify_cases()` holds the case's
+attributes, and the help gives the join. *A link from a primary to its own relapse* -- no mosquito
+is involved.
+**Consequences.** Runs are unchanged. `kind = "direct"` gives the earlier pairs under new names.
+Every local case is the target of exactly one transmission.
+**How to verify.** `tests/testthat/test-transmission.R`: the fixture's 13 links; the targets and
+non-targets; weights; a self link; `kind`; empty logs; a cut log; on a run with co-transmission,
+imports, recrudescence and batch-only bites, every local case a target and every link consistent.
+`inst/validation/audit_events_and_ibd.R`: four checks on each audit run.
+
+---
+
 ## D69 — summarise_run() is the one summary of a run, over one window of days · 2026-11-08 · Accepted
 **Context.** Four of `summarise_run()`'s eight columns (the relapse fraction, relapses per
 person-year, treatment courses and the imported share) covered the whole run, while prevalence,

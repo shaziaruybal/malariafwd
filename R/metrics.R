@@ -399,25 +399,6 @@ classify_who <- function(events, window = 60) {
   flag[, surveillance := fifelse(recent_travel, "Imported", "Indigenous")][]
 }
 
-#' Directed transmission links (source -> target) via shared oocyst
-#' @param events an events data.table.
-#' @return a data.table of `source`, `target` pedigree ids.
-#' @export
-transmission_links <- function(events) {
-  ev <- as.data.table(events)
-  up <- ev[event_type %in% c("hv_uptake_recombinant","hv_uptake_clonal") & oocyst_id != -1,
-           .(oocyst_id, A1 = parent1_pedigree_id, A2 = parent2_pedigree_id)]
-  up <- unique(up, by = "oocyst_id")
-  inoc <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1, .(oocyst_id, C = pedigree_id)]
-  m <- merge(inoc, up, by = "oocyst_id")
-  ## != -1, not > 0: -1 is the no-parent sentinel (malariafwd_vivax.slim ~1397) but pedigree
-  ## 0 is a REAL genome -- the first seed founder -- whose onward edges were being dropped.
-  ## Small but real: 8 of 1769 edges over the audit run set, and it cost `treat` an entire
-  ## four-case transmission chain (7 components reported against 8).
-  unique(rbindlist(list(m[A1 != -1, .(source = A1, target = C)],
-                        m[A2 != -1, .(source = A2, target = C)])))
-}
-
 #' Effective reproduction number by true origin
 #'
 #' @details
@@ -436,7 +417,8 @@ transmission_links <- function(events) {
 rc_by_origin <- function(events, unit = c("episode", "acquisition")) {
   unit <- match.arg(unit)
   ev <- as.data.table(events)
-  links <- transmission_links(ev)
+  links <- transmission_links(ev, kind = "direct")[, .(source = as.numeric(source_pedigree_id),
+                                                     target = target_pedigree_id)]
   cases <- classify_cases(ev)[, .(pedigree_id, origin)]
   if (unit == "acquisition") {
     ## Walk each transmitting genome back to the ACQUISITION it descends from, so a clone
@@ -466,7 +448,8 @@ rc_by_origin <- function(events, unit = c("episode", "acquisition")) {
 #' @return a data.table with a `chain_size` column.
 #' @export
 transmission_chains <- function(events) {
-  links <- transmission_links(events)
+  links <- transmission_links(as.data.table(events), kind = "direct")[, .(source = source_pedigree_id,
+                                                                       target = target_pedigree_id)]
   if (nrow(links) == 0) return(data.table(chain_size = integer(0)))
   nodes <- unique(c(links$source, links$target)); id <- setNames(seq_along(nodes), as.character(nodes))
   p <- seq_along(nodes)

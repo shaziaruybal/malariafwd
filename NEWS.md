@@ -55,7 +55,8 @@ recorded genealogy rather than inferred from markers: **IBD here is ground truth
   `imported`, `local reinfection`, `relapse` or `recrudescence`. A separate `imported` flag
   marks import-derived genotypes, so an **imported relapse** is directly identifiable.
   `episodes()` gives every clone's span, and `recurrences()` pairs each recurrence with the
-  earlier episodes of its host, with ground-truth IBD.
+  earlier episodes of its host, with ground-truth IBD. `transmission_links()` gives who infected
+  whom, through a bite's blood stage (`direct`) or a relapse of the batch it left (`liver`).
 
 ## Episodes and acquisitions are different units
 

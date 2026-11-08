@@ -1262,7 +1262,7 @@ One row per event. Columns:
 | `pedigree_id` | the SLiM individual (tskit-native; join key to the tree sequence) |
 | `parent1_pedigree_id`, `parent2_pedigree_id` | ancestry |
 | `n_hypnozoites` | count this row represents (1 for non-batch events; the batch/thinning count otherwise) |
-| `oocyst_id` | the meiosis this product came from |
+| `oocyst_id` | on an uptake row, the oocyst the mosquito made; on a local bite's blood-stage and batch rows and on every relapse of that batch, the oocyst of the infecting product; −1 for founders, imports and their batches and relapses, recrudescences and bites that did not take |
 | `detected` | 1 if the observation layer reported the episode; −1 = N/A |
 | `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage, born on an earlier day, was still in the host (one that ends that day counts), 0 if not (§5); −1 on other rows. Activations, recrudescences and bites of the lineage on the same day do not see one another, so two batches of one lineage that wake together, with no earlier clone of it in the host, are both 0 |
 
@@ -1398,6 +1398,7 @@ pool runs, sum the counts and the person-years rather than average the rates.
 |---|---|
 | episode | the clones that became patent in one host on one day, named by `episode_id` ("<host>:<day>"). `classify_cases()` gives one row per clone onset, founder seeding excluded; `episodes()` gives every clone's span, founders included |
 | recurrence | every episode of a host after its first. `recurrences()` pairs each of its clones with each clone of the earlier episodes (or of the latest), never with a clone of its own episode |
+| transmission link | a parent genome of an oocyst and a genome the oocyst's products infected: `direct` (a bite's blood stage) or `liver` (a relapse of the batch a bite left). Only local infections are targets; each parent of an outcrossed oocyst has weight 1/2. `transmission_links()` |
 
 ### 16.4 Reproducibility
 

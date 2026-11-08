@@ -5,7 +5,7 @@ protect the *science*. Run them after any change to the SLiM model, and before a
 
 | script | what it checks |
 |---|---|
-| `audit_events_and_ibd.R` | event-log integrity, hypnozoite & blood-stage conservation against `state.tsv`, tree retention, IBD invariants, ARG/TMRCA (99 checks) |
+| `audit_events_and_ibd.R` | event-log integrity, hypnozoite & blood-stage conservation against `state.tsv`, tree retention, transmission links, IBD invariants, ARG/TMRCA (111 checks) |
 | `check_parameters.R` | 34 configurations: structural invariants hold everywhere, every parameter moves the model the right way, seed reproducibility (40 checks) |
 | `audit_arg_recombination.R` | breakpoints follow the recombination map (uniform within chromosomes); a product of meiosis changes parent at rate r, so the segments it shares with a parent are exponential with mean 1/r, cut short at the chromosome ends |
 | `audit_arg_junctions.R` | chromosomes assort independently across the 13 junctions; how much the products of one meiosis share: about a third for unrelated parents, more for related ones, and on the full map never nothing |
