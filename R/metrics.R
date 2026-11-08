@@ -41,18 +41,24 @@ coi_distribution <- function(state, burn_in = 0) {
 ## Deterministic subsampling. Both metrics below cap the number of genomes they compare, and
 ## an unseeded sample() made repeat calls on the SAME run disagree -- new_infection_diversity()
 ## returned 0.0529 / 0.0544 / 0.0526 / 0.0523 across four identical calls. A metric must not do
-## that. The draw stays random (so it is unbiased in time and lineage) but is reproducible, and
-## the caller's RNG stream is restored so this cannot perturb a surrounding simulation.
-.sample_fixed <- function(x, n, seed) {
-  if (length(x) <= n) return(x)
-  if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) {
-    old <- get(".Random.seed", .GlobalEnv, inherits = FALSE)
-    on.exit(assign(".Random.seed", old, envir = .GlobalEnv), add = TRUE)
-  } else {
-    on.exit(suppressWarnings(rm(".Random.seed", envir = .GlobalEnv)), add = TRUE)
-  }
-  set.seed(seed)
-  sample(x, n)
+## that. The draw stays random (so it is unbiased in time and lineage) but is reproducible.
+.sample_fixed <- function(x, n, seed) if (length(x) <= n) x else .with_seed(seed, sample(x, n))
+
+## `expr`, evaluated with the RNG seeded by `seed` under one fixed set of kinds, so that a seed gives
+## the same draw whatever kinds the caller uses (a future or furrr worker runs L'Ecuyer-CMRG). The
+## caller's kinds and stream, or its having none, are restored, so this cannot perturb a
+## surrounding simulation.
+.with_seed <- function(seed, expr) {
+  kinds <- RNGkind()
+  had <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  old <- if (had) get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  on.exit({
+    suppressWarnings(RNGkind(kinds[1], kinds[2], kinds[3]))
+    if (had) assign(".Random.seed", old, envir = .GlobalEnv)
+    else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) rm(".Random.seed", envir = .GlobalEnv)
+  }, add = TRUE)
+  set.seed(seed, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
+  expr
 }
 
 #' Relapse fraction, by episodes and by acquisitions
