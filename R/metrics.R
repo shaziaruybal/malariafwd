@@ -135,18 +135,31 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
              relapses_per_py = if (py > 0) n_rel / py else NA_real_)
 }
 
-#' Hypnozoite dormancy durations (establishment -> activation, in days)
+#' Hypnozoite dormancy durations, from a batch to each of its relapses
+#'
+#' One row per relapse (a `hypnozoite_activation`) whose batch's row is in the log: the days from the
+#' day its hypnozoite batch was laid down to the day it activated, latency included. An import's
+#' batch, laid down a day after its primary, counts from its own row; founder seeding lays down no
+#' batch. These are the durations of the hypnozoites that activated before the run ended, so their
+#' mean is shorter than the mean time to activation; [time_to_relapse()] gives the censored view,
+#' one row per batch.
 #' @param events an events data.table.
-#' @return a data.table with a `duration` column.
+#' @return a data.table, one row per relapse, by `batch_tick`, `batch_pedigree_id` and `tick`, every
+#'   column an integer: `human_id`, `batch_pedigree_id` (the batch it woke from), `pedigree_id` (the
+#'   relapse's genome), `batch_tick` (the day the batch was laid down), `tick` (the day it
+#'   activated) and `duration` (`tick - batch_tick`, in days).
 #' @seealso [time_to_relapse()]
 #' @export
 dormancy_durations <- function(events) {
   ev <- as.data.table(events)
   batch <- ev[event_type %in% .inoculation_events() & is_dormant == 1,
-              .(pedigree_id, est_tick = tick)]
-  act <- ev[event_type == "hypnozoite_activation", .(parent1_pedigree_id, act_tick = tick)]
-  m <- merge(act, batch, by.x = "parent1_pedigree_id", by.y = "pedigree_id")
-  m[act_tick >= est_tick, .(duration = act_tick - est_tick)]
+              .(batch_pedigree_id = as.integer(pedigree_id), batch_tick = as.integer(tick))]
+  act <- ev[event_type == "hypnozoite_activation",
+            .(human_id = as.integer(human_id), batch_pedigree_id = as.integer(parent1_pedigree_id),
+              pedigree_id = as.integer(pedigree_id), tick = as.integer(tick))]
+  m <- batch[act, on = "batch_pedigree_id", nomatch = NULL][tick >= batch_tick]
+  m <- m[, .(human_id, batch_pedigree_id, pedigree_id, batch_tick, tick, duration = tick - batch_tick)]
+  m[order(batch_tick, batch_pedigree_id, tick)]
 }
 
 #' Classify each blood-stage clone onset ("case") by its true origin

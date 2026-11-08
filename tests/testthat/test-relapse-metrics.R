@@ -174,3 +174,17 @@ test_that("every liver-stage row that names a genome takes hypnozoites out of it
   expect_true(all(c("hypnozoite_clearance", "radcure_hypnozoite_clear", "mda_hypnozoite_clear") %in% named))
   expect_setequal(named, malariafwd:::.hypnozoite_exit_events())
 })
+
+test_that("dormancy_durations() gives each relapse its host, batch and both days", {
+  d <- dormancy_durations(episodes_fixture())
+  expect_identical(names(d), c("human_id", "batch_pedigree_id", "pedigree_id", "batch_tick", "tick", "duration"))
+  expect_identical(d$human_id, c(5L, 4L, 1L, 1L))
+  expect_identical(d$batch_pedigree_id, c(501L, 402L, 103L, 103L))
+  expect_identical(d$pedigree_id, c(502L, 403L, 104L, 105L))
+  expect_identical(d$batch_tick, c(7L, 8L, 10L, 10L))
+  expect_identical(d$tick, c(30L, 45L, 20L, 50L))
+  expect_identical(d$duration, c(23L, 37L, 10L, 40L))
+  e <- dormancy_durations(make_events())
+  expect_identical(nrow(e), 0L)
+  expect_true(all(vapply(e, is.integer, logical(1))))
+})

@@ -15,7 +15,7 @@ utils::globalVariables(c(
   "node_a", "node_b", "ibd_fraction", "node_id", "a", "b", "ibd",
   "left", "right", "mrca_node", "mrca_time", "mrca_id", "node_time", "depth", "tract",
   # time-to-relapse / dormancy
-  "t0", "tr", "time", "event", "act_tick", "est_tick", "nrel", "py", "batch_pedigree_id", "batch_tick",
+  "t0", "tr", "time", "event", "nrel", "py", "batch_pedigree_id", "batch_tick",
   "n_hypnozoites", "masked", "relapse", "t_relapse", "t_empty",
   # within-host trajectory
   "kind",

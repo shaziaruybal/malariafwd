@@ -2,7 +2,7 @@
 % Please edit documentation in R/metrics.R
 \name{dormancy_durations}
 \alias{dormancy_durations}
-\title{Hypnozoite dormancy durations (establishment -> activation, in days)}
+\title{Hypnozoite dormancy durations, from a batch to each of its relapses}
 \usage{
 dormancy_durations(events)
 }
@@ -10,10 +10,18 @@ dormancy_durations(events)
 \item{events}{an events data.table.}
 }
 \value{
-a data.table with a \code{duration} column.
+a data.table, one row per relapse, by \code{batch_tick}, \code{batch_pedigree_id} and \code{tick}, every
+column an integer: \code{human_id}, \code{batch_pedigree_id} (the batch it woke from), \code{pedigree_id} (the
+relapse's genome), \code{batch_tick} (the day the batch was laid down), \code{tick} (the day it
+activated) and \code{duration} (\code{tick - batch_tick}, in days).
 }
 \description{
-Hypnozoite dormancy durations (establishment -> activation, in days)
+One row per relapse (a \code{hypnozoite_activation}) whose batch's row is in the log: the days from the
+day its hypnozoite batch was laid down to the day it activated, latency included. An import's
+batch, laid down a day after its primary, counts from its own row; founder seeding lays down no
+batch. These are the durations of the hypnozoites that activated before the run ended, so their
+mean is shorter than the mean time to activation; \code{\link[=time_to_relapse]{time_to_relapse()}} gives the censored view,
+one row per batch.
 }
 \seealso{
 \code{\link[=time_to_relapse]{time_to_relapse()}}

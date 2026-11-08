@@ -41,6 +41,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `new_infection_diversity()$clonal_frac`, a percentage | a fraction, from 0 to 1 | every other `_frac` column is a fraction (D69) |
 | `ibd_trajectory()` | `new_infection_diversity(bin =)`, with `from`, `to` and `min_pairs`: a row for every window, its `days` and `n_pairs` | one question, over the run or by window; it counts new infections only, where the trajectory counted relapses too, and every window keeps its row |
 | `plot_host_trajectory(state, events, host_id)` | `plot_host_trajectory(run, host_id)`, its x axis to `SIM_DAYS` | it read both of a run's tables, so it takes the run, as the other plots do; its summary layout takes the package theme (review n11) |
+| `dormancy_durations()`, a `duration` column | with `human_id`, `batch_pedigree_id`, `pedigree_id`, `batch_tick` and `tick` | a duration alone could not be joined to its host, batch or relapse; the help says they are the durations of the hypnozoites that activated (review n5) |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.
