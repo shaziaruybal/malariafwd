@@ -20,5 +20,5 @@ A \code{theme_bw()}-based theme applied by every \verb{plot_*()} function in the
 from different functions compose cleanly in a panel. Set it once here rather than per plot.
 }
 \examples{
-\dontrun{plot_relapse_km(time_to_relapse(ev)) + theme_malariafwd(base_size = 13)}
+\dontrun{plot_relapse_km(time_to_relapse(run)) + theme_malariafwd(base_size = 13)}
 }

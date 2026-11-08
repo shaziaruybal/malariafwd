@@ -2,12 +2,12 @@
 % Please edit documentation in R/plots.R
 \name{plot_relapse_km}
 \alias{plot_relapse_km}
-\title{Kaplan-Meier plot of time to first relapse}
+\title{Kaplan-Meier curve of the time to first relapse, per hypnozoite batch}
 \usage{
 plot_relapse_km(ttr, title = NULL)
 }
 \arguments{
-\item{ttr}{output of \code{\link[=time_to_relapse]{time_to_relapse()}}.}
+\item{ttr}{the table \code{\link[=time_to_relapse]{time_to_relapse()}} returns.}
 
 \item{title}{plot title.}
 }
@@ -15,5 +15,10 @@ plot_relapse_km(ttr, title = NULL)
 a ggplot object.
 }
 \description{
-No survival-package dependency: \code{S(t) = prod(1 - d_i/n_i)}.
+The fraction of hypnozoite batches not yet relapsed against the days since the infection that
+laid each down, from \code{\link[=time_to_relapse]{time_to_relapse()}}. No survival-package dependency:
+\code{S(t) = prod(1 - d_i/n_i)}.
+}
+\seealso{
+\code{\link[=time_to_relapse]{time_to_relapse()}}
 }

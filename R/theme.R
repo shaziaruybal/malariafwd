@@ -10,7 +10,7 @@
 #'   karyotype and other plots where the grid competes with the data).
 #' @return a ggplot2 theme object.
 #' @examples
-#' \dontrun{plot_relapse_km(time_to_relapse(ev)) + theme_malariafwd(base_size = 13)}
+#' \dontrun{plot_relapse_km(time_to_relapse(run)) + theme_malariafwd(base_size = 13)}
 #' @export
 theme_malariafwd <- function(base_size = 11, grid = TRUE) {
   .need_ggplot()

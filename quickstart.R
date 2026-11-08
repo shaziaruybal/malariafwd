@@ -93,7 +93,7 @@ sv("01-diagnostics", plot_diagnostics(run), w = 11, h = 8)
 host <- pick_host(ev)
 sv("02-host-trajectory", plot_host_trajectory(st, ev, host_id = host), w = 9, h = 4)
 sv("03-host-states",     plot_host_state_prevalence(host_state_prevalence(st)))
-sv("04-time-to-relapse", plot_relapse_km(time_to_relapse(ev)))
+sv("04-time-to-relapse", plot_relapse_km(time_to_relapse(run)))
 sv("05-moi-vs-relapse",  plot_moi_vs_relapse(moi_vs_relapse(st, ev)))
 
 # 5c. genetic output (needs tskit)

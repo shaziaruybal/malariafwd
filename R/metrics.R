@@ -148,10 +148,11 @@ reservoir_trajectory <- function(state) {
 #' Hypnozoite dormancy durations (establishment -> activation, in days)
 #' @param events an events data.table.
 #' @return a data.table with a `duration` column.
+#' @seealso [time_to_relapse()]
 #' @export
 dormancy_durations <- function(events) {
   ev <- as.data.table(events)
-  batch <- ev[event_type %in% c("vh_inoculation","vh_inoculation_import","vh_inoculation_seed") & is_dormant == 1,
+  batch <- ev[event_type %in% .inoculation_events() & is_dormant == 1,
               .(pedigree_id, est_tick = tick)]
   act <- ev[event_type == "hypnozoite_activation", .(parent1_pedigree_id, act_tick = tick)]
   m <- merge(act, batch, by.x = "parent1_pedigree_id", by.y = "pedigree_id")
@@ -471,19 +472,75 @@ transmission_chains <- function(events) {
   data.table(node = nodes, comp = comp)[, .(chain_size = .N), by = comp][, .(chain_size)]
 }
 
-#' Host-level time to first relapse (for Kaplan-Meier), censored at end of sim
-#' @param events an events data.table.
-#' @return a data.table of `human_id`, `time`, `event`.
+#' Time from an infection to the first relapse of its hypnozoite batch
+#'
+#' One row per hypnozoite batch: the hypnozoites one genotype of a bite or an import laid down in a
+#' host, so a bite that delivers two genotypes can lay down two. A batch's clock starts on the day it
+#' was established, the day of the bite, or for an import that also brought a blood-stage infection,
+#' the day after it. Founder hosts carry no batch until a bite or an import gives them one.
+#'
+#' The clock stops at the batch's first relapse (`event = 1`). Without one (`event = 0`) it stops
+#' on the day the batch's last hypnozoite left it, by death or radical cure (`emptied =
+#' "censor"`), or at the run's last day, `SIM_DAYS`, for a batch that still held hypnozoites then,
+#' and with `emptied = "follow"` for one that emptied without relapsing too. Censoring at emptying
+#' gives the time to relapse of the hypnozoites that live; following to the end gives the curve a
+#' trial reports, where radical cure shows as relapses prevented.
+#'
+#' With `exclude_masked = TRUE` a masked relapse, into a patent clone of its own lineage (see
+#' [classify_cases()]), does not stop the clock, although its hypnozoites leave the batch: the
+#' first relapse is the first a study could see as a recurrence.
+#'
+#' @param run a `vivax_run` or its directory.
+#' @param emptied `"censor"` (stop the clock on the day a batch empties without relapsing) or
+#'   `"follow"` (follow it to `SIM_DAYS`).
+#' @param exclude_masked if `TRUE`, the first relapse is the first that is not masked.
+#' @return a data.table, one row per batch, by `batch_tick` and `batch_pedigree_id`:
+#'   `batch_pedigree_id`, `human_id`, `lineage_id`, `imported` (an imported batch), `batch_tick`
+#'   (the day it was established), `n_hypnozoites` (its size then), `time` (days from `batch_tick`
+#'   to the first relapse or to censoring), `event` (1 relapse, 0 censored) and `end_reason`
+#'   (`"relapse"`, `"emptied"` or `"run_end"`). A run with no batch gives no row.
+#' @seealso [plot_relapse_km()], [dormancy_durations()]
+#' @examples
+#' \dontrun{plot_relapse_km(time_to_relapse(run))}
 #' @export
-time_to_relapse <- function(events) {
-  ev <- as.data.table(events)
-  inf <- ev[event_type %in% c("vh_inoculation","vh_inoculation_import","vh_inoculation_seed") &
-              is_dormant == 0, .(t0 = min(tick)), by = human_id]
-  rel <- ev[event_type == "hypnozoite_activation", .(tr = min(tick)), by = human_id]
-  m <- merge(inf, rel, by = "human_id", all.x = TRUE)
-  endt <- max(ev$tick)
-  m[, `:=`(time = fifelse(!is.na(tr), tr - t0, endt - t0), event = as.integer(!is.na(tr)))]
-  m[time >= 0]
+time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked = FALSE) {
+  emptied <- match.arg(emptied); .check_flag(exclude_masked, "exclude_masked")
+  end <- .sim_days(run, "time_to_relapse"); ev <- load_events(run)
+  b <- ev[event_type %in% .inoculation_events() & is_dormant == 1,
+          .(batch_pedigree_id = as.integer(pedigree_id), human_id = as.integer(human_id),
+            lineage_id = as.character(lineage_id), imported = is_imported == 1,
+            batch_tick = as.integer(tick), n_hypnozoites = as.integer(n_hypnozoites))]
+  act <- ev[event_type == "hypnozoite_activation",
+            .(batch_pedigree_id = as.integer(parent1_pedigree_id), tick = as.integer(tick),
+              n = as.integer(n_hypnozoites),
+              masked = if ("into_patent_lineage" %in% names(ev)) into_patent_lineage == 1L else NA)]
+  if (exclude_masked) {
+    gap <- act[is.na(masked), .N]
+    if (gap)
+      stop("`exclude_masked = TRUE` needs into_patent_lineage on every hypnozoite_activation row, and ", gap,
+           " of these events' activation rows lack it.", call. = FALSE)
+  }
+  ## every row that takes hypnozoites out of a batch, in day order; a masked relapse still does
+  out <- rbindlist(list(
+    act[, .(batch_pedigree_id, tick, n, relapse = !(exclude_masked & masked))],
+    ev[event_type %in% .hypnozoite_exit_events(),
+       .(batch_pedigree_id = as.integer(pedigree_id), tick = as.integer(tick), n = as.integer(n_hypnozoites),
+         relapse = FALSE)]))
+  out <- b[, .(batch_pedigree_id, n_hypnozoites)][out, on = "batch_pedigree_id", nomatch = NULL]
+  setorder(out, batch_pedigree_id, tick)
+  out[, left := n_hypnozoites - cumsum(n), by = batch_pedigree_id]
+  first <- unique(out[relapse == TRUE, .(batch_pedigree_id, t_relapse = tick)], by = "batch_pedigree_id")
+  empty <- unique(out[left <= 0L, .(batch_pedigree_id, t_empty = tick)], by = "batch_pedigree_id")
+  m <- empty[first[b, on = "batch_pedigree_id"], on = "batch_pedigree_id"]
+  m[!is.na(t_relapse) & !is.na(t_empty) & t_empty < t_relapse, t_relapse := NA_integer_]
+  m[, end_reason := fcase(!is.na(t_relapse), "relapse", !is.na(t_empty), "emptied", default = "run_end")]
+  m[, event := as.integer(end_reason == "relapse")]
+  m[, time := fcase(end_reason == "relapse", t_relapse - batch_tick,
+                    end_reason == "emptied" & emptied == "censor", t_empty - batch_tick,
+                    default = NA_integer_)]
+  m[is.na(time), time := end - batch_tick]
+  m <- m[, .(batch_pedigree_id, human_id, lineage_id, imported, batch_tick, n_hypnozoites, time, event, end_reason)]
+  m[order(batch_tick, batch_pedigree_id)]
 }
 
 #' Peak COI vs relapse count per host

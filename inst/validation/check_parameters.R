@@ -155,7 +155,7 @@ ok("resurgence trigger -> higher prevalence than baseline",
 
 ## temperate latency should DELAY the first relapse
 ttr <- function(k) { r <- load_run(file.path(OUT, k))
-  t <- time_to_relapse(load_events(r)); if (!nrow(t)) NA_real_ else
+  t <- time_to_relapse(r); if (!nrow(t)) NA_real_ else
     stats::median(t[event == 1]$time, na.rm = TRUE) }
 tb <- ttr("baseline"); tt <- ttr("temperate")
 ok("temperate latency delays the first relapse", is.na(tt) || is.na(tb) || tt > tb,

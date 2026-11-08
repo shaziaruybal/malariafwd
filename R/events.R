@@ -19,6 +19,11 @@
 .inoculation_events <- function()
   setdiff(.onset_events(), c("hypnozoite_activation", "recrudescence"))
 
+## The rows other than an activation that take hypnozoites out of a batch, which each names by
+## pedigree_id: death, and radical cure by a case course or an MDA round.
+.hypnozoite_exit_events <- function()
+  c("hypnozoite_clearance", "radcure_hypnozoite_clear", "mda_hypnozoite_clear")
+
 #' The malariafwd event dictionary
 #'
 #' Every row in a run's `events.tsv` carries an `event_type`. This returns a tidy table

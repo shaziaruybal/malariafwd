@@ -19,6 +19,40 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D67 — Time to first relapse is measured per hypnozoite batch · 2026-11-08 · Accepted
+**Context.** `time_to_relapse()` timed each host from its first blood-stage infection, founder
+seeding included, to the first relapse of any of its batches, possibly one a later bite laid down,
+and ended every host's time on the last event's day. Founders carry no batch, so a founder's first
+relapse always came from a later bite while its clock started on day 1: the curve mixed waiting
+for reinfection into the time to relapse, and its shape depended on `N_FOUNDER_HOSTS` (review M13,
+Q16).
+**Decision.** One row per hypnozoite batch, timed from the day it was established to its first
+relapse (`event = 1`), traced by the activation's `parent1_pedigree_id`. Without one, a batch is
+censored on the day its last hypnozoite left it, by death or radical cure, or at `SIM_DAYS`
+(`emptied = "censor"`, the author's answer to Q16); `emptied = "follow"` follows an emptied batch
+to `SIM_DAYS`, the curve a trial reports. `exclude_masked = TRUE` passes over masked relapses,
+whose hypnozoites still leave the batch (the author's answer to OQ2). The function takes the run;
+its columns name the batch (`batch_pedigree_id`, `batch_tick`) and say why its clock stopped
+(`end_reason`). `plot_relapse_km()` draws the fraction of batches not yet relapsed from (0, 1), and
+stops with a message on a run with no batch. `.hypnozoite_exit_events()` names the rows other than
+an activation that take hypnozoites out of a batch.
+**Rationale.** A relapse comes from a batch, and the time from the infection that laid a batch down
+to its first relapse is the quantity cohort and trial data report.
+**Alternatives rejected.** *A host-level time from the first batch-establishing infection* -- a
+host's first relapse can still come from a later batch. *Following emptied batches by default* --
+the answer was to censor them; following stays available.
+**Consequences.** Runs are unchanged. On a 100-host 548-day run (seed 1) the median time to first
+relapse is 25.5 days per batch (200 of 271 batches relapsed), against 60 days per host (81 of 98
+hosts); with masked relapses passed over it is 71 days. Section 13's latency row is re-measured
+per batch: median 98 days (temperate) against 23 (tropical), where the host-level times gave 142
+against 46. The function takes a run, not an events table.
+**How to verify.** `tests/testthat/test-relapse-metrics.R`: the fixture's five batches, followed and
+with the masked relapse passed over; the curve's steps; a run with no batch; on an import cohort,
+every batch timed from its establishment and the batches radical cure reached first emptied; an
+emptied batch in a run that went extinct; every liver-stage row that names a genome is an exit.
+
+---
+
 ## D66 — Relapses per person-year count every relapse over the person-time of hosts ever infected · 2026-11-08 · Accepted
 **Context.** `relapses_per_person_year()` took the events alone, so it ended every host's time on
 the last event's day, not the run's. It started a host's time at its first blood-stage primary,

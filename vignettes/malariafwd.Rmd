@@ -115,7 +115,7 @@ load_grid(base)   # the same table, from grid.tsv
 
 ```{r}
 plot_host_state_prevalence(host_state_prevalence(st))
-plot_relapse_km(time_to_relapse(ev))
+plot_relapse_km(time_to_relapse(run))
 ```
 
 See `?run_sim`, `?ibd_pairs`, and the `DECISIONS.md` design log for more.

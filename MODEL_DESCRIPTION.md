@@ -37,7 +37,7 @@ accumulates. Any method that reads new episodes as new transmission is reading t
 area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
 relationship classes are point masses, while same-oocyst siblings spread out, in two groups around
 0.6 and 0.2 of the genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
-`plot_relapse_km()` the time-to-first-relapse curve.)
+`plot_relapse_km()` the time from an infection to its batch's first relapse.)
 
 ![IBD karyotype](man/figures/README-ibd-karyotype.png)
 
@@ -308,6 +308,8 @@ Follows the **White et al. 2014** batch model.
   **The batch is drawn once per *bite*** and split uniformly across the co-inoculated
   genotypes, matching White's per-bite parameterisation (§12). Both, either, or neither of primary
   and batch can occur for a given genotype.
+- **Founder hosts** are seeded with a blood-stage clone and no batch: a founder carries hypnozoites
+  only once a bite or an import gives it a batch.
 - **Activation:** each hypnozoite activates at `ALPHA_ACTIVATE` = 1/170 per day (Mehra; White 2014
   would give 1/344). An activation produces **one blood-stage episode** representing however many
   clonal hypnozoites activated that tick.
@@ -1116,7 +1118,7 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | batch boost enlarges the reservoir | 3.30 vs 1.90 |
 | radical cure → smaller reservoir | 0.50 vs 1.90 |
 | vector control → lower prevalence | 0.04 vs 0.34 |
-| temperate latency delays first relapse | median **142 d** vs **46 d** tropical |
+| temperate latency delays each batch's first relapse | median **98 d** vs **23 d** tropical |
 | co-transmission (`LAMBDA_SPOROZOITES = 2`) → more outcrossing, 3-seed means at `BITING_RATE` 0.2 | 48.3% vs 43.2% |
 | all three importation modes produce imports | 184 / 1,535 / 64 |
 | `MAX_MOI` gates superinfection (relapses bypass it) | COI 2.04 at `MAX_MOI = 2`, 5.05 without |
@@ -1377,6 +1379,7 @@ run went extinct.
 | reservoir | mean `hyp_reservoir_size` per host-day of the window |
 | relapse fraction | two readings, counted per clone onset (§9a). `relapse_frac_acquisitions` = relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **every case**, recrudescence included. The two are equal when a run has no recrudescence. Both denominators include each host's first case, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) unless `exclude_masked = TRUE`. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13). A run with no case gives `NA` |
 | relapses per person-year | relapses ÷ person-years of the hosts ever infected, each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to `SIM_DAYS`, also after an extinction (`relapses_per_person_year()`). §13's band table states its own definition |
+| time to first relapse | per hypnozoite batch, from the day it was established (for an import that also brought a blood-stage infection, the day after) to its first relapse; censored on the day it empties without relapsing, or at `SIM_DAYS` (`time_to_relapse()`, `emptied = "follow"` to follow emptied batches to the end) |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded, and with `exclude_masked = TRUE` so is a masked relapse, as a genotyping study would miss it |
 | FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
 | EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |

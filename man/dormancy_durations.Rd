@@ -15,3 +15,6 @@ a data.table with a \code{duration} column.
 \description{
 Hypnozoite dormancy durations (establishment -> activation, in days)
 }
+\seealso{
+\code{\link[=time_to_relapse]{time_to_relapse()}}
+}

@@ -2,16 +2,45 @@
 % Please edit documentation in R/metrics.R
 \name{time_to_relapse}
 \alias{time_to_relapse}
-\title{Host-level time to first relapse (for Kaplan-Meier), censored at end of sim}
+\title{Time from an infection to the first relapse of its hypnozoite batch}
 \usage{
-time_to_relapse(events)
+time_to_relapse(run, emptied = c("censor", "follow"), exclude_masked = FALSE)
 }
 \arguments{
-\item{events}{an events data.table.}
+\item{run}{a \code{vivax_run} or its directory.}
+
+\item{emptied}{\code{"censor"} (stop the clock on the day a batch empties without relapsing) or
+\code{"follow"} (follow it to \code{SIM_DAYS}).}
+
+\item{exclude_masked}{if \code{TRUE}, the first relapse is the first that is not masked.}
 }
 \value{
-a data.table of \code{human_id}, \code{time}, \code{event}.
+a data.table, one row per batch, by \code{batch_tick} and \code{batch_pedigree_id}:
+\code{batch_pedigree_id}, \code{human_id}, \code{lineage_id}, \code{imported} (an imported batch), \code{batch_tick}
+(the day it was established), \code{n_hypnozoites} (its size then), \code{time} (days from \code{batch_tick}
+to the first relapse or to censoring), \code{event} (1 relapse, 0 censored) and \code{end_reason}
+(\code{"relapse"}, \code{"emptied"} or \code{"run_end"}). A run with no batch gives no row.
 }
 \description{
-Host-level time to first relapse (for Kaplan-Meier), censored at end of sim
+One row per hypnozoite batch: the hypnozoites one genotype of a bite or an import laid down in a
+host, so a bite that delivers two genotypes can lay down two. A batch's clock starts on the day it
+was established, the day of the bite, or for an import that also brought a blood-stage infection,
+the day after it. Founder hosts carry no batch until a bite or an import gives them one.
+}
+\details{
+The clock stops at the batch's first relapse (\code{event = 1}). Without one (\code{event = 0}) it stops
+on the day the batch's last hypnozoite left it, by death or radical cure (\code{emptied = "censor"}), or at the run's last day, \code{SIM_DAYS}, for a batch that still held hypnozoites then,
+and with \code{emptied = "follow"} for one that emptied without relapsing too. Censoring at emptying
+gives the time to relapse of the hypnozoites that live; following to the end gives the curve a
+trial reports, where radical cure shows as relapses prevented.
+
+With \code{exclude_masked = TRUE} a masked relapse, into a patent clone of its own lineage (see
+\code{\link[=classify_cases]{classify_cases()}}), does not stop the clock, although its hypnozoites leave the batch: the
+first relapse is the first a study could see as a recurrence.
+}
+\examples{
+\dontrun{plot_relapse_km(time_to_relapse(run))}
+}
+\seealso{
+\code{\link[=plot_relapse_km]{plot_relapse_km()}}, \code{\link[=dormancy_durations]{dormancy_durations()}}
 }

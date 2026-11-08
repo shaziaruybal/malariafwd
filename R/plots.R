@@ -6,23 +6,33 @@
     stop("plotting needs the 'ggplot2' package: install.packages('ggplot2').", call. = FALSE)
 }
 
-#' Kaplan-Meier plot of time to first relapse
+#' Kaplan-Meier curve of the time to first relapse, per hypnozoite batch
 #'
-#' No survival-package dependency: `S(t) = prod(1 - d_i/n_i)`.
-#' @param ttr output of [time_to_relapse()].
+#' The fraction of hypnozoite batches not yet relapsed against the days since the infection that
+#' laid each down, from [time_to_relapse()]. No survival-package dependency:
+#' `S(t) = prod(1 - d_i/n_i)`.
+#' @param ttr the table [time_to_relapse()] returns.
 #' @param title plot title.
 #' @return a ggplot object.
+#' @seealso [time_to_relapse()]
 #' @export
 plot_relapse_km <- function(ttr, title = NULL) {
   .need_ggplot()
-  d <- as.data.table(ttr)[order(time)]; N <- nrow(d)
+  d <- as.data.table(ttr)
+  if (!all(c("time", "event") %in% names(d)))
+    stop("`ttr` must be the table time_to_relapse() returns, with `time` and `event`.", call. = FALSE)
+  if (!nrow(d))
+    stop("no hypnozoite batch was established in this run, so there is no time to relapse to plot.", call. = FALSE)
+  N <- nrow(d)
   tab <- d[, .(d_i = sum(event), c_i = sum(1 - event)), by = time][order(time)]
   tab[, n_i := N - cumsum(shift(d_i + c_i, fill = 0))]
   tab[, surv := cumprod(1 - d_i / n_i)]
+  tab <- rbind(data.table(time = 0L, d_i = 0, c_i = 0, n_i = N, surv = 1), tab[time > 0 | d_i > 0])
   ggplot2::ggplot(tab, ggplot2::aes(time, surv)) +
     ggplot2::geom_step(linewidth = .8, colour = "firebrick") +
     ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(title = title, x = "days since first infection", y = "fraction not yet relapsed") +
+    ggplot2::labs(title = title, x = "days since the infection that laid down the batch",
+                  y = "fraction of batches not yet relapsed") +
     theme_malariafwd()
 }
 
