@@ -166,7 +166,7 @@ load_run <- function(outdir) {
 #' Load the event log of a run
 #'
 #' Reads `events.tsv`. Every run gives the same 21 columns, in the order and classes the model
-#' writes them (MODEL_DESCRIPTION section 16.1), whatever the run holds: a run with no event gives
+#' writes them ([events.tsv][malariafwd-outputs] describes them), whatever the run holds: a run with no event gives
 #' a table with no rows. A column the file lacks is `NA`, a column it adds follows the 21, and a
 #' value that does not fit its column stops with the column named.
 #' @param run a `vivax_run` or a run directory path.
@@ -176,9 +176,10 @@ load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OU
 
 #' Load the per-tick state table of a run
 #'
-#' Reads `state.tsv`, by default its host rows. A mosquito's row counts the broods it carries, so a
+#' Reads `state.tsv`, by default its host rows. A mosquito's row counts the lineages it carries, so a
 #' prevalence or MOI taken over every row mixes the two populations. Every run gives the same 12
-#' columns, in the order and classes the model writes them (MODEL_DESCRIPTION section 16.2),
+#' columns, in the order and classes the model writes them ([state.tsv][malariafwd-outputs]
+#' describes them),
 #' whatever the run holds; a column the file lacks is `NA`.
 #' @param run a `vivax_run` or a run directory path.
 #' @param entity the rows to give: `"human"` (the hosts), `"mosquito"`, or `"all"`, both in the
@@ -196,12 +197,13 @@ load_state <- function(run, entity = c("human", "mosquito", "all")) {
 #' Path to a run's tree-sequence file
 #' @param run a `vivax_run` or a run directory path.
 #' @return the path to `plasmo.trees`.
+#' @seealso [plasmo.trees][malariafwd-outputs]
 #' @export
 trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
 #' The parameter set a run was made from
 #'
-#' Reads `params.tsv` into a [vivax_params()] object holding every parameter, in order and of its
+#' Reads `params.tsv` ([params.tsv][malariafwd-outputs]) into a [vivax_params()] object holding every parameter, in order and of its
 #' type: `run_sim(load_params(run), seed = run$seed)` gives the same run again. Values are not
 #' checked here ([run_sim()] checks them). The seed, the versions, the derived genome and the
 #' outcome rows are on the [load_run()] object instead.

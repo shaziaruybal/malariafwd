@@ -45,6 +45,7 @@
 #' @examples
 #' event_types()
 #' subset(event_types(), is_onset)$event_type       # every way an episode can begin
+#' @seealso [events.tsv][malariafwd-outputs]
 #' @export
 event_types <- function() {
   ## ONE RECORD PER ROW, deliberately. This used to be four positionally aligned vectors,

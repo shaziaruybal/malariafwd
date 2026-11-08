@@ -14,7 +14,7 @@ a \code{data.table} with one row per event, in the order they were logged.
 }
 \description{
 Reads \code{events.tsv}. Every run gives the same 21 columns, in the order and classes the model
-writes them (MODEL_DESCRIPTION section 16.1), whatever the run holds: a run with no event gives
+writes them (\link[=malariafwd-outputs]{events.tsv} describes them), whatever the run holds: a run with no event gives
 a table with no rows. A column the file lacks is \code{NA}, a column it adds follows the 21, and a
 value that does not fit its column stops with the column named.
 }

@@ -17,8 +17,9 @@ a \code{data.table} with one row per host (or mosquito, or both) per day, from d
 run's last day.
 }
 \description{
-Reads \code{state.tsv}, by default its host rows. A mosquito's row counts the broods it carries, so a
+Reads \code{state.tsv}, by default its host rows. A mosquito's row counts the lineages it carries, so a
 prevalence or MOI taken over every row mixes the two populations. Every run gives the same 12
-columns, in the order and classes the model writes them (MODEL_DESCRIPTION section 16.2),
+columns, in the order and classes the model writes them (\link[=malariafwd-outputs]{state.tsv}
+describes them),
 whatever the run holds; a column the file lacks is \code{NA}.
 }

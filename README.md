@@ -92,8 +92,8 @@ run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 # unless overwrite = TRUE (or skip_existing = TRUE, which returns the same run)
 
 # tidy outputs
-ev  <- load_events(run)
-st  <- load_state(run)                              # per-tick host state
+ev  <- load_events(run)                             # one row per event; ?events.tsv describes the columns
+st  <- load_state(run)                              # per-tick host state; ?state.tsv
 summarise_run(run)                                  # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
 
 # ground-truth IBD (tskit)
@@ -151,7 +151,7 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
 
 The model runs as a **subprocess** (`processx`, shell-free) with parameters passed as `-d`
 overrides; it writes `events.tsv`, `state.tsv`, `plasmo.trees`, and a provenance snapshot into
-each run directory. `reticulate` + `tskit` are used only to compute IBD from the recorded tree
+each run directory (`?events.tsv` and `?state.tsv` describe the columns). `reticulate` + `tskit` are used only to compute IBD from the recorded tree
 sequence. Multi-run sweeps parallelise via `future`/`furrr`. Set `VERBOSE = TRUE` to see the
 full per-event narration; the default is quiet.
 

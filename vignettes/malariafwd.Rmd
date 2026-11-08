@@ -44,7 +44,7 @@ p   <- vivax_params(N_HOSTS = 300, N_MOSQ = 600, BITING_RATE = 0.09)
 param_info(c("N_HOSTS", "BITING_RATE"))   # every parameter: ?vivax_params or param_info()
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 
-ev <- load_events(run)      # tidy event log (data.table)
+ev <- load_events(run)      # one row per event; ?events.tsv describes the columns
 st <- load_state(run)       # per-tick host state
 summarise_run(run)            # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
 ```

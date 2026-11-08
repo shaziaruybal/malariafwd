@@ -33,6 +33,8 @@ run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))
 - `DONE` — written last: when the run finished, a key of its parameters and seed, and the size of
   every file, so a directory that is not a whole run can be told from one that is
 
+`?events.tsv` and `?state.tsv` describe every column.
+
 ## The event log
 
 Every row of `events.tsv` carries an `event_type`. `event_types()` is the dictionary:

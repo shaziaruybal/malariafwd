@@ -15,3 +15,6 @@ the path to \code{plasmo.trees}.
 \description{
 Path to a run's tree-sequence file
 }
+\seealso{
+\link[=malariafwd-outputs]{plasmo.trees}
+}

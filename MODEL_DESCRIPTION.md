@@ -818,7 +818,7 @@ the host, and radical-cure failure is per person (D20); a course lands at least 
 (D24, D32); an MDA round is drawn per host (D28) and reaches subpatent clones (D44); and the
 recrudescence delay is a literature assumption (D26, D32, D42).
 
-<!-- BEGIN parameter tables: generated from R/param-dictionary.R by dev/update-param-tables.R; edit the dictionary, not this block -->
+<!-- BEGIN parameter tables: generated from R/param-dictionary.R by dev/update-doc-tables.R; edit the dictionary, not this block -->
 
 ### Run
 
@@ -1256,32 +1256,44 @@ only with `overwrite = TRUE`. A grid of runs (`run_grid()`) records its cells in
 | `lineage_id` | genetic identity / clonal group; propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a fresh one. **COI counts distinct `lineage_id`** |
 | `oocyst_id` | one meiosis / tetrad, ≤ 4 lineages |
 | `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst |
-| `inoculation_id` | one bite (unreliable in pre-release output; see §13) |
+| `inoculation_id` | one bite or one import |
 
 ### 16.1 `events.tsv` data dictionary
 
-One row per event. Columns:
+One row per event, in the order the events were logged; -1 means not applicable and NA no lineage.
+In R, `?events.tsv` gives this table.
 
-| column | meaning |
-|---|---|
-| `tick` | simulation day |
-| `event_id` | `"<tick>_<counter>"`, unique |
-| `event_type` | see the vocabulary below |
-| `inoculation_id` | one bite |
-| `mosq_id`, `human_id` | entity ids; −1 where not applicable |
-| `lineage_id` | genetic identity of the parasite involved |
-| `parent1_lineage_id`, `parent2_lineage_id` | gamete lineages for a meiosis |
-| `is_recombinant` | 1 if the product came from an outcrossed oocyst |
-| `p_outcross` | Simpson diversity of the source gametocyte pool — **diagnostic only** |
-| `recipient` | `"human"` or `"mosquito"` |
-| `is_dormant` | 1 = this row is a hypnozoite batch, 0 = blood stage, −1 = N/A |
-| `is_imported` | 1 if the lineage traces to an import; **carried through to relapses** |
-| `pedigree_id` | the SLiM individual (tskit-native; join key to the tree sequence) |
-| `parent1_pedigree_id`, `parent2_pedigree_id` | ancestry |
-| `n_hypnozoites` | count this row represents (1 for non-batch events; the batch/thinning count otherwise) |
-| `oocyst_id` | on an uptake row, the oocyst the mosquito made; on a local bite's blood-stage and batch rows and on every relapse of that batch, the oocyst of the infecting product; −1 for founders, imports and their batches and relapses, recrudescences and bites that did not take |
-| `detected` | 1 if the observation layer reported the episode; −1 = N/A |
-| `into_patent_lineage` | on `hypnozoite_activation` rows: 1 if a patent clone of the same lineage, born on an earlier day, was still in the host (one that ends that day counts), 0 if not (§5); −1 on other rows. Activations, recrudescences and bites of the lineage on the same day do not see one another, so two batches of one lineage that wake together, with no earlier clone of it in the host, are both 0 |
+<!-- BEGIN events.tsv table: generated from R/outputs.R by dev/update-doc-tables.R; edit the dictionary, not this block -->
+
+| column | class | meaning |
+|---|---|---|
+| `tick` | integer | the simulation day |
+| `event_id` | character | `"<tick>_<counter>"`, unique |
+| `event_type` | character | the kind of event; `event_types()` lists them |
+| `inoculation_id` | integer | the bite or import that brought the parasite, on bite rows (`vh_inoculation` and its no-take form) and import rows (an import's batch row, logged the next day, carries its primary's id); -1 elsewhere |
+| `mosq_id` | integer | the mosquito, on uptake, bite and `mosq_death` rows; -1 elsewhere |
+| `human_id` | integer | the host; -1 only on `mosq_death` rows |
+| `lineage_id` | integer | the parasite's lineage, its clonal group; NA on recombinant uptakes, on course rows about the host (`bloodcure_given`, `radcure_given`, `radcure_failure` and their MDA forms) and on `vh_inoculation_import_no_take` |
+| `parent1_lineage_id` | integer | on uptake rows, the lineage of the first gamete; NA elsewhere |
+| `parent2_lineage_id` | integer | on recombinant uptake rows, the lineage of the second gamete; NA elsewhere |
+| `is_recombinant` | integer | 1 on an outcrossed uptake (`hv_uptake_recombinant`), 0 elsewhere |
+| `p_outcross` | double | on uptake rows, the Simpson diversity of the gametocyte pool the mosquito drew from, to 6 significant digits, a diagnostic; 0 elsewhere |
+| `recipient` | character | `"mosquito"` on uptake and `mosq_death` rows, `"human"` on the others |
+| `is_dormant` | integer | 1 on a hypnozoite batch's rows (its establishment, deaths and drug clearance), 0 on blood-stage and host rows, -1 on no-take rows |
+| `is_imported` | integer | 1 when the parasite was acquired by importation, carried within the host to its batches, relapses and recrudescences; a local infection by an import's offspring is 0 |
+| `pedigree_id` | integer | the genome, the key to the tree sequence (pedigree 0 is a real genome); -1 on uptake, course and no-take rows |
+| `parent1_pedigree_id` | integer | the genome a row's genome came from: a gamete of an uptake, the mosquito product of a bite, the batch of a relapse, the suppressed clone of a recrudescence; -1 where none |
+| `parent2_pedigree_id` | integer | the second gamete of a recombinant uptake; -1 elsewhere |
+| `n_hypnozoites` | integer | the hypnozoites a row stands for: a batch's size when established, the number activating, dying or cleared, or the reservoir surviving a radical-cure failure; 1 on other rows |
+| `oocyst_id` | integer | on an uptake row, the oocyst the mosquito made; on a local bite's blood-stage and batch rows, every relapse of that batch and the drug clearances of its clones, the oocyst of the infecting product; -1 for founders, imports and their batches and relapses, recrudescences, and rows that do not record it (`human_clearance`, `hypnozoite_clearance`, `mosq_death`, course rows) |
+| `detected` | integer | on the blood-stage onset rows of bites, imports, relapses and recrudescences, 1 if the observation layer reported the case and 0 if not; -1 elsewhere, founder seeding included |
+| `into_patent_lineage` | integer | on `hypnozoite_activation` rows, 1 if a patent clone of the same lineage, born on an earlier day, was still in the host (one that ends that day counts), 0 if not; -1 elsewhere |
+
+<!-- END events.tsv table -->
+
+`into_patent_lineage` looks only at clones born on earlier days: activations, recrudescences and
+bites of the lineage on the same day do not see one another, so two batches of one lineage that
+wake together, with no earlier clone of it in the host, are both 0 (§5).
 
 **Event vocabulary.** `event_types()` is the authority and returns them as a data frame with
 `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than reproduce the
@@ -1332,21 +1344,27 @@ root across the genome gives its exact founder mosaic, the `roots` matrix of
 
 ### 16.2 `state.tsv` data dictionary
 
-One row per entity per tick; `load_state()` gives the host rows, and `entity = "mosquito"` or
-`"all"` the mosquitoes' or both:
+One row per host and per mosquito per day; `load_state()` gives the host rows, and
+`entity = "mosquito"` or `"all"` the mosquitoes' or both. In R, `?state.tsv` gives this table.
 
-| column | meaning |
-|---|---|
-| `tick`, `entity_type` (`human`/`mosquito`), `entity_id` | |
-| `tag` | infection state |
-| `moi_active` | distinct **patent** blood-stage lineages (**this is COI**). Excludes suppressed clones |
-| `moi_subpatent` | distinct lineages suppressed below patency — present, undetectable, not an episode (§9a). Always 0 unless `P_RECRUD_GIVEN_FAIL > 0` |
-| `moi_dormant` | distinct dormant genotypes in the reservoir |
-| `hyp_reservoir_size` | **total hypnozoite count** (sum of batch counts) — the quantity White's ν governs |
-| `lineage_ids` | the lineage ids present, `|`-separated and de-duplicated — see below |
-| `n_transmissible` | post-EIP products (mosquitoes); drives the sporozoite rate |
-| `mosq_age_days` | |
-| `infectious_bites` | humans: the bites the host received that day from a mosquito carrying a product past the EIP, whatever the bite then did, which gives the EIR (§4.1); `NA` for mosquitoes |
+<!-- BEGIN state.tsv table: generated from R/outputs.R by dev/update-doc-tables.R; edit the dictionary, not this block -->
+
+| column | class | meaning |
+|---|---|---|
+| `tick` | integer | the simulation day |
+| `entity_type` | character | `"human"` or `"mosquito"` |
+| `entity_id` | integer | the host's or the mosquito's id |
+| `tag` | integer | hosts: 1 if the host carries a clone that can infect a mosquito (patent, or subpatent when `SUBPATENT_INFECTIVITY > 0`), 0 otherwise, hypnozoites alone included; mosquitoes: 1 if it carries a parasite product, inside or past the EIP |
+| `moi_active` | integer | hosts: the distinct patent blood-stage lineages (the COI), suppressed clones excluded; mosquitoes: the distinct lineages it carries, inside the EIP included |
+| `moi_subpatent` | integer | hosts: the distinct lineages suppressed below patency, present but undetectable; 0 unless `P_RECRUD_GIVEN_FAIL > 0` |
+| `moi_dormant` | integer | hosts: the distinct genotypes in the hypnozoite reservoir |
+| `hyp_reservoir_size` | integer | hosts: the hypnozoites, the sum of the batches' counts |
+| `lineage_ids` | character | the lineages present, `\|`-separated and de-duplicated, even for one; NA when none |
+| `n_transmissible` | integer | mosquitoes: the distinct lineages past the EIP; NA for hosts |
+| `mosq_age_days` | integer | mosquitoes: the age in days; NA for hosts |
+| `infectious_bites` | integer | hosts: the bites received that day from a mosquito carrying a product past the EIP, whatever the bite then did, the EIR's numerator; NA for mosquitoes |
+
+<!-- END state.tsv table -->
 
 Note `moi_dormant` (genotypes) and `hyp_reservoir_size` (individuals) are different quantities and
 are routinely confused.
@@ -1367,8 +1385,6 @@ has caught someone out:
 - **Values are unique()d**, so the number of ids is a count of distinct *lineages*, not of
   genomes. A selfed oocyst's four identical products appear as one id. This is consistent with
   `moi_active`, which is also a lineage count.
-- **Runs recorded before v0.1.0 call this column `brood_ids`.** The contents are the same;
-  only the name changed, to match what it holds.
 
 **The model tracks three different groupings; only two are exported.**
 

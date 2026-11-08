@@ -12,7 +12,7 @@ reference:
 - title: Loading a run
   desc: Tidy accessors for the files a run writes.
   contents: [load_run, load_events, load_state, load_params, trees_path,
-             model_version, event_types]
+             model_version, event_types, malariafwd-outputs]
 
 - title: Diagnostics
   desc: Is this run healthy, and what is driving it?

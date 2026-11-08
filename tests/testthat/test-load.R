@@ -198,3 +198,63 @@ test_that("event_types() lists the types the model can write, and says what mosq
   expect_identical(anyDuplicated(et$event_type), 0L)
   expect_match(et$description[et$event_type == "mosq_death"], "one row per genome")
 })
+
+## ---- the column dictionary (?malariafwd-outputs) ----
+
+test_that("the help dictionary, the loaders and MODEL_DESCRIPTION's tables agree", {
+  ev_s <- malariafwd:::.EVENTS_SCHEMA; st_s <- malariafwd:::.STATE_SCHEMA
+  expect_identical(names(load_events(fake_run())), names(ev_s))
+  expect_identical(names(load_state(fake_run())), names(st_s))
+  expect_identical(names(malariafwd:::.EVENTS_MEANING), names(ev_s))
+  expect_identical(names(malariafwd:::.STATE_MEANING), names(st_s))
+  rd <- test_path("..", "..", "man", "malariafwd-outputs.Rd")
+  skip_if_not(file.exists(rd), "not in the source tree")
+  txt <- paste(readLines(rd, warn = FALSE), collapse = "\n")
+  for (col in c(names(ev_s), names(st_s)))
+    expect_true(grepl(paste0("\\item{\\code{", col, "}"), txt, fixed = TRUE), label = col)
+  md <- test_path("..", "..", "MODEL_DESCRIPTION.md")
+  skip_if_not(file.exists(md), "not in the source tree")
+  m <- paste(readLines(md, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+  for (w in c("events", "state")) {
+    key <- paste0(w, "\\.tsv table")
+    block <- regmatches(m, regexpr(paste0("(?s)<!-- BEGIN ", key, ".*?-->\n\n(.*?)\n\n<!-- END ", key, " -->"), m, perl = TRUE))
+    expect_length(block, 1L)
+    expect_identical(sub(paste0("(?s)^<!-- BEGIN ", key, ".*?-->\n\n(.*)\n\n<!-- END ", key, " -->$"), "\\1", block, perl = TRUE),
+                     malariafwd:::.dictionary_md(w), label = paste0(w, ".tsv table (run dev/update-doc-tables.R)"))
+  }
+})
+
+test_that("the dictionary's sentinel rules hold on a run with every kind of row", {
+  skip_if_no_slim()
+  r <- suppressMessages(run_sim(vivax_params(
+    N_HOSTS = 100, N_MOSQ = 200, BITING_RATE = 0.12, SIM_DAYS = 300, LAMBDA_OOCYSTS = 2, LAMBDA_SPOROZOITES = 2,
+    IMPORT_START = 1L, IMPORT_END = 300L, IMPORT_RATE_PER_TICK = 0.1, BLOODCURE_COVERAGE = 0.6, P_BLOODCURE_SURVIVAL = 0.3,
+    P_RECRUD_GIVEN_FAIL = 0.5, RADCURE_COVERAGE = 0.5, RADCURE_MODE = "hypnozoite", P_RAD_SURVIVAL = 0.5, MDA_TICK = 150,
+    MDA_COVERAGE = 0.7, P_PRIMARY = 0.8, K_LATENCY = 1, DELTA_LATENCY = 0.05, SUBPATENT_INFECTIVITY = 0.3,
+    CHROMOSOMES = "1"), seed = 3, outdir = tempfile("mfwd_rich_")))
+  ev <- load_events(r)
+  up <- c("hv_uptake_clonal", "hv_uptake_recombinant")
+  course <- c("bloodcure_given", "radcure_given", "radcure_failure", "mda_bloodcure_given", "mda_radcure_given",
+              "mda_radcure_failure")
+  no_take <- c("vh_inoculation_no_take", "vh_inoculation_import_no_take")
+  in_ <- function(rows, types) all(rows$event_type %in% types)
+  expect_identical(unique(ev[is_recombinant == 1]$event_type), "hv_uptake_recombinant")
+  expect_true(in_(ev[p_outcross != 0], up))
+  expect_true(in_(ev[is.na(lineage_id)], c("hv_uptake_recombinant", course, "vh_inoculation_import_no_take")))
+  expect_true(in_(ev[!is.na(parent1_lineage_id)], up))
+  expect_true(in_(ev[inoculation_id != -1], c("vh_inoculation", "vh_inoculation_import", no_take)))
+  expect_true(in_(ev[mosq_id != -1], c(up, "vh_inoculation", "vh_inoculation_no_take", "mosq_death")))
+  expect_true(in_(ev[human_id == -1], "mosq_death"))
+  expect_true(in_(ev[recipient == "mosquito"], c(up, "mosq_death")) && in_(ev[recipient == "human"], setdiff(ev$event_type, c(up, "mosq_death"))))
+  expect_true(in_(ev[is_dormant == -1], no_take))
+  expect_true(in_(ev[pedigree_id == -1], c(up, course, no_take)))
+  d <- ev[detected != -1]
+  expect_true(in_(d, malariafwd:::.onset_events()) && all(d$is_dormant == 0) && !any(d$event_type == "vh_inoculation_seed"))
+  expect_true(in_(ev[into_patent_lineage != -1], "hypnozoite_activation"))
+  st <- load_state(r, entity = "all")
+  expect_true(all(is.na(st[entity_type == "human"]$n_transmissible)) && all(is.na(st[entity_type == "mosquito"]$infectious_bites)))
+  expect_identical(st[entity_type == "mosquito", tag == 1], st[entity_type == "mosquito", moi_active > 0])
+  h <- st[entity_type == "human"]
+  expect_true(all(h[tag == 1, moi_active > 0 | moi_subpatent > 0]))
+  expect_true(all(is.na(h$lineage_ids) == (h$moi_active + h$moi_subpatent + h$moi_dormant == 0)))
+})

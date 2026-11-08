@@ -512,7 +512,7 @@ checked at the edit, while M26 had settled on checking it when it is used.
 **Decision.** One dictionary (`R/param-dictionary.R`) holds a record per parameter: the typed
 default, unit, meaning, the single-value bounds, a joint rule in words and the source. The defaults
 are taken from it, and it generates the Parameters section of `?vivax_params` and the tables of
-MODEL_DESCRIPTION section 10 (`dev/update-param-tables.R`); `param_info()` gives it as a table, and
+MODEL_DESCRIPTION section 10 (`dev/update-doc-tables.R`, which also writes sections 16.1 and 16.2); `param_info()` gives it as a table, and
 `as.data.frame()` gives a parameter set's. `validate_params()` stays the one check, and a test holds
 every documented bound to it. An edited set is checked when it is used (`run_sim()`, `run_grid()`,
 or `do.call(vivax_params, p)`), and `?vivax_params` says so; there is no `$<-` method. The sync test

@@ -97,7 +97,7 @@ test_that("?vivax_params and MODEL_DESCRIPTION section 10 hold the current table
   block <- regmatches(txt, regexpr("(?s)<!-- BEGIN parameter tables.*?-->\n\n(.*?)\n<!-- END parameter tables -->", txt, perl = TRUE))
   expect_length(block, 1L)
   expect_identical(sub("(?s)^<!-- BEGIN parameter tables.*?-->\n\n(.*)\n<!-- END parameter tables -->$", "\\1", block, perl = TRUE),
-                   malariafwd:::.param_md(), label = "MODEL_DESCRIPTION.md's tables (run dev/update-param-tables.R)")
+                   malariafwd:::.param_md(), label = "MODEL_DESCRIPTION.md's tables (run dev/update-doc-tables.R)")
 })
 
 test_that("a parameter set prints what differs by value, and gives its table", {

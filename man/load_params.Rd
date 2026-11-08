@@ -13,7 +13,7 @@ load_params(run)
 a \code{\link[=vivax_params]{vivax_params()}} object.
 }
 \description{
-Reads \code{params.tsv} into a \code{\link[=vivax_params]{vivax_params()}} object holding every parameter, in order and of its
+Reads \code{params.tsv} (\link[=malariafwd-outputs]{params.tsv}) into a \code{\link[=vivax_params]{vivax_params()}} object holding every parameter, in order and of its
 type: \code{run_sim(load_params(run), seed = run$seed)} gives the same run again. Values are not
 checked here (\code{\link[=run_sim]{run_sim()}} checks them). The seed, the versions, the derived genome and the
 outcome rows are on the \code{\link[=load_run]{load_run()}} object instead.

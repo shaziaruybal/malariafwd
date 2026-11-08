@@ -30,3 +30,6 @@ deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.
 event_types()
 subset(event_types(), is_onset)$event_type       # every way an episode can begin
 }
+\seealso{
+\link[=malariafwd-outputs]{events.tsv}
+}
