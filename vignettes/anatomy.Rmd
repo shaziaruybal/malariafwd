@@ -126,6 +126,12 @@ summary(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id))   # each relaps
 Only the listed pairs are computed. To compare every pair among a set of genomes, pass `ids`
 instead, which costs the square of their number.
 
+The relatedness of the newly acquired infections follows transmission, quarter by quarter:
+
+```{r}
+new_infection_diversity(run, bin = 90, cap = 40)   # mean IBD, clonal share and lineages, by quarter
+```
+
 ## Seeing the relatedness, not just the number
 
 `ibd_pairs()` gives one number per pair. `ibd_segments()` gives the stretches behind it, and

@@ -257,3 +257,32 @@ test_that("new_infection_diversity()'s clonal_frac is the share of pairs at or a
   expect_equal(d$clonal_frac, share)
   expect_identical(new_infection_diversity(r, cap = 20, clonal = 1.01)$clonal_frac, 0)
 })
+
+test_that("new_infection_diversity() gives one row for the window, or one for every window with bin", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  r <- ibd_fixture()   # SIM_DAYS 250: the default window is days 126 to 250
+  one <- new_infection_diversity(r, cap = 20)
+  expect_identical(vapply(one, function(v) class(v)[1], ""),
+                   c(win = "integer", days = "integer", n = "integer", n_pairs = "integer", mean_ibd = "numeric",
+                     clonal_frac = "numeric", n_lineages = "integer"))
+  expect_identical(c(one$win, one$days), c(126L, 125L))
+  expect_identical(one$n_pairs, as.integer(choose(one$n, 2)))
+  expect_identical(new_infection_diversity(r, cap = 20, bin = 251)[, !"win"], one[, !"win"])
+  by60 <- new_infection_diversity(r, cap = 20, bin = 60)
+  expect_identical(by60$win, c(120L, 180L, 240L))
+  expect_identical(by60$days, c(54L, 60L, 11L))
+  ## every genome is in the tree sequence, so each window compares its acquisitions, at most 20
+  cs <- classify_cases(load_events(r))[origin %in% c("imported", "local reinfection") & tick >= 126L]
+  expect_identical(length(suppressWarnings(ibd_pairs(r, ids = cs$pedigree_id))$missing), 0L)
+  per <- cs[, .N, by = .(win = as.integer((tick %/% 60) * 60))]
+  expect_identical(by60$n, pmin(data.table::fcoalesce(per$N[match(by60$win, per$win)], 0L), 20L))
+  expect_identical(is.na(by60$mean_ibd), by60$n_pairs < 15L)
+  nv <- new_infection_diversity(never_run(), bin = 10)
+  expect_identical(nrow(nv), 4L)
+  expect_true(all(nv$n == 0L) && all(is.na(nv$mean_ibd)))
+  expect_error(new_infection_diversity(r, min_pairs = 0), "`min_pairs` must be a whole number, at least 1.",
+               fixed = TRUE)
+  expect_error(new_infection_diversity(r, bin = 0), "`bin` must be a whole number of days, at least 1")
+  expect_error(new_infection_diversity(r, burn_frac = 0.2, from = 10), "give `burn_frac` or `from`, not both.",
+               fixed = TRUE)
+})

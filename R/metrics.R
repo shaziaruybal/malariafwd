@@ -309,33 +309,6 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
   as.integer(bin)
 }
 
-#' Mean pairwise IBD among cases active in each time window (relatedness trajectory)
-#' @param events an events data.table.
-#' @param ibd a `vivax_ibd` object from [ibd_pairs()], of every pair among the run's cases.
-#' @param bin window width (days).
-#' @param cap max cases sampled per window.
-#' @param min_pairs drop windows with fewer pairs.
-#' @param seed seed for the per-window subsample when a window exceeds `cap`, so repeat calls
-#'   on the same run agree. The caller's RNG stream is left untouched.
-#' @return a data.table of `win`, `mean_ibd`, `n_pairs`.
-#' @export
-ibd_trajectory <- function(events, ibd, bin = 90, cap = 40, min_pairs = 5, seed = 1) {
-  if (!inherits(ibd, "vivax_ibd") || !isTRUE(ibd$all_pairs))
-    stop("`ibd` must be a vivax_ibd object of every pair among its genomes, from ibd_pairs().", call. = FALSE)
-  x <- ibd
-  cs <- classify_cases(events)[pedigree_id %in% x$samples$pedigree_id]
-  cs[, win := (tick %/% bin) * bin]
-  out <- cs[, {
-    peds <- .sample_fixed(pedigree_id, cap, seed + .GRP)
-    if (length(peds) >= 2) {
-      cb <- combn(length(peds), 2)
-      v <- ibd_lookup(x, peds[cb[1,]], peds[cb[2,]])
-      .(mean_ibd = mean(v), n_pairs = length(v))
-    } else .(mean_ibd = NA_real_, n_pairs = 0L)
-  }, by = win][n_pairs >= min_pairs]
-  out[order(win)]
-}
-
 #' Each case as a travel rule classes it: recent travel or not
 #'
 #' What a surveillance system that knows only travel history concludes: a case is
@@ -629,25 +602,50 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
     person_years = py, person_years_at_risk = risk$person_years)
 }
 
-#' New-infection genetic diversity (relatedness of the transmitting population)
+#' Genetic diversity of new infections, over the run or by window
 #'
-#' Pairwise IBD among non-relapse blood-stage infections in the steady-state window;
-#' clonal fraction rises / lineage richness falls as transmission falls (the surveillance
-#' signal). Requires the tree sequence (IBD).
-#' @param run a `vivax_run` or run directory.
-#' @param burn_frac the fraction of `SIM_DAYS` discarded as burn-in.
-#' @param cap max cases sampled.
-#' @param clonal IBD threshold for a "clonal" pair.
-#' @param seed seed for the subsample when the pool exceeds `cap`, so repeat calls on the same
-#'   run agree. The caller's RNG stream is left untouched.
-#' @return a one-row data.table: `n` (the genomes compared), `mean_ibd`, `clonal_frac` (the share of
-#'   their pairs with IBD at least `clonal`, from 0 to 1) and `n_lineages`.
+#' The relatedness of the genomes newly acquired in a window of days, the infections from bites and
+#' imports: their mean pairwise IBD, the share of their pairs that are clonal and how many lineages
+#' they carry. Relapses and recrudescences are left out, since neither brings a newly acquired
+#' genome. As transmission falls, the clonal share rises and the lineages fall. With `bin`, each
+#' window of the run's grid gets a row.
+#'
+#' Each window draws at most `cap` of its acquisitions, and the tree sequence is read once for all
+#' of them, only when a window has the `min_pairs` pairs its measures need.
+#' @param run a `vivax_run` or its directory.
+#' @param burn_frac,from,to the window, as [summarise_run()] takes it: the days after the first
+#'   `burn_frac` of `SIM_DAYS`, or days `from` to `to` (`to = NULL` is `SIM_DAYS`).
+#' @param bin `NULL` for one row over the window, or a whole number of days, at least 1, for a row
+#'   for every window of the run's grid (days `0` to `bin - 1`, `bin` to `2 * bin - 1`, ..., as in
+#'   [force_of_infection()]) that meets it.
+#' @param cap the most acquisitions drawn from a window.
+#' @param clonal the IBD at or above which a pair is clonal.
+#' @param min_pairs the fewest pairs of genomes a window needs for its measures, a whole number, at
+#'   least 1; 15 pairs are 6 genomes.
+#' @param seed seed for the draw when a window holds more than `cap`, the `k`-th window drawing with
+#'   `seed + k - 1`, so repeat calls on the same run agree. The caller's RNG stream is left untouched.
+#' @return a data.table, one row per window, by window: `win` (its first day on the grid with `bin`;
+#'   without, the window's first day), `days` (its days inside the window asked for), `n` (the
+#'   genomes compared: those drawn that the tree sequence holds, or all those drawn when it is not
+#'   read), `n_pairs` (`n * (n - 1) / 2`), `mean_ibd`, `clonal_frac` (the share of the pairs with IBD
+#'   at least `clonal`, from 0 to 1) and `n_lineages`, the last three `NA` below `min_pairs`. A
+#'   window with no acquisition has `n = 0`.
+#' @examples
+#' \dontrun{
+#' new_infection_diversity(run)                     # the second half of the run
+#' new_infection_diversity(run, bin = 90, cap = 40) # by quarter
+#' }
 #' @inheritSection tskit_available Python
 #' @export
-new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.5, seed = 1) {
+new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL, bin = NULL, cap = 250,
+                                    clonal = 0.5, min_pairs = 15, seed = 1) {
   ev <- load_events(run)
-  ## the window summarise_run() gives the same burn_frac: from the day after the burn-in
-  from <- .run_window(.sim_days(run, "new_infection_diversity"), burn_frac)$from
+  sim_days <- .sim_days(run, "new_infection_diversity")
+  w <- .run_window(sim_days, burn_frac, from, to, both = !missing(burn_frac) && !is.null(from))
+  if (!is.null(bin)) bin <- .check_bin(bin)
+  if (!is.numeric(min_pairs) || length(min_pairs) != 1L || is.na(min_pairs) || min_pairs < 1 ||
+      min_pairs != round(min_pairs))
+    stop("`min_pairs` must be a whole number, at least 1.", call. = FALSE)
   ## Every non-relapse acquisition route, derived from classify_cases() rather than from a
   ## literal event type. Matching "vh_inoculation" alone dropped imported genomes, which
   ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%
@@ -656,17 +654,28 @@ new_infection_diversity <- function(run, burn_frac = 0.5, cap = 250, clonal = 0.
   ## acquisitions only. `origin != "relapse"` would now admit recrudescences, which are not
   ## newly acquired genomes - they were already in the host - and would bias this toward the
   ## clonality it exists to measure.
-  peds <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= from,
-                             unique(pedigree_id)]
-  if (length(peds) < 6)
-    return(data.table(n = length(peds), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
-  peds <- .sample_fixed(peds, cap, seed)
-  .require_python("new_infection_diversity()", c("tskit", "numpy"))
-  x <- suppressWarnings(.ibd_pairs(run, ids = peds, none_ok = TRUE))
-  vp <- x$samples$pedigree_id
-  if (length(vp) < 2)
-    return(data.table(n = length(vp), mean_ibd = NA_real_, clonal_frac = NA_real_, n_lineages = NA_integer_))
-  di <- x$pairs$ibd
-  data.table(n = length(vp), mean_ibd = mean(di), clonal_frac = mean(di >= clonal),
-             n_lineages = uniqueN(ev[pedigree_id %in% vp, lineage_id]))
+  cs <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= w$from & tick <= w$to]
+  grid <- if (is.null(bin)) data.table(win = w$from, days = w$n_days) else .window_grid(sim_days, bin, w$from, w$to)
+  cs[, win := if (is.null(bin)) w$from else as.integer((tick %/% bin) * bin)]
+  ## the k-th window draws with seed + k - 1, so a single window draws as `seed` does
+  drawn <- lapply(seq_len(nrow(grid)), function(k)
+    .sample_fixed(cs[win == grid$win[k], unique(pedigree_id)], cap, seed + k - 1L))
+  ## one read of the tree sequence for every window's genomes, and none when no window can reach
+  ## min_pairs; a pair's IBD does not depend on the other genomes asked for (D63)
+  x <- NULL
+  if (any(vapply(drawn, function(p) choose(length(p), 2) >= min_pairs, logical(1)))) {
+    .require_python("new_infection_diversity()", c("tskit", "numpy"))
+    x <- suppressWarnings(.ibd_pairs(run, ids = unique(unlist(drawn)), none_ok = TRUE))
+  }
+  rows <- lapply(drawn, function(p) {
+    vp <- if (is.null(x)) p else sort(intersect(p, x$samples$pedigree_id))
+    np <- as.integer(choose(length(vp), 2))
+    if (is.null(x) || np < min_pairs)
+      return(data.table(n = length(vp), n_pairs = np, mean_ibd = NA_real_, clonal_frac = NA_real_,
+                        n_lineages = NA_integer_))
+    di <- x$pairs[a %in% vp & b %in% vp, ibd]
+    data.table(n = length(vp), n_pairs = np, mean_ibd = mean(di), clonal_frac = mean(di >= clonal),
+               n_lineages = uniqueN(ev[pedigree_id %in% vp, lineage_id]))
+  })
+  cbind(grid, rbindlist(rows))
 }

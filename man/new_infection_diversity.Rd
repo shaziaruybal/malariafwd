@@ -2,36 +2,58 @@
 % Please edit documentation in R/metrics.R
 \name{new_infection_diversity}
 \alias{new_infection_diversity}
-\title{New-infection genetic diversity (relatedness of the transmitting population)}
+\title{Genetic diversity of new infections, over the run or by window}
 \usage{
 new_infection_diversity(
   run,
   burn_frac = 0.5,
+  from = NULL,
+  to = NULL,
+  bin = NULL,
   cap = 250,
   clonal = 0.5,
+  min_pairs = 15,
   seed = 1
 )
 }
 \arguments{
-\item{run}{a \code{vivax_run} or run directory.}
+\item{run}{a \code{vivax_run} or its directory.}
 
-\item{burn_frac}{the fraction of \code{SIM_DAYS} discarded as burn-in.}
+\item{burn_frac, from, to}{the window, as \code{\link[=summarise_run]{summarise_run()}} takes it: the days after the first
+\code{burn_frac} of \code{SIM_DAYS}, or days \code{from} to \code{to} (\code{to = NULL} is \code{SIM_DAYS}).}
 
-\item{cap}{max cases sampled.}
+\item{bin}{\code{NULL} for one row over the window, or a whole number of days, at least 1, for a row
+for every window of the run's grid (days \code{0} to \code{bin - 1}, \code{bin} to \code{2 * bin - 1}, ..., as in
+\code{\link[=force_of_infection]{force_of_infection()}}) that meets it.}
 
-\item{clonal}{IBD threshold for a "clonal" pair.}
+\item{cap}{the most acquisitions drawn from a window.}
 
-\item{seed}{seed for the subsample when the pool exceeds \code{cap}, so repeat calls on the same
-run agree. The caller's RNG stream is left untouched.}
+\item{clonal}{the IBD at or above which a pair is clonal.}
+
+\item{min_pairs}{the fewest pairs of genomes a window needs for its measures, a whole number, at
+least 1; 15 pairs are 6 genomes.}
+
+\item{seed}{seed for the draw when a window holds more than \code{cap}, the \code{k}-th window drawing with
+\code{seed + k - 1}, so repeat calls on the same run agree. The caller's RNG stream is left untouched.}
 }
 \value{
-a one-row data.table: \code{n} (the genomes compared), \code{mean_ibd}, \code{clonal_frac} (the share of
-their pairs with IBD at least \code{clonal}, from 0 to 1) and \code{n_lineages}.
+a data.table, one row per window, by window: \code{win} (its first day on the grid with \code{bin};
+without, the window's first day), \code{days} (its days inside the window asked for), \code{n} (the
+genomes compared: those drawn that the tree sequence holds, or all those drawn when it is not
+read), \code{n_pairs} (\code{n * (n - 1) / 2}), \code{mean_ibd}, \code{clonal_frac} (the share of the pairs with IBD
+at least \code{clonal}, from 0 to 1) and \code{n_lineages}, the last three \code{NA} below \code{min_pairs}. A
+window with no acquisition has \code{n = 0}.
 }
 \description{
-Pairwise IBD among non-relapse blood-stage infections in the steady-state window;
-clonal fraction rises / lineage richness falls as transmission falls (the surveillance
-signal). Requires the tree sequence (IBD).
+The relatedness of the genomes newly acquired in a window of days, the infections from bites and
+imports: their mean pairwise IBD, the share of their pairs that are clonal and how many lineages
+they carry. Relapses and recrudescences are left out, since neither brings a newly acquired
+genome. As transmission falls, the clonal share rises and the lineages fall. With \code{bin}, each
+window of the run's grid gets a row.
+}
+\details{
+Each window draws at most \code{cap} of its acquisitions, and the tree sequence is read once for all
+of them, only when a window has the \code{min_pairs} pairs its measures need.
 }
 \section{Python}{
 
@@ -44,3 +66,9 @@ session. A function that cannot reach them stops with an error of class
 \code{malariafwd_no_python} that says what to do, and \code{\link[=check_setup]{check_setup()}} reports what is found.
 }
 
+\examples{
+\dontrun{
+new_infection_diversity(run)                     # the second half of the run
+new_infection_diversity(run, bin = 90, cap = 40) # by quarter
+}
+}

@@ -7,7 +7,7 @@ test_that("the package exports these functions", {
   "arg_summary", "arg_tmrca", "check_setup",
   "chrom_map", "classify_cases", "classify_chain", "classify_travel", "coi_distribution", "dormancy_durations", "episodes",
   "event_types", "force_of_infection", "host_state_prevalence", "ibd_lookup", "ibd_pairs",
-  "ibd_segments", "ibd_trajectory", "ibd_truth_pairs",
+  "ibd_segments", "ibd_truth_pairs",
   "load_events", "load_grid", "load_params", "load_run", "load_state",
   "new_infection_diversity", "param_info", "plot_diagnostics", "plot_force_of_infection",
   "plot_host_state_prevalence", "plot_host_trajectory", "plot_ibd_pair",

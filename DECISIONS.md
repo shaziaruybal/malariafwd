@@ -39,6 +39,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `reservoir_trajectory()` | `host_state_prevalence()$hypnozoites_per_host`, the day's mean on each of its rows | one table of the hosts' states by day, the reservoir among them, named as `summarise_run()` names it |
 | `ibd_relapse_origin()` | removed: the `relapse vs its origin` rows of `ibd_truth_pairs()`, or `ibd_lookup()` on each relapse and its batch, `parent1_pedigree_id` | it checked a property that holds by construction, against an earlier primary of the lineage rather than the batch the relapse woke from |
 | `new_infection_diversity()$clonal_frac`, a percentage | a fraction, from 0 to 1 | every other `_frac` column is a fraction (D69) |
+| `ibd_trajectory()` | `new_infection_diversity(bin =)`, with `from`, `to` and `min_pairs`: a row for every window, its `days` and `n_pairs` | one question, over the run or by window; it counts new infections only, where the trajectory counted relapses too, and every window keeps its row |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.
