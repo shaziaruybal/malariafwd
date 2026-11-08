@@ -120,6 +120,7 @@ plot_diagnostics(run)        # one-call health dashboard: prevalence, incidence 
 event_types()         # what every event_type in events.tsv means
 force_of_infection(run)     # FOI (bites and imports) vs molFOB (and relapses), by window
 classify_chain(ev)          # each case's WHO class from its true chain back to an import
+classify_travel(ev)         # what a travel-history rule concludes instead, to score against it
 ```
 
 ## Genetics toolkit

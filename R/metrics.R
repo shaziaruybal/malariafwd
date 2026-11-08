@@ -362,28 +362,37 @@ ibd_trajectory <- function(events, ibd, bin = 90, cap = 40, min_pairs = 5, seed 
   out[order(win)]
 }
 
-#' Epidemiology-only (WHO-style) import classification of each case
+#' Each case as a travel rule classes it: recent travel or not
 #'
-#' What a surveillance system would conclude from **travel history alone**, so that it can be
-#' scored against the genetic truth in `origin` / `imported`. The two are *expected* to
-#' disagree -- that disagreement is the quantity of interest, not an error.
+#' What a surveillance system that knows only travel history concludes: a case is
+#' `"imported (recent travel)"` when its host brought an infection in during the `window` days up to
+#' the case, and `"local (no recent travel)"` otherwise. Score it against the truth, the `imported`
+#' column of [classify_cases()] or the `who_class` of [classify_chain()]. The two are expected to
+#' disagree: the disagreement is what a travel rule costs.
 #'
-#' `window` is the dominant parameter, and the reason is specific to vivax: a hypnozoite can
-#' activate long after the trip. On the audit run the gap from importation to an imported
-#' relapse had a median of 43 days but an IQR of 18-95 and a maximum of 325, so a 60-day window
-#' catches 59% of imported relapses, 90 days catches 73%, and 180 days 92% -- at the cost of
-#' flagging steadily more locally-acquired cases as imported (520 rising to 935). Any travel
-#' window is a trade between the two, and no window recovers an imported relapse that activates
-#' a year later.
+#' The trip is recorded when an import establishes in the host, as a blood-stage infection or as
+#' hypnozoites only. The window decides most of the result, and for vivax no window is right: a
+#' relapse of an imported batch can come long after the trip, so a short window misses the late
+#' relapses, while a long one flags more of the cases the host acquired locally after the trip.
 #'
-#' @param events an events data.table.
-#' @param window travel look-back window (days). See above: this choice dominates the result.
-#' @return every column [classify_cases()] returns, plus `recent_travel` and a `surveillance`
-#'   label to compare against `origin`. The schema does not depend on whether the run has
-#'   imports, so results pool across a grid.
+#' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
+#' @param window the look-back, a whole number of days, 0 or more: a case on day `tick` is flagged
+#'   when its host had an import on a day from `tick - window + 1` to `tick`. An import's own case
+#'   is flagged for any `window` of 1 or more; at 0 no case is.
+#' @return a data.table, one row per row of [classify_cases()] and in its order: its columns, then
+#'   `recent_travel` (logical) and `surveillance`, `"imported (recent travel)"` or
+#'   `"local (no recent travel)"`. A run without imports gives the same columns, every case local.
+#' @seealso [classify_chain()], [classify_cases()]
+#' @examples
+#' \dontrun{
+#' tr <- classify_travel(run, window = 90)
+#' table(tr$surveillance, tr$imported)
+#' }
 #' @export
-classify_who <- function(events, window = 60) {
-  cases <- classify_cases(events)
+classify_travel <- function(events, window = 60) {
+  ev <- .as_events(events)
+  window <- .check_day(window, "window")
+  cases <- classify_cases(ev)
   ## Group by WHATEVER classify_cases() returns, so the output schema is the same table for
   ## every run. Naming four columns here meant an import-free run returned all of them plus
   ## `surveillance` while a run WITH imports returned only the four -- and `imported`, the
@@ -392,17 +401,15 @@ classify_who <- function(events, window = 60) {
   keys <- names(cases)
   ## Any import establishment marks the trip, dormant or not. Requiring is_dormant == 0 meant a
   ## traveller who returned carrying only hypnozoites never registered as having travelled --
-  ## 43 of 91 import-exposed hosts on the audit run, and only 59% of imported relapses were
-  ## flagged. A surveillance system records the journey, not which compartment the parasite
-  ## ended up in.
-  imports <- as.data.table(events)[event_type == "vh_inoculation_import",
-                                   .(human_id, imp_tick = tick)]
+  ## 43 of 91 import-exposed hosts on the audit run. A surveillance system records the journey,
+  ## not which compartment the parasite ended up in.
+  imports <- ev[event_type == "vh_inoculation_import", .(human_id, imp_tick = tick)]
   if (nrow(imports) == 0)
-    return(cases[, `:=`(recent_travel = FALSE, surveillance = "Indigenous")][])
+    return(cases[, `:=`(recent_travel = FALSE, surveillance = "local (no recent travel)")][])
   j <- imports[cases, on = "human_id", allow.cartesian = TRUE]
   j[, recent := !is.na(imp_tick) & imp_tick <= tick & imp_tick > tick - window]
   flag <- j[, .(recent_travel = any(recent, na.rm = TRUE)), by = keys]
-  flag[, surveillance := fifelse(recent_travel, "Imported", "Indigenous")][]
+  flag[, surveillance := fifelse(recent_travel, "imported (recent travel)", "local (no recent travel)")][]
 }
 
 #' Time from an infection to the first relapse of its hypnozoite batch

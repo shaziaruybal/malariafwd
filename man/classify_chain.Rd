@@ -39,5 +39,5 @@ World Health Organization (2021) WHO malaria terminology, 2021 update. Geneva: W
 Health Organization.
 }
 \seealso{
-\code{\link[=classify_who]{classify_who()}}, \code{\link[=transmission_links]{transmission_links()}}, \code{\link[=classify_cases]{classify_cases()}}
+\code{\link[=classify_travel]{classify_travel()}}, \code{\link[=transmission_links]{transmission_links()}}, \code{\link[=classify_cases]{classify_cases()}}
 }

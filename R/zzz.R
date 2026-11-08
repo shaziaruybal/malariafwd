@@ -19,7 +19,7 @@ utils::globalVariables(c(
   "n_hypnozoites", "masked", "relapse", "t_relapse", "t_empty",
   # moi / within-host trajectory
   "peak_moi", "n_relapse", "kind",
-  # classify_who
+  # classify_travel
   "imp_tick", "recent", "recent_travel", "surveillance",
   # ibd_relapse_origin
   "rp", "rt", "pp", "pt",

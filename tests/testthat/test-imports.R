@@ -1,4 +1,5 @@
-## classify_chain(): each case's WHO class from its true chain of transmission from an import.
+## classify_chain(): each case's WHO class from its true chain of transmission from an import;
+## classify_travel(): what a travel rule says instead.
 
 chain_fixture <- function() {
   ## the transmission fixture, with the import 7 suppressed on day 40 and recrudescing as 19
@@ -47,4 +48,50 @@ test_that("on a run, each generation is one link from the one before", {
   best <- g[!is.na(sg), .(sg = min(sg)), by = target]
   chk <- best[cc[generation >= 1L & origin != "recrudescence", .(target = pedigree_id, generation)], on = "target"]
   expect_true(all(chk$generation == chk$sg + 1))
+})
+
+## Host 1: an import (1) on day 10, local cases 2 and 3 on days 50 and 100; host 2: an import that
+## left hypnozoites only (4) on day 20 and their relapse (5) on day 30; host 3: a local case (6) on
+## day 40.
+travel_fixture <- function() make_events(list(
+  list(tick = 10L, event_type = "vh_inoculation_import", human_id = 1L, lineage_id = 1L, pedigree_id = 1L,
+       is_imported = 1L, detected = 1L),
+  list(tick = 50L, event_type = "vh_inoculation", human_id = 1L, lineage_id = 2L, pedigree_id = 2L, detected = 1L),
+  list(tick = 100L, event_type = "vh_inoculation", human_id = 1L, lineage_id = 3L, pedigree_id = 3L, detected = 1L),
+  list(tick = 20L, event_type = "vh_inoculation_import", human_id = 2L, lineage_id = 4L, pedigree_id = 4L,
+       is_imported = 1L, is_dormant = 1L),
+  list(tick = 30L, event_type = "hypnozoite_activation", human_id = 2L, lineage_id = 4L, pedigree_id = 5L,
+       parent1_pedigree_id = 4L, is_imported = 1L, detected = 1L),
+  list(tick = 40L, event_type = "vh_inoculation", human_id = 3L, lineage_id = 6L, pedigree_id = 6L, detected = 1L)))
+
+test_that("classify_travel() flags a case whose host had an import in the window up to it", {
+  ev <- travel_fixture()
+  imp <- "imported (recent travel)"; loc <- "local (no recent travel)"
+  by_ped <- function(w) { x <- classify_travel(ev, window = w); x$surveillance[order(x$pedigree_id)] }
+  ## cases 1, 2, 3, 5 and 6
+  expect_identical(by_ped(60), c(imp, imp, loc, imp, loc))
+  expect_identical(by_ped(120), c(imp, imp, imp, imp, loc))
+  expect_identical(by_ped(0), rep(loc, 5))
+  expect_identical(by_ped(1), c(imp, loc, loc, loc, loc))
+  x <- classify_travel(ev)
+  cs <- classify_cases(ev)
+  expect_identical(x[, names(cs), with = FALSE], cs)
+  expect_identical(names(x), c(names(cs), "recent_travel", "surveillance"))
+  expect_identical(x$recent_travel, x$surveillance == imp)
+  expect_identical(classify_travel(transmission_fixture_run()), classify_travel(transmission_fixture()))
+})
+
+test_that("classify_travel() gives the same columns without imports or cases, and checks its window", {
+  ev <- travel_fixture()
+  cls <- function(d) vapply(d, function(v) class(v)[1], "")
+  full <- classify_travel(ev)
+  none <- classify_travel(ev[event_type != "vh_inoculation_import"])
+  expect_identical(none$surveillance, rep("local (no recent travel)", 4))
+  expect_identical(cls(none), cls(full))
+  e <- classify_travel(make_events())
+  expect_identical(nrow(e), 0L)
+  expect_identical(cls(e), cls(full))
+  for (w in list(-1, 1.5, NA, c(30, 60)))
+    expect_error(classify_travel(ev, window = w), "`window` must be a single whole number of days, 0 or more.",
+                 fixed = TRUE)
 })

@@ -250,7 +250,7 @@ rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all"
 #'   `who_class`.
 #' @references World Health Organization (2021) WHO malaria terminology, 2021 update. Geneva: World
 #'   Health Organization.
-#' @seealso [classify_who()], [transmission_links()], [classify_cases()]
+#' @seealso [classify_travel()], [transmission_links()], [classify_cases()]
 #' @examples
 #' \dontrun{classify_chain(load_events(run))[, .N, by = who_class]}
 #' @export

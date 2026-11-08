@@ -32,7 +32,7 @@ test_that("every reader takes a run with no parasite", {
     lo <- data.frame(chrom = 1, pos = c(1000, 2000), plaf = 0.3)
     readers <- list(
       load_run = function() load_run(r$outdir), load_params = function() load_params(r),
-      classify_cases = function() classify_cases(ev), classify_who = function() classify_who(ev),
+      classify_cases = function() classify_cases(ev), classify_travel = function() classify_travel(r),
       classify_chain = function() classify_chain(r), episodes = function() episodes(r),
       recurrences = function() recurrences(r), relapse_fraction = function() relapse_fraction(r),
       relapses_per_person_year = function() relapses_per_person_year(r),
