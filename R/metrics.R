@@ -104,25 +104,12 @@ relapse_fraction <- function(events, exclude_masked = FALSE) {
              relapse_frac_acquisitions = frac(n_rel, n_rel + n_new))
 }
 
-#' Relapses per person-year among hosts ever infected
-#'
-#' Every relapse (a `hypnozoite_activation` row) over the person-time of the hosts ever infected. A
-#' host's person-time starts the day after its first establishment, a blood-stage primary or a
-#' hypnozoite batch, from a bite or an import, and runs to the run's last day, `SIM_DAYS`, also after
-#' an extinction. Founder seeding does not start it: a founder host enters when a bite or an import
-#' first reaches it. Masked relapses, into a patent clone of their own lineage (see
-#' [classify_cases()]), are counted.
-#'
-#' @param run a `vivax_run` or its directory.
-#' @param from,to the window, in days: the relapses on days `from` to `to`, over the person-time in
-#'   them. `to = NULL` is `SIM_DAYS`.
-#' @return a one-row data.table: `n_relapse` (relapses in the window), `n_hosts` (hosts with
-#'   person-time in it), `person_years` (days / 365) and `relapses_per_py` (`NA` with no
-#'   person-time).
-#' @seealso [summarise_run()], [time_to_relapse()]
-#' @examples
-#' \dontrun{relapses_per_person_year(run, from = 365)}
-#' @export
+## Relapses per person-year among the hosts ever infected, on days `from` to `to` (`NULL`: SIM_DAYS),
+## which summarise_run() gives as relapses_per_py_at_risk (D66): every hypnozoite_activation row over
+## the person-time from the day after each host's first establishment, a blood-stage primary or a
+## hypnozoite batch from a bite or an import, to `to`, also after an extinction; founder seeding does
+## not start it, and masked relapses are counted. One row: n_relapse, n_hosts (with person-time in
+## the window), person_years and relapses_per_py (NA with no person-time).
 relapses_per_person_year <- function(run, from = 0, to = NULL) {
   sim_days <- .sim_days(run, "relapses_per_person_year")
   from <- .check_day(from, "from")

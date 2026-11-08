@@ -34,6 +34,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `pick_host()` | removed: `ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]`, the host with the most relapses | one line that picks a figure's host, and nothing in the package calls it; the vignette and `quickstart.R` write it out |
 | `as_slim_args()`, `slim_path()` | internal | plumbing: `run_sim()` builds SLiM's arguments, and `check_setup()` shows the SLiM path |
 | `theme_malariafwd()` | internal | every plot applies it; a user restyles a plot with ggplot2's own themes |
+| `relapses_per_person_year()` | internal: `summarise_run()$relapses_per_py_at_risk`, over its window | one summary of a run; `?summarise_run` defines the person-years at risk |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.

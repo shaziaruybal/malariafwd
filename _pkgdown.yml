@@ -30,8 +30,7 @@ reference:
 
 - title: Hypnozoites and relapses
   desc: The latent reservoir and the recurrences it drives.
-  contents: [reservoir_trajectory, relapse_fraction, relapses_per_person_year,
-             dormancy_durations, time_to_relapse]
+  contents: [reservoir_trajectory, relapse_fraction, dormancy_durations, time_to_relapse]
 
 - title: Relatedness (IBD)
   desc: Ground-truth identity-by-descent from the recorded genealogy.
