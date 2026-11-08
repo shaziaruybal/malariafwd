@@ -60,11 +60,12 @@
 #' [classify_travel()] by what a rule that knows only travel history would conclude.
 #'
 #' @section Relatedness:
-#' Every genome descends from root genomes, the founders and the imports, which are unrelated, so
-#' the genealogy is a forest. Identity by descent (IBD) is read from it exactly: [ibd_pairs()] for
-#' pairs, [ibd_segments()] for the stretches behind them, and [ibd_lookup()] to read a pair.
-#' [arg_tmrca()] gives how far back two genomes share an ancestor, and [arg_summary()] the shape of
-#' the forest.
+#' Every genome descends from root genomes, which are unrelated: the founder templates, one per
+#' founder lineage (`N_FOUNDER_LINEAGES`), and the imports. The founder hosts of one lineage carry
+#' clonal copies of its template. So the genealogy is a forest. Identity by descent (IBD) is read
+#' from it exactly: [ibd_pairs()] for pairs, [ibd_segments()] for the stretches behind them, and
+#' [ibd_lookup()] to read a pair. [arg_tmrca()] gives how far back two genomes share an ancestor,
+#' and [arg_summary()] the shape of the forest.
 #'
 #' @import data.table
 #' @importFrom stats setNames

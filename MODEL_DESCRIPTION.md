@@ -1591,7 +1591,7 @@ counting or drawing them (§6.3, §7).
 | **tick** | one day; a run's days are 1 to `SIM_DAYS`, and every `*_tick` column is a day |
 | **genome** | one parasite genome, one individual of the simulation: a bite, an import, a relapse and a recrudescence each make a new one, and a batch is one genome standing for its count |
 | **pedigree id** | `pedigree_id`, a genome's id, unique within a run and the key of every genetic table; 0 is a genome and -1 means none |
-| **founder** / **import** | the two kinds of root genome: a founder seeds a host at the start of a run, an import arrives in a host from outside the population |
+| **founder** / **import** | a founder host is seeded at the start of a run; an import arrives in a host from outside the population. The root genomes are the founder templates, one per founder lineage, and the imports: founder hosts of one lineage carry clonal copies of its template (IBD 1) |
 | **lineage** | a genetic identity / clonal group. Propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a new one. **COI counts distinct lineages.** In the package *lineage* always means this clonal group, `lineage_id`; the genealogy is the tree sequence |
 | **brood** | one blood meal's co-hatching group of oocysts (≥ 1 oocyst) |
 | **oocyst** | one meiosis, producing a tetrad of ≤ 4 lineages |

@@ -81,11 +81,12 @@ case reproduction number, is the mean number of secondary cases per case, by tru
 
 \section{Relatedness}{
 
-Every genome descends from root genomes, the founders and the imports, which are unrelated, so
-the genealogy is a forest. Identity by descent (IBD) is read from it exactly: \code{\link[=ibd_pairs]{ibd_pairs()}} for
-pairs, \code{\link[=ibd_segments]{ibd_segments()}} for the stretches behind them, and \code{\link[=ibd_lookup]{ibd_lookup()}} to read a pair.
-\code{\link[=arg_tmrca]{arg_tmrca()}} gives how far back two genomes share an ancestor, and \code{\link[=arg_summary]{arg_summary()}} the shape of
-the forest.
+Every genome descends from root genomes, which are unrelated: the founder templates, one per
+founder lineage (\code{N_FOUNDER_LINEAGES}), and the imports. The founder hosts of one lineage carry
+clonal copies of its template. So the genealogy is a forest. Identity by descent (IBD) is read
+from it exactly: \code{\link[=ibd_pairs]{ibd_pairs()}} for pairs, \code{\link[=ibd_segments]{ibd_segments()}} for the stretches behind them, and
+\code{\link[=ibd_lookup]{ibd_lookup()}} to read a pair. \code{\link[=arg_tmrca]{arg_tmrca()}} gives how far back two genomes share an ancestor,
+and \code{\link[=arg_summary]{arg_summary()}} the shape of the forest.
 }
 
 \seealso{
