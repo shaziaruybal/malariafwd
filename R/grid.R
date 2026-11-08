@@ -82,6 +82,9 @@
 .read_grid_manifest <- function(base) {
   d <- data.table::fread(file.path(base, "grid.tsv"), sep = "\t", colClasses = "character",
                          na.strings = NULL, showProgress = FALSE)
+  ## fwrite(quote = TRUE) doubles a quote inside a text field, and fread keeps it doubled; undone
+  ## here, or every later write would double it again
+  for (nm in names(d)) data.table::set(d, j = nm, value = gsub('""', '"', d[[nm]], fixed = TRUE))
   cell <- intersect(names(.grid_columns), names(d))
   for (nm in cell) {
     x <- d[[nm]]; x[x == "NA"] <- NA

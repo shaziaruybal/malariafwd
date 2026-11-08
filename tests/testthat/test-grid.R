@@ -125,3 +125,19 @@ test_that("a cell that fails leaves its directory as it was, and its log in <cel
   expect_true(file.exists(file.path(base, "set01_seed1.failed", "run.log")))
   expect_false(dir.exists(file.path(base, "set01_seed1")))
 })
+
+test_that("grid.tsv keeps a quote in a text field, however often it is written", {
+  base <- tempfile("mfwd_gridq_"); dir.create(base)
+  row <- function(seed) data.table::data.table(set = "lo", seed = seed, dir = paste0("lo_seed", seed), ok = FALSE,
+    skipped = FALSE, error = 'a "quoted" failure: ""', extinct_tick = NA_integer_, never_started = NA, elapsed_s = 1.5,
+    finished = "2026-11-08 03:00:00", slim_version = "5.2", malariafwd_version = "0.1.0", run_key = "k",
+    model_md5 = "m", SIM_ID = 'say "hi"')
+  malariafwd:::.write_grid_manifest(base, row(1L))
+  r1 <- malariafwd:::.read_grid_manifest(base)
+  expect_identical(c(r1$error, r1$SIM_ID), c('a "quoted" failure: ""', 'say "hi"'))
+  malariafwd:::.write_grid_manifest(base, row(2L))
+  malariafwd:::.write_grid_manifest(base, row(3L))
+  r3 <- malariafwd:::.read_grid_manifest(base)
+  expect_identical(r3$SIM_ID, rep('say "hi"', 3))
+  expect_identical(r3$error, rep('a "quoted" failure: ""', 3))
+})
