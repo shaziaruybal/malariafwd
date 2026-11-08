@@ -227,12 +227,3 @@ load_params <- function(run) {
   .warn_params_mismatch(r, dir)
   r$params
 }
-
-#' Detect the model generation that produced a run
-#' @param run a `vivax_run` or a run directory path.
-#' @return `"v2 (meiosis)"` or `"v1 (pre-meiosis)"`.
-#' @export
-model_version <- function(run) {
-  h <- names(data.table::fread(file.path(.run_dir(run), "events.tsv"), sep = "\t", nrows = 0))
-  if ("oocyst_id" %in% h) "v2 (meiosis)" else "v1 (pre-meiosis)"
-}

@@ -29,6 +29,7 @@ their own help. The author accepted the table's proposals; each export change be
 |---|---|---|
 | `arg_diversity()`, `arg_divergence()` | removed | branch statistics are no relatedness measure on the forest the model records, as their own help said; `arg_tmrca()` is (the author's answer to question 12) |
 | `classify_who()`, labels `Imported` / `Indigenous` | `classify_travel()`, labels `imported (recent travel)` / `local (no recent travel)`; takes a run, and `window` is checked | it applies a travel rule, and "WHO" and "Indigenous" read as the truth, which `classify_chain()` gives (review m16); lower case like the package's other classes |
+| `model_version()` | removed: a run's versions are `load_run()$malariafwd_version` and `$slim_version` | it told two model generations apart by a column every run of this release has |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.
