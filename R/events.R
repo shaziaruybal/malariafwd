@@ -15,6 +15,10 @@
 .onset_events <- function()
   event_types()$event_type[event_types()$is_onset]
 
+## The onsets that bring a parasite into a host: a bite, an import or founder seeding.
+.inoculation_events <- function()
+  setdiff(.onset_events(), c("hypnozoite_activation", "recrudescence"))
+
 #' The malariafwd event dictionary
 #'
 #' Every row in a run's `events.tsv` carries an `event_type`. This returns a tidy table

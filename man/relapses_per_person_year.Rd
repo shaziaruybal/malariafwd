@@ -2,16 +2,32 @@
 % Please edit documentation in R/metrics.R
 \name{relapses_per_person_year}
 \alias{relapses_per_person_year}
-\title{Relapses per person-year among ever-infected hosts}
+\title{Relapses per person-year among hosts ever infected}
 \usage{
-relapses_per_person_year(events)
+relapses_per_person_year(run, from = 0, to = NULL)
 }
 \arguments{
-\item{events}{an events data.table.}
+\item{run}{a \code{vivax_run} or its directory.}
+
+\item{from, to}{the window, in days: the relapses on days \code{from} to \code{to}, over the person-time in
+them. \code{to = NULL} is \code{SIM_DAYS}.}
 }
 \value{
-a one-row data.table.
+a one-row data.table: \code{n_relapse} (relapses in the window), \code{n_hosts} (hosts with
+person-time in it), \code{person_years} (days / 365) and \code{relapses_per_py} (\code{NA} with no
+person-time).
 }
 \description{
-Relapses per person-year among ever-infected hosts
+Every relapse (a \code{hypnozoite_activation} row) over the person-time of the hosts ever infected. A
+host's person-time starts the day after its first establishment, a blood-stage primary or a
+hypnozoite batch, from a bite or an import, and runs to the run's last day, \code{SIM_DAYS}, also after
+an extinction. Founder seeding does not start it: a founder host enters when a bite or an import
+first reaches it. Masked relapses, into a patent clone of their own lineage (see
+\code{\link[=classify_cases]{classify_cases()}}), are counted.
+}
+\examples{
+\dontrun{relapses_per_person_year(run, from = 365)}
+}
+\seealso{
+\code{\link[=summarise_run]{summarise_run()}}, \code{\link[=time_to_relapse]{time_to_relapse()}}
 }

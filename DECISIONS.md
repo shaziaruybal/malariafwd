@@ -19,6 +19,37 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D66 — Relapses per person-year count every relapse over the person-time of hosts ever infected · 2026-11-08 · Accepted
+**Context.** `relapses_per_person_year()` took the events alone, so it ended every host's time on
+the last event's day, not the run's. It started a host's time at its first blood-stage primary,
+founder seeding included, and left out a host with no blood-stage primary, and its relapses (56
+of 438 at `P_PRIMARY = 0.5` in a 100-host 548-day run). Section 16.3 defined the metric over every
+host instead (review M12, Q14, m22).
+**Decision.** Relapses per person-year are every relapse over the person-time of the hosts ever
+infected. A host's time starts the day after its first establishment, a primary or a hypnozoite
+batch from a bite or an import, and runs to `SIM_DAYS`, also after an extinction; founder seeding
+does not start it (the author's answer to OQ4). `relapses_per_person_year(run, from, to)` takes
+the run and an optional window, which restricts both the relapses and the person-time, and gives
+`n_relapse`, `n_hosts`, `person_years` and `relapses_per_py`, unrounded, `NA` with no person-time.
+An internal core takes the events and the run's length and can leave the masked relapses out of
+the numerator, for `summarise_run()`.
+**Rationale.** A host that has never been infected cannot relapse, and a host whose first
+infection left only a batch can. The run's length, not its last event, is the period observed.
+**Alternatives rejected.** *Activations over `N_HOSTS` times the run's years* (section 16.3) -- it
+counts hosts that were never at risk, so the rate falls with the share never bitten. *Every
+ever-infected host over the window's whole length* -- it counts a host's days before its first
+infection.
+**Consequences.** Runs are unchanged. The value changes on every run: 6.12 to 6.80 per person-year
+on a 100-host 548-day run (seed 1), 5.64 to 5.51 at `P_PRIMARY = 0.5`, where 438 relapses are
+counted, not 382. The function takes a run, not an events table. Section 13's band table states its
+own definition (relapses after burn-in per year of the hosts ever infected) and is re-measured at
+the next band re-check.
+**How to verify.** `tests/testthat/test-relapse-metrics.R`: the fixture's relapses and person-time,
+with and without a window; refusals; a run with no infection; on a run every activation counted,
+and person-time to `SIM_DAYS` after an extinction.
+
+---
+
 ## D65 — relapse_fraction() gives relapse_frac_episodes and relapse_frac_acquisitions · 2026-11-08 · Accepted
 **Context.** `relapse_fraction()` returned `relapse_fraction` over acquisitions and
 `relapse_frac_episodes` over every case: one reading named for the function and one for its unit,

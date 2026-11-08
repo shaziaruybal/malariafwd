@@ -93,19 +93,48 @@ relapse_fraction <- function(events, exclude_masked = FALSE) {
              relapse_frac_acquisitions = frac(n_rel, n_rel + n_new))
 }
 
-#' Relapses per person-year among ever-infected hosts
-#' @param events an events data.table.
-#' @return a one-row data.table.
+#' Relapses per person-year among hosts ever infected
+#'
+#' Every relapse (a `hypnozoite_activation` row) over the person-time of the hosts ever infected. A
+#' host's person-time starts the day after its first establishment, a blood-stage primary or a
+#' hypnozoite batch, from a bite or an import, and runs to the run's last day, `SIM_DAYS`, also after
+#' an extinction. Founder seeding does not start it: a founder host enters when a bite or an import
+#' first reaches it. Masked relapses, into a patent clone of their own lineage (see
+#' [classify_cases()]), are counted.
+#'
+#' @param run a `vivax_run` or its directory.
+#' @param from,to the window, in days: the relapses on days `from` to `to`, over the person-time in
+#'   them. `to = NULL` is `SIM_DAYS`.
+#' @return a one-row data.table: `n_relapse` (relapses in the window), `n_hosts` (hosts with
+#'   person-time in it), `person_years` (days / 365) and `relapses_per_py` (`NA` with no
+#'   person-time).
+#' @seealso [summarise_run()], [time_to_relapse()]
+#' @examples
+#' \dontrun{relapses_per_person_year(run, from = 365)}
 #' @export
-relapses_per_person_year <- function(events) {
-  ev <- as.data.table(events); endt <- max(ev$tick)
-  inf <- ev[event_type %in% c("vh_inoculation","vh_inoculation_import","vh_inoculation_seed") &
-              is_dormant == 0, .(t0 = min(tick)), by = human_id]
-  rel <- ev[event_type == "hypnozoite_activation", .(nrel = .N), by = human_id]
-  m <- merge(inf, rel, by = "human_id", all.x = TRUE)[is.na(nrel), nrel := 0]
-  m[, py := (endt - t0) / 365]
-  data.table(total_relapses = sum(m$nrel), person_years = round(sum(m$py), 1),
-             relapses_per_py = round(sum(m$nrel) / sum(m$py), 2))
+relapses_per_person_year <- function(run, from = 0, to = NULL) {
+  sim_days <- .sim_days(run, "relapses_per_person_year")
+  from <- .check_day(from, "from")
+  to <- if (is.null(to)) sim_days else .check_day(to, "to")
+  if (to > sim_days)
+    stop("`to` = ", to, " is after the run's last day, SIM_DAYS = ", sim_days, ".", call. = FALSE)
+  if (from > to) stop("`from` = ", from, " is after `to` = ", to, ".", call. = FALSE)
+  .relapses_per_person_year(load_events(run), sim_days, from, to)
+}
+
+## The core of relapses_per_person_year() (D66), for callers that hold the events. A host counts
+## the days max(t0 + 1, from) to `to`, t0 its first establishment; masked relapses leave the
+## numerator only.
+.relapses_per_person_year <- function(events, sim_days, from = 0L, to = sim_days, exclude_masked = FALSE) {
+  ev <- .as_events(events)
+  est <- ev[event_type %in% setdiff(.inoculation_events(), "vh_inoculation_seed") & is_dormant %in% 0:1,
+            .(human_id = as.integer(human_id), t0 = as.integer(tick))]
+  est <- unique(data.table::setorder(est, human_id, t0), by = "human_id")   # each host's first
+  days <- pmax(0, to - pmax(est$t0 + 1, from) + 1)
+  n_rel <- classify_cases(ev, exclude_masked)[origin == "relapse" & tick >= from & tick <= to, .N]
+  py <- sum(days) / 365
+  data.table(n_relapse = n_rel, n_hosts = sum(days > 0), person_years = py,
+             relapses_per_py = if (py > 0) n_rel / py else NA_real_)
 }
 
 #' Mean hypnozoite reservoir per host over time
@@ -499,7 +528,7 @@ pick_host <- function(events) {
 #'   remaining days as days with no infected host.
 #' @return a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
 #'   `relapse_frac` is [relapse_fraction()]'s `relapse_frac_acquisitions` over the whole run, `NA`
-#'   for a run with no case.
+#'   for a run with no case, and `relapses_py` is [relapses_per_person_year()] over the whole run.
 #' @export
 summarise_run <- function(run, burn_frac = 0.5) {
   st <- load_state(run); ev <- load_events(run)
@@ -516,7 +545,7 @@ summarise_run <- function(run, burn_frac = 0.5) {
     poly = round(if (nrow(cd)) sum(cd[moi_active > 1]$pct) else NA_real_, 1),
     mean_res = round(sum(h$hyp_reservoir_size) / host_days, 1),
     relapse_frac = round(relapse_fraction(ev)$relapse_frac_acquisitions, 3),
-    relapses_py = relapses_per_person_year(ev)$relapses_per_py,
+    relapses_py = round(relapses_per_person_year(run)$relapses_per_py, 2),
     ## courses GIVEN, not clones cleared: one course clears every clone in the host, and a
     ## clone can survive it (bloodcure_persist), so counting clearances is wrong in both
     ## directions - and counts zero for MDA, which clears via mda_bloodstage_clear.

@@ -16,7 +16,7 @@ remaining days as days with no infected host.}
 \value{
 a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
 \code{relapse_frac} is \code{\link[=relapse_fraction]{relapse_fraction()}}'s \code{relapse_frac_acquisitions} over the whole run, \code{NA}
-for a run with no case.
+for a run with no case, and \code{relapses_py} is \code{\link[=relapses_per_person_year]{relapses_per_person_year()}} over the whole run.
 }
 \description{
 One-call calibration metrics for a run (steady state = 2nd half)
