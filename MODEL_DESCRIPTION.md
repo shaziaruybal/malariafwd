@@ -1609,7 +1609,7 @@ counting or drawing them (§6.3, §7).
 | **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone): `molfob_clones_per_py`; `molfob_episodes_per_py` counts recrudescences too |
 | **FOI** | force of infection: new blood-stage clones from bites and imports, relapses **excluded**: `foi_per_py` |
 | **EIR** | entomological inoculation rate: infectious bites per person-year, `eir_per_py` (§4.1) |
-| **COI** / **MOI** | one quantity here: the distinct patent blood-stage lineages in a host, `moi_active`. `MAX_MOI` caps the blood-stage lineages a host can carry, suppressed ones included |
+| **COI** / **MOI** | one quantity here: the distinct patent blood-stage lineages in a host, `moi_active`. `MAX_MOI` gates new inoculations rather than capping COI: a host already carrying that many blood-stage lineages, patent or subpatent, takes no new bite or import, but relapses bypass it and a bite is admitted whole |
 | **transmission link** | a parent genome of an oocyst and a genome the oocyst's products infected: `direct` (a bite's blood stage) or `liver` (a relapse of the batch a bite left); a host's own relapses are not links |
 | **Rc** | the case reproduction number: the mean number of secondary cases per case, by true origin, from `rc_by_origin()` (§16.3) |
 | **transmission chain** | a connected group of transmission links: `chain_id` and `chain_size` on `transmission_links()` |

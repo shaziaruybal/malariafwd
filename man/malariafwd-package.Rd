@@ -63,8 +63,10 @@ acquisition. A relapse into a patent clone of its own lineage is flagged by
 \section{COI and MOI}{
 
 Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:
-the distinct patent blood-stage lineages in a host, \code{moi_active} in \code{state.tsv}. \code{MAX_MOI} caps
-the blood-stage lineages a host can carry, suppressed ones included.
+the distinct patent blood-stage lineages in a host, \code{moi_active} in \code{state.tsv}. \code{MAX_MOI} gates
+new inoculations: a host already carrying that many blood-stage lineages, patent or subpatent,
+takes no new bite or import. Relapses bypass it, and a bite that delivers several genotypes is
+admitted whole, so a host's COI can exceed it.
 }
 
 \section{Transmission}{

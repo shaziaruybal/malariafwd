@@ -46,8 +46,10 @@
 #'
 #' @section COI and MOI:
 #' Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:
-#' the distinct patent blood-stage lineages in a host, `moi_active` in `state.tsv`. `MAX_MOI` caps
-#' the blood-stage lineages a host can carry, suppressed ones included.
+#' the distinct patent blood-stage lineages in a host, `moi_active` in `state.tsv`. `MAX_MOI` gates
+#' new inoculations: a host already carrying that many blood-stage lineages, patent or subpatent,
+#' takes no new bite or import. Relapses bypass it, and a bite that delivers several genotypes is
+#' admitted whole, so a host's COI can exceed it.
 #'
 #' @section Transmission:
 #' A *transmission link* joins a parent genome of an oocyst to a genome its products infected:
