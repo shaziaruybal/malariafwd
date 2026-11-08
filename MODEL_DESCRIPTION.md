@@ -274,7 +274,8 @@ MU_MOSQ = 1 / MOSQ_LIFESPAN                # daily mosquito mortality
 `EIR` is **emergent**, not a parameter, and `state.tsv` counts it: `infectious_bites` on a host's
 row is the number of bites the host received that day from a mosquito carrying a product past the
 EIP, whatever the bite then did (§16.2), so the EIR is their sum over hosts and days divided by
-`N_HOSTS` and the run's length in years. The formula above, with `s` read from `state.tsv` as the
+person-years, `N_HOSTS` times the days over 365; `summarise_run()` reports it over its window as
+`eir_per_py`. The formula above, with `s` read from `state.tsv` as the
 share of mosquitoes with `n_transmissible > 0`, gives about 1 − 1/`MOSQ_LIFESPAN` of it (about 0.9
 at the default 10 days), because the snapshot is taken after the day's mosquito deaths; it also
 assumes a constant biting rate, so with seasonality, vector control or a boost its error can go
@@ -1112,7 +1113,7 @@ Monotonicity and switch checks — that each parameter moves the model in the di
 | higher biting → higher prevalence | 0.94 vs 0.01 |
 | higher biting → higher COI | 2.60 vs 1.00 |
 | more founder lineages → more circulating lineages | 21 vs 4 |
-| `NU_HYPNOZOITE_BATCH = 0` → no relapses at all | relapse fraction 0.000, reservoir 0.00 |
+| `NU_HYPNOZOITE_BATCH = 0` → no relapses at all | 0 relapses, reservoir 0.00 |
 | faster activation → higher relapse fraction | 0.77 vs 0.52 |
 | faster activation → **smaller** standing reservoir | 0.80 vs 2.10 |
 | batch boost enlarges the reservoir | 3.30 vs 1.90 |
@@ -1369,20 +1370,27 @@ of creation in `events.tsv`.
 
 ### 16.3 Derived metrics
 
-**Summary metrics.** Each is over a window of the run, which ends at `SIM_DAYS` whether or not the
-run went extinct.
+**Summary metrics.** `summarise_run()` gives each over one window of days, by default the second
+half of `SIM_DAYS` (`burn_frac = 0.5`; `from` and `to` set it directly), whether or not the run went
+extinct: a day after an extinction counts as a day with no parasite. Counts are clone onsets, as in
+`classify_cases()`. The EIR, FOI and molFOB divide by the person-years of every host, `N_HOSTS` ×
+the window's days ÷ 365; the relapse rate divides by the person-years at risk. Nothing is rounded,
+and a ratio with nothing to divide is `NA`. `exclude_masked = TRUE` leaves the relapses into a
+patent clone of their own lineage (`into_patent_lineage = 1`, §5) out of every relapse column. To
+pool runs, sum the counts and the person-years rather than average the rates.
 
-| metric | definition |
-|---|---|
-| prevalence | fraction of the window's host-days with `moi_active > 0`; a day after an extinction counts as a day with no infection |
-| COI / MOI | `moi_active` among infected hosts |
-| reservoir | mean `hyp_reservoir_size` per host-day of the window |
-| relapse fraction | two readings, counted per clone onset (§9a). `relapse_frac_acquisitions` = relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band and what `summarise_run()$relapse_frac` reports. `relapse_frac_episodes` = relapses ÷ **every case**, recrudescence included. The two are equal when a run has no recrudescence. Both denominators include each host's first case, which is not a recurrence, and both count relapses into a patent clone of their own lineage (`into_patent_lineage = 1`, §5) unless `exclude_masked = TRUE`. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13). A run with no case gives `NA` |
-| relapses per person-year | relapses ÷ person-years of the hosts ever infected, each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to `SIM_DAYS`, also after an extinction (`relapses_per_person_year()`). §13's band table states its own definition |
-| time to first relapse | per hypnozoite batch, from the day it was established (for an import that also brought a blood-stage infection, the day after) to its first relapse; censored on the day it empties without relapsing, or at `SIM_DAYS` (`time_to_relapse()`, `emptied = "follow"` to follow emptied batches to the end) |
-| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). Sum the `is_acquisition` rows of `force_of_infection()`; a recrudescence is a new episode but not a new clone, so it is excluded, and with `exclude_masked = TRUE` so is a masked relapse, as a genotyping study would miss it |
-| FOI | mosquito-borne acquisitions only — *not* the same as molFOB |
-| EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ (`N_HOSTS` × years) (§4.1) |
+| metric | definition | `summarise_run()` column |
+|---|---|---|
+| prevalence | fraction of the window's host-days with `moi_active > 0` | `prevalence_frac` |
+| COI / MOI | `moi_active` over the infected host-days; polyclonality is the share of them with 2 or more | `coi_mean`, `coi_median`, `polyclonal_frac` |
+| reservoir | `hyp_reservoir_size` per host-day | `hypnozoites_per_host` |
+| EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ person-years (§4.1) | `eir_per_py` |
+| FOI | new blood-stage clones from bites and imports per person-year — *not* the same as molFOB | `foi_per_py` |
+| molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). A recrudescence is a new episode but not a new clone, so only the episode reading counts it. `force_of_infection()` gives the same counts window by window: sum its `is_acquisition` rows | `molfob_clones_per_py`, `molfob_episodes_per_py` |
+| relapses per person-year | relapses ÷ person-years at risk: each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to the window's end, also after an extinction. §13's band table states its own definition | `relapses_per_py_at_risk` |
+| relapse fraction | two readings, counted per clone onset (§9a): relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band, and relapses ÷ **every case**, recrudescence included; equal when a run has no recrudescence. Both include each host's first case, which is not a recurrence. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13) | `relapse_frac_acquisitions`, `relapse_frac_episodes` |
+| imported share | imports among the new clones from bites and imports | `imported_frac` |
+| time to first relapse | per hypnozoite batch, from the day it was established (for an import that also brought a blood-stage infection, the day after) to its first relapse; censored on the day it empties without relapsing, or at `SIM_DAYS` (`time_to_relapse()`, `emptied = "follow"` to follow emptied batches to the end) | — |
 
 **Truth tables.** Read from the event log, so exact.
 
@@ -1429,7 +1437,7 @@ run <- run_sim(p, seed = 1, outdir = "runs/example")
 
 ev <- load_events(run)
 st <- load_state(run)
-summarise_run(run)                       # prevalence, COI, reservoir, relapse fraction
+summarise_run(run)                       # prevalence, COI, EIR, FOI, molFOB, relapses: the second half
 
 cs  <- classify_cases(ev)                # truth labels, one row per clone onset
 x   <- ibd_pairs(run, ids = cs$pedigree_id)  # ground-truth IBD; as.matrix(x) for the matrix
@@ -1510,8 +1518,9 @@ than one segment.
 | **holder** | the suppressed clone a recrudescence comes from; it is retired when its replacement is minted, which keeps the pair MOI-neutral, or cleared by an MDA round (`mda_subpatent_clear`), which cancels the recrudescence |
 | **acquisition** | an episode in which a new parasite genome entered the host — imported, local reinfection, or relapse. **Not** recrudescence. Force-of-infection rates count acquisitions; case counts count episodes |
 | **homologous / heterologous relapse** | relapse genetically identical to / different from the acute infection |
-| **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone) |
-| **FOI** | mosquito-borne force of infection only |
+| **molFOB** | compound force of blood-stage infection, relapses **included**, recrudescence **excluded** (it is not a new clone): `molfob_clones_per_py`; `molfob_episodes_per_py` counts recrudescences too |
+| **FOI** | force of infection: new blood-stage clones from bites and imports, relapses **excluded**: `foi_per_py` |
+| **EIR** | entomological inoculation rate: infectious bites per person-year, `eir_per_py` (§4.1) |
 | **iIBD** | mean IBD among co-present strains within one host |
 | **ground-truth IBD** | IBD read from the recorded genealogy, as opposed to marker-inferred |
 

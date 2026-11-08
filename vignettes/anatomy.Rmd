@@ -67,7 +67,7 @@ rec[, .N, by = .(origin, prior_origin)]
 ## Epidemiology over time
 
 ```{r}
-summarise_run(run)                       # prevalence, COI, relapse fraction, reservoir, ...
+summarise_run(run)                       # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
 incidence_by_origin(ev, bin = 30)      # monthly case counts by origin
 ```
 

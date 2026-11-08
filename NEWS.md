@@ -68,6 +68,8 @@ apart rather than choosing for you:
 * `relapse_fraction()` reports both: `relapse_frac_acquisitions` over acquisitions (the unit of
   the published 0.55–0.85 vivax band) and `relapse_frac_episodes` over every case, recrudescence
   included.
+* `summarise_run()` reports both molFOB readings, `molfob_clones_per_py` and
+  `molfob_episodes_per_py`, and both relapse fractions, over one window of the run.
 * `rc_by_origin(unit = "episode" | "acquisition")` credits onward transmission either to the
   recurrence itself or to the infection that originally brought the clone in. The second is the
   unit a reproduction number estimated from routine case counts refers to.

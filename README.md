@@ -94,7 +94,7 @@ run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 # tidy outputs
 ev  <- load_events(run)
 st  <- load_state(run)                              # per-tick host state
-summarise_run(run)                                  # prevalence, COI, relapse fraction, ...
+summarise_run(run)                                  # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
 
 # ground-truth IBD (tskit)
 cs  <- classify_cases(ev)

@@ -6,9 +6,9 @@ test_that("summarise_run() counts the days after an extinction as days with no i
   for (s in 1:6) {
     r <- w_run(s)
     expect_lt(r$extinct_tick, 200L)
-    m <- suppressWarnings(summarise_run(r))
-    expect_identical(c(m$prev, m$mean_res), c(0, 0), label = paste("seed", s))
-    expect_true(is.na(m$COI) && is.na(m$poly), label = paste("seed", s))
+    m <- summarise_run(r)
+    expect_identical(c(m$prevalence_frac, m$hypnozoites_per_host), c(0, 0), label = paste("seed", s))
+    expect_true(is.na(m$coi_mean) && is.na(m$polyclonal_frac), label = paste("seed", s))
   }
 })
 
@@ -41,13 +41,13 @@ test_that("plot_diagnostics() runs to SIM_DAYS, at zero after an extinction", {
   expect_true(all(prev$y[prev$w > (r$extinct_tick %/% 30) * 30] == 0))
 })
 
-test_that("a run that reaches SIM_DAYS gives the same summary as before", {
+test_that("a run that reaches SIM_DAYS has its prevalence over the second half of its days", {
   skip_if_no_slim()
   r <- suppressMessages(run_sim(vivax_params(N_HOSTS = 30, N_MOSQ = 60, SIM_DAYS = 40), seed = 4,
                                 outdir = tempfile("mfwd_full_")))
   st <- load_state(r)
-  m <- suppressWarnings(summarise_run(r))
-  expect_identical(m$prev, round(mean(st[tick >= 20]$moi_active > 0), 3))
+  m <- summarise_run(r)
+  expect_equal(m$prevalence_frac, mean(st[tick >= 21]$moi_active > 0))
 })
 
 test_that(".sim_days() reads SIM_DAYS, and refuses an events table", {

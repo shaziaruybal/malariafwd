@@ -43,9 +43,9 @@ run_cfg <- function(tag, ...) {
            dup_ids   = nrow(ev) - uniqueN(ev$event_id),
            dup_clear = sum(duplicated(ev[event_type %in% .CLEARERS, pedigree_id])))
   data.table(tag = tag, secs = round(secs, 1), events = nrow(ev),
-             prev = m$prev, coi = m$COI, relapse_frac = m$relapse_frac,
-             reservoir = m$mean_res, treated = m$n_bloodstage_treated,
-             imported = cs[imported == TRUE, .N], cases = nrow(cs),
+             prev = m$prevalence_frac, coi = m$coi_mean, relapse_frac = m$relapse_frac_acquisitions,
+             reservoir = m$hypnozoites_per_host, treated = m$n_bloodstage_courses,
+             imported = cs[imported == TRUE, .N], cases = nrow(cs), relapses = cs[origin == "relapse", .N],
              recomb_pct = round(100 * mean(ev[grepl("^hv_uptake_(clonal|recombinant)$", event_type),
                                               event_type] == "hv_uptake_recombinant"), 1),
              lineages = uniqueN(cs$lineage_id),
@@ -73,7 +73,7 @@ mean_reservoir <- function(tag, ...) {
   mean(vapply(1:3, function(sd) {
     d <- file.path(OUT, paste0("res_", tag, "_", sd)); unlink(d, recursive = TRUE)
     p <- do.call(vivax_params, utils::modifyList(BASE, list(...)))
-    summarise_run(run_sim(p, seed = sd, outdir = d))$mean_res
+    summarise_run(run_sim(p, seed = sd, outdir = d))$hypnozoites_per_host
   }, numeric(1)))
 }
 
@@ -124,8 +124,8 @@ ok("higher biting -> higher COI", g("biting_high","coi") >= g("biting_low","coi"
 ok("more founder lineages -> more circulating lineages",
    g("founders_40","lineages") > g("founders_2","lineages"),
    sprintf("%d vs %d", g("founders_40","lineages"), g("founders_2","lineages")))
-ok("NU_HYPNOZOITE_BATCH = 0 -> no relapses at all", g("no_relapse","relapse_frac") == 0,
-   sprintf("relapse_frac %.3f, reservoir %.2f", g("no_relapse","relapse_frac"), g("no_relapse","reservoir")))
+ok("NU_HYPNOZOITE_BATCH = 0 -> no relapses at all", g("no_relapse","relapses") == 0,
+   sprintf("%d relapses, reservoir %.2f", g("no_relapse","relapses"), g("no_relapse","reservoir")))
 ## 3-seed, like every other directional comparison on the reservoir: single-seed, this class
 ## of check has already flipped once with no change in behaviour (see the radical-cure efficacy
 ## check below). The standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single
@@ -301,7 +301,7 @@ if (inherits(gr, "error")) {
   ## the sweep must actually vary: different parameter sets give different prevalence,
   ## and different seeds give different realisations of the same set
   mm <- rbindlist(lapply(outs, function(o) {
-    m <- summarise_run(o); data.table(dir = basename(o), prev = m$prev) }))
+    m <- summarise_run(o); data.table(dir = basename(o), prev = m$prevalence_frac) }))
   lo <- mm[grepl("low", dir), mean(prev)]; hi <- mm[grepl("high", dir), mean(prev)]
   ok("sweep separates the parameter sets", hi > lo, sprintf("prev high %.2f vs low %.2f", hi, lo))
   ok("seeds within a set give different realisations",

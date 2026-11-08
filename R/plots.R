@@ -222,7 +222,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
         paste0("%.0f hosts | %.0f mosquitoes | %d d (%.1f yr)%s | biting %.3g | founders %s | burn-in %d d (dashed)\n",
                "prev %.0f%% | COI %.2f | FOI %.1f/py (import+local) | molFOB %.1f/py (+relapse) | relapse frac (episodes) %.2f"),
         nh, nm, endt, endt / 365, outcome, as.numeric(rp$BITING_RATE), rp$N_FOUNDER_LINEAGES, burn,
-        100 * m$prev, m$COI, foi, mol, relapse_fraction(ev)$relapse_frac_episodes),
+        100 * m$prevalence_frac, m$coi_mean, foi, mol, relapse_fraction(ev)$relapse_frac_episodes),
       theme = ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 14))) &
     ggplot2::theme(legend.position = "bottom")
 }

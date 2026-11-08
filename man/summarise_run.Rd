@@ -2,22 +2,83 @@
 % Please edit documentation in R/metrics.R
 \name{summarise_run}
 \alias{summarise_run}
-\title{One-call calibration metrics for a run (steady state = 2nd half)}
+\title{A run's epidemiology over one window of days}
 \usage{
-summarise_run(run, burn_frac = 0.5)
+summarise_run(
+  run,
+  burn_frac = 0.5,
+  from = NULL,
+  to = NULL,
+  exclude_masked = FALSE
+)
 }
 \arguments{
-\item{run}{a \code{vivax_run} or run directory.}
+\item{run}{a \code{vivax_run} or its directory.}
 
-\item{burn_frac}{the fraction of \code{SIM_DAYS} discarded as burn-in. Prevalence and the reservoir
-are means over every host-day of the rest of the run, so a run that went extinct counts its
-remaining days as days with no infected host.}
+\item{burn_frac}{the share of \code{SIM_DAYS} left out as burn-in, at least 0 and below 1: the window
+starts on day \code{round(SIM_DAYS * burn_frac) + 1}. Not with \code{from}.}
+
+\item{from, to}{the window's first and last days, both included: \code{from = 0} is day 1, and
+\code{to = NULL} is \code{SIM_DAYS}.}
+
+\item{exclude_masked}{if \code{TRUE}, leave masked relapses out of every relapse column.}
 }
 \value{
-a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
-\code{relapse_frac} is \code{\link[=relapse_fraction]{relapse_fraction()}}'s \code{relapse_frac_acquisitions} over the whole run, \code{NA}
-for a run with no case, and \code{relapses_py} is \code{\link[=relapses_per_person_year]{relapses_per_person_year()}} over the whole run.
+a one-row data.table, nothing rounded:
+\itemize{
+\item the window and the run: \code{from_tick}, \code{to_tick} and \code{n_days} (integer), \code{exclude_masked},
+\code{extinct} and \code{never_started} (logical), and \code{extinct_tick} (integer, \code{NA} for a run that
+did not go extinct);
+\item host state, over the window's host-days: \code{prevalence_frac} (the share with a patent clone),
+\code{coi_mean} and \code{coi_median} (patent lineages per infected host-day) and \code{polyclonal_frac} (the
+share of infected host-days with two or more), each \code{NA} with no infected host-day, and
+\code{hypnozoites_per_host};
+\item rates per person-year: \code{eir_per_py} (infectious bites; \code{NA} for a state table without
+\code{infectious_bites}), \code{foi_per_py} (new clones from bites and imports),
+\code{molfob_clones_per_py} (and from relapses), \code{molfob_episodes_per_py} (and from
+recrudescences) and \code{relapses_per_py_at_risk} (\code{NA} with no time at risk);
+\item fractions: \code{relapse_frac_episodes} and \code{relapse_frac_acquisitions}, as
+\code{\link[=relapse_fraction]{relapse_fraction()}} gives them, and \code{imported_frac} (imports among the new clones from bites
+and imports), each \code{NA} with nothing to divide;
+\item counts (integer): \code{n_imported}, \code{n_local_reinfection}, \code{n_relapse}, \code{n_relapse_masked} (\code{NA}
+for an event log without the flag), \code{n_recrudescence} and \code{n_bloodstage_courses} (blood-stage
+courses, by case management or MDA);
+\item denominators: \code{person_years} and \code{person_years_at_risk}.
+}
 }
 \description{
-One-call calibration metrics for a run (steady state = 2nd half)
+One row that summarises a run over a window of its days, by default the second half. Every
+column covers the same days, so the rows of different runs, or of a grid, mean the same thing.
+}
+\details{
+\strong{The window.} The first \code{burn_frac} of the run's \code{SIM_DAYS} days are burn-in, so the window is
+days \code{round(SIM_DAYS * burn_frac) + 1} to \code{SIM_DAYS}; \code{from} and \code{to} set it directly. A run that
+went extinct, or never started, is summarised over the same days, the days after its last state
+row counting as days with no parasite. A run that stopped early without either record is
+summarised only up to its last recorded day.
+
+\strong{What is counted.} Cases are the clone onsets in the window, as \code{\link[=classify_cases]{classify_cases()}} gives them:
+a bite that delivers two genotypes is two new clones, though one infectious bite, and founder
+seeding is not an onset. A recrudescence is an episode but not an acquisition, so it is in
+\code{molfob_episodes_per_py} and \code{relapse_frac_episodes} only. Masked relapses, into a patent clone
+of their own lineage, are counted unless \code{exclude_masked = TRUE} leaves them out of every relapse
+column; \code{n_relapse_masked} counts them either way. \code{NU_HYPNOZOITE_BATCH} was fitted with every
+relapse counted (see \code{\link[=relapse_fraction]{relapse_fraction()}}).
+
+\strong{Person-years.} The EIR, FOI and molFOB divide by the person-years of every host, \code{N_HOSTS}
+times the window's days over 365. The relapse rate divides by the person-years at risk: each
+host counts from the day after its first infection by a bite or an import, a blood-stage primary
+or a hypnozoite batch, to the window's end; founder seeding does not put a host at risk.
+
+\strong{Pooling.} To pool runs, sum the counts and the person-years and divide, or weight each rate by
+its person-years: an average of rates weights a short or small run as much as a long one.
+}
+\examples{
+\dontrun{
+summarise_run(run)                        # the second half of the run
+summarise_run(run, from = 366, to = 730)  # its second year
+}
+}
+\seealso{
+\code{\link[=force_of_infection]{force_of_infection()}}, \code{\link[=relapse_fraction]{relapse_fraction()}}, \code{\link[=classify_cases]{classify_cases()}}, \code{\link[=plot_diagnostics]{plot_diagnostics()}}
 }

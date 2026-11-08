@@ -68,7 +68,7 @@ cat("   done in", round(as.numeric(Sys.time() - t0, units = "secs")), "s ->", ru
 say("4. Run summary")
 ev <- load_events(run)
 st <- load_state(run)
-hr(); print(summarise_run(run)); hr()
+hr(); str(summarise_run(run)); hr()
 
 cat("\nevents logged:\n")
 print(ev[, .N, by = event_type][order(-N)])

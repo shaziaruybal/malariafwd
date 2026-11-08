@@ -594,37 +594,145 @@ pick_host <- function(events) {
   as.data.table(events)[event_type == "hypnozoite_activation", .N, by = human_id][order(-N)][1]$human_id
 }
 
-#' One-call calibration metrics for a run (steady state = 2nd half)
-#' @param run a `vivax_run` or run directory.
-#' @param burn_frac the fraction of `SIM_DAYS` discarded as burn-in. Prevalence and the reservoir
-#'   are means over every host-day of the rest of the run, so a run that went extinct counts its
-#'   remaining days as days with no infected host.
-#' @return a one-row data.table of prevalence, COI, polyclonality, reservoir, relapse metrics.
-#'   `relapse_frac` is [relapse_fraction()]'s `relapse_frac_acquisitions` over the whole run, `NA`
-#'   for a run with no case, and `relapses_py` is [relapses_per_person_year()] over the whole run.
+#' A run's epidemiology over one window of days
+#'
+#' One row that summarises a run over a window of its days, by default the second half. Every
+#' column covers the same days, so the rows of different runs, or of a grid, mean the same thing.
+#'
+#' **The window.** The first `burn_frac` of the run's `SIM_DAYS` days are burn-in, so the window is
+#' days `round(SIM_DAYS * burn_frac) + 1` to `SIM_DAYS`; `from` and `to` set it directly. A run that
+#' went extinct, or never started, is summarised over the same days, the days after its last state
+#' row counting as days with no parasite. A run that stopped early without either record is
+#' summarised only up to its last recorded day.
+#'
+#' **What is counted.** Cases are the clone onsets in the window, as [classify_cases()] gives them:
+#' a bite that delivers two genotypes is two new clones, though one infectious bite, and founder
+#' seeding is not an onset. A recrudescence is an episode but not an acquisition, so it is in
+#' `molfob_episodes_per_py` and `relapse_frac_episodes` only. Masked relapses, into a patent clone
+#' of their own lineage, are counted unless `exclude_masked = TRUE` leaves them out of every relapse
+#' column; `n_relapse_masked` counts them either way. `NU_HYPNOZOITE_BATCH` was fitted with every
+#' relapse counted (see [relapse_fraction()]).
+#'
+#' **Person-years.** The EIR, FOI and molFOB divide by the person-years of every host, `N_HOSTS`
+#' times the window's days over 365. The relapse rate divides by the person-years at risk: each
+#' host counts from the day after its first infection by a bite or an import, a blood-stage primary
+#' or a hypnozoite batch, to the window's end; founder seeding does not put a host at risk.
+#'
+#' **Pooling.** To pool runs, sum the counts and the person-years and divide, or weight each rate by
+#' its person-years: an average of rates weights a short or small run as much as a long one.
+#'
+#' @param run a `vivax_run` or its directory.
+#' @param burn_frac the share of `SIM_DAYS` left out as burn-in, at least 0 and below 1: the window
+#'   starts on day `round(SIM_DAYS * burn_frac) + 1`. Not with `from`.
+#' @param from,to the window's first and last days, both included: `from = 0` is day 1, and
+#'   `to = NULL` is `SIM_DAYS`.
+#' @param exclude_masked if `TRUE`, leave masked relapses out of every relapse column.
+#' @return a one-row data.table, nothing rounded:
+#'   * the window and the run: `from_tick`, `to_tick` and `n_days` (integer), `exclude_masked`,
+#'     `extinct` and `never_started` (logical), and `extinct_tick` (integer, `NA` for a run that
+#'     did not go extinct);
+#'   * host state, over the window's host-days: `prevalence_frac` (the share with a patent clone),
+#'     `coi_mean` and `coi_median` (patent lineages per infected host-day) and `polyclonal_frac` (the
+#'     share of infected host-days with two or more), each `NA` with no infected host-day, and
+#'     `hypnozoites_per_host`;
+#'   * rates per person-year: `eir_per_py` (infectious bites; `NA` for a state table without
+#'     `infectious_bites`), `foi_per_py` (new clones from bites and imports),
+#'     `molfob_clones_per_py` (and from relapses), `molfob_episodes_per_py` (and from
+#'     recrudescences) and `relapses_per_py_at_risk` (`NA` with no time at risk);
+#'   * fractions: `relapse_frac_episodes` and `relapse_frac_acquisitions`, as
+#'     [relapse_fraction()] gives them, and `imported_frac` (imports among the new clones from bites
+#'     and imports), each `NA` with nothing to divide;
+#'   * counts (integer): `n_imported`, `n_local_reinfection`, `n_relapse`, `n_relapse_masked` (`NA`
+#'     for an event log without the flag), `n_recrudescence` and `n_bloodstage_courses` (blood-stage
+#'     courses, by case management or MDA);
+#'   * denominators: `person_years` and `person_years_at_risk`.
+#' @seealso [force_of_infection()], [relapse_fraction()], [classify_cases()], [plot_diagnostics()]
+#' @examples
+#' \dontrun{
+#' summarise_run(run)                        # the second half of the run
+#' summarise_run(run, from = 366, to = 730)  # its second year
+#' }
 #' @export
-summarise_run <- function(run, burn_frac = 0.5) {
-  st <- load_state(run); ev <- load_events(run)
-  endt <- .sim_days(run, "summarise_run"); burn <- round(endt * burn_frac)
-  nh <- as.numeric(.params_of(run)$N_HOSTS)
-  ## every host-day of the window, also those after an extinction, which state.tsv does not hold
-  host_days <- nh * (endt - max(burn, 1L) + 1L)
-  h <- as.data.table(st)[entity_type == "human" & tick >= burn]
-  cd <- coi_distribution(st, burn_in = burn)
-  vi <- as.data.table(ev)[event_type %in% c("vh_inoculation","vh_inoculation_import") & is_dormant == 0]
+summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_masked = FALSE) {
+  .check_flag(exclude_masked, "exclude_masked")
+  run <- load_run(run)
+  w <- .run_window(.sim_days(run, "summarise_run"), burn_frac, from, to,
+                   both = !missing(burn_frac) && !is.null(from))
+  .summary_row(run, load_events(run), load_state(run), w, exclude_masked)
+}
+
+## The days a summary covers (D69), both included: from day round(SIM_DAYS * burn_frac) + 1, or
+## `from` (0 is day 1), to `to`, SIM_DAYS by default.
+.run_window <- function(sim_days, burn_frac = 0.5, from = NULL, to = NULL, both = FALSE) {
+  if (both) stop("give `burn_frac` or `from`, not both.", call. = FALSE)
+  if (is.null(from)) {
+    if (!is.numeric(burn_frac) || length(burn_frac) != 1L || is.na(burn_frac) || burn_frac < 0 ||
+        burn_frac >= 1)
+      stop("`burn_frac` must be a number at least 0 and below 1: the share of the run's ", sim_days,
+           " days (SIM_DAYS) left out as burn-in.", call. = FALSE)
+    from <- round(sim_days * burn_frac) + 1
+  } else from <- .check_day(from, "from")
+  to <- if (is.null(to)) sim_days else .check_day(to, "to")
+  if (to > sim_days)
+    stop("`to` = ", to, " is after the run's last day, SIM_DAYS = ", sim_days, ".", call. = FALSE)
+  from <- max(from, 1)
+  if (from > to)
+    stop("the window has no day: it starts on day ", from, " and ends on day ", to, ".", call. = FALSE)
+  list(from = as.integer(from), to = as.integer(to), n_days = as.integer(to - from + 1))
+}
+
+## summarise_run()'s row for window `w`, from tables already read; plot_diagnostics() shares it.
+.summary_row <- function(run, events, hosts, w, exclude_masked) {
+  nh <- as.integer(.params_of(run)$N_HOSTS); sim_days <- .sim_days(run)
+  ## the days after the last state row are days with no parasite only once the run has ended:
+  ## extinct, or never started
+  last <- if (nrow(hosts)) max(hosts$tick) else 0L
+  ended <- if (!is.na(run$extinct_tick)) run$extinct_tick else if (isTRUE(run$never_started)) last else sim_days
+  if (w$to > last && last < ended)
+    stop("state.tsv in ", .run_dir(run), " stops on day ", last, " of ", sim_days, ", and params.tsv ",
+         "records no extinction and no start failure, so the run did not finish: summarise the days it ",
+         "recorded with `to = ", last, "`.", call. = FALSE)
+  hw <- hosts[tick >= w$from & tick <= w$to]
+  if (nrow(hw) != as.numeric(nh) * max(0L, min(w$to, last) - w$from + 1L))
+    stop("state.tsv in ", .run_dir(run), " does not hold one row per host (N_HOSTS = ", nh,
+         ") for each day from ", w$from, " to ", min(w$to, last), ".", call. = FALSE)
+  host_days <- as.numeric(nh) * w$n_days; py <- host_days / 365
+  inf <- hw$moi_active[hw$moi_active > 0]
+  evw <- events[tick >= w$from & tick <= w$to]
+  cs_all <- classify_cases(evw)
+  cs <- if (exclude_masked) classify_cases(evw, exclude_masked = TRUE) else cs_all
+  rf <- relapse_fraction(evw, exclude_masked)
+  n_of <- function(o) cs[origin == o, .N]
+  n_imp <- n_of("imported"); n_loc <- n_of("local reinfection")
+  n_rel <- n_of("relapse"); n_rec <- n_of("recrudescence")
+  flag <- cs_all[origin == "relapse"]$into_patent_lineage
+  ## the whole log: a host's first establishment can lie in the burn-in
+  risk <- .relapses_per_person_year(events, sim_days, w$from, w$to, exclude_masked)
+  frac <- function(a, b) if (b > 0) a / b else NA_real_
   data.table(
-    prev = round(sum(h$moi_active > 0) / host_days, 3),
-    COI = round(if (nrow(cd)) sum(cd$moi_active * cd$pct/100) else NA_real_, 2),
-    poly = round(if (nrow(cd)) sum(cd[moi_active > 1]$pct) else NA_real_, 1),
-    mean_res = round(sum(h$hyp_reservoir_size) / host_days, 1),
-    relapse_frac = round(relapse_fraction(ev)$relapse_frac_acquisitions, 3),
-    relapses_py = round(relapses_per_person_year(run)$relapses_per_py, 2),
-    ## courses GIVEN, not clones cleared: one course clears every clone in the host, and a
-    ## clone can survive it (bloodcure_persist), so counting clearances is wrong in both
-    ## directions - and counts zero for MDA, which clears via mda_bloodstage_clear.
-    n_bloodstage_treated = as.data.table(ev)[
-      event_type %in% c("bloodcure_given", "mda_bloodcure_given"), .N],
-    imported_frac = round(if (nrow(vi)) mean(vi$is_imported == 1) else 0, 3))
+    from_tick = w$from, to_tick = w$to, n_days = w$n_days, exclude_masked = exclude_masked,
+    extinct = !is.na(run$extinct_tick), extinct_tick = as.integer(run$extinct_tick),
+    never_started = isTRUE(run$never_started),
+    prevalence_frac = sum(hw$moi_active > 0) / host_days,
+    coi_mean = if (length(inf)) mean(inf) else NA_real_,
+    coi_median = if (length(inf)) as.numeric(stats::median(inf)) else NA_real_,
+    polyclonal_frac = if (length(inf)) mean(inf > 1) else NA_real_,
+    hypnozoites_per_host = sum(as.numeric(hw$hyp_reservoir_size)) / host_days,
+    eir_per_py = if (anyNA(hw$infectious_bites)) NA_real_ else sum(as.numeric(hw$infectious_bites)) / py,
+    foi_per_py = (n_imp + n_loc) / py,
+    molfob_clones_per_py = (n_imp + n_loc + n_rel) / py,
+    molfob_episodes_per_py = (n_imp + n_loc + n_rel + n_rec) / py,
+    relapses_per_py_at_risk = risk$relapses_per_py,
+    relapse_frac_episodes = rf$relapse_frac_episodes,
+    relapse_frac_acquisitions = rf$relapse_frac_acquisitions,
+    imported_frac = frac(n_imp, n_imp + n_loc),
+    n_imported = n_imp, n_local_reinfection = n_loc, n_relapse = n_rel,
+    n_relapse_masked = if (anyNA(flag)) NA_integer_ else sum(flag),
+    n_recrudescence = n_rec,
+    ## courses given, not clones cleared: one course clears every clone in a host, and a clone can
+    ## survive it (bloodcure_persist); an MDA round clears through mda_bloodstage_clear
+    n_bloodstage_courses = evw[event_type %in% c("bloodcure_given", "mda_bloodcure_given"), .N],
+    person_years = py, person_years_at_risk = risk$person_years)
 }
 
 #' Relapse-vs-origin IBD: each relapse paired to a same-lineage prior primary

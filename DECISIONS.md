@@ -19,6 +19,44 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D69 — summarise_run() is the one summary of a run, over one window of days · 2026-11-08 · Accepted
+**Context.** Four of `summarise_run()`'s eight columns (the relapse fraction, relapses per
+person-year, treatment courses and the imported share) covered the whole run, while prevalence,
+COI, polyclonality and the reservoir covered its second half, so on a treated 400-day run the
+relapse fraction read 0.608 at `burn_frac` 0 and 0.5 alike. The units were mixed and undocumented,
+values were rounded, there was no EIR, FOI or molFOB, and the calibration was scored with the
+analysis repository's own summary, under other definitions (review M11, m23, m29, m41; Q12).
+**Decision.** One window, from day `round(SIM_DAYS * burn_frac) + 1` (or `from`) to `to` (by
+default `SIM_DAYS`), for every column: counts of its days, means over its host-days, rates over its
+person-years, the days after an extinction counting as days with no parasite (D61). One row of 28
+typed columns named by their units (`_frac`, `_per_py`, `_tick`, `n_`), unrounded, `NA` where
+there is nothing to divide. The EIR is the count of infectious bites (D47). The relapse rate is per
+person-year at risk (D66); the EIR, FOI and molFOB are per person-year of every host; FOI counts
+the new clones from bites and imports. molFOB has both D25 readings, and both relapse fractions are
+given (D65). `exclude_masked` leaves D40's masked relapses out of every relapse column, and
+`n_relapse_masked` counts them either way. The row records its window, its reading and how the run
+ended. A run that stopped early without a record is summarised only up to its last day.
+**Rationale.** A summary pooled over a grid must mean the same thing in every column and every
+cell. The bite count is exact, where the Ross-Macdonald formula needs a correction that depends on
+mosquito mortality and the season.
+**Alternatives rejected.** *Summing `force_of_infection()`'s rows* -- the window need not line up
+with its bins. *Polyclonality in percent.* *One column per masked reading.* *A class with a print
+method* -- `rbindlist()` drops it.
+**Consequences.** Runs are unchanged. 28 columns replace 8, and every run's values change: the
+window starts one day later, the event columns are windowed, nothing is rounded, and polyclonality
+is a fraction. On the treated run (seed 1) the relapse fraction is 0.608 over the whole run and
+0.640 over its second half, relapses per person-year at risk 5.77 and 5.93, courses 125 and 81, the
+imported share 0.174 and 0.119. The glossary's FOI row, which said mosquito-borne only, gives the
+FOI the functions compute, imports included. The NU = 0 validation check counts relapses, since its
+window holds no onset. Section 13's figures are regenerated with the release (M33).
+**How to verify.** `tests/testthat/test-summary.R`: names and classes on every kind of run; the
+fixture's values over the whole run, the default window and two others; `exclude_masked`; logs
+without the flag or the bite count; extinct, never-started and unfinished runs; the window's
+arguments; on a SLiM run, every column against its definition over the window, and FOI and molFOB
+against `force_of_infection()`.
+
+---
+
 ## D68 — host_state_prevalence() counts subpatent carriers, and has every state every day · 2026-11-08 · Accepted
 **Context.** `host_state_prevalence()` gave a row only for the (day, state) pairs that held a host,
 so its stacked-area plot joined the rows on either side of an empty state, drawing hosts on days
@@ -1540,7 +1578,7 @@ which is the check failing to reach the network in this sandbox).
 
 ---
 
-## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the molFOB pair (molfob_clones / molfob_episodes) and the subpatent_clearance event; relapse-fraction names by D65; open item on MDA settled by D44
+## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the subpatent_clearance event; relapse-fraction names by D65, the molFOB pair by D69; open item on MDA settled by D44
 **Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
 reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
 suppressed below patency and later re-expand. A scratch prototype
