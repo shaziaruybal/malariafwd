@@ -31,6 +31,7 @@ their own help. The author accepted the table's proposals; each export change be
 | `classify_who()`, labels `Imported` / `Indigenous` | `classify_travel()`, labels `imported (recent travel)` / `local (no recent travel)`; takes a run, and `window` is checked | it applies a travel rule, and "WHO" and "Indigenous" read as the truth, which `classify_chain()` gives (review m16); lower case like the package's other classes |
 | `model_version()` | removed: a run's versions are `load_run()$malariafwd_version` and `$slim_version` | it told two model generations apart by a column every run of this release has |
 | `moi_vs_relapse()`, `plot_moi_vs_relapse()` | removed | one study's figure; a host's peak `moi_active` is in `load_state()`, its relapses in `classify_cases()` |
+| `pick_host()` | removed: `ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]`, the host with the most relapses | one line that picks a figure's host, and nothing in the package calls it; the vignette and `quickstart.R` write it out |
 
 **Rationale.** A user looking for how to answer a question should find one function, and a function
 whose help tells the user not to use it should not be exported.

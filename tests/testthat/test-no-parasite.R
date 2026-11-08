@@ -41,7 +41,6 @@ test_that("every reader takes a run with no parasite", {
       incidence_by_origin = function() incidence_by_origin(ev), force_of_infection = function() force_of_infection(r),
       transmission_links = function() transmission_links(ev), rc_episode = function() rc_by_origin(r),
       rc_acquisition = function() rc_by_origin(r, unit = "acquisition"), time_to_relapse = function() time_to_relapse(r),
-      pick_host = function() pick_host(ev),
       summarise_run = function() summarise_run(r), chrom_map = function() chrom_map(r))
     for (nm in names(readers)) quiet(readers[[nm]]())
     if (k != "d") expect_identical(nrow(classify_cases(ev)), 0L, label = k)

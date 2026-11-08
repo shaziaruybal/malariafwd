@@ -26,7 +26,7 @@ reference:
 - title: Epidemiology
   desc: Cases by origin, transmission chains, and the surveillance view.
   contents: [classify_cases, episodes, recurrences, classify_chain, incidence_by_origin, host_state_prevalence,
-             coi_distribution, transmission_links, rc_by_origin, classify_travel, pick_host]
+             coi_distribution, transmission_links, rc_by_origin, classify_travel]
 
 - title: Hypnozoites and relapses
   desc: The latent reservoir and the recurrences it drives.

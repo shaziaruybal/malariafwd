@@ -90,8 +90,9 @@ sv <- function(name, plot, w = 9, h = 5) {
 sv("01-diagnostics", plot_diagnostics(run), w = 11, h = 8)
 
 # 5b. epidemiological output
-host <- pick_host(ev)
-sv("02-host-trajectory", plot_host_trajectory(st, ev, host_id = host), w = 9, h = 4)
+host <- ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]   # most relapses
+if (is.na(host)) say("   no relapse in this run: no host trajectory figure") else
+  sv("02-host-trajectory", plot_host_trajectory(st, ev, host_id = host), w = 9, h = 4)
 sv("03-host-states",     plot_host_state_prevalence(host_state_prevalence(st)))
 sv("04-time-to-relapse", plot_relapse_km(time_to_relapse(run)))
 

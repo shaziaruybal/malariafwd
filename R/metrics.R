@@ -508,14 +508,6 @@ host_state_prevalence <- function(state) {
   out[order(tick, cls)]
 }
 
-#' Pick a host with a rich relapse history (for a trajectory illustration)
-#' @param events an events data.table.
-#' @return a single host id.
-#' @export
-pick_host <- function(events) {
-  as.data.table(events)[event_type == "hypnozoite_activation", .N, by = human_id][order(-N)][1]$human_id
-}
-
 #' A run's epidemiology over one window of days
 #'
 #' One row that summarises a run over a window of its days, by default the second half. Every
