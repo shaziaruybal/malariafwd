@@ -134,8 +134,9 @@
 #'   `finished` (UTC), `slim_version` and `malariafwd_version`, from the run's `DONE`, and then one
 #'   column per parameter whose value differs between the sets, of the parameter's type. A cell
 #'   that never started is `ok`: not starting is an outcome of the grid, which `never_started`
-#'   records. Its run holds no parasite, though, so give only the cells with
-#'   `ok & !never_started` to the readers that need one, such as [arg_summary()]. The cells that
+#'   records. Its run holds no parasite, so its event and genetic summaries are empty or `NA`: keep
+#'   the cells with `ok & !never_started` for those, and count the cells that never started as an
+#'   outcome. The cells that
 #'   went extinct, those that never started, and those not run again are counted in one message
 #'   each. A failed cell does not abort the grid -- its directory is left as it was and its files
 #'   and log are in `<cell>.failed` -- but it warns, and the reason travels with the result. A

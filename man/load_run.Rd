@@ -44,8 +44,9 @@ of 0, or an \code{IMPORT_RATE_PER_TICK} window whose rate is 0 throughout, as un
 \code{IMPORT_RATE_BOOST = 0} from a trigger before the window). It ends on the first tick after its
 last import day, but not before tick 10, or on its last day if that comes first, and its
 \code{params.tsv} ends with a \code{NEVER_STARTED} row. It holds no parasite: its tree sequence has no
-nodes and its events are at most imports that did not take, so the readers that need a parasite,
-such as \code{\link[=arg_summary]{arg_summary()}}, stop on it.
+nodes and its events are at most imports that did not take. Every reader takes such a run: its
+tables have their usual columns and no rows, its counts are 0, and a quantity that needs a
+parasite is \code{NA} (\code{\link[=arg_summary]{arg_summary()}} reports no samples).
 
 The functions that summarise a window of a run take its length from \code{SIM_DAYS}, so the days
 after an extinction count as days with no parasite.

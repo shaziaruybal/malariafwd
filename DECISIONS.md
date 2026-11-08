@@ -1062,11 +1062,10 @@ legitimate null arm of a grid, and never started is its honest outcome.
 stopped end with exit status 0 instead of an error; those that ran to their last day gain the
 `NEVER_STARTED` row, with their events and state unchanged. Every other run is byte-identical. A
 run that never started holds no parasite (a tree sequence with no nodes, and at most no-take rows
-in its events). The readers that need a parasite stop on it (`arg_summary()`, `arg_diversity()`,
-`ibd_truth_pairs()`, and `moi_vs_relapse()` when no import arrived), and `summarise_run()`,
-`relapses_per_person_year()` and `plot_diagnostics()` warn on it. `?run_grid` says to give such
-readers only the `ok & !never_started` cells, while the cells that never started still count as
-outcomes; making the readers handle such a run is still to do.
+in its events). Every reader takes such a run, as it does an extinct one: its tables have their
+usual columns and no rows, its counts are 0, and a quantity that needs a parasite is `NA`
+(`tests/testthat/test-no-parasite.R`). `?run_grid` says to keep the `ok & !never_started` cells for
+event and genetic summaries, while the cells that never started still count as outcomes.
 **How to verify.** `tests/testthat/test-run.R` runs a founder-free set whose import rate draws no
 import: `run_sim()` gives the message, `never_started` is `TRUE`, `extinct_tick` is `NA`,
 `load_params()` has no `NEVER_STARTED`, and `run_grid()` counts both cells. A second test checks

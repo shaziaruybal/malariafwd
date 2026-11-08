@@ -117,8 +117,9 @@ last day if that comes first, and writes its outputs as an extinct run does. Unl
 this is decided on the last day whatever the import schedule, so every run that never had a
 parasite is marked: its `params.tsv` ends with a `NEVER_STARTED` row, `run_sim()` says so, and the
 run's `never_started` is `TRUE` (D43). Such a run holds no parasite: its tree sequence has no
-nodes, and its events are at most imports that did not take. A founder-free run with no import
-path inside it at all is refused before SLiM starts.
+nodes, and its events are at most imports that did not take. Every reader takes it, with empty
+tables, zero counts or NA. A founder-free run with no import path inside it at all is refused
+before SLiM starts.
 
 Ordering matters for one subtlety: a batch exhausted during `reproduction()` is **retired** by
 setting `batch_count = 0`, and killed by the cleanup pass at the top of `early()` in the **same**

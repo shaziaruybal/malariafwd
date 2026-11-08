@@ -202,7 +202,8 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::theme(plot.title = ggplot2::element_text(size = 11, face = "bold"),
                    panel.grid.minor = ggplot2::element_blank(), legend.position = "bottom")
   lp <- function(d, col, ttl, xlab, ylab, ymax = NA) {
-    p <- gg(d, ae(w, y)) + vbl + ggplot2::geom_line(colour = col, linewidth = .9) +
+    ## a window with no infected host has no COI: the line breaks there
+    p <- gg(d, ae(w, y)) + vbl + ggplot2::geom_line(colour = col, linewidth = .9, na.rm = TRUE) +
       ggplot2::labs(title = ttl, x = xlab, y = ylab) + th
     if (!is.na(ymax)) p + ggplot2::coord_cartesian(ylim = c(0, ymax)) else p
   }
