@@ -28,14 +28,26 @@
 ## Inputs are the data.tables from load_events()/load_state() (or pass a vivax_run to the
 ## run-level helpers). See DECISIONS.md for the identity model (pedigree/lineage/oocyst).
 
-#' Distribution of complexity-of-infection (active MOI) across hosts
+#' Distribution of complexity of infection over the infected host-days
+#'
+#' The patent lineages (`moi_active`) of every infected host on each day from `from` to `to`, as
+#' counts of host-days and their shares.
 #' @inheritParams host_state_prevalence
-#' @param burn_in drop ticks before this (steady-state).
-#' @return a data.table of `moi_active` counts and percentages.
+#' @param from,to the days, both included: `from = 0` is day 1, and `to = NULL` is the state table's
+#'   last day.
+#' @return a data.table, one row per COI, by COI: `moi_active` (integer), `n` (the infected host-days,
+#'   integer) and `frac` (their share, from 0 to 1, summing to 1).
 #' @export
-coi_distribution <- function(state, burn_in = 0) {
-  h <- .as_state(state)[entity_type == "human" & tick >= burn_in & moi_active > 0]
-  h[, .N, by = moi_active][order(moi_active)][, pct := 100 * N / sum(N)][]
+coi_distribution <- function(state, from = 0, to = NULL) {
+  from <- .check_day(from, "from")
+  if (!is.null(to)) {
+    to <- .check_day(to, "to")
+    if (from > to) stop("`from` = ", from, " is after `to` = ", to, ".", call. = FALSE)
+  }
+  h <- .as_state(state)[entity_type == "human" & tick >= from & moi_active > 0]
+  if (!is.null(to)) h <- h[tick <= to]
+  out <- h[, .(n = .N), by = .(moi_active = as.integer(moi_active))][order(moi_active)]
+  out[, frac := n / sum(n)][]
 }
 
 ## Deterministic subsampling. Both metrics below cap the number of genomes they compare, and

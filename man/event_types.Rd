@@ -7,7 +7,7 @@
 event_types()
 }
 \value{
-a data.frame with columns \code{event_type}, \code{stage}, \code{ends_episode} (does this event
+a data.table with columns \code{event_type}, \code{stage}, \code{ends_episode} (does this event
 end a patent blood-stage episode?), \code{is_onset} (does it begin one?) and \code{description}.
 }
 \description{

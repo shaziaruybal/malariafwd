@@ -2,18 +2,21 @@
 % Please edit documentation in R/metrics.R
 \name{coi_distribution}
 \alias{coi_distribution}
-\title{Distribution of complexity-of-infection (active MOI) across hosts}
+\title{Distribution of complexity of infection over the infected host-days}
 \usage{
-coi_distribution(state, burn_in = 0)
+coi_distribution(state, from = 0, to = NULL)
 }
 \arguments{
 \item{state}{a state table from \code{\link[=load_state]{load_state()}}, or a run (a \code{vivax_run} or its directory).}
 
-\item{burn_in}{drop ticks before this (steady-state).}
+\item{from, to}{the days, both included: \code{from = 0} is day 1, and \code{to = NULL} is the state table's
+last day.}
 }
 \value{
-a data.table of \code{moi_active} counts and percentages.
+a data.table, one row per COI, by COI: \code{moi_active} (integer), \code{n} (the infected host-days,
+integer) and \code{frac} (their share, from 0 to 1, summing to 1).
 }
 \description{
-Distribution of complexity-of-infection (active MOI) across hosts
+The patent lineages (\code{moi_active}) of every infected host on each day from \code{from} to \code{to}, as
+counts of host-days and their shares.
 }

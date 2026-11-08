@@ -40,7 +40,7 @@
 #' `mosq_death` is one row per parasite genome an infected mosquito carried when it died; the
 #' deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.
 #'
-#' @return a data.frame with columns `event_type`, `stage`, `ends_episode` (does this event
+#' @return a data.table with columns `event_type`, `stage`, `ends_episode` (does this event
 #'   end a patent blood-stage episode?), `is_onset` (does it begin one?) and `description`.
 #' @examples
 #' event_types()
@@ -53,8 +53,8 @@ event_types <- function() {
   ## 23 rows of a public dictionary - caught by a regression sweep, not by the test suite.
   ## Here a mis-edit is a visibly short row, not a silent shift.
   r <- function(event_type, stage, ends_episode, is_onset, description)
-    data.frame(event_type = event_type, stage = stage, ends_episode = ends_episode,
-               is_onset = is_onset, description = description, stringsAsFactors = FALSE)
+    data.table::data.table(event_type = event_type, stage = stage, ends_episode = ends_episode,
+                           is_onset = is_onset, description = description)
   rbind(
     r("vh_inoculation",                "blood",  FALSE, TRUE,
       "new local mosquito-borne blood-stage infection"),

@@ -40,3 +40,23 @@ test_that("plot_host_state_prevalence() draws every state", {
   expect_no_warning(b <- ggplot2::ggplot_build(plot_host_state_prevalence(host_state_prevalence(hs_state()))))
   expect_identical(length(unique(b$data[[1]]$fill)), 5L)
 })
+
+test_that("coi_distribution() counts the infected host-days by COI, in a window", {
+  st <- fixture_state()
+  cd <- coi_distribution(st)
+  expect_identical(names(cd), c("moi_active", "n", "frac"))
+  expect_identical(vapply(cd, function(v) class(v)[1], ""), c(moi_active = "integer", n = "integer", frac = "numeric"))
+  h <- st[entity_type == "human" & moi_active > 0]
+  expect_identical(cd$n, h[, .N, by = moi_active][order(moi_active)]$N)
+  expect_equal(sum(cd$frac), 1)
+  w <- coi_distribution(st, from = 50, to = 70)
+  expect_identical(w$n, h[tick >= 50 & tick <= 70, .N, by = moi_active][order(moi_active)]$N)
+  expect_identical(coi_distribution(st, from = 50)$n, h[tick >= 50, .N, by = moi_active][order(moi_active)]$N)
+  expect_error(coi_distribution(st, from = 70, to = 50), "`from` = 70 is after `to` = 50.", fixed = TRUE)
+  expect_identical(nrow(coi_distribution(st[0])), 0L)
+})
+
+test_that("event_types() is a data.table", {
+  expect_true(data.table::is.data.table(event_types()))
+  expect_identical(names(event_types()), c("event_type", "stage", "ends_episode", "is_onset", "description"))
+})
