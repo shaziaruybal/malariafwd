@@ -82,7 +82,8 @@ h  <- pick_host(ev)        # a host with both relapses and reinfections
 plot_host_trajectory(st, ev, host_id = h)
 ```
 
-Population-level state composition (susceptible / infected) over time:
+Hosts by state over time: uninfected, patent without or with hypnozoites, subpatent only, and
+hypnozoites only:
 
 ```{r}
 plot_host_state_prevalence(host_state_prevalence(st))

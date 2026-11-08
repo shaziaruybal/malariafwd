@@ -19,6 +19,29 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D68 — host_state_prevalence() counts subpatent carriers, and has every state every day · 2026-11-08 · Accepted
+**Context.** `host_state_prevalence()` gave a row only for the (day, state) pairs that held a host,
+so its stacked-area plot joined the rows on either side of an empty state, drawing hosts on days
+that had none (the bug class of D62). It ignored `moi_subpatent`, so a host whose only clone was
+suppressed below patency was counted as uninfected, as section 16.2 conceded (review m20).
+**Decision.** One row per day of the state table and state, 0 where no host is in it, with `cls` a
+factor of five levels: `uninfected`, `active only`, `active + reservoir`, `subpatent` (a subpatent
+clone and no patent one, with or without hypnozoites) and `reservoir only (invisible)`. The count
+column is `n`. A state table without `moi_subpatent` counts no subpatent host. The plot keys a
+named five-colour palette by level.
+**Rationale.** A subpatent carrier is infected and can infect a mosquito; counting it as uninfected
+understates carriage exactly where treatment fails. A missing row is not a zero.
+**Alternatives rejected.** *Subpatent carriers with hypnozoites in the reservoir-only state* -- they
+carry a blood-stage clone, which a sensitive assay would find.
+**Consequences.** Runs are unchanged. Every day has five rows; at the default
+`P_RECRUD_GIVEN_FAIL = 0` the subpatent state is always 0. `N` is `n`.
+**How to verify.** `tests/testthat/test-host-states.R`: every state on every day, the subpatent
+carriers, a table without the column, an empty table, the plot. `tests/testthat/test-treatment.R`:
+on a run with recrudescence, the subpatent count is every day's host rows with no patent clone and
+a subpatent one.
+
+---
+
 ## D67 — Time to first relapse is measured per hypnozoite batch · 2026-11-08 · Accepted
 **Context.** `time_to_relapse()` timed each host from its first blood-stage infection, founder
 seeding included, to the first relapse of any of its batches, possibly one a later bite laid down,

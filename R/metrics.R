@@ -19,6 +19,11 @@
 ## rather than a silent shape = NA that draws nothing.
 .KIND_SHAPE <- c("new infection" = 24, "relapse" = 21, "recrudescence" = 23)
 
+## Host states, in the order host_state_prevalence() gives its levels, each with its fill. Named
+## for the same reason: an unlisted state would draw unfilled.
+.HOST_STATE_FILL <- c("uninfected" = "grey85", "active only" = "goldenrod2", "active + reservoir" = "firebrick",
+                      "subpatent" = "#8e6bbf", "reservoir only (invisible)" = "turquoise4")
+
 ## metrics.R -- epidemiological + genetic summaries of a run's event log / state table.
 ## Inputs are the data.tables from load_events()/load_state() (or pass a vivax_run to the
 ## run-level helpers). See DECISIONS.md for the identity model (pedigree/lineage/oocyst).
@@ -556,18 +561,29 @@ moi_vs_relapse <- function(state, events) {
   m[is.na(n_relapse), n_relapse := 0][peak_moi > 0]
 }
 
-#' Population host-state prevalence over time (the 4-way surveillance-blind-spot split)
-#' @param state a state data.table.
-#' @return a data.table of `tick`, `cls`, `N`, `frac`.
+#' Host-state prevalence over time
+#'
+#' The share of hosts in each of five states on each day of the state table: no parasite; patent
+#' blood-stage clones, without or with hypnozoites; subpatent clones and no patent one, with or
+#' without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see.
+#' @param state a state table from [load_state()].
+#' @return a data.table, one row per day of the state table and state, by day and state: `tick`,
+#'   `cls` (a factor with levels `"uninfected"`, `"active only"`, `"active + reservoir"`,
+#'   `"subpatent"` and `"reservoir only (invisible)"`), `n` (hosts, 0 when none) and `frac` (`n`
+#'   over the day's hosts). A state table without `moi_subpatent` counts no subpatent host.
+#' @seealso [plot_host_state_prevalence()]
 #' @export
 host_state_prevalence <- function(state) {
+  lv <- names(.HOST_STATE_FILL)
   st <- as.data.table(state)[entity_type == "human"]
-  st[, cls := fcase(
-    moi_active > 0 & moi_dormant > 0, "active + reservoir",
-    moi_active > 0 & moi_dormant == 0, "active only",
-    moi_active == 0 & moi_dormant > 0, "reservoir only (invisible)",
-    default = "uninfected")]
-  st[, .N, by = .(tick, cls)][, frac := N / sum(N), by = tick][]
+  subp <- if ("moi_subpatent" %in% names(st)) fcoalesce(as.integer(st$moi_subpatent), 0L) else integer(nrow(st))
+  st[, cls := fcase(moi_active > 0 & moi_dormant > 0, lv[3], moi_active > 0, lv[2],
+                    subp > 0, lv[4], moi_dormant > 0, lv[5], default = lv[1])]
+  cnt <- st[, .(n = .N), by = .(tick = as.integer(tick), cls)]
+  out <- cnt[CJ(tick = unique(cnt$tick), cls = lv), on = .(tick, cls)][is.na(n), n := 0L]
+  out[, frac := n / sum(n), by = tick]
+  out[, cls := factor(cls, levels = lv)]
+  out[order(tick, cls)]
 }
 
 #' Pick a host with a rich relapse history (for a trajectory illustration)

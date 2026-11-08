@@ -67,15 +67,20 @@ plot_moi_vs_relapse <- function(mvr, min_n = 5) {
 }
 
 #' Host-state prevalence over time (stacked area)
-#' @param hsp output of [host_state_prevalence()].
+#'
+#' The share of hosts in each state, day by day, stacked; subpatent carriers and the hosts with
+#' hypnozoites alone are bands of their own.
+#' @param hsp the table [host_state_prevalence()] returns.
 #' @return a ggplot object.
+#' @seealso [host_state_prevalence()]
 #' @export
 plot_host_state_prevalence <- function(hsp) {
   .need_ggplot()
-  lv <- c("uninfected","active only","active + reservoir","reservoir only (invisible)")
-  hsp <- copy(hsp)[, cls := factor(cls, levels = lv)]
+  hsp <- copy(as.data.table(hsp))
+  stopifnot(all(as.character(hsp$cls) %in% names(.HOST_STATE_FILL)))   # an unlisted state would draw unfilled
+  hsp[, cls := factor(cls, levels = names(.HOST_STATE_FILL))]
   ggplot2::ggplot(hsp, ggplot2::aes(tick, frac, fill = cls)) + ggplot2::geom_area() +
-    ggplot2::scale_fill_manual(values = c("grey85","goldenrod2","firebrick","turquoise4")) +
+    ggplot2::scale_fill_manual(values = .HOST_STATE_FILL) +
     ggplot2::labs(x = "day", y = "fraction of hosts", fill = NULL) +
     theme_malariafwd()
 }

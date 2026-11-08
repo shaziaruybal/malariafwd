@@ -2,16 +2,24 @@
 % Please edit documentation in R/metrics.R
 \name{host_state_prevalence}
 \alias{host_state_prevalence}
-\title{Population host-state prevalence over time (the 4-way surveillance-blind-spot split)}
+\title{Host-state prevalence over time}
 \usage{
 host_state_prevalence(state)
 }
 \arguments{
-\item{state}{a state data.table.}
+\item{state}{a state table from \code{\link[=load_state]{load_state()}}.}
 }
 \value{
-a data.table of \code{tick}, \code{cls}, \code{N}, \code{frac}.
+a data.table, one row per day of the state table and state, by day and state: \code{tick},
+\code{cls} (a factor with levels \code{"uninfected"}, \code{"active only"}, \code{"active + reservoir"},
+\code{"subpatent"} and \code{"reservoir only (invisible)"}), \code{n} (hosts, 0 when none) and \code{frac} (\code{n}
+over the day's hosts). A state table without \code{moi_subpatent} counts no subpatent host.
 }
 \description{
-Population host-state prevalence over time (the 4-way surveillance-blind-spot split)
+The share of hosts in each of five states on each day of the state table: no parasite; patent
+blood-stage clones, without or with hypnozoites; subpatent clones and no patent one, with or
+without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see.
+}
+\seealso{
+\code{\link[=plot_host_state_prevalence]{plot_host_state_prevalence()}}
 }

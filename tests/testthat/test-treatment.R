@@ -146,6 +146,11 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   expect_gt(nrow(sub), 0); expect_gt(nrow(rec), 0)
   expect_equal(nrow(ev[event_type == "bloodcure_persist"]), 0L)  # all failures suppress
   expect_gt(max(st$moi_subpatent), 0L)
+  ## host_state_prevalence() counts each subpatent carrier, every day
+  hs <- host_state_prevalence(st)
+  want <- st[entity_type == "human", .(n = sum(moi_active == 0 & moi_subpatent > 0), all = .N), by = tick][order(tick)]
+  expect_identical(hs[cls == "subpatent"]$n, want$n)
+  expect_identical(hs[, .(all = sum(n)), by = tick]$all, want$all)
 
   ## D25: a recrudescence MINTS a new genome whose parent is the holder
   expect_true(all(rec$parent1_pedigree_id %in% sub$pedigree_id))

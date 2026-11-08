@@ -7,11 +7,15 @@
 plot_host_state_prevalence(hsp)
 }
 \arguments{
-\item{hsp}{output of \code{\link[=host_state_prevalence]{host_state_prevalence()}}.}
+\item{hsp}{the table \code{\link[=host_state_prevalence]{host_state_prevalence()}} returns.}
 }
 \value{
 a ggplot object.
 }
 \description{
-Host-state prevalence over time (stacked area)
+The share of hosts in each state, day by day, stacked; subpatent carriers and the hosts with
+hypnozoites alone are bands of their own.
+}
+\seealso{
+\code{\link[=host_state_prevalence]{host_state_prevalence()}}
 }

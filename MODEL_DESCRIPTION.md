@@ -1336,8 +1336,8 @@ are routinely confused.
 **Prevalence is patent prevalence.** `moi_active > 0` is the model's prevalence, and it excludes
 subpatent carriers by construction — which is the right reading for a microscopy-era definition,
 and the one every calibration number here was scored against. For total carriage use
-`moi_active > 0 | moi_subpatent > 0`. Note `host_state_prevalence()` currently ignores
-`moi_subpatent` entirely, so it reports a subpatent-only host as uninfected.
+`moi_active > 0 | moi_subpatent > 0`. `host_state_prevalence()` reports a host with subpatent
+clones and no patent one as `subpatent`, with or without hypnozoites.
 
 **`lineage_ids` is `|`-separated and de-duplicated.** The column is written as
 `paste(unique(individuals.getValue("lineage_id")), sep="|")`, so three things follow and each
