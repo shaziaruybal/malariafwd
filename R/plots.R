@@ -190,7 +190,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   }
   inc  <- fill0(keep(cs[, .(y = .N), by = .(w, origin)]))
   ## new clones only: a recrudescence is a new episode but not a new clone
-  fo   <- fill0(keep(cs[origin %in% .ACQUISITIONS, .(y = .N / nh / (bin / 365)), by = .(w, origin)]), .ACQUISITIONS)
+  ## per host-year of the days each window covers, as force_of_infection() gives it: the first holds
+  ## days 1 to bin - 1
+  fo   <- cs[origin %in% .ACQUISITIONS, .(n = .N), by = .(w, origin)][grid, on = "w", nomatch = NULL]
+  fo   <- fill0(keep(fo[, .(w, origin, y = n / nh / (days / 365))]), .ACQUISITIONS)
   lin  <- merge(keep(grid)[, .(w)], cs[, .(y = uniqueN(lineage_id)), by = w], by = "w", all.x = TRUE)[is.na(y), y := 0]
   outcome <- if (!is.na(run$extinct_tick)) paste0(", extinct on day ", run$extinct_tick)
              else if (isTRUE(run$never_started)) ", never started" else ""

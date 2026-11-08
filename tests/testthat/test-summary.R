@@ -234,3 +234,12 @@ test_that("on a run, plot_diagnostics() names its window and that window's numbe
   expect_match(s, sprintf("days 361-400: prevalence %.0f%% | COI %.2f", 100 * m$prevalence_frac, m$coi_mean), fixed = TRUE)
   expect_match(s, sprintf("relapse frac (episodes) %.2f", m$relapse_frac_episodes), fixed = TRUE)
 })
+
+test_that("the dashboard's force panel is force_of_infection()'s rate, its short first window included", {
+  skip_if_not_installed("ggplot2"); skip_if_not_installed("patchwork")
+  r <- sm_main()
+  d <- plot_diagnostics(r)[[3]]$data
+  fo <- force_of_infection(r, split_imported = FALSE)[is_acquisition == TRUE & win %in% d$w]
+  expect_true(any(fo$win == 0L & fo$days < 30L & fo$rate > 0))
+  expect_equal(d[fo, on = .(w = win, origin), y], fo$rate)
+})

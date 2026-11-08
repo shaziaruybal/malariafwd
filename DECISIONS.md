@@ -466,8 +466,9 @@ its plot failed. The first window, which holds days 1 to `bin - 1`, was divided 
 **Decision.** `force_of_infection()` gives one row per window of the run, to the window holding
 `SIM_DAYS` (D61), and per origin, with `n = 0` where there is none; `win` and `days` are integers,
 and `days` is what the window covers within the run, `bin - 1` for the first. `bin` must be a whole
-number of days, at least 1. `plot_force_of_infection()` draws both series in every window.
-`incidence_by_origin()` is left as it is, to be merged into `force_of_infection()`.
+number of days, at least 1. `plot_force_of_infection()` draws both series in every window, and
+`plot_diagnostics()`'s force panel divides each window by the same days. `incidence_by_origin()` is
+left as it is, to be merged into `force_of_infection()`.
 **Rationale.** A window without a case is a measurement of zero, and a series should say so rather
 than leave it out.
 **Alternatives rejected.** *Zero-filling only in the plots* -- every other reader of the table would
