@@ -294,9 +294,11 @@ clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (the cur
 seasonality; ≈ 0.85 gives strong annual peaks swinging biting between roughly 0.15× and 1.85× the
 mean.
 
-> **Scale warning.** Because `ma` depends on `N_MOSQ / N_HOSTS`, prevalence and COI are
-> **scale-dependent**. A biting rate calibrated at 150 hosts does **not** transfer to 400 hosts.
-> Always calibrate at the scale you intend to publish.
+> **Scale warning.** `ma` depends on the ratio `N_MOSQ / N_HOSTS`, so scaling hosts and mosquitoes
+> together leaves it unchanged, while changing one without the other changes transmission. Even at
+> a fixed ratio, prevalence and COI depend on scale, through the numbers of founders and imports
+> and through chance fade-out, which is stronger in a small population: a biting rate calibrated
+> at 150 hosts need not transfer to 400 hosts. Calibrate at the scale you intend to publish.
 
 ---
 
@@ -1152,7 +1154,7 @@ junctions (φ about 0.09), because meiosis I pairs the products alike on every c
 | quantity | status |
 |---|---|
 | `NU_HYPNOZOITE_BATCH` | fitted against four published bands at moderate transmission, and shipped at 3 (measured below) |
-| `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI depend on `N_HOSTS`/`N_MOSQ`), so calibrate at the scale you will publish |
+| `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI move with `N_MOSQ / N_HOSTS`, and with the founder and import counts and chance fade-out at small scale), so calibrate at the scale you will publish |
 | hypnozoite rates | literature values (White, Mehra), not fitted |
 | genome, recombination | reference values, not fitted |
 
@@ -1547,11 +1549,14 @@ Use `defineGlobal()`. The trap is silent: a queue filled this way inside a callb
 TMRCA formulas give nonsense (a worked error: `dv/2/frac` gave 17,419 ticks against a maximum root
 time of 1,094). Use `ibd_pairs()` / `arg_tmrca()`.
 
-**R integer typing.** R passes `0.0` through the SLiM CLI as `-d X=0`, which Eidos types as
-integer and then rejects where a float is required. The engine uses the `asFloat()` idiom
-throughout; new parameters must too.
+**Integer and float spellings.** `-d X=0` makes an Eidos integer and `-d X=0.0` a float, and
+Eidos will not mix the two in some places (`rbinom()`, `seqLen()`, subsetting, a tick range).
+`initialize()` converts every parameter to the type it needs (D45), so a run started with
+`slim -d` takes either spelling; a new parameter must be converted there too. R writes every float
+with a decimal point.
 
-**Empty-vector iteration.** Eidos errors on iterating an empty vector; guard with `if (size(x) > 0)`.
+**Iterating `NULL`.** A `for` loop over a zero-length vector runs no iteration, and the model relies
+on that, but a loop over `NULL` is an error: guard anything that can be `NULL`.
 
 **Chromosome-aware joins.** When splitting IBD segments by chromosome, split each segment on its
 own — a whole-group comparison against the 14-row chromosome table silently recycles for pairs with
@@ -1610,7 +1615,6 @@ counting or drawing them (§6.3, §7).
 
 ## 20. Citation and licence
 
-See `DESCRIPTION`, `DECISIONS.md` (ADR log, D1–D16) and `NEWS.md`.
-
-> **Documentation defect to fix:** `NEWS.md` states the genome has "forward mutation". It does not —
-> `initializeMutationRate(0.0)`.
+malariafwd is released under the MIT licence (`LICENSE`). To cite it, use `citation("malariafwd")`
+or `CITATION.cff`. `DECISIONS.md` gives the reasons for the model's choices, and `NEWS.md` what
+each release contains.
