@@ -34,3 +34,23 @@ test_that("the package page is a page of concepts that names the shared terms", 
   for (term in c("tick", "pedigree_id", "lineage_id", "COI", "MOI", "Rc", "vivax_run"))
     expect_match(text, term, fixed = TRUE, label = term)
 })
+
+test_that("the author's name, ORCID and roles agree across the metadata files", {
+  root <- test_path("..", "..")
+  skip_if_not(file.exists(file.path(root, "CITATION.cff")), "the metadata files are in the source tree only")
+  read <- function(f) paste(readLines(file.path(root, f), encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  name <- "Ruybal-Pesántez"
+  orcid <- "0000-0002-0495-179X"
+  for (f in c("DESCRIPTION", "inst/CITATION", "LICENSE", "LICENSE.md", "CITATION.cff", ".zenodo.json", "README.md")) {
+    txt <- read(f)
+    expect_match(txt, name, fixed = TRUE, label = f)
+    expect_no_match(txt, "Ruybal[- ]Pesantez|Ruybal Pes", label = f)
+  }
+  for (f in c("DESCRIPTION", "inst/CITATION", "CITATION.cff", ".zenodo.json"))
+    expect_match(read(f), orcid, fixed = TRUE, label = f)
+  au <- eval(parse(text = read.dcf(file.path(root, "DESCRIPTION"), fields = "Authors@R")[[1]]))
+  expect_setequal(unlist(au$role), c("aut", "cre", "cph"))
+  ## the funder is acknowledged where the release is described and archived
+  for (f in c("README.md", ".zenodo.json"))
+    expect_match(read(f), "LCF/BQ/PI25/12100035", fixed = TRUE, label = f)
+})

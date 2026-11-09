@@ -180,6 +180,10 @@ Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bu
 questions, and get in touch before building on the package — see the pre-release note above.
 A citation and archived DOI will accompany the first tagged release.
 
+## Funding
+
+This work was supported by the "la Caixa" Foundation (ID 100010434), Junior Leader Fellowship LCF/BQ/PI25/12100035.
+
 ## Design history
 
 The genome model, biology fixes, and interface choices are recorded as an append-only decision

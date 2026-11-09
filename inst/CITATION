@@ -3,7 +3,7 @@ citHeader("To cite malariafwd in publications, please use:")
 bibentry(
   bibtype = "Manual",
   title   = "{malariafwd}: Forward Simulation of {Plasmodium vivax} Transmission and Genetics",
-  author  = person("Shazia", "Ruybal-Pesantez"),
+  author  = person("Shazia", "Ruybal-Pesántez", comment = c(ORCID = "0000-0002-0495-179X")),
   year    = "2026",
   note    = paste("R package version", meta$Version),
   url     = "https://github.com/shaziaruybal/malariafwd"

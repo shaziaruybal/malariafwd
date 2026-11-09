@@ -104,11 +104,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Shazia Ruybal-Pesantez \email{shazia.ruybal@isglobal.org} (\href{https://orcid.org/0000-0002-0495-179X}{ORCID})
+\strong{Maintainer}: Shazia Ruybal-Pesántez \email{shazia.ruybal@isglobal.org} (\href{https://orcid.org/0000-0002-0495-179X}{ORCID}) [copyright holder]
 
 Authors:
 \itemize{
-  \item Shazia Ruybal-Pesantez \email{shazia.ruybal@isglobal.org} (\href{https://orcid.org/0000-0002-0495-179X}{ORCID})
+  \item Shazia Ruybal-Pesántez \email{shazia.ruybal@isglobal.org} (\href{https://orcid.org/0000-0002-0495-179X}{ORCID}) [copyright holder]
 }
 
 }
