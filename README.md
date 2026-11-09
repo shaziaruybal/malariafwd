@@ -20,8 +20,9 @@
 Forward simulation of *Plasmodium vivax* transmission and genetics — an R interface to a
 [SLiM](https://messerlab.org/slim/) (Eidos) + [tskit](https://tskit.dev/) individual-based
 model. The model simulates blood-stage infection, the **hypnozoite reservoir and relapses**,
-meiotic recombination in the mosquito, and importation/interventions on a neutral
-14-chromosome PvP01 genome, recording a tree sequence for **ground-truth identity-by-descent**.
+meiotic recombination in the mosquito, and importation/interventions on a neutral copy of the
+14 chromosomes of the PvP01 reference genome, recording a tree sequence for **ground-truth
+identity-by-descent (IBD)**.
 
 An epidemiological model and a genetic model run together: each infection carries a real
 genome, so a question about transmission can be answered with genetics against a known truth.
@@ -49,13 +50,18 @@ from markers. Shared segments for pairs of known relationship:
 
 ## Requirements
 
-- **SLiM ≥ 5.2** on your `PATH` (or set `MALARIAFWD_SLIM`).
-- For the IBD and ARG functions and `simulate_genotypes()`: **Python with `tskit` (≥ 1.0) and `numpy`**, through
-  the `reticulate` package. Either route works. *Automatic*: with no Python chosen, reticulate
-  sets up its own environment with these modules the first time an IBD function runs; this needs
-  internet once and a few hundred MB in the user cache. *Your own Python*: set
-  `RETICULATE_PYTHON=/path/to/python` (in `~/.Renviron` to keep it) before the first IBD call of a
-  session.
+- **SLiM ≥ 5.2.** On any system, `conda install -c conda-forge slim` (builds for Linux, macOS on
+  Intel or Apple silicon, and Windows). On macOS the installer from the
+  [SLiM page](https://messerlab.org/slim/) works too; on Linux, conda or a build from source (the
+  SLiM manual, chapter 2). On Debian and Ubuntu, `apt install slim` installs an unrelated login
+  manager, not this SLiM. Windows is untested. If R cannot find SLiM (RStudio on macOS does not
+  see the shell's `PATH`), add `MALARIAFWD_SLIM=/full/path/to/slim` to `~/.Renviron` and restart R.
+- For the IBD and ancestral recombination graph (ARG) functions and `simulate_genotypes()`: **Python
+  with `tskit` (≥ 1.0) and `numpy`**, through the `reticulate` package. Either route works.
+  *Automatic*: with no Python chosen, reticulate sets up its own environment with these modules the
+  first time an IBD function runs; this needs internet once and a few hundred MB in the user cache.
+  *Your own Python*: set `RETICULATE_PYTHON=/path/to/python` (in `~/.Renviron` to keep it) before
+  the first IBD call of a session.
 - On a cluster whose compute nodes have no internet, run `check_setup()` once on a node that has
   it; later sessions that share the same user cache may then reuse the environment. If that does
   not work, use your own Python.
@@ -68,6 +74,11 @@ from markers. Shared segments for pairs of known relationship:
 # install.packages("remotes")
 remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE)
 ```
+
+`dependencies = TRUE` also installs the suggested packages that the plots and the IBD functions
+use (ggplot2, patchwork and reticulate). The vignettes are on the
+[website](https://shaziaruybal.github.io/malariafwd/); to install them as well, add
+`build_vignettes = TRUE`, which needs pandoc (RStudio includes it).
 
 ## Check it works
 
@@ -85,8 +96,12 @@ Rscript quickstart.R --github        # install from GitHub instead
 library(malariafwd)
 check_setup()                                     # SLiM, the model, and Python with tskit
 
-# one run
-p   <- vivax_params(N_HOSTS = 300, BITING_RATE = 0.09)   # validated params; full genome by default
+# no SLiM yet? every function below also takes the run that ships with the package:
+# run <- example_run()
+
+# one run: 100 hosts and 250 mosquitoes for 18 months, a few seconds on a laptop. Transmission
+# rises with BITING_RATE * N_MOSQ / N_HOSTS, so more hosts alone means less of it.
+p   <- vivax_params(N_HOSTS = 100, N_MOSQ = 250, BITING_RATE = 0.1, SIM_DAYS = 548)
 # every parameter, its unit and the values it may take: ?vivax_params or param_info()
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 # the run's directory appears when the run has finished; a second run into it is refused
@@ -95,7 +110,9 @@ run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
 # tidy outputs
 ev  <- load_events(run)                             # one row per event; ?events.tsv describes the columns
 st  <- load_state(run)                              # per-tick host state; ?state.tsv
-summarise_run(run)                                  # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
+summarise_run(run)     # over the second half of the run: prevalence, complexity of infection (COI),
+                       # entomological inoculation rate (EIR), force of infection (FOI), molecular
+                       # force of blood-stage infection (molFOB), relapses
 
 # ground-truth IBD (tskit)
 cs  <- classify_cases(ev)
@@ -126,8 +143,12 @@ classify_travel(ev)         # what a travel-history rule concludes instead, to s
 ## Genetics toolkit
 
 ```r
+# a relapse and the batch of hypnozoites it came from, by pedigree id (the tree sequence's key)
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
+a <- rel$pedigree_id; b <- rel$parent1_pedigree_id
+
 # pairwise IBD, and the segments behind it
-x <- ibd_pairs(run, ids = cs$pedigree_id); as.matrix(x)
+m <- as.matrix(x); m[1:4, 1:4]           # the quick start's x as a matrix, one row per genome
 ibd_segments(run, a, b)                  # the shared stretches, split by chromosome
 plot_ibd_pair(run, a, b)                 # IBD "karyotype" -- 14 chromosomes, shared blocks
 plot_relatedness_ladder(ibd_truth_pairs(run))   # IBD by known relationship vs the textbook rungs
@@ -137,7 +158,7 @@ loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
 g <- simulate_genotypes(run, cs$pedigree_id, loci, error = 0.01, seed = 1)
 write_vcf(g, "cases.vcf")
 
-# ARG-native (time-domain) views. The genealogy is a FOREST (see ?arg_summary), so tskit's branch
+# the ARG itself, in time. The genealogy is a FOREST (see ?arg_summary), so tskit's branch
 # statistics are no relatedness measure on it; arg_tmrca() is.
 arg_summary(run)                         # trees, edges, roots per tree, oldest root
 arg_tmrca(run, a, b)                     # genealogical DEPTH to the common ancestor, plus
@@ -147,6 +168,22 @@ arg_tmrca(run, a, b)                     # genealogical DEPTH to the common ance
 uptake_moments(2, k = 1)                     # what a setting actually produces
 uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
 ```
+
+## Learn more
+
+- [Getting started](https://shaziaruybal.github.io/malariafwd/articles/malariafwd.html): a run,
+  from its parameters to its ground truth and IBD.
+- [Anatomy of a run](https://shaziaruybal.github.io/malariafwd/articles/anatomy.html): what each
+  output holds, and how to read it.
+- [Reference](https://shaziaruybal.github.io/malariafwd/reference/): every function, starting with
+  the terms they share (`?malariafwd`).
+- [Model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html): the
+  model in full, with its parameters, assumptions and validation.
+- [Decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html): why each modelling
+  choice was made.
+- The validation scripts are installed with the package: list them with
+  `dir(system.file("validation", package = "malariafwd"))` and run one with `source()`, for
+  example `source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))`.
 
 ## How it works
 
@@ -183,9 +220,5 @@ A citation and archived DOI will accompany the first tagged release.
 
 ## Funding
 
-This work was supported by the "la Caixa" Foundation (ID 100010434), Junior Leader Fellowship LCF/BQ/PI25/12100035.
-
-## Design history
-
-The genome model, biology fixes, and interface choices are recorded as an append-only decision
-log in [`DECISIONS.md`](DECISIONS.md).
+This work was supported by the "la Caixa" Foundation (ID 100010434), Junior Leader Fellowship
+LCF/BQ/PI25/12100035.

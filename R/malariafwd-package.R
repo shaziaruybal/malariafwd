@@ -5,11 +5,15 @@
 #' defines the terms the help pages share.
 #'
 #' @section Start here:
-#' `vignette("malariafwd")` runs a simulation and reads it, and `vignette("anatomy")` walks through
-#' what a run records; [event_types()] lists every event a run logs. The model is described in full
-#' in [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), and the
+#' [example_run()] returns a small run that ships with the package, so every reader can be tried
+#' without SLiM. `vignette("malariafwd")` runs a simulation and reads it, and `vignette("anatomy")`
+#' walks through what a run records (both are also on the
+#' [website](https://shaziaruybal.github.io/malariafwd/)); [event_types()] lists every event a run
+#' logs. The model is described in full in
+#' [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), the
 #' reasons for its choices are in
-#' [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
+#' [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html), and the scripts that
+#' validate the model are installed in `system.file("validation", package = "malariafwd")`.
 #'
 #' @section Runs and their tables:
 #' A *run* is one simulation: [run_sim()] writes it to a directory, and [load_run()] reads that
