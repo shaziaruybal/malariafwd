@@ -5,8 +5,8 @@ template:
 
 reference:
 - title: Start here
-  desc: The terms used across the package, and where to read more.
-  contents: [malariafwd-package]
+  desc: The terms used across the package, a run to try them on, and where to read more.
+  contents: [malariafwd-package, example_run]
 
 - title: Running simulations
   desc: Build a parameter set, run the model, sweep in parallel.

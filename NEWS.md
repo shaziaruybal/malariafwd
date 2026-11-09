@@ -16,6 +16,8 @@ two parasite genomes are. It is a pre-release: the interface and the model may c
   vector control, seasonality and resurgence. Everything beyond the core is off by default.
 * **Running it**: `vivax_params()`, with every parameter described in `?vivax_params` and
   `param_info()`; `run_sim()`; `run_grid()`, for parallel sweeps that resume where they stopped.
+* **An example run**: `example_run()` returns a small run that ships with the package, so every
+  reader can be tried without SLiM.
 * **Ground truth**: `classify_cases()`, `episodes()`, `recurrences()`, `transmission_links()`,
   `classify_chain()` and `rc_by_origin()`, with `classify_travel()` for what a travel-history
   rule concludes instead.
