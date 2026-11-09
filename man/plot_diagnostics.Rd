@@ -33,6 +33,11 @@ The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop
 there to the end of the run, and the subtitle says on which day it went extinct. A window with no
 case is drawn as zero.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("patchwork", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot_diagnostics(example_run())
+\dontshow{\}) # examplesIf}
+}
 \references{
 Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
 }

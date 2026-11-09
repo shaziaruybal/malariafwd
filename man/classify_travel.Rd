@@ -37,10 +37,8 @@ imported batch can come long after the trip, so a short window misses the late r
 a long one flags more of the cases the host acquired locally after the trip.
 }
 \examples{
-\dontrun{
-tr <- classify_travel(run, window = 90)
-table(tr$surveillance, tr$imported)
-}
+tr <- classify_travel(example_run(), window = 90)
+table(tr$surveillance, tr$imported)   # the travel rule against the truth
 }
 \seealso{
 \code{\link[=classify_chain]{classify_chain()}}, \code{\link[=classify_cases]{classify_cases()}}

@@ -38,5 +38,7 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{arg_summary(run)}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+arg_summary(example_run())
+\dontshow{\}) # examplesIf}
 }

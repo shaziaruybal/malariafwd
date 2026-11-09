@@ -19,6 +19,11 @@ The fraction of hypnozoite batches not yet relapsed against the days since the i
 laid each down, from \code{\link[=time_to_relapse]{time_to_relapse()}}. No survival-package dependency:
 \code{S(t) = prod(1 - d_i/n_i)}.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot_relapse_km(time_to_relapse(example_run()))
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=time_to_relapse]{time_to_relapse()}}
 }

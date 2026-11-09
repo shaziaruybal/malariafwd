@@ -45,6 +45,10 @@ A relapse into a patent clone of its own lineage, born on an earlier day, is \em
 that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). \code{into_patent_lineage}
 marks it, and \code{exclude_masked = TRUE} leaves it out.
 }
+\examples{
+cs <- classify_cases(example_run())
+table(cs$origin, cs$imported)
+}
 \seealso{
 \code{\link[=episodes]{episodes()}} for every clone's span, \code{\link[=recurrences]{recurrences()}} for each episode against the
 earlier ones.

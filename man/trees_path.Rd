@@ -15,6 +15,10 @@ the path to \code{plasmo.trees}.
 \description{
 Path to a run's tree-sequence file
 }
+\examples{
+trees_path(example_run())
+file.exists(trees_path(example_run()))
+}
 \seealso{
 \link[=malariafwd-outputs]{plasmo.trees}
 }

@@ -42,7 +42,7 @@ inside the band), and leaving the masked relapses out gives 0.39, below it (MODE
 section 13).
 }
 \examples{
-\dontrun{relapse_fraction(load_events(run))}
+relapse_fraction(example_run())
 }
 \seealso{
 \code{\link[=classify_cases]{classify_cases()}}, \code{\link[=summarise_run]{summarise_run()}}

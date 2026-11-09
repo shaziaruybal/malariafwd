@@ -26,5 +26,7 @@ around 0.2, a third on average for unrelated parents and more when the parents a
 the full map none shares nothing.
 }
 \examples{
-\dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}
+\dontshow{if (tskit_available() && requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot_relatedness_ladder(ibd_truth_pairs(example_run()))
+\dontshow{\}) # examplesIf}
 }

@@ -61,7 +61,7 @@ imports sustain transmission. To compare runs, choose \code{from} and \code{foll
 \code{\link[=plot_diagnostics]{plot_diagnostics()}} shows to be steady; \code{followup} alone keeps a growing run's early cases.
 }
 \examples{
-\dontrun{rc_by_origin(run, from = 365, followup = 365)}
+rc_by_origin(example_run(), from = 100, followup = 100)
 }
 \references{
 Fraser C (2007) Estimating individual and household reproduction numbers in an

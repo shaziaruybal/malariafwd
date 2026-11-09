@@ -71,8 +71,9 @@ absolute paths. A run that fails, times out or is interrupted leaves its files a
 }
 
 \examples{
-\dontrun{
-run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1,
-        outdir = file.path(tempdir(), "demo"))
-}
+\dontshow{if (slim_available()) withAutoprint(\{ # examplesIf}
+run <- run_sim(vivax_params(SIM_DAYS = 100), seed = 1, outdir = tempfile("demo"))
+run
+summarise_run(run)
+\dontshow{\}) # examplesIf}
 }

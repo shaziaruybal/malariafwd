@@ -273,11 +273,11 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 #' @section Cost:
 #' One simplification and one pass over the pairs; `segments = TRUE` costs a few times as long and
 #' gives one row per segment per pair, so restrict it with `ids` and `min_span`.
-#' @examples
-#' \dontrun{
-#' x <- ibd_pairs(run, ids = classify_cases(load_events(run))$pedigree_id)
-#' ibd_lookup(x, 12, 345)
-#' }
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id[1:30])
+#' x
+#' as.matrix(x)[1:4, 1:4]
 #' @seealso [ibd_lookup()], [ibd_segments()]
 #' @inheritSection tskit_available Python
 #' @export
@@ -334,12 +334,11 @@ ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments =
 #' @param ... ignored.
 #' @return `ibd_lookup()`: a numeric vector; `as.matrix()`: a matrix; `as.data.frame()`: a
 #'   data.frame of `a`, `b` and `ibd`.
-#' @examples
-#' \dontrun{
-#' x <- ibd_pairs(run, ids = c(12, 345, 678))
-#' ibd_lookup(x, 12, c(345, 678))
-#' as.matrix(x)
-#' }
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' ids <- classify_cases(run)$pedigree_id[1:30]
+#' x <- ibd_pairs(run, ids = ids)
+#' ibd_lookup(x, ids[1], ids[2:5])
 #' @seealso [ibd_pairs()]
 #' @export
 ibd_lookup <- function(x, a, b) {

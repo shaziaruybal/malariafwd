@@ -37,6 +37,8 @@
 #'   last day.
 #' @return a data.table, one row per COI, by COI: `moi_active` (integer), `n` (the infected host-days,
 #'   integer) and `frac` (their share, from 0 to 1, summing to 1).
+#' @examples
+#' coi_distribution(example_run(), from = 200)
 #' @export
 coi_distribution <- function(state, from = 0, to = NULL) {
   from <- .check_day(from, "from")
@@ -103,7 +105,7 @@ coi_distribution <- function(state, from = 0, to = NULL) {
 #'   when its denominator is 0 (a run with no case).
 #' @seealso [classify_cases()], [summarise_run()]
 #' @examples
-#' \dontrun{relapse_fraction(load_events(run))}
+#' relapse_fraction(example_run())
 #' @export
 relapse_fraction <- function(events, exclude_masked = FALSE) {
   cs <- classify_cases(events, exclude_masked)
@@ -161,6 +163,9 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
 #'   relapse's genome), `batch_tick` (the day the batch was laid down), `tick` (the day it
 #'   activated) and `duration` (`tick - batch_tick`, in days).
 #' @seealso [time_to_relapse()]
+#' @examples
+#' d <- dormancy_durations(example_run())
+#' summary(d$duration)   # days from a batch to each of its relapses
 #' @export
 dormancy_durations <- function(events) {
   ev <- .as_events(events)
@@ -209,6 +214,9 @@ dormancy_durations <- function(events) {
 #'   `NA` for a relapse whose run does not record the flag).
 #' @seealso [episodes()] for every clone's span, [recurrences()] for each episode against the
 #'   earlier ones.
+#' @examples
+#' cs <- classify_cases(example_run())
+#' table(cs$origin, cs$imported)
 #' @export
 classify_cases <- function(events, exclude_masked = FALSE) {
   .check_flag(exclude_masked, "exclude_masked")
@@ -278,6 +286,8 @@ classify_cases <- function(events, exclude_masked = FALSE) {
 #'   infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl
 #'   Trop Dis 7(9):e2403.
 #' @seealso [plot_force_of_infection()]
+#' @examples
+#' force_of_infection(example_run(), bin = 100)
 #' @export
 force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_masked = FALSE,
                                detected_only = FALSE) {
@@ -361,10 +371,8 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
 #'   `"local (no recent travel)"`. A run without imports gives the same columns, every case local.
 #' @seealso [classify_chain()], [classify_cases()]
 #' @examples
-#' \dontrun{
-#' tr <- classify_travel(run, window = 90)
-#' table(tr$surveillance, tr$imported)
-#' }
+#' tr <- classify_travel(example_run(), window = 90)
+#' table(tr$surveillance, tr$imported)   # the travel rule against the truth
 #' @export
 classify_travel <- function(events, window = 60) {
   ev <- .as_events(events)
@@ -422,7 +430,8 @@ classify_travel <- function(events, window = 60) {
 #'   (`"relapse"`, `"emptied"` or `"run_end"`). A run with no batch gives no row.
 #' @seealso [plot_relapse_km()], [dormancy_durations()]
 #' @examples
-#' \dontrun{plot_relapse_km(time_to_relapse(run))}
+#' tt <- time_to_relapse(example_run())
+#' head(tt)
 #' @export
 time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked = FALSE) {
   emptied <- match.arg(emptied); .check_flag(exclude_masked, "exclude_masked")
@@ -478,6 +487,9 @@ time_to_relapse <- function(run, emptied = c("censor", "follow"), exclude_masked
 #'   hosts, the same on each of its rows, so `unique(x[, .(tick, hypnozoites_per_host)])` is the
 #'   reservoir's trajectory). A state table without `moi_subpatent` counts no subpatent host.
 #' @seealso [plot_host_state_prevalence()]
+#' @examples
+#' hs <- host_state_prevalence(example_run())
+#' hs[tick == 400]   # the last day
 #' @export
 host_state_prevalence <- function(state) {
   lv <- names(.HOST_STATE_FILL)
@@ -548,10 +560,9 @@ host_state_prevalence <- function(state) {
 #'   * denominators: `person_years` and `person_years_at_risk`.
 #' @seealso [force_of_infection()], [relapse_fraction()], [classify_cases()], [plot_diagnostics()]
 #' @examples
-#' \dontrun{
+#' run <- example_run()
 #' summarise_run(run)                        # the second half of the run
-#' summarise_run(run, from = 366, to = 730)  # its second year
-#' }
+#' summarise_run(run, from = 101, to = 200)  # its second hundred days
 #' @export
 summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_masked = FALSE) {
   .check_flag(exclude_masked, "exclude_masked")
@@ -665,11 +676,10 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
 #'   read), `n_pairs` (`n * (n - 1) / 2`), `mean_ibd`, `clonal_frac` (the share of the pairs with IBD
 #'   at least `clonal`, from 0 to 1) and `n_lineages`, the last three `NA` below `min_pairs`. A
 #'   window with no new infection has `n = 0`.
-#' @examples
-#' \dontrun{
-#' new_infection_diversity(run)                     # the second half of the run
-#' new_infection_diversity(run, bin = 90, cap = 40) # by quarter
-#' }
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' new_infection_diversity(run)                        # the second half of the run
+#' new_infection_diversity(run, bin = 100, cap = 40)   # by 100 days
 #' @inheritSection tskit_available Python
 #' @export
 new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL, bin = NULL, cap = 250,

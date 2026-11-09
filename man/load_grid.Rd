@@ -22,8 +22,9 @@ copied still loads. It warns, naming up to five, when a cell recorded as \code{o
 its whole run, and says so when the cells were run by different versions of SLiM or malariafwd.
 }
 \examples{
-\dontrun{
-run_grid(vivax_params(), seeds = 1:2, outdir_base = file.path(tempdir(), "sweep"))
-load_grid(file.path(tempdir(), "sweep"))
-}
+\dontshow{if (slim_available()) withAutoprint(\{ # examplesIf}
+out <- tempfile("sweep")
+run_grid(vivax_params(SIM_DAYS = 100), seeds = 1:2, outdir_base = out)
+load_grid(out)
+\dontshow{\}) # examplesIf}
 }

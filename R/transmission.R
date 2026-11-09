@@ -49,10 +49,9 @@
 #'   `chain_size`. Ids, days and chains are integer.
 #' @seealso [rc_by_origin()], [classify_cases()]
 #' @examples
-#' \dontrun{
-#' links <- transmission_links(run)
-#' unique(links[, .(chain_id, chain_size)])     # one row per chain
-#' }
+#' links <- transmission_links(example_run())
+#' table(links$kind)
+#' unique(links[, .(chain_id, chain_size)])   # one row per chain
 #' @export
 transmission_links <- function(events, kind = c("all", "direct", "liver")) {
   kind <- match.arg(kind)
@@ -199,7 +198,7 @@ transmission_links <- function(events, kind = c("all", "direct", "liver")) {
 #'   emerging epidemic. PLoS ONE 2(8): e758. \doi{10.1371/journal.pone.0000758}
 #' @seealso [transmission_links()], [classify_cases()]
 #' @examples
-#' \dontrun{rc_by_origin(run, from = 365, followup = 365)}
+#' rc_by_origin(example_run(), from = 100, followup = 100)
 #' @export
 rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all", "direct", "liver"),
                          from = 0, followup = 0) {
@@ -253,7 +252,8 @@ rc_by_origin <- function(run, unit = c("episode", "acquisition"), kind = c("all"
 #'   Health Organization.
 #' @seealso [classify_travel()], [transmission_links()], [classify_cases()]
 #' @examples
-#' \dontrun{classify_chain(load_events(run))[, .N, by = who_class]}
+#' ch <- classify_chain(example_run())
+#' table(ch$who_class)
 #' @export
 classify_chain <- function(events) {
   ev <- .as_events(events)

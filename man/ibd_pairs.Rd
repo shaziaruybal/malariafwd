@@ -100,10 +100,12 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{
-x <- ibd_pairs(run, ids = classify_cases(load_events(run))$pedigree_id)
-ibd_lookup(x, 12, 345)
-}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
+x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id[1:30])
+x
+as.matrix(x)[1:4, 1:4]
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=ibd_lookup]{ibd_lookup()}}, \code{\link[=ibd_segments]{ibd_segments()}}

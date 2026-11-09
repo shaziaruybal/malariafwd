@@ -13,6 +13,8 @@ slim_path <- function() {
 #' The binary is the one the `MALARIAFWD_SLIM` environment variable names if it is set, otherwise
 #' `slim` on the PATH. [check_setup()] shows the path it found.
 #' @return `TRUE` if that binary is found.
+#' @examples
+#' slim_available()
 #' @export
 slim_available <- function() nzchar(Sys.which(slim_path()))
 
@@ -42,6 +44,8 @@ slim_available <- function() nzchar(Sys.which(slim_path()))
 
 #' SLiM version string
 #' @return the version (e.g. `"5.2"`) or `NA` if SLiM is not found.
+#' @examples
+#' slim_version()   # NA without SLiM
 #' @export
 slim_version <- function() {
   if (!slim_available()) return(NA_character_)
@@ -55,5 +59,8 @@ slim_version <- function() {
 #' The single source of truth for the model; `run_sim()` snapshots it into each run's
 #' output directory for provenance.
 #' @return file path to `inst/slim/malariafwd_vivax.slim`.
+#' @examples
+#' slim_model()
+#' file.exists(slim_model())
 #' @export
 slim_model <- function() system.file("slim", "malariafwd_vivax.slim", package = "malariafwd")

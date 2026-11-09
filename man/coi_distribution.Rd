@@ -20,3 +20,6 @@ integer) and \code{frac} (their share, from 0 to 1, summing to 1).
 The patent lineages (\code{moi_active}) of every infected host on each day from \code{from} to \code{to}, as
 counts of host-days and their shares.
 }
+\examples{
+coi_distribution(example_run(), from = 200)
+}

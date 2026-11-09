@@ -37,3 +37,10 @@ lines end where \code{state.tsv} does.
 \details{
 Each call reads the run's \code{state.tsv} and \code{events.tsv}.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+run <- example_run()
+n <- load_events(run)[event_type == "hypnozoite_activation", .N, by = human_id]
+plot_host_trajectory(run, n$human_id[which.max(n$N)])   # the host with the most relapses
+\dontshow{\}) # examplesIf}
+}

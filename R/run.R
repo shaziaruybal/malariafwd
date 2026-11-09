@@ -44,11 +44,10 @@
 #'   versions, genome and `complete` (see [load_run()]). A run that goes extinct, with no parasite
 #'   left and no importation still to come, ends on that tick and gives a message; so does a
 #'   founder-free run whose imports never established a parasite.
-#' @examples
-#' \dontrun{
-#' run_sim(vivax_params(N_HOSTS = 200, BITING_RATE = 0.09), seed = 1,
-#'         outdir = file.path(tempdir(), "demo"))
-#' }
+#' @examplesIf slim_available()
+#' run <- run_sim(vivax_params(SIM_DAYS = 100), seed = 1, outdir = tempfile("demo"))
+#' run
+#' summarise_run(run)
 #' @export
 run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_model(),
                     verbose = NULL, timeout = Inf, echo = FALSE, overwrite = FALSE,

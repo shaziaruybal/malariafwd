@@ -19,5 +19,5 @@ parameters the run itself recorded (\code{GENOME_MODE}, \code{CHROMOSOMES}), and
 add up to the genome length the run recorded.
 }
 \examples{
-\dontrun{chrom_map(run)}
+chrom_map(example_run())
 }

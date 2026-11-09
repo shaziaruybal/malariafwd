@@ -151,12 +151,13 @@
 #'   `options(warn = 2)` a warning in a cell fails that cell, in any plan and also inside
 #'   `suppressWarnings()`, and the FAILED summary is then an error, so nothing is returned; the
 #'   cells that ran are on disk. The caller's random-number stream is left as it was.
-#' @examples
-#' \dontrun{
-#' sets <- list(low = vivax_params(BITING_RATE = 0.05), high = vivax_params(BITING_RATE = 0.12))
-#' g <- run_grid(sets, seeds = 1:3, outdir_base = file.path(tempdir(), "sweep"), workers = 2)
-#' load_grid(file.path(tempdir(), "sweep"))
-#' }
+#' @examplesIf slim_available()
+#' sets <- list(low = vivax_params(BITING_RATE = 0.05, SIM_DAYS = 100),
+#'              high = vivax_params(BITING_RATE = 0.12, SIM_DAYS = 100))
+#' out <- tempfile("sweep")
+#' g <- run_grid(sets, seeds = 1:2, outdir_base = out)   # workers = 2 for two at a time
+#' g
+#' load_grid(out)
 #' @export
 run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
                      workers = NULL, verbose = NULL, skip_existing = TRUE, overwrite = FALSE, ...) {
@@ -342,11 +343,10 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
 #' @param params `"varying"` (the default) for the parameters whose values differ between the
 #'   cells, `"all"` for every parameter, each of its type.
 #' @return a `data.table`, as [run_grid()] returns.
-#' @examples
-#' \dontrun{
-#' run_grid(vivax_params(), seeds = 1:2, outdir_base = file.path(tempdir(), "sweep"))
-#' load_grid(file.path(tempdir(), "sweep"))
-#' }
+#' @examplesIf slim_available()
+#' out <- tempfile("sweep")
+#' run_grid(vivax_params(SIM_DAYS = 100), seeds = 1:2, outdir_base = out)
+#' load_grid(out)
 #' @export
 load_grid <- function(outdir_base, params = c("varying", "all")) {
   params <- match.arg(params)

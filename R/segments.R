@@ -20,7 +20,7 @@
 #' @inheritParams load_events
 #' @return a data.table of `chrom` (PvP01 number), `start`, `end`, `length` in concatenated bp.
 #' @examples
-#' \dontrun{chrom_map(run)}
+#' chrom_map(example_run())
 #' @export
 chrom_map <- function(run) {
   r <- .read_params_tsv(file.path(.run_dir(run), "params.tsv"))
@@ -56,11 +56,10 @@ chrom_map <- function(run) {
 #'   see [ibd_pairs()]). A pair sharing nothing has no rows, and nor does a pair with a genome the
 #'   tree sequence does not hold, which warns. A genome with itself is shared end to end: one row
 #'   per chromosome, its own ancestor at depth 0. A pair given twice has its rows twice.
-#' @examples
-#' \dontrun{
+#' @examplesIf tskit_available()
+#' run <- example_run()
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
-#' ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
-#' }
+#' ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)   # all 14 chromosomes shared
 #' @seealso [plot_ibd_pair()], [ibd_pairs()]
 #' @inheritSection tskit_available Python
 #' @export
@@ -112,8 +111,13 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
 #' @param layout `"chromosome"` (one bar per chromosome, pairs as facets) or `"concatenated"`.
 #' @param fill colour for the shared (IBD) blocks.
 #' @return a ggplot object.
-#' @examples
-#' \dontrun{plot_ibd_pair(run, c(id1, id3), c(id2, id4), labels = c("relapse", "unrelated"))}
+#' @examplesIf tskit_available() && requireNamespace("ggplot2", quietly = TRUE)
+#' run <- example_run()
+#' ev <- load_events(run)
+#' rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
+#' founders <- ev[event_type == "vh_inoculation_seed"]$pedigree_id[1:2]
+#' plot_ibd_pair(run, c(rel$pedigree_id, founders[1]), c(rel$parent1_pedigree_id, founders[2]),
+#'               labels = c("a relapse vs its batch", "two founders"))
 #' @inheritSection tskit_available Python
 #' @export
 plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
@@ -187,8 +191,9 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
 #' @return a data.table of `cls` (a factor of the six classes), `a` and `b` (integer pedigree ids)
 #'   and `ibd` (double), one row per pair. A class with no pair in the run has no rows, and a run
 #'   with none, such as one that never started, gives a table with no rows.
-#' @examples
-#' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
+#' @examplesIf tskit_available()
+#' tp <- ibd_truth_pairs(example_run())
+#' tp[, .(pairs = .N, mean_ibd = mean(ibd)), by = cls]
 #' @inheritSection tskit_available Python
 #' @export
 ibd_truth_pairs <- function(run, max_per_class = 60) {
@@ -252,8 +257,8 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
 #'   point masses (relapses are always clonal, distinct founders always unrelated). Both label
 #'   the number of pairs per class, so a class resting on two observations is visible.
 #' @return a ggplot object.
-#' @examples
-#' \dontrun{plot_relatedness_ladder(ibd_truth_pairs(run), style = "bars")}
+#' @examplesIf tskit_available() && requireNamespace("ggplot2", quietly = TRUE)
+#' plot_relatedness_ladder(ibd_truth_pairs(example_run()))
 #' @export
 plot_relatedness_ladder <- function(x, style = c("points", "bars")) {
   .need_ggplot()

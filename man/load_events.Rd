@@ -18,3 +18,7 @@ writes them (\link[=malariafwd-outputs]{events.tsv} describes them), whatever th
 a table with no rows. A column the file lacks is \code{NA}, a column it adds follows the 21, and a
 value that does not fit its column stops with the column named.
 }
+\examples{
+ev <- load_events(example_run())
+ev[, .N, by = event_type]
+}

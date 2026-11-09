@@ -35,5 +35,8 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{plot_relatedness_ladder(ibd_truth_pairs(run))}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+tp <- ibd_truth_pairs(example_run())
+tp[, .(pairs = .N, mean_ibd = mean(ibd)), by = cls]
+\dontshow{\}) # examplesIf}
 }

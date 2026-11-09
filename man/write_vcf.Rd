@@ -31,7 +31,13 @@ for both alleles present, \code{./.}. The model has no sequence, so without \cod
 the loci REF and ALT are the placeholders A and C, and the header says so.
 }
 \examples{
-\dontrun{write_vcf(g, file.path(tempdir(), "genotypes.vcf.gz"))}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
+loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
+g <- simulate_genotypes(run, classify_cases(run)$pedigree_id[1:10], loci, seed = 1)
+f <- write_vcf(g, tempfile(fileext = ".vcf"))
+readLines(f, n = 12)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=simulate_genotypes]{simulate_genotypes()}}

@@ -23,6 +23,10 @@ blood-stage clones, without or with hypnozoites; subpatent clones and no patent 
 without hypnozoites; and hypnozoites alone, a reservoir no blood survey can see. Each day also
 carries its mean number of hypnozoites per host.
 }
+\examples{
+hs <- host_state_prevalence(example_run())
+hs[tick == 400]   # the last day
+}
 \seealso{
 \code{\link[=plot_host_state_prevalence]{plot_host_state_prevalence()}}
 }

@@ -39,7 +39,8 @@ With \code{exclude_masked = TRUE} a masked relapse, into a patent clone of its o
 first relapse is the first a study could see as a recurrence.
 }
 \examples{
-\dontrun{plot_relapse_km(time_to_relapse(run))}
+tt <- time_to_relapse(example_run())
+head(tt)
 }
 \seealso{
 \code{\link[=plot_relapse_km]{plot_relapse_km()}}, \code{\link[=dormancy_durations]{dormancy_durations()}}

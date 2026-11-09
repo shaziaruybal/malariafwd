@@ -54,5 +54,12 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{plot_ibd_pair(run, c(id1, id3), c(id2, id4), labels = c("relapse", "unrelated"))}
+\dontshow{if (tskit_available() && requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+run <- example_run()
+ev <- load_events(run)
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
+founders <- ev[event_type == "vh_inoculation_seed"]$pedigree_id[1:2]
+plot_ibd_pair(run, c(rel$pedigree_id, founders[1]), c(rel$parent1_pedigree_id, founders[2]),
+              labels = c("a relapse vs its batch", "two founders"))
+\dontshow{\}) # examplesIf}
 }

@@ -23,6 +23,10 @@ batch. These are the durations of the hypnozoites that activated before the run 
 mean is shorter than the mean time to activation; \code{\link[=time_to_relapse]{time_to_relapse()}} gives the censored view,
 one row per batch.
 }
+\examples{
+d <- dormancy_durations(example_run())
+summary(d$duration)   # days from a batch to each of its relapses
+}
 \seealso{
 \code{\link[=time_to_relapse]{time_to_relapse()}}
 }

@@ -35,11 +35,12 @@ recycled against the other. \code{as.matrix()} gives the pairs as a symmetric ma
 pedigree id, with a unit diagonal, and \code{as.data.frame()} the \code{pairs} table.
 }
 \examples{
-\dontrun{
-x <- ibd_pairs(run, ids = c(12, 345, 678))
-ibd_lookup(x, 12, c(345, 678))
-as.matrix(x)
-}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
+ids <- classify_cases(run)$pedigree_id[1:30]
+x <- ibd_pairs(run, ids = ids)
+ibd_lookup(x, ids[1], ids[2:5])
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=ibd_pairs]{ibd_pairs()}}

@@ -50,10 +50,9 @@ Pass the whole event log, as \code{\link[=load_events]{load_events()}} gives it,
 rows of the feed, the bite and the source's onset, which can lie long before its target.
 }
 \examples{
-\dontrun{
-links <- transmission_links(run)
-unique(links[, .(chain_id, chain_size)])     # one row per chain
-}
+links <- transmission_links(example_run())
+table(links$kind)
+unique(links[, .(chain_id, chain_size)])   # one row per chain
 }
 \seealso{
 \code{\link[=rc_by_origin]{rc_by_origin()}}, \code{\link[=classify_cases]{classify_cases()}}

@@ -32,7 +32,8 @@ the shorter chain counts. Masked relapses are classed like any case; \code{into_
 them out.
 }
 \examples{
-\dontrun{classify_chain(load_events(run))[, .N, by = who_class]}
+ch <- classify_chain(example_run())
+table(ch$who_class)
 }
 \references{
 World Health Organization (2021) WHO malaria terminology, 2021 update. Geneva: World

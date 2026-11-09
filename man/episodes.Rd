@@ -25,7 +25,8 @@ and how it ended. A clone counts in \code{state.tsv}'s \code{moi_active} from \c
 recrudescence: a row of its own.
 }
 \examples{
-\dontrun{episodes(load_events(run))}
+ep <- episodes(example_run())
+head(ep)
 }
 \seealso{
 \code{\link[=recurrences]{recurrences()}}, \code{\link[=classify_cases]{classify_cases()}}

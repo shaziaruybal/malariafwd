@@ -15,6 +15,8 @@
 #' @param title plot title.
 #' @return a ggplot object.
 #' @seealso [time_to_relapse()]
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' plot_relapse_km(time_to_relapse(example_run()))
 #' @export
 plot_relapse_km <- function(x, title = NULL) {
   .need_ggplot()
@@ -41,6 +43,8 @@ plot_relapse_km <- function(x, title = NULL) {
 #' @param x a run, a state table from [load_state()], or the table [host_state_prevalence()] returns.
 #' @return a ggplot object.
 #' @seealso [host_state_prevalence()]
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' plot_host_state_prevalence(example_run())
 #' @export
 plot_host_state_prevalence <- function(x) {
   .need_ggplot()
@@ -70,6 +74,10 @@ plot_host_state_prevalence <- function(x) {
 #' @param layout `"lineages"` (stacked per-lineage areas) or `"summary"` (COI + reservoir lines).
 #' @param palette colours cycled across lineages.
 #' @return a ggplot object.
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' run <- example_run()
+#' n <- load_events(run)[event_type == "hypnozoite_activation", .N, by = human_id]
+#' plot_host_trajectory(run, n$human_id[which.max(n$N)])   # the host with the most relapses
 #' @export
 plot_host_trajectory <- function(run, host_id,
                                  layout = c("lineages", "summary"),
@@ -136,6 +144,8 @@ plot_host_trajectory <- function(run, host_id,
 #'   [summarise_run()]'s numbers for the rest.
 #' @return a patchwork object (combined ggplot).
 #' @references Koepfli C, et al. (2013) PLoS Negl Trop Dis 7(9):e2403 (molFOB).
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("patchwork", quietly = TRUE)
+#' plot_diagnostics(example_run())
 #' @export
 plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   .need_ggplot(); .need_patchwork()
@@ -285,11 +295,10 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #' @param x a run, or the table [force_of_infection()] returns (for a run, with its defaults).
 #' @param smooth span for a loess trend through each series; `NA` draws the raw series.
 #' @return a ggplot object.
-#' @examples
-#' \dontrun{
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' run <- example_run()
 #' plot_force_of_infection(run)
-#' plot_force_of_infection(force_of_infection(run, bin = 60))
-#' }
+#' plot_force_of_infection(force_of_infection(run, bin = 15))
 #' @seealso [force_of_infection()]
 #' @export
 plot_force_of_infection <- function(x, smooth = 0.4) {

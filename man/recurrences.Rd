@@ -47,10 +47,12 @@ recurrence with the latest earlier episode on the observed line list, filter
 \code{prior_tick}.
 }
 \examples{
-\dontrun{
-ev <- load_events(run)
-recurrences(ev, ibd = ibd_pairs(run, ids = classify_cases(ev)$pedigree_id))
-}
+head(recurrences(example_run()))
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
+x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id)
+head(recurrences(run, ibd = x))   # with each pair's IBD
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=episodes]{episodes()}}, \code{\link[=classify_cases]{classify_cases()}}, \code{\link[=ibd_pairs]{ibd_pairs()}}

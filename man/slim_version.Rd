@@ -12,3 +12,6 @@ the version (e.g. \code{"5.2"}) or \code{NA} if SLiM is not found.
 \description{
 SLiM version string
 }
+\examples{
+slim_version()   # NA without SLiM
+}

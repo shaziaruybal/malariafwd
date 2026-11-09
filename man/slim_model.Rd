@@ -13,3 +13,7 @@ file path to \code{inst/slim/malariafwd_vivax.slim}.
 The single source of truth for the model; \code{run_sim()} snapshots it into each run's
 output directory for provenance.
 }
+\examples{
+slim_model()
+file.exists(slim_model())
+}

@@ -23,3 +23,7 @@ columns, in the order and classes the model writes them (\link[=malariafwd-outpu
 describes them),
 whatever the run holds; a column the file lacks is \code{NA}.
 }
+\examples{
+st <- load_state(example_run())
+st[tick == 400]   # every host on the last day
+}

@@ -18,7 +18,8 @@
 #'   [classify_cases()] on `pedigree_id` for each clone's origin; founders have none.
 #' @seealso [recurrences()], [classify_cases()]
 #' @examples
-#' \dontrun{episodes(load_events(run))}
+#' ep <- episodes(example_run())
+#' head(ep)
 #' @export
 episodes <- function(events) {
   ev <- .as_events(events)
@@ -74,10 +75,11 @@ episodes <- function(events) {
 #'   (`NA` where either genome is not in the object).
 #' @seealso [episodes()], [classify_cases()], [ibd_pairs()]
 #' @examples
-#' \dontrun{
-#' ev <- load_events(run)
-#' recurrences(ev, ibd = ibd_pairs(run, ids = classify_cases(ev)$pedigree_id))
-#' }
+#' head(recurrences(example_run()))
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id)
+#' head(recurrences(run, ibd = x))   # with each pair's IBD
 #' @export
 recurrences <- function(events, prior = c("all", "previous"), from = 0, ibd = NULL, exclude_masked = FALSE) {
   prior <- match.arg(prior)

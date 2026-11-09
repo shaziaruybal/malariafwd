@@ -68,8 +68,9 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{
-new_infection_diversity(run)                     # the second half of the run
-new_infection_diversity(run, bin = 90, cap = 40) # by quarter
-}
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
+new_infection_diversity(run)                        # the second half of the run
+new_infection_diversity(run, bin = 100, cap = 40)   # by 100 days
+\dontshow{\}) # examplesIf}
 }

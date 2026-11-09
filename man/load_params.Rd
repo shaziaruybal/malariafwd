@@ -24,8 +24,9 @@ defaults, or hold rows that are not parameters, which are left out. Either warns
 directory per session, with class \code{malariafwd_params_mismatch}.
 }
 \examples{
-\dontrun{
-run <- load_run("runs/demo")
-run_sim(load_params(run), seed = run$seed + 1, outdir = "runs/demo_seed2")
-}
+p <- load_params(example_run())
+p
+\dontshow{if (slim_available()) withAutoprint(\{ # examplesIf}
+run <- run_sim(p, seed = 3, outdir = tempfile("seed3"))   # the same settings, another seed
+\dontshow{\}) # examplesIf}
 }

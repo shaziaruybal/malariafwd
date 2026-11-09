@@ -28,10 +28,11 @@ it is in neither series. Both series are drawn in every window of the run, as ze
 was no case.
 }
 \examples{
-\dontrun{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+run <- example_run()
 plot_force_of_infection(run)
-plot_force_of_infection(force_of_infection(run, bin = 60))
-}
+plot_force_of_infection(force_of_infection(run, bin = 15))
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=force_of_infection]{force_of_infection()}}

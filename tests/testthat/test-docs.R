@@ -80,3 +80,19 @@ test_that("the help pages give reasons, not decision codes or private files", {
   expect_identical(names(txt)[grepl("\\bD[0-9]{1,2}\\b", txt, perl = TRUE)], character())
   expect_identical(names(txt)[grepl("analys[ie]s repo|malariafwd-analyses|prototype run|audit run", txt)], character())
 })
+
+test_that("every export's help page has examples, and none is \\dontrun", {
+  db <- rd_db()
+  ex <- getNamespaceExports("malariafwd")
+  tag <- function(e) { t <- attr(e, "Rd_tag"); if (is.null(t)) "" else t }
+  has <- vapply(db, function(rd) {
+    if (!any(vapply(rd_tagged(rd, "\\alias"), rd_flat, "") %in% ex)) return(NA_character_)
+    exs <- rd_tagged(rd, "\\examples")
+    if (!length(exs)) return("no examples")
+    if ("\\dontrun" %in% vapply(exs[[1]], tag, "")) return("\\dontrun")
+    "ok"
+  }, "")
+  has <- has[!is.na(has)]
+  expect_gte(length(has), length(ex) - 1L)   # every export has a page (`malariafwd` is a package alias)
+  expect_identical(names(has)[has != "ok"], character())
+})

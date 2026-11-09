@@ -16,6 +16,11 @@ a ggplot object.
 The share of hosts in each state, day by day, stacked; subpatent carriers and the hosts with
 hypnozoites alone are bands of their own.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot_host_state_prevalence(example_run())
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=host_state_prevalence]{host_state_prevalence()}}
 }

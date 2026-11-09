@@ -169,6 +169,10 @@
 #'     (logical).
 #'
 #'   A field the run's `params.tsv` does not record is `NA`.
+#' @examples
+#' run <- load_run(example_run()$outdir)   # a run directory, read again
+#' run$seed
+#' run$params$N_HOSTS
 #' @export
 load_run <- function(outdir) {
   dir <- .run_dir(outdir)
@@ -201,6 +205,9 @@ load_run <- function(outdir) {
 #' value that does not fit its column stops with the column named.
 #' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory.
 #' @return a `data.table` with one row per event, in the order they were logged.
+#' @examples
+#' ev <- load_events(example_run())
+#' ev[, .N, by = event_type]
 #' @export
 load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OUTPUT_RENAMES$events)
 
@@ -216,6 +223,9 @@ load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OU
 #'   order of the file.
 #' @return a `data.table` with one row per host (or mosquito, or both) per day, from day 1 to the
 #'   run's last day.
+#' @examples
+#' st <- load_state(example_run())
+#' st[tick == 400]   # every host on the last day
 #' @export
 load_state <- function(run, entity = c("human", "mosquito", "all")) {
   entity <- match.arg(entity)
@@ -228,6 +238,9 @@ load_state <- function(run, entity = c("human", "mosquito", "all")) {
 #' @inheritParams load_events
 #' @return the path to `plasmo.trees`.
 #' @seealso [plasmo.trees][malariafwd-outputs]
+#' @examples
+#' trees_path(example_run())
+#' file.exists(trees_path(example_run()))
 #' @export
 trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
@@ -244,10 +257,10 @@ trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 #' @inheritParams load_events
 #' @return a [vivax_params()] object.
 #' @examples
-#' \dontrun{
-#' run <- load_run("runs/demo")
-#' run_sim(load_params(run), seed = run$seed + 1, outdir = "runs/demo_seed2")
-#' }
+#' p <- load_params(example_run())
+#' p
+#' @examplesIf slim_available()
+#' run <- run_sim(p, seed = 3, outdir = tempfile("seed3"))   # the same settings, another seed
 #' @export
 load_params <- function(run) {
   if (.has_current_set(run)) return(run$params)

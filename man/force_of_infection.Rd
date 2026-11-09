@@ -58,6 +58,9 @@ clone acquisitions. Worth noting that a real molFOB, measured by comparing genot
 study visits, would often count a recrudescence as a new clone, because the clone was
 undetectable at the previous visit; the gap between the two sums here estimates that bias.
 }
+\examples{
+force_of_infection(example_run(), bin = 100)
+}
 \references{
 Koepfli C, et al. (2013) A high force of \emph{Plasmodium vivax} blood-stage
 infection drives the rapid acquisition of immunity in Papua New Guinean children. PLoS Negl

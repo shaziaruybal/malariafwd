@@ -58,3 +58,8 @@ directory per session by every reader of the directory. A run started with \code
 has no \code{DONE}.
 \code{suppressWarnings(..., classes = "malariafwd_incomplete_run")} silences it.
 }
+\examples{
+run <- load_run(example_run()$outdir)   # a run directory, read again
+run$seed
+run$params$N_HOSTS
+}

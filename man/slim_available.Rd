@@ -13,3 +13,6 @@ slim_available()
 The binary is the one the \code{MALARIAFWD_SLIM} environment variable names if it is set, otherwise
 \code{slim} on the PATH. \code{\link[=check_setup]{check_setup()}} shows the path it found.
 }
+\examples{
+slim_available()
+}

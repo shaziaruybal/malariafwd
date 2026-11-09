@@ -43,10 +43,11 @@ session. A function that cannot reach them stops with an error of class
 }
 
 \examples{
-\dontrun{
+\dontshow{if (tskit_available()) withAutoprint(\{ # examplesIf}
+run <- example_run()
 rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
-ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)
-}
+ibd_segments(run, rel$pedigree_id, rel$parent1_pedigree_id)   # all 14 chromosomes shared
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=plot_ibd_pair]{plot_ibd_pair()}}, \code{\link[=ibd_pairs]{ibd_pairs()}}

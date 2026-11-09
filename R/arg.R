@@ -88,8 +88,8 @@ def arg_tmrca(trees, ids_a, ids_b):
 #'   `max_root_time` (ticks before the end of the run). A run that recorded no genome, such as
 #'   one that never started, gives the tree sequence's counts, no samples, 0 roots, and `NA` for
 #'   `pct_trees_coalesced` and `max_root_time`.
-#' @examples
-#' \dontrun{arg_summary(run)}
+#' @examplesIf tskit_available()
+#' arg_summary(example_run())
 #' @inheritSection tskit_available Python
 #' @export
 arg_summary <- function(run, ids = NULL) {
@@ -134,11 +134,10 @@ arg_summary <- function(run, ids = NULL) {
 #' tick 390. `tmrca_node_time` is the raw tskit node time of that ancestor, i.e. ticks before
 #' the **end of the run**; that is what `tree.tmrca()` returns natively and it is dominated by
 #' when the pair was sampled rather than by how related it is. Use `tmrca` for relatedness.
-#' @examples
-#' \dontrun{
-#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
-#' arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # relapse vs its origin
-#' }
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1:3]
+#' arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # relapses vs their batches
 #' @inheritSection tskit_available Python
 #' @export
 arg_tmrca <- function(run, ids_a, ids_b) {

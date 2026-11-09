@@ -215,14 +215,15 @@ def gt_roots(path, ids, positions):
 #'     and `imported`) and `root_alleles`, their alleles;
 #'   * `chromosomes`, the run's [chrom_map()]; `type` (`"clone"` or `"host"`), `error`, `missing`,
 #'     `seed` (`NA` when not set) and `run`.
-#' @examples
-#' \dontrun{
+#' @examplesIf tskit_available()
+#' run <- example_run()
 #' cm <- chrom_map(run)
 #' loci <- data.frame(chrom = rep(cm$chrom, each = 5), pos = 1000 * rep(1:5, nrow(cm)), plaf = 0.3)
-#' cs <- classify_cases(load_events(run))
-#' g <- simulate_genotypes(run, cs$pedigree_id, loci, error = 0.01, missing = 0.05, seed = 1)
-#' write_vcf(g, file.path(tempdir(), "cases.vcf"))
-#' }
+#' g <- simulate_genotypes(run, classify_cases(run)$pedigree_id[1:20], loci, error = 0.01,
+#'                         missing = 0.05, seed = 1)
+#' g
+#' g$calls[1:4, 1:5]   # what a method sees
+#' g$roots[1:4, 1:5]   # the truth behind it
 #' @seealso [write_vcf()], [ibd_segments()], [ibd_pairs()], [chrom_map()], [episodes()]
 #' @inheritSection tskit_available Python
 #' @export
@@ -335,8 +336,12 @@ print.vivax_genotypes <- function(x, ...) {
 #' @param chrom_names `NULL`, or the 14 contig names by PvP01 number; by default `PvP01_01_v2` to
 #'   `PvP01_14_v2`, and `as.character(1:14)` gives numbered contigs.
 #' @return `file`, invisibly.
-#' @examples
-#' \dontrun{write_vcf(g, file.path(tempdir(), "genotypes.vcf.gz"))}
+#' @examplesIf tskit_available()
+#' run <- example_run()
+#' loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
+#' g <- simulate_genotypes(run, classify_cases(run)$pedigree_id[1:10], loci, seed = 1)
+#' f <- write_vcf(g, tempfile(fileext = ".vcf"))
+#' readLines(f, n = 12)
 #' @seealso [simulate_genotypes()]
 #' @export
 write_vcf <- function(x, file, calls = c("observed", "true"), chrom_names = NULL) {

@@ -74,10 +74,9 @@ or a hypnozoite batch, to the window's end; founder seeding does not put a host 
 its person-years: an average of rates weights a short or small run as much as a long one.
 }
 \examples{
-\dontrun{
+run <- example_run()
 summarise_run(run)                        # the second half of the run
-summarise_run(run, from = 366, to = 730)  # its second year
-}
+summarise_run(run, from = 101, to = 200)  # its second hundred days
 }
 \seealso{
 \code{\link[=force_of_infection]{force_of_infection()}}, \code{\link[=relapse_fraction]{relapse_fraction()}}, \code{\link[=classify_cases]{classify_cases()}}, \code{\link[=plot_diagnostics]{plot_diagnostics()}}

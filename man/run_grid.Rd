@@ -86,9 +86,12 @@ calling \code{run_grid()} with the same sets and seeds afterwards, which runs no
 writing into one \code{outdir_base} at the same time race on \code{grid.tsv}; a later call rebuilds it.
 }
 \examples{
-\dontrun{
-sets <- list(low = vivax_params(BITING_RATE = 0.05), high = vivax_params(BITING_RATE = 0.12))
-g <- run_grid(sets, seeds = 1:3, outdir_base = file.path(tempdir(), "sweep"), workers = 2)
-load_grid(file.path(tempdir(), "sweep"))
-}
+\dontshow{if (slim_available()) withAutoprint(\{ # examplesIf}
+sets <- list(low = vivax_params(BITING_RATE = 0.05, SIM_DAYS = 100),
+             high = vivax_params(BITING_RATE = 0.12, SIM_DAYS = 100))
+out <- tempfile("sweep")
+g <- run_grid(sets, seeds = 1:2, outdir_base = out)   # workers = 2 for two at a time
+g
+load_grid(out)
+\dontshow{\}) # examplesIf}
 }
