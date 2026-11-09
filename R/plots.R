@@ -293,12 +293,14 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #' was no case.
 #'
 #' @param x a run, or the table [force_of_infection()] returns (for a run, with its defaults).
-#' @param smooth span for a loess trend through each series; `NA` draws the raw series.
+#' @param smooth span for a loess trend through each series; `NA` draws the raw series, as does a
+#'   run with fewer than `5 / smooth` windows (13 at the default), too few for a trend.
 #' @return a ggplot object.
 #' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
 #' run <- example_run()
 #' plot_force_of_infection(run)
 #' plot_force_of_infection(force_of_infection(run, bin = 15))
+#' plot_force_of_infection(force_of_infection(run, bin = 60))   # 7 windows: no trend
 #' @seealso [force_of_infection()]
 #' @export
 plot_force_of_infection <- function(x, smooth = 0.4) {
@@ -328,7 +330,9 @@ plot_force_of_infection <- function(x, smooth = 0.4) {
   p <- ggplot2::ggplot() +
     ggplot2::geom_line(data = w, ggplot2::aes(win, rate, colour = series),
                        linewidth = .5, alpha = .45)
-  if (!is.na(smooth))
+  ## a loess fit needs about five windows within its span: with fewer, loess warns and the curve
+  ## says nothing the raw series does not
+  if (!is.na(smooth) && data.table::uniqueN(w$win) * smooth >= 5)
     p <- p + ggplot2::geom_smooth(data = w, ggplot2::aes(win, rate, colour = series),
                                   method = "loess", span = smooth, se = FALSE,
                                   linewidth = 1, formula = y ~ x)

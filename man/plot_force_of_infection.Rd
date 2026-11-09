@@ -9,7 +9,8 @@ plot_force_of_infection(x, smooth = 0.4)
 \arguments{
 \item{x}{a run, or the table \code{\link[=force_of_infection]{force_of_infection()}} returns (for a run, with its defaults).}
 
-\item{smooth}{span for a loess trend through each series; \code{NA} draws the raw series.}
+\item{smooth}{span for a loess trend through each series; \code{NA} draws the raw series, as does a
+run with fewer than \code{5 / smooth} windows (13 at the default), too few for a trend.}
 }
 \value{
 a ggplot object.
@@ -32,6 +33,7 @@ was no case.
 run <- example_run()
 plot_force_of_infection(run)
 plot_force_of_infection(force_of_infection(run, bin = 15))
+plot_force_of_infection(force_of_infection(run, bin = 60))   # 7 windows: no trend
 \dontshow{\}) # examplesIf}
 }
 \seealso{

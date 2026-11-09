@@ -123,3 +123,16 @@ test_that("force_of_infection() counts every case, or with detected_only the rep
   expect_identical(shown[, .(win, origin, days, is_acquisition)], every[, .(win, origin, days, is_acquisition)])
   expect_error(force_of_infection(r, detected_only = NA), "`detected_only` must be TRUE or FALSE.", fixed = TRUE)
 })
+
+test_that("plot_force_of_infection() leaves out the trend of a series too short for its span", {
+  skip_if_not_installed("ggplot2")
+  run <- example_run()
+  ## 7 windows of 60 days: loess at span 0.4 would fit 2 or 3 points and warn
+  short <- plot_force_of_infection(force_of_infection(run, bin = 60))
+  expect_no_warning(b <- ggplot2::ggplot_build(short))
+  expect_length(b$data, 1L)                      # the raw series only
+  ## 14 windows of 30 days carry the trend
+  long <- ggplot2::ggplot_build(plot_force_of_infection(run))
+  expect_length(long$data, 2L)
+  expect_length(ggplot2::ggplot_build(plot_force_of_infection(run, smooth = NA))$data, 1L)
+})
