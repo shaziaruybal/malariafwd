@@ -1,5 +1,6 @@
 # Build and deploy the package website. Runs on the runner (which has pandoc) rather than
-# locally. Vignette chunks are eval = FALSE, so no SLiM install is needed to render them.
+# locally. The vignettes read the bundled example run, so rendering them needs no SLiM; their
+# IBD chunks get Python with tskit through reticulate, or are left out without it.
 on:
   push:
     branches: [main]

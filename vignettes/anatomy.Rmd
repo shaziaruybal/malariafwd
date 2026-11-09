@@ -8,20 +8,32 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, out.width = "100%")
+has_tskit <- malariafwd::tskit_available()
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 ```
 
 A single `malariafwd` run writes a handful of files into its output directory. This
-vignette tours them — what each output means and how to explore it. As with the
-*Getting started* vignette, the chunks are not evaluated at build time (they need SLiM and
-Python `tskit`); run them locally after checking your setup with `check_setup()`.
+vignette tours them — what each output means and how to explore it. It reads
+`example_run()`, a run that ships with the package: 60 hosts and 150 mosquitoes for 400 days,
+with imports, case management and recrudescence switched on, so that every kind of case occurs.
+The chunks that read the tree sequence need Python with tskit (see `check_setup()`).
 
 ## Run one simulation
 
-```{r}
-library(malariafwd)
+With SLiM, a run of your own is one call (not run here):
+
+```{r, eval = FALSE}
 p   <- vivax_params(N_HOSTS = 200, N_MOSQ = 400, BITING_RATE = 0.1, SIM_DAYS = 1095)
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))
+```
+
+Here, the bundled run:
+
+```{r}
+library(malariafwd)
+run <- example_run()
+dir(run$outdir)
 ```
 
 `run` points at the output directory, which holds:
@@ -50,8 +62,9 @@ Classify each blood-stage clone onset ("case") by its true origin: one row per c
 clones that became patent in one host on one day share an `episode_id`. There are **four** origins: `relapse`
 (a hypnozoite activated), `imported`, `local reinfection`, and `recrudescence` (a clone that
 survived a treatment course, was suppressed below patency, and re-expanded). The fourth only
-appears when treatment can fail *and* `P_RECRUD_GIVEN_FAIL > 0`; at the shipped defaults there
-is no treatment at all, so you will see three:
+appears when treatment can fail *and* `P_RECRUD_GIVEN_FAIL > 0`. At the shipped defaults there is
+no treatment at all, so a default run shows three; the example run has case management with
+recrudescence on, so it shows all four:
 
 ```{r}
 cs <- classify_cases(ev)
@@ -69,8 +82,9 @@ rec[, .N, by = .(origin, prior_origin)]
 ## Epidemiology over time
 
 ```{r}
-summarise_run(run)                       # prevalence, COI, EIR, FOI, molFOB, relapses: the second half of the run
-force_of_infection(run, split_imported = FALSE)[, .(win, origin, n)]   # new cases a month, by origin
+summarise_run(run)     # over the second half of the run: prevalence, COI, EIR, FOI, molFOB, relapses
+fo <- force_of_infection(run, split_imported = FALSE)
+fo[win %in% c(0, 180, 390), .(win, origin, n)]   # new cases in three 30-day windows, by origin
 ```
 
 ## Who infected whom
@@ -78,10 +92,10 @@ force_of_infection(run, split_imported = FALSE)[, .(win, origin, n)]   # new cas
 Every local infection has a true infector: the genome a mosquito took up before the bite. A bite can
 also leave hypnozoites, so a link runs to each relapse the bite causes later, often months on.
 
-```{r, eval = FALSE}
+```{r}
 links <- transmission_links(ev)
 links[, .(infected = sum(weight)), by = kind]     # through a bite's blood stage, or a relapse
-rc_by_origin(run, from = 365, followup = 365)    # secondary cases per case, by true origin
+rc_by_origin(run, from = 100, followup = 100)    # secondary cases per case, by true origin
 ```
 
 ## A single host's trajectory
@@ -89,7 +103,7 @@ rc_by_origin(run, from = 365, followup = 365)    # secondary cases per case, by 
 `state.tsv` records every host each tick. Take the host with the most relapses and plot its
 active blood-stage lineages and hypnozoite reservoir through time:
 
-```{r}
+```{r, eval = has_gg}
 st <- load_state(run)      # each host's state, day by day
 h  <- ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]
 plot_host_trajectory(run, host_id = h)
@@ -98,7 +112,7 @@ plot_host_trajectory(run, host_id = h)
 Hosts by state over time: uninfected, patent without or with hypnozoites, subpatent only, and
 hypnozoites only:
 
-```{r}
+```{r, eval = has_gg}
 plot_host_state_prevalence(host_state_prevalence(st))
 ```
 
@@ -107,18 +121,23 @@ plot_host_state_prevalence(host_state_prevalence(st))
 The hypnozoite reservoir is the model's distinctive, otherwise-unobservable compartment:
 
 ```{r}
-unique(host_state_prevalence(st)[, .(tick, hypnozoites_per_host)])   # mean hypnozoites per host, by day
+st <- load_state(run)
+hs <- unique(host_state_prevalence(st)[, .(tick, hypnozoites_per_host)])
+hs[tick %% 50 == 0]                          # mean hypnozoites per host, every 50 days
 relapse_fraction(ev)                         # two readings, per episode and per acquisition: equal unless recrudescence is on
-plot_relapse_km(time_to_relapse(run))        # time to each batch's first relapse (Kaplan-Meier)
 coi_distribution(st)                         # COI over the infected host-days: counts and shares
+```
+
+```{r, eval = has_gg}
+plot_relapse_km(time_to_relapse(run))        # time to each batch's first relapse (Kaplan-Meier)
 ```
 
 ## Ground-truth relatedness
 
 Because the full genealogy is recorded, identity-by-descent is exact rather than inferred:
 
-```{r}
-rel <- ev[event_type == "hypnozoite_activation"]
+```{r, eval = has_tskit}
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
 x <- ibd_pairs(run, pairs = data.frame(a = rel$pedigree_id, b = rel$parent1_pedigree_id))
 summary(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id))   # each relapse vs its batch: IBD 1
 ```
@@ -128,7 +147,7 @@ instead, which costs the square of their number.
 
 The relatedness of the newly acquired infections follows transmission, quarter by quarter:
 
-```{r}
+```{r, eval = has_tskit}
 new_infection_diversity(run, bin = 90, cap = 40)   # mean IBD, clonal share and lineages, by quarter
 ```
 
@@ -139,7 +158,7 @@ new_infection_diversity(run, bin = 90, cap = 40)   # mean IBD, clonal share and 
 is shared end to end, same-oocyst siblings show a recombination mosaic, unrelated genomes
 share nothing:
 
-```{r}
+```{r, eval = has_tskit && has_gg, fig.height = 5}
 rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 plot_ibd_pair(run, rel$pedigree_id, rel$parent1_pedigree_id, labels = "relapse vs origin")
 
@@ -161,7 +180,8 @@ ancestor -- so a relapse and the hypnozoite it activated from give 0 no matter w
 they occurred. The raw tskit node time (ticks before the *end of the run*) is reported
 separately as `tmrca_node_time`; it moves with sampling date rather than with relatedness.
 
-```{r}
+```{r, eval = has_tskit}
+rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 arg_summary(run)                                   # trees, edges, roots/tree, oldest root
 arg_tmrca(run, rel$pedigree_id, rel$parent1_pedigree_id)   # coalesced = 1, tmrca = 0
 ```

@@ -96,3 +96,14 @@ test_that("every export's help page has examples, and none is \\dontrun", {
   expect_gte(length(has), length(ex) - 1L)   # every export has a page (`malariafwd` is a package alias)
   expect_identical(names(has)[has != "ok"], character())
 })
+
+test_that("the vignettes run their analysis, on the bundled run", {
+  dir <- test_path("..", "..", "vignettes")
+  skip_if_not(dir.exists(dir), "the vignettes' sources are in the source tree only")
+  for (f in list.files(dir, "\\.Rmd$", full.names = TRUE)) {
+    txt <- readLines(f, encoding = "UTF-8", warn = FALSE)
+    setup <- grep("opts_chunk\\$set", txt, value = TRUE)
+    expect_false(any(grepl("eval\\s*=\\s*FALSE", setup)), label = basename(f))
+    expect_true(any(grepl("example_run()", txt, fixed = TRUE)), label = basename(f))
+  }
+})
