@@ -733,6 +733,10 @@ edited set and from a set of an earlier version, and `N_FOUNDER_LINEAGES` follow
 `N_FOUNDER_HOSTS`), `tests/testthat/test-slim.R` (`-d N_FOUNDERS=12` refused),
 `tests/testthat/test-load.R` (an older file's rows, and a run object of an earlier version) and
 `tests/testthat/test-run.R` (no `N_FOUNDERS` row in `params.tsv`).
+
+---
+
+## D53 — load_state() gives the host rows unless asked · 2026-11-07 · Accepted
 **Context.** Most rows of `state.tsv` are mosquitoes (100 of every 140 at the defaults), whose
 `moi_active` counts the broods they carry, so a prevalence taken over every row,
 `mean(moi_active > 0)`, gave 0.30 against a host prevalence of 0.54 in the review's run (m28). No

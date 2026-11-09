@@ -54,3 +54,17 @@ test_that("the author's name, ORCID and roles agree across the metadata files", 
   for (f in c("README.md", ".zenodo.json"))
     expect_match(read(f), "LCF/BQ/PI25/12100035", fixed = TRUE, label = f)
 })
+
+## the decision log's entries: their numbers, in file order
+decision_numbers <- function() {
+  f <- test_path("..", "..", "DECISIONS.md")
+  skip_if_not(file.exists(f), "DECISIONS.md is in the source tree only")
+  h <- grep("^## D[0-9]+ ", readLines(f, encoding = "UTF-8", warn = FALSE), value = TRUE)
+  as.integer(sub("^## D([0-9]+) .*", "\\1", h))
+}
+
+test_that("every decision from D1 to the newest has one entry", {
+  d <- decision_numbers()
+  expect_setequal(d, seq_len(max(d)))
+  expect_false(anyDuplicated(d) > 0)
+})
