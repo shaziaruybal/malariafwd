@@ -37,7 +37,6 @@ run it occurred -- a clonal parent-child pair gives 0 whether it happened on tic
 tick 390. \code{tmrca_node_time} is the raw tskit node time of that ancestor, i.e. ticks before
 the \strong{end of the run}; that is what \code{tree.tmrca()} returns natively and it is dominated by
 when the pair was sampled rather than by how related it is. Use \code{tmrca} for relatedness.
-See D22 in \code{DECISIONS.md}.
 }
 
 \section{Python}{

@@ -188,7 +188,7 @@ dormancy_durations <- function(events) {
 #' `relapse` = a hypnozoite activated; `imported` = a new infection that arrived via
 #' importation; `local reinfection` = a new local mosquito-borne infection; and
 #' `recrudescence` = a clone that survived a treatment course, was suppressed below patency,
-#' and re-expanded (D25). Note the fourth is **not** an acquisition -- no new parasite entered
+#' and re-expanded. Note the fourth is **not** an acquisition -- no new parasite entered
 #' the host -- so it is excluded from [force_of_infection()]'s rates and from
 #' [new_infection_diversity()]. `imported` is a separate genotype-origin flag that is
 #' `TRUE` whenever the parasite genotype is import-derived -- including **imported

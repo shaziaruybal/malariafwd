@@ -56,7 +56,7 @@ audit_run <- function(tag, params, seed = 1) {
        all(per$hosts == 1), sprintf("%d bites", nrow(per)))
     ok("local inoculations occupy a single tick",
        all(per[imported == FALSE]$ticks == 1), sprintf("%d local", per[imported == FALSE, .N]))
-    ok("imported inoculations span at most the one-tick batch deferral (D17)",
+    ok("imported inoculations span at most one tick (an import's batch is logged the next day)",
        all(per[imported == TRUE]$span <= 1), sprintf("%d imported", per[imported == TRUE, .N]))
     ok("inoculation_ids do not restart each tick",
        max(inoc$inoculation_id) >= 0.5 * uniqueN(inoc$inoculation_id))

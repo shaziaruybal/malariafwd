@@ -32,7 +32,7 @@ episode can differ in \code{detected}.
 \code{relapse} = a hypnozoite activated; \code{imported} = a new infection that arrived via
 importation; \verb{local reinfection} = a new local mosquito-borne infection; and
 \code{recrudescence} = a clone that survived a treatment course, was suppressed below patency,
-and re-expanded (D25). Note the fourth is \strong{not} an acquisition -- no new parasite entered
+and re-expanded. Note the fourth is \strong{not} an acquisition -- no new parasite entered
 the host -- so it is excluded from \code{\link[=force_of_infection]{force_of_infection()}}'s rates and from
 \code{\link[=new_infection_diversity]{new_infection_diversity()}}. \code{imported} is a separate genotype-origin flag that is
 \code{TRUE} whenever the parasite genotype is import-derived -- including \strong{imported

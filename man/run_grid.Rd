@@ -69,7 +69,7 @@ cells that ran are on disk. The caller's random-number stream is left as it was.
 Runs every (parameter set, seed) cell, each in its own directory \verb{<set>_seed<seed>} under
 \code{outdir_base}, in parallel with the current \code{future} plan. Set \code{workers} for a quick local
 multisession; for a cluster, set \code{future::plan(...)} yourself before calling and leave
-\code{workers = NULL} (see DECISIONS.md D15).
+\code{workers = NULL}, so that the grid runs under your plan.
 }
 \details{
 Every set is checked, and every cell's directory, before any cell starts: a set

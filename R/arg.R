@@ -134,7 +134,6 @@ arg_summary <- function(run, ids = NULL) {
 #' tick 390. `tmrca_node_time` is the raw tskit node time of that ancestor, i.e. ticks before
 #' the **end of the run**; that is what `tree.tmrca()` returns natively and it is dominated by
 #' when the pair was sampled rather than by how related it is. Use `tmrca` for relatedness.
-#' See D22 in `DECISIONS.md`.
 #' @examples
 #' \dontrun{
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]

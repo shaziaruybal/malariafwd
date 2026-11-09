@@ -68,3 +68,15 @@ test_that("every decision from D1 to the newest has one entry", {
   expect_setequal(d, seq_len(max(d)))
   expect_false(anyDuplicated(d) > 0)
 })
+
+test_that("the decision log lists its entries newest first", {
+  d <- decision_numbers()
+  expect_identical(d, sort(d, decreasing = TRUE))
+})
+
+test_that("the help pages give reasons, not decision codes or private files", {
+  db <- rd_db()
+  txt <- vapply(db, function(rd) gsub("\\s+", " ", rd_flat(rd)), "")
+  expect_identical(names(txt)[grepl("\\bD[0-9]{1,2}\\b", txt, perl = TRUE)], character())
+  expect_identical(names(txt)[grepl("analys[ie]s repo|malariafwd-analyses|prototype run|audit run", txt)], character())
+})

@@ -1,17 +1,23 @@
 # Decision log — malariafwd (P. vivax SLiM + tskit simulator)
 
-Internal history of the design decisions behind the model + R package, and *why* we made
-them. This is deliberately separate from the standard R-package machinery:
+The design decisions behind the model and the R package, and *why* they were made. It sits
+beside the package's other documentation:
 
-- **`NEWS.md`** (later, in the package) = terse user-facing changelog ("what changed").
+- **`NEWS.md`** = what each release contains.
 - **roxygen / vignettes** = API reference + how-to.
+- **`MODEL_DESCRIPTION.md`** = the model as it is, with its assumptions and validation.
 - **`DECISIONS.md`** (this file) = the reasoning history ("*why* we chose X over Y, and what
   we rejected"). This is the part normally lost.
 
 **Conventions.** One entry per decision, newest at the top. Entries are *append-only*: when we
 change our mind we add a new entry that marks the old one `Superseded by DNN` — we never delete,
 so the trail of what we tried survives. Each entry: Context → Decision → Rationale → Alternatives
-rejected → Consequences. Cross-reference model code and the review finding IDs (F1–F15).
+rejected → Consequences, cross-referenced to the model code.
+
+**References outside this repository.** Some entries cite material that is not public: the
+prototype the package was extracted from, the author's analysis code (the "analysis repository"),
+and the internal reviews whose finding and question IDs (such as F3, M11, m23 or Q12) appear in
+entries. It is cited so that the record is complete; each entry is meant to be read without it.
 
 Model file: `inst/slim/malariafwd_vivax.slim` (SLiM 5.2). This log starts at the first
 full-genome prototype milestone (2026-08); entries written before the package was extracted
@@ -891,7 +897,7 @@ digits, from R and from a direct run).
 ## D48 — NU_HYPNOZOITE_BATCH defaults to 3, the fitted value · 2026-11-07 · Accepted
 **Context.** The default hypnozoite batch mean was 5, called a placeholder, while every documented
 figure and the fit to four published vivax bands (relapses per person-year 0.5-5, molFOB 0.7-15,
-median MOI 1-3, relapse fraction 0.55-0.85; malariafwd-analyses `01_calibrate_nu.R`) used 3. A
+median MOI 1-3, relapse fraction 0.55-0.85, in the author's calibration code) used 3. A
 default run gave 6.8 relapses per person-year, above its band (review M32, question Q19).
 **Decision.** The default is 3. `?vivax_params` says the 40-host defaults are an illustrative
 preview, not a calibrated setting. MODEL_DESCRIPTION 13 gives the fit, re-measured at this version.
@@ -1731,7 +1737,7 @@ whose only import establishment was dormant. Suites: `test_dir()` 97/0,
 
 ## D26 — The recrudescence delay is geometric at mean 10.5 d, and the distribution is selectable · 2026-10-23 · Accepted; partly superseded by D32 and D42
 **Context.** Step 4 shipped the suppression-to-recrudescence delay as a geometric at mean 21 d.
-Two things needed settling: the plan (`TREATMENT_IMPLEMENTATION.md:32, :361`) specified
+Two things needed settling: the treatment implementation plan specified
 `1 + Poisson(MEAN_RECRUD_DELAY - 1)` instead, and the 21 d default was uncited. A literature and
 reference-model review found that **none of the four reference models represents recrudescence
 at all** -- White 2014 has no treatment-failure branch; the White 2018 IBM puts a failure
@@ -1774,59 +1780,11 @@ invalid value must be refused on both the R and SLiM sides.
 
 ---
 
-## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted; partly superseded by D32 and D44 (MDA courses)
-**Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
-A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default
-of 7**, and 100% at 0 -- so the course landed in the same tick's `early()`. `reproduction()` runs
-before `early()`, so the genome that caused the case was minted moments earlier in the same tick,
-and `applyTreatment()` cleared it on its own creation tick. Measured over 5 seeds on three
-configurations: **796 episodes had zero patent days** (426 / 184 / 186), i.e. a parasite was
-treated before it had been detectable for a single day, could cause symptoms, or could transmit.
-This is not a treatment question, it is an internal inconsistency: natural clearance has enforced
-the rule since the model was written (`malariafwd_vivax.slim`, "Cannot be cleared on same tick as
-inoculation"); `applyTreatment()` simply never applied it.
-**Decision.** Two changes, both needed. (1) `decideTreatment()` floors the delay at **one tick**:
-`sim.cycle + max(1, rgeom(...))`, and `TREATMENT_DELAY = 0` now means "as fast as the model can
-represent", i.e. next tick. (2) `applyTreatment()` skips any clone whose `bloodstage_start_tick`
-is the current tick, so a course given for one case cannot reach a *different* clone that appeared
-that same tick.
-**Rationale.** A clone that became patent this tick cannot have caused symptoms, prompted
-care-seeking or been diagnosed -- OpenMalaria and malariasimulation both place delays between
-infection, symptoms and treatment. The floor must be at the decision site as well as the
-application site: with only the `applyTreatment()` fence, a course whose every target was created
-that tick is **consumed anyway** (`tx_pending` is cleared regardless of what was treated) and the
-patient silently goes untreated. Measured, that overcorrection moved prevalence 24.4% -> 55.3% on
-the `TREATMENT_DELAY = 0` run. With both changes the effect is small and in the expected direction.
-**Alternatives rejected.** *Forbid `TREATMENT_DELAY = 0`* -- restricts the parameter space for no
-reason; zero is a coherent request and now resolves to the fastest representable response.
-*Fence only in `applyTreatment()`* -- wastes courses, as above. *Leave it and document* -- the
-model would keep asserting two contradictory rules about the same tick.
-**Consequences.** Every treated run changes. Over 5 seeds: zero-patent-day episodes 796 -> **0**;
-prevalence 14.3+-8.0 -> 15.4+-4.0 (`treat_now`), 52.0+-10.7 -> 56.3+-6.2 (`cotrans`),
-35.1+-5.4 -> 35.7+-5.8 (`mild`) -- every shift well inside the between-seed SD, so no calibration
-conclusion moves. Treatment is now marginally *less* effective, which is the expected direction
-once a parasite gets at least one patent day. Untreated runs are unaffected
-(`BLOODCURE_COVERAGE = 0` is the shipped default, so `applyTreatment()` never runs).
-Also makes the radical-cure efficacy check 3-seed. It is not a regression -- the ordering is
-correct on both the old and new model, and *stronger* on the new one (6 of 6 seeds against 5 of 6)
--- but single-seed it was a near coin flip, so the shifted RNG stream flipped it with no change in
-behaviour. Same fix as D20 applied to its sibling check; the two remaining single-seed directional
-checks in `check_parameters.R` carry the same fragility.
-**How to verify.** No episode may be cleared by `case_bloodstage_clear` or `mda_bloodstage_clear`
-on the tick it was created, on any configuration (0 across `treat_now`, `cotrans`, `mild` at 5
-seeds each, against 426/184/186 before). `tx_tick > sim.cycle` for every scheduled course. Suites:
-`test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_parameters.R` 41/0,
-`R CMD check --as-cran --no-manual` 3 NOTEs (the two known, plus "unable to verify current time",
-which is the check failing to reach the network in this sandbox).
-
----
-
 ## D25 — Three-state recurrence: a recrudescence mints a new genome and is a case, not an acquisition · 2026-10-23 · Accepted; implemented except the subpatent_clearance event; relapse-fraction names by D65, the molFOB pair by D69; item 3's Champagne sentence superseded by D71; open item on MDA settled by D44
 **Context.** Step 4 adds the third recurrence state of the Pv3Rs/Taylor taxonomy -- relapse,
 reinfection, **recrudescence** -- by letting a clone that survives a blood-stage course be
-suppressed below patency and later re-expand. A scratch prototype
-(`/tmp/mfwchk/step4/proto.slim`) established the mechanics; a second prototype established the
-representation. Both are throwaway and are not in the repo.
+suppressed below patency and later re-expand. A scratch prototype established the mechanics, and
+a second one the representation; neither is kept.
 **Decision.**
 1. **A recrudescence MINTS a new genome** -- `h.addCloned(holder)`, fresh `pedigree_id`, fresh
    tskit node at the recrudescence tick -- and the holder is retired. This is the relapse
@@ -1891,7 +1849,7 @@ artesunate (Taylor 2019, n=1441), so the shipped default must be ~0 and a chloro
 is needed for the state to have anything to classify; subpatent relative infectivity is
 **0.10-0.20** (Koepfli 2021; White 2018 IBM), so neither 0 nor 1 is defensible.
 **Open, to settle during implementation.** The plan's `1 + Poisson(MEAN_RECRUD_DELAY - 1)`
-(`TREATMENT_IMPLEMENTATION.md:32, :361`, default 21 d) carries **no cited source**; it is
+(default 21 d) carries **no cited source**; it is
 self-consistent with the plan's row 7 ("natural clearance while subpatent: off", which makes
 `P_BLOODCURE_SURVIVAL` = P(recrudescence | treated) exactly), but Taylor's `RecurrentVivax` models
 time-to-recrudescence as Exponential with mean 10 d (SD 10) against Poisson(20)'s SD 4.5. The
@@ -1912,6 +1870,53 @@ sees the previous tick's end state). That count must be 0 at `SUBPATENT_INFECTIV
 monotonically above it. Do NOT use patent prevalence as the test -- at four seeds it came out
 5.5 / 5.9 / 2.8 / 10.7% with SDs of 4.0 / 5.4 / 0.9 / 3.6, i.e. unresolved, while the uptake
 channel was unambiguous.
+
+---
+
+## D24 — Treatment cannot precede patency · 2026-10-23 · Accepted; partly superseded by D32 and D44 (MDA courses)
+**Context.** `decideTreatment()` scheduled a course at `sim.cycle + rgeom(1, 1/(1+TREATMENT_DELAY))`.
+A geometric with mean *D* returns 0 with probability `1/(1+D)` -- **12.5% at the shipped default
+of 7**, and 100% at 0 -- so the course landed in the same tick's `early()`. `reproduction()` runs
+before `early()`, so the genome that caused the case was minted moments earlier in the same tick,
+and `applyTreatment()` cleared it on its own creation tick. Measured over 5 seeds on three
+configurations: **796 episodes had zero patent days** (426 / 184 / 186), i.e. a parasite was
+treated before it had been detectable for a single day, could cause symptoms, or could transmit.
+This is not a treatment question, it is an internal inconsistency: natural clearance has enforced
+the rule since the model was written (`malariafwd_vivax.slim`, "Cannot be cleared on same tick as
+inoculation"); `applyTreatment()` simply never applied it.
+**Decision.** Two changes, both needed. (1) `decideTreatment()` floors the delay at **one tick**:
+`sim.cycle + max(1, rgeom(...))`, and `TREATMENT_DELAY = 0` now means "as fast as the model can
+represent", i.e. next tick. (2) `applyTreatment()` skips any clone whose `bloodstage_start_tick`
+is the current tick, so a course given for one case cannot reach a *different* clone that appeared
+that same tick.
+**Rationale.** A clone that became patent this tick cannot have caused symptoms, prompted
+care-seeking or been diagnosed -- OpenMalaria and malariasimulation both place delays between
+infection, symptoms and treatment. The floor must be at the decision site as well as the
+application site: with only the `applyTreatment()` fence, a course whose every target was created
+that tick is **consumed anyway** (`tx_pending` is cleared regardless of what was treated) and the
+patient silently goes untreated. Measured, that overcorrection moved prevalence 24.4% -> 55.3% on
+the `TREATMENT_DELAY = 0` run. With both changes the effect is small and in the expected direction.
+**Alternatives rejected.** *Forbid `TREATMENT_DELAY = 0`* -- restricts the parameter space for no
+reason; zero is a coherent request and now resolves to the fastest representable response.
+*Fence only in `applyTreatment()`* -- wastes courses, as above. *Leave it and document* -- the
+model would keep asserting two contradictory rules about the same tick.
+**Consequences.** Every treated run changes. Over 5 seeds: zero-patent-day episodes 796 -> **0**;
+prevalence 14.3+-8.0 -> 15.4+-4.0 (`treat_now`), 52.0+-10.7 -> 56.3+-6.2 (`cotrans`),
+35.1+-5.4 -> 35.7+-5.8 (`mild`) -- every shift well inside the between-seed SD, so no calibration
+conclusion moves. Treatment is now marginally *less* effective, which is the expected direction
+once a parasite gets at least one patent day. Untreated runs are unaffected
+(`BLOODCURE_COVERAGE = 0` is the shipped default, so `applyTreatment()` never runs).
+Also makes the radical-cure efficacy check 3-seed. It is not a regression -- the ordering is
+correct on both the old and new model, and *stronger* on the new one (6 of 6 seeds against 5 of 6)
+-- but single-seed it was a near coin flip, so the shifted RNG stream flipped it with no change in
+behaviour. Same fix as D20 applied to its sibling check; the two remaining single-seed directional
+checks in `check_parameters.R` carry the same fragility.
+**How to verify.** No episode may be cleared by `case_bloodstage_clear` or `mda_bloodstage_clear`
+on the tick it was created, on any configuration (0 across `treat_now`, `cotrans`, `mild` at 5
+seeds each, against 426/184/186 before). `tx_tick > sim.cycle` for every scheduled course. Suites:
+`test_dir()` 71/0, `audit_events_and_ibd.R` 66/0, `check_parameters.R` 41/0,
+`R CMD check --as-cran --no-manual` 3 NOTEs (the two known, plus "unable to verify current time",
+which is the check failing to reach the network in this sandbox).
 
 ---
 
@@ -2018,7 +2023,7 @@ ever summed and discarded. tskit exposes `total_span` per pair without it -- 5.1
 over 14.8M segments on a 5413-sample tree, a 7.5x saving for an identical answer -- and `ids=`
 was always the bigger lever. Its scientific rationale was a depth concept the implementation did
 not provide; the cited authority (`DECISIONS D10d`) does not exist in this file or in any commit
-of it, and the actual record, the prototype's `GENOMIC_SURVEILLANCE_DESIGN_PLAN.md` §10d, says
+of it, and the actual record, the prototype's genomic-surveillance design plan, says
 "coalescing **within** 180 days" and "coalescence-recency" -- depth intent throughout. Making the
 segments the unit means the time convention is visible in the analysis code that chooses it rather
 than hidden behind an argument whose meaning no caller could see.
@@ -2180,18 +2185,47 @@ separate efficacy for treatment* — does not fix the forced coupling of the two
 
 **Consequences.** BREAKING for any run that set a coverage AND opened the intervention window:
 treatment now applies for the whole run unless `TREATMENT_*` is set.
-`analysis/11_china_scenarios.R` is the only such analysis and needs `TREATMENT_START = P1`,
-`TREATMENT_END = END` added to keep its current meaning; otherwise radical cure would act over
-the pre-control baseline too and drain the reservoir before the programme starts. Expect a
-stronger radical-cure effect once the window is scoped cleanly, and watch the relapse-driven
-resurgence arm, which the script's own comment notes becomes degenerate if radical cure is too
-effective. NOT addressed here: `INTERVENTION_EFFICACY` also suppresses importation, so border
-measures and bednets remain the same knob — a modelling question, not a bug, and out of scope.
+The author's analysis of elimination scenarios in China is the only such analysis and needs
+`TREATMENT_START = P1`, `TREATMENT_END = END` added to keep its current meaning; otherwise radical
+cure would act over the pre-control baseline too and drain the reservoir before the programme
+starts. Expect a stronger radical-cure effect once the window is scoped cleanly, and watch the
+relapse-driven resurgence arm, which the script's own comment notes becomes degenerate if radical
+cure is too effective. NOT addressed here: `INTERVENTION_EFFICACY` also suppresses importation, so
+border measures and bednets remain the same knob — a modelling question, not a bug, and out of
+scope.
 
 **How to verify.** A coverage alone produces treatments; opening the intervention window alone
 produces none while changing prevalence; a bounded `TREATMENT_*` window produces fewer
 treatments than an unbounded one; a coverage against a closed window errors. All four in
 `tests/testthat/test-treatment.R`.
+
+---
+
+## D18 — Imports are independent founders for v0.1.0; a source deme is deferred to v0.2.0 · 2026-10-19 · Accepted (interim)
+**Context.** Every import enters as an ARG root with no ancestry — exactly the limit of an
+infinitely large, infinitely diverse source population, in which two imports can never be related
+to each other. The population-genetics convention for immigration is a source ("ghost") deme with
+migration, under which imported genomes carry real ancestry and coalesce with one another in the
+source.
+
+**Decision.** Keep independent founders for the pre-release; implement a source deme in v0.2.0.
+
+**Rationale.** A source deme is structural: it adds source diversity as a calibration axis and
+changes what an import *is*. It is not required to fix D17's defects, and the pre-release scope is
+already treatment + recrudescence.
+
+**Alternatives rejected.** *Implement the source deme now* — scope, and it would land
+simultaneously with the treatment rework, making D17's regression ambiguous.
+
+**Consequences.** Imports are maximally distinguishable by construction, so any result reporting
+how identifiable imported cases are is conditional on that assumption: the E-id import arm's
+AUC 0.80, with import founders near-disjoint (overlap 0.03), would fall under a realistic source.
+This must be stated in the README limitations and in the software note, not left implicit. Under a
+source deme the inoculum becomes a real genome, so D17's primary→batch edge is superseded by the
+sibling topology of an ordinary bite, as a by-product rather than new work.
+
+**How to verify.** README limitations names it; the software note states the assumption alongside
+any import-identifiability result.
 
 ---
 
@@ -2253,34 +2287,6 @@ non-empty event log. (2) A run driven to extinction, then given an import window
 (3) `IBD(primary, its own batch) == 1` for imported inoculations, matching local ones — this
 un-skips the regression test in `tests/testthat/test-model-invariants.R`. (4) A queued second
 compartment whose primary dies before the next tick is purged and the queue does not grow.
-
----
-
-## D18 — Imports are independent founders for v0.1.0; a source deme is deferred to v0.2.0 · 2026-10-19 · Accepted (interim)
-**Context.** Every import enters as an ARG root with no ancestry — exactly the limit of an
-infinitely large, infinitely diverse source population, in which two imports can never be related
-to each other. The population-genetics convention for immigration is a source ("ghost") deme with
-migration, under which imported genomes carry real ancestry and coalesce with one another in the
-source.
-
-**Decision.** Keep independent founders for the pre-release; implement a source deme in v0.2.0.
-
-**Rationale.** A source deme is structural: it adds source diversity as a calibration axis and
-changes what an import *is*. It is not required to fix D17's defects, and the pre-release scope is
-already treatment + recrudescence.
-
-**Alternatives rejected.** *Implement the source deme now* — scope, and it would land
-simultaneously with the treatment rework, making D17's regression ambiguous.
-
-**Consequences.** Imports are maximally distinguishable by construction, so any result reporting
-how identifiable imported cases are is conditional on that assumption: the E-id import arm's
-AUC 0.80, with import founders near-disjoint (overlap 0.03), would fall under a realistic source.
-This must be stated in the README limitations and in the software note, not left implicit. Under a
-source deme the inoculum becomes a real genome, so D17's primary→batch edge is superseded by the
-sibling topology of an ordinary bite, as a by-product rather than new work.
-
-**How to verify.** README limitations names it; the software note states the assumption alongside
-any import-identifiability result.
 
 ---
 
@@ -2490,10 +2496,10 @@ toward the center under 14 chromosomes vs bimodal under one (assortment working)
 **Context.** Packaging the run+analysis engine as a prototype R package for a new GitHub repo.
 **Decision.** Name `malariafwd` (matches the model's internal name; room to extend beyond vivax).
 Scope = **engine + IBD toolkit**: params object, `run_sim`/`run_grid`, `load_run`, tskit IBD, the
-general metrics + plots from `utility_functions.R`. The ~117 analysis scripts + framework work
-(E1/classify/design) stay in the prototype repo as the paper's code. Scaffold as `./malariafwd/`,
-port to a fresh repo later. Do the model review + 14-chromosome genome FIRST so the package ships
-around a corrected model.
+general metrics + plots from the prototype's utility functions. The ~117 analysis scripts +
+framework work (E1/classify/design) stay in the prototype repo as the paper's code. Scaffold as
+`./malariafwd/`, port to a fresh repo later. Do the model review + 14-chromosome genome FIRST so the
+package ships around a corrected model.
 **Rationale.** Ships the reusable engine, not the research; smallest coherent surface for a v0.1.
 **Alternatives rejected.** Engine-only (too thin — loses the tested IBD/metrics); engine+framework
 (couples the package to in-progress research).

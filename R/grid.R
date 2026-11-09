@@ -99,7 +99,7 @@
 #' Runs every (parameter set, seed) cell, each in its own directory `<set>_seed<seed>` under
 #' `outdir_base`, in parallel with the current `future` plan. Set `workers` for a quick local
 #' multisession; for a cluster, set `future::plan(...)` yourself before calling and leave
-#' `workers = NULL` (see DECISIONS.md D15).
+#' `workers = NULL`, so that the grid runs under your plan.
 #'
 #' Every set is checked, and every cell's directory, before any cell starts: a set
 #' [vivax_params()] refuses, or a cell whose directory [run_sim()] would refuse, stops the grid
