@@ -1224,6 +1224,8 @@ Ordered by how much the answer is likely to move.
 |---|---|
 | **Co-transmission on by default**, and genotyping each hypnozoite independently of the inoculated primaries | at present a bite delivers one genotype and the reservoir is a subset of the blood-stage infection, so heterologous relapse can only arise across separate bites. Both changes make it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
+| Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (§11); planned to follow the malariasimulation protection curves |
+| Calibration of the treatment and recurrence machinery | including a chloroquine-resistant setting, in which recrudescence is material rather than negligible |
 | Founder genomes from recombuddy | root genomes painted with background relatedness and linkage disequilibrium, which independent painting leaves out (§16.7) |
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Andolina 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
