@@ -1,40 +1,238 @@
-# Standard r-lib check. NOTE: SLiM is not installed on the runner, so the integration tests
-# self-skip (skip_if_not(slim_available())). CI therefore validates the R side -- docs,
-# examples, NAMESPACE, the pure-R tests -- while the simulation tests and the scripts in
-# inst/validation/ are run locally against a real SLiM install before a release.
+# Two layers, because malariafwd has two halves:
+#
+#   R-CMD-check  the standard r-lib matrix (macOS, Windows, Ubuntu devel/release/oldrel-1, and
+#                R 4.1, the oldest version DESCRIPTION accepts). SLiM is not installed here, so
+#                the simulation tests skip: this proves the R side installs, documents and
+#                checks on every OS and R version.
+#
+#   integration  installs SLiM from conda-forge (builds for linux-64, osx-64, osx-arm64 and
+#                win-64) and Python with tskit and numpy, runs R CMD check again so that every
+#                test runs (a step fails the job if a test skipped for want of SLiM or Python),
+#                then runs inst/validation/audit_events_and_ibd.R as a smoke test of the model.
+#                The other validation scripts run weekly, on release tags and on demand.
+#
+# Python is set up two ways on purpose: Ubuntu and Windows name an interpreter with
+# RETICULATE_PYTHON (the "I already have tskit" route, as on a cluster); macOS leaves Python
+# unset, so that reticulate builds its own environment (the route a new user gets).
+
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
+  schedule:
+    - cron: '17 4 * * 1'   # weekly: catches drift in SLiM, tskit and the R dependencies
   workflow_dispatch:
+    inputs:
+      full-validation:
+        description: 'Also run every script in inst/validation (slow)'
+        type: boolean
+        default: false
 
 name: R-CMD-check
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The model is tested on SLiM 5.2; a seed gives the same output only within one SLiM version.
+  SLIM_VERSION: '5.2'
 
 jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         config:
-          - {os: ubuntu-latest,  r: 'release'}
           - {os: macos-latest,   r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: '4.1'}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
       - uses: r-lib/actions/setup-pandoc@v2
+
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
           needs: check
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
           args: 'c("--no-manual", "--as-cran")'
+          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
+
+  integration:
+    name: SLiM integration (${{ matrix.os }}, python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    # Windows reports but does not block: no run has been tested there yet. Set experimental to
+    # false once this leg passes.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest,  python: 'pip',     experimental: false}
+          - {os: macos-latest,   python: 'managed', experimental: false}
+          - {os: windows-latest, python: 'pip',     experimental: true}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      NOT_CRAN: true
+      MALARIAFWD_FIGS: ${{ github.workspace }}/validation-figs
+      FULL_VALIDATION: ${{ github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v') || inputs.full-validation == true }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      # SLiM is a standalone binary in its own conda environment; nothing from conda is loaded
+      # into the R process, so its libraries cannot clash with R's or with the pip wheels.
+      - name: Install SLiM ${{ env.SLIM_VERSION }} from conda-forge
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: slim
+          create-args: >-
+            slim=${{ env.SLIM_VERSION }}
+          init-shell: bash
+          cache-environment: true
+          post-cleanup: none
+
+      - name: Point malariafwd at SLiM (MALARIAFWD_SLIM)
+        shell: bash -el {0}
+        run: |
+          s="$(command -v slim)"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            s="$(cygpath -m "$s")"
+            case "$s" in *.exe) ;; *) s="$s.exe" ;; esac
+          fi
+          echo "MALARIAFWD_SLIM=$s" >> "$GITHUB_ENV"
+          slim -v
+
+      # Python, route 1: an interpreter of your own, named by RETICULATE_PYTHON
+      - name: Set up Python
+        if: matrix.python == 'pip'
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install tskit and numpy, and point reticulate at them
+        if: matrix.python == 'pip'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "tskit>=1.0" numpy
+          python -c "import tskit, numpy; print('tskit', tskit.__version__, '| numpy', numpy.__version__)"
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+
+      # Python, route 2: nothing set, so reticulate builds its own environment on first use
+      - name: Cache reticulate's own Python
+        if: matrix.python == 'managed'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/org.R-project.R/R/reticulate
+            ~/.cache/R/reticulate
+          key: reticulate-uv-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('DESCRIPTION') }}
+          restore-keys: reticulate-uv-${{ runner.os }}-${{ runner.arch }}-
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          # local::. installs malariafwd itself: the validation scripts use system.file(), and
+          # run_grid()'s future workers load the installed package, not the source tree.
+          extra-packages: any::rcmdcheck, local::.
+          needs: check
+
+      - name: The toolchain as malariafwd sees it
+        shell: Rscript {0}
+        run: |
+          library(malariafwd)
+          print(check_setup())   # on the macOS leg this builds reticulate's environment
+          stopifnot(slim_available(), numeric_version(slim_version()) >= "5.2", tskit_available())
+
+      - name: R CMD check with SLiM and tskit present (every test runs)
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          build_args: 'c("--no-manual")'
+          upload-snapshots: true
+          artifact-name: integration-${{ runner.os }}-check-results
+          snapshot-artifact-name: integration-${{ runner.os }}-snapshots
+
+      - name: Fail if a test skipped for want of SLiM or Python
+        if: always()
+        shell: bash
+        run: |
+          rout="$(find check -name 'testthat.Rout*' | head -n 1)"
+          if [ -z "$rout" ]; then echo "::error::no testthat output found under check/"; exit 1; fi
+          grep -E '\[ FAIL [0-9]+ \| WARN [0-9]+ \| SKIP [0-9]+ \| PASS [0-9]+ \]' "$rout" | tail -n 1
+          # the reasons testthat lists under "Skipped tests", up to its next section
+          skipped="$(awk '/Skipped tests/ {f = 1; next} /Failed tests|Warnings \(|DONE|\[ FAIL/ {f = 0} f' "$rout")"
+          if echo "$skipped" | grep -E 'SLiM not on PATH|tskit \(>= 1\.0\) and numpy not available|reticulate'; then
+            echo "::error::tests were skipped: R CMD check could not see SLiM or Python with tskit"
+            exit 1
+          fi
+
+      - name: Same seed, same output (informational, across platforms)
+        shell: Rscript {0}
+        run: |
+          library(malariafwd)
+          od <- file.path(tempdir(), "golden")
+          run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 200,
+                               LAMBDA_OOCYSTS = 2, LAMBDA_SPOROZOITES = 2),
+                  seed = 42, outdir = od)
+          got  <- unname(tools::md5sum(file.path(od, c("events.tsv", "state.tsv"))))
+          want <- c("4a7fab76d115350ddcf76fde739955f7",   # events.tsv: macOS arm64, SLiM 5.2,
+                    "dbbcd295c5b9897df5f5320488d6d2ff")   # state.tsv   the model at d37079a
+          print(data.frame(file = c("events.tsv", "state.tsv"), got = got, want = want))
+          if (!identical(got, want))
+            cat("::warning::seed 42 gives other output than the macOS / SLiM 5.2 reference.",
+                "Expected after a change to the model; otherwise a difference between platforms.\n")
+
+      - name: Validation smoke test (inst/validation/audit_events_and_ibd.R)
+        shell: Rscript {0}
+        run: source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))
+
+      - name: The other validation scripts (weekly, release tags, on demand)
+        if: env.FULL_VALIDATION == 'true' && runner.os == 'Linux'
+        shell: bash
+        run: |
+          # bash -e: the loop stops at the first script that exits non-zero
+          for s in check_parameters.R audit_arg_recombination.R audit_arg_junctions.R explain_ibd.R; do
+            echo "::group::$s"
+            Rscript -e "source(system.file('validation', '$s', package = 'malariafwd'))"
+            echo "::endgroup::"
+          done
+
+      - name: Upload the validation figures
+        if: always() && env.FULL_VALIDATION == 'true' && runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: validation-figures
+          path: ${{ env.MALARIAFWD_FIGS }}
+          if-no-files-found: ignore
