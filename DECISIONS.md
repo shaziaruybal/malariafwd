@@ -2298,7 +2298,8 @@ model file vs a runtime switch.
 through a `vcat()` helper (`if (VERBOSE) catn(msg)`); GENOME/WARNING/SIMULATION-FINISHED stay on `catn()`
 (always shown). 50 of 57 `catn()` converted to `vcat()`.
 **Rationale.** One source of truth (two files would drift). Verified: VERBOSE=F → 28 log lines, VERBOSE=T
-→ 9226, and events/state/trees are byte-identical between modes (narration only, never results). Not a
+→ 9226; events and state are byte-identical between modes, and so are the tree sequence's tables
+(only its provenance record differs): narration only, never results. Not a
 speed win (logging isn't the bottleneck) — the point is log-disk noise at sweep scale + a debuggable mode.
 **Alternatives rejected.** Two model files (drift); deleting the narration (loses the debug mode).
 **Consequences.** Default quiet; set VERBOSE=T to debug a single run.
@@ -2409,7 +2410,7 @@ delayed lineage clearance (all N copies had to clear), rolled detection/radical-
 relapse counts, detection, and COI are now correct. Different *batches* (heterologous genotypes)
 activating the same day still yield distinct episodes.
 
-## D7 — Radical cure models the LIVER stage only (F5) · 2026-08-05 · Accepted
+## D7 — Radical cure models the LIVER stage only (F5) · 2026-08-05 · Accepted; partly superseded by D20
 **Context.** `applyRadicalCure` thins the host's hypnozoite reservoir but leaves the blood-stage
 infection, which then clears naturally over ~MEAN_BLOOD_STAGE_DURATION.
 **Decision.** Keep it liver-stage-only (anti-relapse); add a clarifying comment. Blood-stage
@@ -2421,6 +2422,10 @@ anti-hypnozoite lever is faithful and isolates the epidemiologically key mechani
 reservoir that sustains transmission). (MDA, by contrast, models a combined blood+liver regimen.)
 **Consequences.** A treated case keeps transmitting from blood-stage for ~weeks — a real feature
 of vivax control, not a bug. Add blood-stage treatment when treatment becomes a focus.
+**Superseded in part by D20.** Radical cure is still liver-stage only, but it is no longer the only
+treatment: D20 nests it inside a blood-stage course, applied to the host, and makes its efficacy
+per person by default (all or nothing), so the reservoir is no longer thinned unless
+`RADCURE_MODE = "hypnozoite"`.
 
 ## D6 — Gametocyte gating wired in but defaults to identity (F1) · 2026-08-05 · Accepted
 **Context.** `GAMETOCYTE_DELAY` and `P_GAMETOCYTE` were declared but never read: humans were
