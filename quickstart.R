@@ -9,9 +9,10 @@
 #   Rscript quickstart.R --github        # install from GitHub instead
 #   Rscript quickstart.R --outdir path   # where to put the run and the figures
 #
-# Needs SLiM (>= 5.2) on your PATH; the IBD and ARG steps also need Python with tskit (>= 1.0)
-# and numpy, through reticulate (with no Python chosen, reticulate sets one up on first use).
-# check_setup() reports what is found. Everything else degrades gracefully.
+# Needs SLiM (>= 5.2) on your PATH. The install brings the suggested packages the plots use; the
+# IBD and ARG steps also need Python with tskit (>= 1.0) and numpy, through reticulate (with no
+# Python chosen, reticulate sets one up on first use), and are skipped without it.
+# check_setup() reports what is found.
 # ---------------------------------------------------------------------------------------
 
 args    <- commandArgs(trailingOnly = TRUE)
@@ -51,8 +52,8 @@ if (!has_py) cat("   the IBD and ARG steps will be skipped (no Python with tskit
 # -- 3. run one simulation ----------------------------------------------------------------
 say("3. Running a simulation")
 p <- vivax_params(
-  N_HOSTS = 100, N_MOSQ = 200,     # a small population, so this finishes quickly
-  BITING_RATE = 0.11,              # moderate transmission
+  N_HOSTS = 100, N_MOSQ = 250,     # the README's quick start: a small population, a few seconds
+  BITING_RATE = 0.1,               # moderate transmission
   SIM_DAYS = 548,                  # 1.5 years
   N_FOUNDER_HOSTS = 16,
   N_FOUNDER_LINEAGES = 10,         # 10 distinct founding genomes among 16 infected hosts
@@ -115,4 +116,5 @@ if (has_py) {
 }
 
 say("Done. Run: ", rundir, "   Figures: ", figs)
-cat("\nNext: ?plot_diagnostics, ?ibd_pairs, ?arg_summary, or vignette(\"anatomy\", \"malariafwd\")\n")
+cat("\nNext: ?plot_diagnostics, ?ibd_pairs, ?arg_summary, or the articles at",
+    "https://shaziaruybal.github.io/malariafwd/\n")

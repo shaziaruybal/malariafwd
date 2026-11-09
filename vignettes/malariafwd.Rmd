@@ -43,8 +43,8 @@ run's directory appears when the run has finished, and a directory that already 
 not replaced unless you pass `overwrite = TRUE`.
 
 ```{r, eval = FALSE}
-p   <- vivax_params(N_HOSTS = 300, N_MOSQ = 600, BITING_RATE = 0.09)
-run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
+p   <- vivax_params(N_HOSTS = 100, N_MOSQ = 250, BITING_RATE = 0.1, SIM_DAYS = 548)
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))   # a few seconds on a laptop
 ```
 
 Every parameter, with its unit and the values it may take, is in `?vivax_params` and
@@ -121,7 +121,7 @@ sets <- list(
   high = vivax_params(BITING_RATE = 0.12)
 )
 base <- file.path(tempdir(), "sweep")
-res  <- run_grid(sets, seeds = 1:10, outdir_base = base, workers = 2)
+res  <- run_grid(sets, seeds = 1:10, outdir_base = base, workers = 2)   # 20 short runs, about 10 s
 res   # one row per cell: set, seed, outdir, ok, skipped, error, extinct_tick, never_started,
       # elapsed_s, finished, slim_version, malariafwd_version, and BITING_RATE, which varies
 load_grid(base)   # the same table, from grid.tsv

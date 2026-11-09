@@ -82,12 +82,14 @@ use (ggplot2, patchwork and reticulate). The vignettes are on the
 
 ## Check it works
 
-`quickstart.R` installs the package, runs one simulation and writes the diagnostic and
-model-output plots — under a minute end to end on a laptop:
+[`quickstart.R`](https://github.com/shaziaruybal/malariafwd/blob/main/quickstart.R) installs the
+package into your R library, runs one simulation and writes the diagnostic and model-output plots,
+in under a minute on a laptop:
 
 ```sh
 Rscript quickstart.R                 # from a clone
-Rscript quickstart.R --github        # install from GitHub instead
+curl -O https://raw.githubusercontent.com/shaziaruybal/malariafwd/main/quickstart.R
+Rscript quickstart.R --github        # or the script alone, installing from GitHub
 ```
 
 ## Quick start

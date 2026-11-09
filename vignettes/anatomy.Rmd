@@ -24,8 +24,8 @@ The chunks that read the tree sequence need Python with tskit (see `check_setup(
 With SLiM, a run of your own is one call (not run here):
 
 ```{r, eval = FALSE}
-p   <- vivax_params(N_HOSTS = 200, N_MOSQ = 400, BITING_RATE = 0.1, SIM_DAYS = 1095)
-run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))
+p   <- vivax_params(N_HOSTS = 100, N_MOSQ = 250, BITING_RATE = 0.1, SIM_DAYS = 548)
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))   # a few seconds on a laptop
 ```
 
 Here, the bundled run:
