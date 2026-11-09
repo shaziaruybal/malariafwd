@@ -24,7 +24,7 @@ p   <- vivax_params(N_HOSTS = 200, N_MOSQ = 400, BITING_RATE = 0.1, SIM_DAYS = 1
 run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "anatomy"))
 ```
 
-`run` points at the output directory, which now holds:
+`run` points at the output directory, which holds:
 
 - `events.tsv` — every discrete event (infections, clearances, relapses, mosquito uptake …)
 - `state.tsv` — per-tick state of every host and mosquito

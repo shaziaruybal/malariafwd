@@ -433,11 +433,11 @@ its own `oocyst_id`; all oocysts from one meal share a `brood_id`.
 **Gamete draw.** Each oocyst draws **two gametes independently and uniformly** from the host's
 gametocyte pool. Selfing vs outcrossing **emerges** from whether the two happen to share a lineage;
 it is not rolled as a coin flip. This reproduces P(outcross) = 1 − Σpᵢ² as a marginal *and* gives
-the correct pairing P(i,j) ∝ pᵢpⱼ (Wong et al. 2018), which the previous "roll outcross, then pick
-two distinct lineages" did not.
+the correct pairing P(i,j) ∝ pᵢpⱼ (Wong et al. 2018); rolling outcrossing first and then picking two
+distinct lineages would give the marginal but not the pairing.
 
-> `computeOutcrossingProb()` (Simpson) still exists but is **logged only**, as the `p_outcross`
-> column. It no longer drives anything.
+> `computeOutcrossingProb()` (Simpson's index of the pool) is **logged only**, as the `p_outcross`
+> column, and drives nothing.
 
 **Meiosis.** An outcrossed oocyst yields a full **tetrad** by per-chromosome four-strand meiosis
 (D34, D41): the zygote's two genomes replicate into four chromatids per chromosome, and each chiasma
@@ -683,9 +683,10 @@ overlap 0.03). A structured source pool is planned (§15).
   baseline and then switch on a single mechanism.
 
 **Observation layer.** A true episode becomes a *detected* (reported, genotyped) case with
-probability `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD`, drawn **once per
-episode** — not per co-inoculated genotype, which used to let one bite be "detected and treated"
-for one of its genotypes and not the other (D20). Relapses are often sub-patent, so a realistic
+probability `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD`, drawn **once per bite**
+(for all the genotypes it delivers), **per import, per activation or per recrudescence** — not per
+co-inoculated genotype, so one bite cannot be "detected and treated" for one of its genotypes and
+not the other (D20). Relapses are often sub-patent, so a realistic
 setting is much lower for them (e.g. 0.15); Ross et al. (2025) put recurrence detectability at
 0.13–0.49 of a primary, so `P_DETECT_RECRUD` should usually sit well below `P_DETECT_PRIMARY`.
 Detected cases form the observed line list and can trigger case-based treatment. A bite that seeds
@@ -1052,23 +1053,7 @@ batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢp
 
 ---
 
-## 13. Verification, fixed defects, and calibration status
-
-### Correctness audit
-
-Five defects were found during development, reproduced empirically, and fixed before release.
-Four were instances of the same Eidos trap: a plain assignment to a global inside a callback or
-function creates a **local**. They are recorded here because each has a standing regression test,
-and because the first one changes how earlier results should be read.
-
-| defect | measured impact |
-|---|---|
-| hypnozoite batches never retired — exhausted and age-capped batches kept activating | **64% of batches over-drew**; relapses/host-yr fell ~3× after the fix (4.7 → 1.55 at ν = 3) |
-| duplicate event ids (`INOCULATION_ID` never incremented) | all inoculations shared id 1 |
-| deferred radical-cure flag, MDA empty-host guard, tick-event id | corrected |
-
-**Consequence for output produced by pre-release versions of the engine:** group bites by
-`(tick, mosq_id, human_id)` rather than `inoculation_id`.
+## 13. Verification and calibration status
 
 ### Validation suite
 
@@ -1099,8 +1084,8 @@ machinery.
 | oocysts per blood meal | ≥ 1; 1 at λ = 0 | mean 1.00 (max 1) and mean 3.04 (max 20) |
 | recombinant uptakes record two distinct parents | always | 6.9% and 22.9% recombinant |
 
-The over-draw check is the standing regression test for the batch-retirement defect — it was
-**64%** before the fix.
+The over-draw check guards the retirement of exhausted batches, which the Eidos scoping trap of §18
+would break silently: an unretired batch keeps activating after it has run out.
 
 #### ARG and IBD
 
@@ -1547,11 +1532,11 @@ genomes in batches with one seed. `write_vcf()` writes that object in about a se
 
 ## 18. Implementation notes and traps
 
-Recorded because each cost real debugging time.
+Traps for anyone who changes the model script or reads its tree sequence.
 
 **Eidos scoping.** A plain assignment to a global *inside a callback or function creates a local*.
-Use `defineGlobal()`. Four of the five defects in §13 were instances of this; the batch-retirement
-queue silently never reached `early()`.
+Use `defineGlobal()`. The trap is silent: a queue filled this way inside a callback never reaches
+`early()`. The validation suite's over-draw check (§13) catches it for the batch-retirement queue.
 
 **Vacant tskit nodes.** SLiM haploid individuals get **two** nodes — the real haplosome
 (`is_vacant = [0]`) and an isolated null placeholder (`is_vacant = [1]`, IBD 0 with everything).
