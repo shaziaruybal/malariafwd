@@ -1551,9 +1551,11 @@ time of 1,094). Use `ibd_pairs()` / `arg_tmrca()`.
 
 **Integer and float spellings.** `-d X=0` makes an Eidos integer and `-d X=0.0` a float, and
 Eidos will not mix the two in some places (`rbinom()`, `seqLen()`, subsetting, a tick range).
-`initialize()` converts every parameter to the type it needs (D45), so a run started with
-`slim -d` takes either spelling; a new parameter must be converted there too. R writes every float
-with a decimal point.
+The model converts a parameter to the type it needs where it uses it there (`asInteger()`,
+`asFloat()`), and `initialize()` checks each parameter's type and range (D45), so a run started
+with `slim -d` takes either spelling. A new parameter must be converted at each such use (a
+constant given with `-d` cannot be redefined in `initialize()`). R writes every float with a
+decimal point.
 
 **Iterating `NULL`.** A `for` loop over a zero-length vector runs no iteration, and the model relies
 on that, but a loop over `NULL` is an error: guard anything that can be `NULL`.
