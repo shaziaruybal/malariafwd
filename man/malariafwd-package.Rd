@@ -13,8 +13,8 @@ defines the terms the help pages share.
 \section{Start here}{
 
 \code{\link[=example_run]{example_run()}} returns a small run that ships with the package, so every reader can be tried
-without SLiM. \code{vignette("malariafwd")} runs a simulation and reads it, and \code{vignette("anatomy")}
-walks through what a run records (both are also on the
+without SLiM. \code{vignette("malariafwd")} shows how to run a simulation and reads the bundled run,
+and \code{vignette("anatomy")} walks through what a run records (both are also on the
 \href{https://shaziaruybal.github.io/malariafwd/}{website}); \code{\link[=event_types]{event_types()}} lists every event a run
 logs. The model is described in full in
 \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{MODEL_DESCRIPTION}, the
