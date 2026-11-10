@@ -1,0 +1,4 @@
+# Check text files out with LF line endings on every system. The model's md5 is part of what
+# identifies a run (its DONE file, and the bundled example run), so a copy checked out with CRLF,
+# as Git for Windows does by default, would differ from it.
+* text=auto eol=lf

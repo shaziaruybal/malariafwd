@@ -22,3 +22,4 @@
 ^.*\.Rcheck$
 ^.*\.tar\.gz$
 ^data-raw$
+^\.gitattributes$
