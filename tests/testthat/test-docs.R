@@ -116,3 +116,19 @@ test_that("the validation results record a run of every checking script", {
   scripts <- setdiff(dir(dirname(f), "\\.R$"), "explain_ibd.R")   # explain_ibd.R draws, it checks nothing
   for (s in scripts) expect_match(txt, paste0("`", s, "`"), fixed = TRUE, label = s)
 })
+
+test_that("the decision log names no file that is not in the repository", {
+  root <- test_path("..", "..")
+  f <- file.path(root, "DECISIONS.md")
+  skip_if_not(file.exists(f), "DECISIONS.md is in the source tree only")
+  ours <- tryCatch(suppressWarnings(system2("git", c("-C", shQuote(root), "ls-files"), stdout = TRUE, stderr = FALSE)),
+                   error = function(e) character())
+  skip_if(length(ours) == 0L, "git cannot list the repository's files")
+  txt <- paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  ticks <- gsub("^`|`$", "", regmatches(txt, gregexpr("`[^`\n]+`", txt))[[1]])
+  files <- unique(sub(":[0-9, :]+$", "", grep("^[A-Za-z0-9_./-]+\\.(R|Rmd|md|slim|py|yaml|yml|json|cff)(:[0-9, :]+)?$",
+                                               ticks, value = TRUE)))
+  run_files <- "model.slim"   # the copy of the model in every run directory
+  ok <- files %in% ours | basename(files) %in% basename(ours) | files %in% run_files
+  expect_identical(files[!ok], character())
+})

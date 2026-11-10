@@ -1679,9 +1679,9 @@ exists for. Removal would have cost more than it saved: six event types out of t
 `event_types()` dictionary, `mda_bloodstage_clear` out of the episode vocabulary that span
 reconstruction depends on, a metric branch, a shipped validation scenario, the structure diagram,
 three passages in `MODEL_DESCRIPTION.md`, and two accepted ADRs needing supersession. There is
-also a live mislabel downstream: `deploy_malariafwd_vivax.R` ships a scenario named
-`E3_mda_imperfect` / "imperfect coverage" implemented as `P_RAD_SURVIVAL = 0.50`, which conflates
-coverage with efficacy. `MDA_COVERAGE` is what that scenario actually wanted.
+also a live mislabel downstream: a deployment script in the author's analysis code ships a scenario
+named `E3_mda_imperfect` / "imperfect coverage" implemented as `P_RAD_SURVIVAL = 0.50`, which
+conflates coverage with efficacy. `MDA_COVERAGE` is what that scenario actually wanted.
 **Alternatives rejected.** *Remove MDA* -- above. *Leave it all-or-nothing and document the
 limitation* -- cheaper, but it leaves the mislabelled scenario with nothing correct to point at.
 **Consequences.** `MDA_COVERAGE = 1.0` is byte-identical to the previous behaviour: the draw is
@@ -2039,13 +2039,14 @@ row count that only arises from a call (`segments = TRUE` with no `ids`) nobody 
 *Fix the documentation only* -- leaves the inversion above in place.
 **Consequences.** Breaking change to two exported functions, taken deliberately before any
 release (no tag, no published version). Every `ibd_pairs()` call that did not pass `max_time` --
-which is every call inside the package, and 100 of the 102 IBD call sites across the three repos --
+which is every call inside the package, and 100 of the 102 IBD call sites in the package, the
+prototype and the author's analysis code --
 returns bit-identical numbers and runs faster. The two that did: `vignettes/malariafwd.Rmd` is
 rewritten to demonstrate `segments` and to state that `mrca_time` is not a depth, and
-`vivax_slim_prototype/e1_ibddef.R` needs its `ibd_time` arm re-specified -- that is the analysis
-this defect was corrupting, and is a separate decision. `segments = TRUE` costs 3-7x the default,
-growing with sample count. Also closes the `extract_segments` bridge on
-`resources/PACKAGE_UTILS_WISHLIST.md`, and removes the dangling `D10d` cross-reference.
+the prototype's IBD-definition experiment needs its `ibd_time` arm re-specified -- that is the
+analysis this defect was corrupting, and is a separate decision. `segments = TRUE` costs 3-7x the
+default, growing with sample count. Also closes the `extract_segments` bridge on the prototype's
+package wishlist, and removes the dangling `D10d` cross-reference.
 **How to verify.** `ibd_pairs(run, ids)` must equal the pre-change no-cutoff output bit for bit
 (1101 relapse-origin pairs, max |diff| 0.00e+00, all 1.000); `segments = TRUE` must reconstruct
 `ibd_fraction` from `sum(right - left) / sequence_length` for every pair (25,193 pairs / 105,918
@@ -2239,8 +2240,8 @@ founders + the same setting → 0 events. This made the documented naive-populat
 (`IMPORT_TICK = 1`) dead since it was written, and meant **no run reaching elimination could ever
 be re-seeded** — i.e. the decline/resurgence scenarios. (b) An imported inoculation built its
 blood-stage infection and its hypnozoite batch with two separate `addEmpty(NULL)` calls, giving
-two unrelated ARG roots under one `lineage_id` (`IMPORT_INOCULATION_BUG.md`). Measured on
-`mosaic_demo_s1`: IBD(primary, own batch) = 1.000 for local bites (100% of 40) but **0.000 for
+two unrelated ARG roots under one `lineage_id` (the prototype's note on the bug). Measured on a
+prototype demo run: IBD(primary, own batch) = 1.000 for local bites (100% of 40) but **0.000 for
 imports (100% of 40)**; a relapse of an imported infection reads IBD 0.000 to the infection that
 caused it, i.e. it looks like a brand-new unrelated infection.
 
@@ -2272,7 +2273,7 @@ rows (neither has a source genome inside the simulation), and `inoculation_id` /
 already carry "same inoculation, same lineage". The ARG gains a parent→child edge from primary to
 batch; this divergence from the event log is deliberate, so nothing reconstructing transmission
 from `parent1_pedigree_id` infers an intra-host blood→liver transmission that never happened.
-Sampled ancestors are not a new class — 10.7% of sample nodes in `mosaic_demo_s1` already have
+Sampled ancestors are not a new class — 10.7% of sample nodes in that demo run already have
 children, and 1.7% of edges already span ≤ 1 tick. Subpopulation ids cannot be reused
 (`subpopulation p99 has been used already`), so a monotonic counter burns one id per import-tick
 (~730 over a 40-year run against a base of ~1,400). Imported genomes carry the scratch population
