@@ -10,7 +10,7 @@ plot_force_of_infection(x, smooth = 0.4)
 \item{x}{a run, or the table \code{\link[=force_of_infection]{force_of_infection()}} returns (for a run, with its defaults).}
 
 \item{smooth}{span for a loess trend through each series; \code{NA} draws the raw series, as does a
-run with fewer than \code{5 / smooth} windows (13 at the default), too few for a trend.}
+span that loess cannot fit to the run's windows without a warning (too few windows for it).}
 }
 \value{
 a ggplot object.

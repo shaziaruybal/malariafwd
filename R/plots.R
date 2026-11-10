@@ -294,7 +294,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 #'
 #' @param x a run, or the table [force_of_infection()] returns (for a run, with its defaults).
 #' @param smooth span for a loess trend through each series; `NA` draws the raw series, as does a
-#'   run with fewer than `5 / smooth` windows (13 at the default), too few for a trend.
+#'   span that loess cannot fit to the run's windows without a warning (too few windows for it).
 #' @return a ggplot object.
 #' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
 #' run <- example_run()
@@ -330,9 +330,15 @@ plot_force_of_infection <- function(x, smooth = 0.4) {
   p <- ggplot2::ggplot() +
     ggplot2::geom_line(data = w, ggplot2::aes(win, rate, colour = series),
                        linewidth = .5, alpha = .45)
-  ## a loess fit needs about five windows within its span: with fewer, loess warns and the curve
-  ## says nothing the raw series does not
-  if (!is.na(smooth) && data.table::uniqueN(w$win) * smooth >= 5)
+  ## a trend only where loess fits every series without a warning: with too few windows for the
+  ## span it warns, and its curve says nothing the raw series does not. The fit is the one
+  ## geom_smooth() makes, with its 80 points of prediction.
+  fits <- function(s) tryCatch({
+    m <- stats::loess(rate ~ win, data = s, span = smooth)
+    stats::predict(m, data.frame(win = seq(min(s$win), max(s$win), length.out = 80)))
+    TRUE
+  }, warning = function(x) FALSE, error = function(x) FALSE)
+  if (!is.na(smooth) && all(vapply(split(w, w$series), fits, logical(1))))
     p <- p + ggplot2::geom_smooth(data = w, ggplot2::aes(win, rate, colour = series),
                                   method = "loess", span = smooth, se = FALSE,
                                   linewidth = 1, formula = y ~ x)
