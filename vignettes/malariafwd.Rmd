@@ -11,6 +11,12 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5, out.width = "100%")
 has_tskit <- malariafwd::tskit_available()
 has_plots <- requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("patchwork", quietly = TRUE)
+## the build machine's temporary directory, shown as <tempdir>: a run's printed directory is the
+## reader's own, not the machine's that built this page
+local({
+  td <- tempdir(); out <- knitr::knit_hooks$get("output")
+  knitr::knit_hooks$set(output = function(x, options) out(gsub(td, "<tempdir>", x, fixed = TRUE), options))
+})
 ```
 
 `malariafwd` is an R interface to a SLiM + tskit forward simulator of *Plasmodium

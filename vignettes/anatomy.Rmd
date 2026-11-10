@@ -11,6 +11,12 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, out.width = "100%")
 has_tskit <- malariafwd::tskit_available()
 has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+## the build machine's temporary directory, shown as <tempdir>: a run's printed directory is the
+## reader's own, not the machine's that built this page
+local({
+  td <- tempdir(); out <- knitr::knit_hooks$get("output")
+  knitr::knit_hooks$set(output = function(x, options) out(gsub(td, "<tempdir>", x, fixed = TRUE), options))
+})
 ```
 
 A single `malariafwd` run writes a handful of files into its output directory. This
