@@ -1059,9 +1059,9 @@ batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢp
 
 ### Validation suite
 
-`inst/validation/` ships five scripts. Last full run (v0.1.0, this document):
-**163 assertion checks, 163 passed, 0 failed**, plus two numeric audits of the recombination
-machinery.
+`inst/validation/` ships five scripts: 163 assertion checks, two numeric audits of the
+recombination machinery and an explainer. `inst/validation/RESULTS.md` records the last full run,
+with its date, commit, versions and what each script found.
 
 | script | checks | result |
 |---|---|---|

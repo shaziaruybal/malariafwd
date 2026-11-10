@@ -18,4 +18,5 @@ They need SLiM on `PATH` and Python with `tskit` (>= 1.0) and `numpy`;
 Rscript -e 'source(system.file("validation", "check_parameters.R", package = "malariafwd"))'
 ```
 
-Figures are written to `$MALARIAFWD_FIGS` (default: a temporary directory).
+Figures are written to `$MALARIAFWD_FIGS` (default: a temporary directory). `RESULTS.md` records
+the last full run: its date, commit and versions, and what each script found.

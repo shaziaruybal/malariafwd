@@ -107,3 +107,12 @@ test_that("the vignettes run their analysis, on the bundled run", {
     expect_true(any(grepl("example_run()", txt, fixed = TRUE)), label = basename(f))
   }
 })
+
+test_that("the validation results record a run of every checking script", {
+  f <- system.file("validation", "RESULTS.md", package = "malariafwd")
+  expect_true(nzchar(f))
+  txt <- paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  expect_match(txt, "at commit [0-9a-f]{7}")
+  scripts <- setdiff(dir(dirname(f), "\\.R$"), "explain_ibd.R")   # explain_ibd.R draws, it checks nothing
+  for (s in scripts) expect_match(txt, paste0("`", s, "`"), fixed = TRUE, label = s)
+})

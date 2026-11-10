@@ -183,9 +183,10 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
   model in full, with its parameters, assumptions and validation.
 - [Decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html): why each modelling
   choice was made.
-- The validation scripts are installed with the package: list them with
-  `dir(system.file("validation", package = "malariafwd"))` and run one with `source()`, for
-  example `source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))`.
+- The validation scripts are installed with the package, with the results of their last run in
+  `RESULTS.md`: list them with `dir(system.file("validation", package = "malariafwd"))` and run
+  one with `source()`, for example
+  `source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))`.
 
 ## How it works
 
