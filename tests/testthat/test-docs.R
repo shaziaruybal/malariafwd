@@ -121,9 +121,12 @@ test_that("the decision log names no file that is not in the repository", {
   root <- test_path("..", "..")
   f <- file.path(root, "DECISIONS.md")
   skip_if_not(file.exists(f), "DECISIONS.md is in the source tree only")
-  ours <- tryCatch(suppressWarnings(system2("git", c("-C", shQuote(root), "ls-files"), stdout = TRUE, stderr = FALSE)),
-                   error = function(e) character())
-  skip_if(length(ours) == 0L, "git cannot list the repository's files")
+  ## the repository's files: from git in a clone (which leaves out the untracked .claude/), or the
+  ## files of an exported copy, which holds only those
+  ours <- if (dir.exists(file.path(root, ".git")))
+    suppressWarnings(system2("git", c("-C", shQuote(root), "ls-files"), stdout = TRUE, stderr = FALSE))
+  else list.files(root, recursive = TRUE, all.files = TRUE)
+  skip_if(length(ours) == 0L, "the repository's files cannot be listed")
   txt <- paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
   ticks <- gsub("^`|`$", "", regmatches(txt, gregexpr("`[^`\n]+`", txt))[[1]])
   files <- unique(sub(":[0-9, :]+$", "", grep("^[A-Za-z0-9_./-]+\\.(R|Rmd|md|slim|py|yaml|yml|json|cff)(:[0-9, :]+)?$",
