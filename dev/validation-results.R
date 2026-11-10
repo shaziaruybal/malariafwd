@@ -28,13 +28,17 @@ res <- do.call(rbind, lapply(scripts, function(s) {
   line <- utils::tail(grep("[0-9]+ passed, [0-9]+ failed", out, value = TRUE), 1)
   data.frame(script = s,
              result = if (length(line)) sub(".*?([0-9]+ passed, [0-9]+ failed).*", "\\1", line)
-                      else if (status == 0L) "ran without error (a numeric audit; see its output)" else "stopped with an error",
+                      else if (status == 0L) "ran without error (a numeric audit: run it to see its numbers)" else "stopped with an error",
              ok = status == 0L && (!length(line) || grepl(" 0 failed", line)),
              minutes = round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1))
 }))
 
 git <- function(...) suppressWarnings(system2("git", c(...), stdout = TRUE, stderr = FALSE))
-commit <- paste0(git("rev-parse", "--short", "HEAD"), if (length(git("status", "--porcelain", "--untracked-files=no"))) " (with uncommitted changes)" else "")
+## R CMD INSTALL took everything under R/, inst/ and man/, untracked files too, so any change there
+## or to DESCRIPTION and NAMESPACE means the run was not of the commit alone
+changed <- git("status", "--porcelain", "--", "R", "inst", "man", "DESCRIPTION", "NAMESPACE")
+changed <- changed[!grepl("inst/validation/RESULTS.md$", changed)]
+commit <- paste0(git("rev-parse", "--short", "HEAD"), if (length(changed)) " (with uncommitted changes)" else "")
 desc <- read.dcf("DESCRIPTION", fields = "Version")[1, 1]
 md <- c(
   "# Validation results", "",
