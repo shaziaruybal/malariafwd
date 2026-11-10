@@ -20,9 +20,11 @@ stopifnot(is.na(run$extinct_tick), !run$never_started,
           length(unique(classify_chain(ev)$who_class)) == 4L,
           any(ev$is_recombinant == 1L))
 
-## the run's files, in name order, as a plain ustar archive (which R's own untar() reads, as
-## example_run() does): no owner's name or number, no extended attributes, no macOS metadata
+## the run's files, in name order with DONE last (as run_sim() writes it), as a plain ustar archive
+## (which R's own untar() reads, as example_run() does): no owner's name or number, no extended
+## attributes, no macOS metadata
 files <- sort(list.files(out, all.files = TRUE, no.. = TRUE), method = "radix")
+files <- c(setdiff(files, "DONE"), "DONE")
 tarball <- normalizePath(file.path("inst", "extdata", "example_run.tar.xz"), mustWork = FALSE)
 dir.create(dirname(tarball), showWarnings = FALSE, recursive = TRUE)
 bsd <- any(grepl("bsdtar", system2("tar", "--version", stdout = TRUE)))

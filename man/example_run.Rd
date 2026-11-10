@@ -18,7 +18,8 @@ the relatedness functions still need Python with tskit (\code{\link[=tskit_avail
 }
 \details{
 The first call in a session unpacks the run into a temporary directory, and later calls return
-the same run. Its settings are \code{load_params(example_run())} and its seed \code{example_run()$seed};
+the same run, unpacking it again if a file in its directory is missing or has changed. Its
+settings are \code{load_params(example_run())} and its seed \code{example_run()$seed};
 \code{data-raw/example_run.R}, in the package's source repository, makes it.
 }
 \examples{

@@ -19,7 +19,8 @@
 #' the relatedness functions still need Python with tskit ([tskit_available()]).
 #'
 #' The first call in a session unpacks the run into a temporary directory, and later calls return
-#' the same run. Its settings are `load_params(example_run())` and its seed `example_run()$seed`;
+#' the same run, unpacking it again if a file in its directory is missing or has changed. Its
+#' settings are `load_params(example_run())` and its seed `example_run()$seed`;
 #' `data-raw/example_run.R`, in the package's source repository, makes it.
 #' @return a `vivax_run` (see [load_run()]).
 #' @seealso [load_run()], [run_sim()]
@@ -29,11 +30,17 @@
 #' table(classify_cases(run)$origin)
 #' @export
 example_run <- function() {
-  dir <- file.path(tempdir(), "malariafwd-example-run")
-  if (!file.exists(file.path(dir, "DONE"))) {
-    tarball <- system.file("extdata", "example_run.tar.xz", package = "malariafwd")
-    if (!nzchar(tarball)) stop("the example run is not installed with the package.", call. = FALSE)
-    utils::untar(tarball, exdir = dir, tar = "internal")
+  tarball <- system.file("extdata", "example_run.tar.xz", package = "malariafwd")
+  if (!nzchar(tarball)) stop("the example run is not installed with the package.", call. = FALSE)
+  ## one directory per archive, so a new archive is unpacked afresh; unpacked beside it and moved in
+  ## whole, so that the directory, like one run_sim() leaves, holds the whole run or nothing
+  dir <- file.path(tempdir(), paste0("malariafwd-example-run-", substr(unname(tools::md5sum(tarball)), 1, 8)))
+  if (!isTRUE(.run_complete(dir)$complete)) {
+    tmp <- tempfile("malariafwd-example-run-")
+    utils::untar(tarball, exdir = tmp, tar = "internal")
+    if (dir.exists(dir) && !isTRUE(.run_complete(dir)$complete)) unlink(dir, recursive = TRUE)
+    if (!file.rename(tmp, dir)) unlink(tmp, recursive = TRUE)   # another process moved its copy in first
+    if (!isTRUE(.run_complete(dir)$complete)) stop("could not unpack the example run into ", dir, call. = FALSE)
   }
   load_run(dir)
 }

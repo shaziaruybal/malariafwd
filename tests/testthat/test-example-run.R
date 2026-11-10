@@ -40,3 +40,16 @@ test_that("the example run's genealogy gives every rung of the relatedness ladde
                   c("self (same genome)", "clonal copies", "relapse vs its origin", "same lineage, 2 hosts",
                     "same-oocyst sibs", "distinct founders"))
 })
+
+test_that("example_run() unpacks the run again when its directory is no longer whole", {
+  run <- example_run()
+  unlink(file.path(run$outdir, "events.tsv"))
+  again <- example_run()
+  expect_true(again$complete)
+  expect_true(file.exists(file.path(again$outdir, "events.tsv")))
+})
+
+test_that("the example run's archive holds DONE last, as run_sim() writes it", {
+  files <- utils::untar(system.file("extdata", "example_run.tar.xz", package = "malariafwd"), list = TRUE)
+  expect_identical(utils::tail(files, 1L), "DONE")
+})
