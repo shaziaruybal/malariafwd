@@ -256,7 +256,7 @@ audit_run <- function(tag, params, seed = 1) {
   invisible(NULL)
 }
 
-## two configurations: the shipped default, and the multi-oocyst/NB path
+## the defaults, and the multi-oocyst, negative-binomial path with imports
 audit_run("default", vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.12,
                                   SIM_DAYS = 400, N_FOUNDER_LINEAGES = 8))
 audit_run("wsf_nb_imports",
