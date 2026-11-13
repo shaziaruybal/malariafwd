@@ -68,8 +68,8 @@ initialize() {
 	// event succeeds - allowing 0 would count a failure twice.
 	// DEFAULT lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite) =
 	// the previous behaviour. NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
-	// (zero-inflated negative binomial fits better than Poisson; Sci Rep 2020, 96 PvDMFA
-	// assays / 22,236 mosquitoes), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob; a
+	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
+	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob; a
 	// negative-binomial option calibrated to vivax DMFA data is the planned refinement.
 	defineDefault("LAMBDA_OOCYSTS",          0.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
 	defineDefault("LAMBDA_SPOROZOITES",      0.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
@@ -111,10 +111,10 @@ initialize() {
 	// primary infection (P_PRIMARY) and (2) how many hypnozoites it establishes
 	// as a single "batch" object (geometric, mean NU_HYPNOZOITE_BATCH) - both,
 	// either, or neither can occur for the same transmitted genotype.
-	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); White 2014 base model treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per transmitted genotype (geometric distribution, White et al. 2014 sec. 2); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
-	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day (Mehra 2023/2026; 344 days would be from White 2014)
-	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day (White 2014)
+	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per transmitted genotype (geometric distribution, as in White et al. 2014); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
+	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
+	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
 	
@@ -157,7 +157,7 @@ initialize() {
 	// CASE MANAGEMENT. A detected case is treated w.p. BLOODCURE_COVERAGE; radical cure is
 	// NESTED inside that, so RADCURE_COVERAGE is P(radical cure | blood-stage treatment).
 	// In practice primaquine is never given without a schizonticide, and all three reference
-	// models (White 2014, White 2018, malariasimulation) nest them the same way.
+	// models (White et al. 2014, White et al. 2018, malariasimulation) nest them the same way.
 	defineDefault("BLOODCURE_COVERAGE", 0.0); // P(a detected case is treated)
 	defineDefault("RADCURE_COVERAGE", 0.0);   // P(radical cure | treated) - LIVER stage only
 	defineDefault("P_BLOODCURE_SURVIVAL", 0.0); // P(a blood-stage clone survives treatment)
@@ -179,14 +179,14 @@ initialize() {
 	// uses. Taylor et al. (2019) model time-to-recrudescence as exponential; the ceiling of an
 	// exponential on a day scale is exactly a geometric (their own simulator rounds instead,
 	// round(rexp(1, 1/10)), which differs only in the mass at 0). It is also the house style
-	// of every reference model's state exits. NB none of White 2014, the White 2018 IBM,
-	// OpenMalaria or malariasimulation represents recrudescence at all -- in all four a failed
-	// course simply leaves the infection where it is -- so they cannot arbitrate this, and we
-	// follow Taylor.
+	// of every reference model's state exits. NB none of White et al. (2014), the individual-based
+	// model of White et al. (2018), OpenMalaria or malariasimulation represents recrudescence at
+	// all -- in all four a failed course simply leaves the infection where it is -- so they cannot
+	// arbitrate this, and we follow Taylor et al.
 	//
-	// 10.5 d is a literature assumption, pending parameterisation (D42): the reciprocal of
-	// Taylor's posterior median, which sits on their strongly informative Gamma(100, 1000) prior
-	// (mean 0.1/day), so it is not an estimate from data. It keeps recrudescences inside a
+	// 10.5 d is a literature assumption, pending parameterisation (D42): the reciprocal of the
+	// posterior median of Taylor et al. (2019), which sits on their strongly informative
+	// Gamma(100, 1000) prior (mean 0.1/day), so it is not an estimate from data. It keeps recrudescences inside a
 	// standard 28-day WHO therapeutic-efficacy window, where a real study can see them: the
 	// median gap is 7 d and ~94% land inside day 28.
 	//
@@ -198,15 +198,15 @@ initialize() {
 	// Detection of a recrudescent episode. Ross et al. (2025) put recurrence detectability at
 	// 0.13-0.49 of a primary, so this should usually be set well below P_DETECT_PRIMARY.
 	defineDefault("P_DETECT_RECRUD", 0.5);
-	// Infectiousness of a SUBPATENT clone relative to a patent one. 0.035-0.10 in White's IBM,
-	// 0.0062-0.068 in malariasimulation, 0.10-0.20 empirically (Koepfli 2021: microscopy
-	// positives are 5-10x more infective than submicroscopic). NOT 0: submicroscopic carriage
-	// is a real transmission reservoir.
+	// Infectiousness of a SUBPATENT clone relative to a patent one. 0.035-0.10 in the
+	// individual-based model of White et al. (2018), 0.0062-0.068 in malariasimulation, 0.10-0.20
+	// empirically (Koepfli et al. 2021: microscopy positives are 5-10x more infective than
+	// submicroscopic). NOT 0: submicroscopic carriage is a real transmission reservoir.
 	defineDefault("SUBPATENT_INFECTIVITY", 0.15);
 	// Days from blood-stage emergence to receiving drugs: symptom onset + care seeking +
 	// diagnosis. Drawn once per course: each day after the case the course arrives with
 	// probability 1/TREATMENT_DELAY, so the delay is geometric on 1, 2, ... with this mean
-	// (White 2014 uses 7). Must be >= 1; 1 = the next day, the fastest response the model can
+	// (White et al. 2014 use 7). Must be >= 1; 1 = the next day, the fastest response the model can
 	// represent (D24, D32).
 	// Treatment is NOT instantaneous: a treated case is infectious until its drugs arrive.
 	defineDefault("TREATMENT_DELAY", 7.0);
@@ -230,8 +230,8 @@ initialize() {
 	// unchanged bit for bit.
 	defineDefault("MDA_COVERAGE",    1.0);
 	// RADICAL CURE EFFICACY, per PERSON: P_RAD_SURVIVAL is the probability that the whole
-	// reservoir survives a course. 0.29 (~71% cure) is what White 2018 and malariasimulation
-	// imply for 14-day primaquine.
+	// reservoir survives a course. 0.29 (~71% cure) is what White et al. (2018) and
+	// malariasimulation imply for 14-day primaquine.
 	//
 	// RADCURE_MODE selects the unit:
 	//   "person"     (default) all-or-nothing - the reservoir is cleared or it is not. This is
@@ -2121,9 +2121,8 @@ function (integer$) getDormantLineageCount(o<Subpopulation>$ s)
 // NOTE: distinct from getDormantLineageCount() above, which counts unique
 // GENOTYPES currently dormant. This sums batch_count across all dormant
 // batch objects to give the true hypnozoite RESERVOIR SIZE (total number
-// of individual hypnozoites), matching the quantity White et al. (2014)/
-// Mehra et al. report reservoir sizes for (reported up to ~30 in
-// moderate-high transmission settings).
+// of individual hypnozoites), the quantity White et al. (2014) model for
+// each person.
 function (integer$) getHypnozoiteReservoirSize(o<Subpopulation>$ s)
 {
 	if (s.individualCount == 0)
@@ -2136,7 +2135,7 @@ function (integer$) getHypnozoiteReservoirSize(o<Subpopulation>$ s)
 
 // -----------------------------------------------------------
 // Draw a geometric(mean) batch size, n in {0, 1, 2, ...}, using Eidos's
-// built-in rgeom() [White et al. 2014, Sec 2 parameterization: mean = nu].
+// built-in rgeom() [White et al. (2014) parameterise the batch by its mean, nu].
 // Eidos's rgeom(n, p) already implements exactly the {0,1,2,...}-support
 // "number of failures before success" definition we want (same convention
 // as R's rgeom, per the Eidos manual) - this is just a thin wrapper
