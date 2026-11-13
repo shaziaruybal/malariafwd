@@ -1251,11 +1251,11 @@ Ordered by how much the answer is likely to move.
 
 | # | target | why | status |
 |---|---|---|---|
-| S1 | **`LAMBDA_SPOROZOITES`** (genotypes per bite) | no measurement of genotypes per *natural* bite exists; the Saimiri anchor (2–4 genotypes) comes from ~20 bites' worth of sporozoites | **priority** — sweep, don't trust a point value |
+| S1 | **`LAMBDA_SPOROZOITES`** (genotypes per bite) | no measurement of genotypes per *natural* bite exists; *Saimiri* monkeys given 13,000 sporozoites intravenously, from the glands of 20 mosquitoes, carried 2 and 4 genotypes (Hazzard et al. 2024), a far larger inoculum than a bite's | **priority** — sweep, don't trust a point value |
 | S2 | **`NU_HYPNOZOITE_BATCH`** | fitted at 3 for one setting; drives relapse rate, reservoir size and COI | sweep per setting |
-| S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax DMFA counts overdispersed; field median 7.2 vs our effective 1 | sweep; NB option exists |
-| S4 | **Per-oocyst sporozoite productivity** | we assume equal (weight 4); IDM draws ~3,000/oocyst Poisson with 20% gland migration, so an early or productive oocyst would dominate | not implemented; test as sensitivity |
-| S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax realistic ≈ 3 d and ≈ 0.9 | knobs exist for exactly this |
+| S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax membrane-feeding counts are overdispersed (Miura et al. 2020), with a median of 7.2 oocysts a midgut in wild *An. arabiensis* (Ayele et al. 2023), against our effective 1 | sweep; NB option exists |
+| S4 | **Per-oocyst sporozoite productivity** | we assume equal (weight 4); Childs & Prosper (2017) draw ~3,000 sporozoites an oocyst, Poisson, 20% of which reach the glands, so an early or productive oocyst would dominate | not implemented; test as sensitivity |
+| S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax gametocytes appear early, so sweep a short delay and a high carriage (3 d and 0.9, say) | knobs exist for exactly this |
 | S6 | **`P_DETECT_RELAPSE`** | relapses are often sub-patent; everything observational depends on it | sweep 0.15–1.0 |
 | S7 | **`ALPHA_ACTIVATE` / `K_LATENCY`** | tropical vs temperate strongly changes relapse periodicity and identifiability | already explored; keep as a reported axis |
 | S8 | **`MAX_MOI`** | a runaway guard that becomes the measured quantity if set low | confirm it never binds in published runs |
@@ -1279,7 +1279,7 @@ The extensions planned for later versions, each with the reason for it.
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Kanatani et al. 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
 | Origin-dependent detection | to separate active vs passive surveillance |
-| Fate determination (`P_HYPNOZOITE`) | measured at 0.58–0.63 and strain-dependent; **deferred** — would make ν emergent but trades one well-identified parameter for two poorly-identified ones |
+| Fate determination (`P_HYPNOZOITE`) | 0.58–0.63 of liver-stage parasites became hypnozoites in culture, depending on the patient isolate (Vantaux et al. 2022); **deferred** — would make ν emergent but trades one well-identified parameter for two poorly-identified ones |
 | Immunity | explicitly out of scope for now; would require a separate identifiability argument |
 | Spatial structure / heterogeneous biting | currently homogeneous mixing |
 | Vector fitness cost of burden | `MAX_BROODS_PER_MOSQ` is a hard cap with no graded effect |
@@ -1727,6 +1727,9 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 - Haller BC, Ralph PL, Messer PW (2025). SLiM 5: eco-evolutionary simulations across multiple
   chromosomes and full genomes. *Molecular Biology and Evolution* 43(1):msaf313.
   <https://doi.org/10.1093/molbev/msaf313>
+- Hazzard B, Sá JM, Bogale HN, Pascini TV, Ellis AC, Amin S, et al. (2024). Single-cell analyses of
+  polyclonal *Plasmodium vivax* infections and their consequences on parasite transmission. *Nature
+  Communications* 15:7625. <https://doi.org/10.1038/s41467-024-51949-8>
 - Jiang H, Li N, Gopalan V, Zilversmit MM, Varma S, Nagarajan V, et al. (2011). High recombination
   rates and hotspots in a *Plasmodium falciparum* genetic cross. *Genome Biology* 12(4):R33.
   <https://doi.org/10.1186/gb-2011-12-4-r33>
@@ -1777,6 +1780,10 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 - Taylor AR, Watson JA, Chu CS, Puaprasert K, Duanguppama J, Day NPJ, et al. (2019). Resolving the
   cause of recurrent *Plasmodium vivax* malaria probabilistically. *Nature Communications*
   10:5595. <https://doi.org/10.1038/s41467-019-13412-x>
+- Vantaux A, Péneau J, Cooper CA, Kyle DE, Witkowski B, Maher SP (2022). Liver-stage fate
+  determination in *Plasmodium vivax* parasites: characterization of schizont growth and hypnozoite
+  fating from patient isolates. *Frontiers in Microbiology* 13:976606.
+  <https://doi.org/10.3389/fmicb.2022.976606>
 - White MT, Karl S, Battle KE, Hay SI, Mueller I, Ghani AC (2014). Modelling the contribution of
   the hypnozoite reservoir to *Plasmodium vivax* transmission. *eLife* 3:e04692.
   <https://doi.org/10.7554/eLife.04692>
