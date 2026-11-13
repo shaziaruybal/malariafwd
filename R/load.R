@@ -158,7 +158,7 @@
 #'   * `outdir`, the run directory (character);
 #'   * `params`, the parameter set, as [load_params()] gives it;
 #'   * `seed`, the seed SLiM ran with (integer; a double beyond the 32-bit range, which only a run
-#'     started with `slim -s` can have);
+#'     started with `slim` directly, with `-d SEED`, can have);
 #'   * `extinct_tick`, the tick on which the run went extinct and ended, or `NA` (integer);
 #'   * `never_started`, `TRUE` for a run that never started (logical);
 #'   * `slim_version` and `malariafwd_version` (character; `malariafwd_version` is `"unknown"`

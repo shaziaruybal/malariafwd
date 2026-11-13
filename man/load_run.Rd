@@ -15,7 +15,7 @@ a \code{vivax_run} object, a list of:
 \item \code{outdir}, the run directory (character);
 \item \code{params}, the parameter set, as \code{\link[=load_params]{load_params()}} gives it;
 \item \code{seed}, the seed SLiM ran with (integer; a double beyond the 32-bit range, which only a run
-started with \code{slim -s} can have);
+started with \code{slim} directly, with \verb{-d SEED}, can have);
 \item \code{extinct_tick}, the tick on which the run went extinct and ended, or \code{NA} (integer);
 \item \code{never_started}, \code{TRUE} for a run that never started (logical);
 \item \code{slim_version} and \code{malariafwd_version} (character; \code{malariafwd_version} is \code{"unknown"}

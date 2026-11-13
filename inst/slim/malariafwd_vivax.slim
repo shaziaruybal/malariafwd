@@ -4,18 +4,22 @@
 // dormant one stands for a batch of identical hypnozoites); each human host and each mosquito is a
 // subpopulation.
 //
-// It needs SLiM 5.2 or newer, which initialize() checks. run_sim() starts it in the run's directory
-// as `slim -s SEED -d NAME=value ... model.slim` (the run's cmdline.txt holds the whole command) and
-// passes the package version as MALARIAFWD_VERSION, which params.tsv records. A parameter not given
-// with -d takes the default set in initialize().
+// It needs SLiM 5.2 or newer, which initialize() checks. Each parameter is given with -d NAME=value
+// and otherwise takes the default set in initialize(). The run's random numbers come from the SEED
+// parameter (default 55), not from slim's -s: run_sim() passes the same seed both ways, so that the
+// tree sequence's provenance, which records -s, agrees with params.tsv. run_sim() starts the model
+// in the run's directory with OUTDIR '.', the directory the outputs go to, which must exist; the
+// run's cmdline.txt holds the arguments it gave slim. It also passes the package version as
+// MALARIAFWD_VERSION, which params.tsv records.
 //
 // Part of malariafwd, released under the MIT licence (the package's LICENSE). To cite it, use
-// citation("malariafwd") in R or the package's CITATION.cff, and please also cite SLiM (Haller et
-// al. 2025) and tskit (Kelleher et al. 2018).
+// citation("malariafwd") in R, and please also cite SLiM (Haller et al. 2025; Haller et al. 2019)
+// and tskit (Kelleher et al. 2018).
 //
-// The package's MODEL_DESCRIPTION.md describes the model, and its section 21 lists the works cited
-// here by author and year. DECISIONS.md gives the reasons for the model's choices; the D numbers in
-// these comments (D17, D25, ...) refer to it.
+// The model description (https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)
+// describes the model, and its section 21 lists the works cited here by author and year. The
+// decision log (https://shaziaruybal.github.io/malariafwd/DECISIONS.html) gives the reasons for the
+// model's choices; the D numbers in these comments (D17, D25, ...) refer to it.
 //
 // One tick is one day, in SLiM's nonWF order:
 //   reproduction()  relapses; the hypnozoite batch of an import that arrived the day before (D17);
@@ -257,7 +261,7 @@ initialize() {
 	defineDefault("N_IMPORTS", 0);
 	
 	// output
-	defineDefault("OUTDIR", "output/default_run"); // output file
+	defineDefault("OUTDIR", "output/default_run"); // the output directory, which must exist
 	// VERBOSE: T = print the full per-event / per-tick narration (~30k lines/run, useful for
 	// debugging a single run); F (default) = quiet, only the GENOME line, WARNINGs, and the
 	// SIMULATION FINISHED banner. Does NOT affect results or the data files (events/state/trees),
