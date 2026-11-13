@@ -796,50 +796,48 @@ reproduction()
 			// most one course. Batch depletion by n_activating is handled above.
 			if (n_activating > 0)
 			{
-				{
-					// Is a patent clone of the same lineage already in the host? Such a relapse is
-					// counted, and drawn for detection, like any other, but a real observer would see
-					// only the infection already there, not a recurrence, so the row says so (D40).
-					// Only clones born on earlier days are seen (one that ends today still counts): a
-					// clone born this tick, from another batch of the lineage waking, a recrudescence
-					// or a bite, is not visible yet, so a relapse that starts with it is not flagged.
-					blood = h.individuals[h.individuals.getValue("is_dormant") == F];
-					into_patent = 0;
-					if (size(blood) > 0)
-						into_patent = asInteger(any((blood.getValue("is_subpatent") == F) &
-							(blood.getValue("lineage_id") == hyp.getValue("lineage_id"))));
-					// A relapse is a clone of the hypnozoite that woke, so it inherits
-					// its originating infection's ancestry and is IBD 1 to it. This
-					// invariant is asserted in inst/validation/audit_events_and_ibd.R.
-					new_active = h.addCloned(hyp);
-					h.setValue("new_lineages", c(h.getValue("new_lineages"), hyp.getValue("lineage_id")));
-					setHostClone(new_active, hyp, activation=sim.cycle, batch=0, color="darkorange");
-					h.tag = INFECTED;
+				// Is a patent clone of the same lineage already in the host? Such a relapse is
+				// counted, and drawn for detection, like any other, but a real observer would see
+				// only the infection already there, not a recurrence, so the row says so (D40).
+				// Only clones born on earlier days are seen (one that ends today still counts): a
+				// clone born this tick, from another batch of the lineage waking, a recrudescence
+				// or a bite, is not visible yet, so a relapse that starts with it is not flagged.
+				blood = h.individuals[h.individuals.getValue("is_dormant") == F];
+				into_patent = 0;
+				if (size(blood) > 0)
+					into_patent = asInteger(any((blood.getValue("is_subpatent") == F) &
+						(blood.getValue("lineage_id") == hyp.getValue("lineage_id"))));
+				// A relapse is a clone of the hypnozoite that woke, so it inherits
+				// its originating infection's ancestry and is IBD 1 to it. This
+				// invariant is asserted in inst/validation/audit_events_and_ibd.R.
+				new_active = h.addCloned(hyp);
+				h.setValue("new_lineages", c(h.getValue("new_lineages"), hyp.getValue("lineage_id")));
+				setHostClone(new_active, hyp, activation=sim.cycle, batch=0, color="darkorange");
+				h.tag = INFECTED;
 
-					// detection layer: relapses are mostly sub-patent -> lower detection
-					rel_detected = asInteger(runif(1) < P_DETECT_RELAPSE);
+				// detection layer: relapses are mostly sub-patent -> lower detection
+				rel_detected = asInteger(runif(1) < P_DETECT_RELAPSE);
 
-					logEvent("hypnozoite_activation",
-						-1, // no inoc ID bc not V-H event
-						-1, h.id,
-						asString(new_active.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 0, asInteger(hyp.getValue("is_imported")),  // is_imported carried from the source hypnozoite -> imported relapses are labelled directly
-						new_active.pedigreeID,
-						hyp.pedigreeID,  // parent1_pedigree_id links back to the source batch object
-						// ONE episode row, but n_hypnozoites = the n_activating clonal hypnozoites
-						// it represents (so hypnozoite-activation counts stay correct downstream).
-						-1, n_activating, hyp.getValue("oocyst_id"), rel_detected, into_patent
-						);
+				logEvent("hypnozoite_activation",
+					-1, // no inoc ID bc not V-H event
+					-1, h.id,
+					asString(new_active.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 0, asInteger(hyp.getValue("is_imported")),  // is_imported carried from the source hypnozoite -> imported relapses are labelled directly
+					new_active.pedigreeID,
+					hyp.pedigreeID,  // parent1_pedigree_id links back to the source batch object
+					// ONE episode row, but n_hypnozoites = the n_activating clonal hypnozoites
+					// it represents (so hypnozoite-activation counts stay correct downstream).
+					-1, n_activating, hyp.getValue("oocyst_id"), rel_detected, into_patent
+					);
 
-					// A detected relapse is a case like any other: it gets the same course a
-					// primary would, blood-stage drugs included. Scheduling rather than acting
-					// here also keeps this host's batch bookkeeping below untouched.
-					if (rel_detected == 1)
-						decideTreatment(h);
-					
-					vcat("🚨Hypnozoite ACTIVATED in 👤 human " + h.id +
-						" — brood " + new_active.getValue("lineage_id") +
-						" (from batch " + hyp.pedigreeID + "; " + n_activating + " activating this tick, born tick " + hyp.getValue("brood_birth_tick") + ")");
-				}
+				// A detected relapse is a case like any other: it gets the same course a
+				// primary would, blood-stage drugs included. Scheduling rather than acting
+				// here also keeps this host's batch bookkeeping below untouched.
+				if (rel_detected == 1)
+					decideTreatment(h);
+				
+				vcat("🚨Hypnozoite ACTIVATED in 👤 human " + h.id +
+					" — brood " + new_active.getValue("lineage_id") +
+					" (from batch " + hyp.pedigreeID + "; " + n_activating + " activating this tick, born tick " + hyp.getValue("brood_birth_tick") + ")");
 			}
 			
 			// ---- Deaths within the batch: no individual spawned, just logged as a count ----
@@ -1226,7 +1224,6 @@ reproduction()
 
 	n_subpops = asInteger(N_HOSTS + N_MOSQ);
 
-	founder_templates = c();          // distinct founder-lineage template individuals (genome roots)
 	pending_clone_hosts     = c();    // subpop IDs of founder HOSTS awaiting a clonal copy (seeded tick 2; addCloned needs reproduction())
 	pending_clone_templates = c();    // subpop ID of the founder LINEAGE each pending clone-host copies
 
@@ -1239,7 +1236,6 @@ reproduction()
 		if (s < N_HOSTS & s < N_FOUNDER_LINEAGES)    // a NEW distinct founder lineage (genome root), human host
 		{
 			subpop = sim.addSubpop(s, 1);
-			founder_templates = c(founder_templates, subpop.individuals);
 		}
 		else if (s < N_HOSTS & s < N_FOUNDER_HOSTS)  // founder host carrying a CLONAL COPY (empty now; cloned tick 2)
 		{
@@ -2432,7 +2428,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 // -----------------------------------------------------------
 function (integer) establishInfectionOutcome(
 	o<Subpopulation>$ h,
-	No<Individual>$ source,
+	o<Individual>$ source,
 	i$ inoculation_id,
 	i$ mosq_id,
 	i$ detected,                // detection is drawn ONCE PER EPISODE by the caller, not per
