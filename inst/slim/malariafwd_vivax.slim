@@ -57,7 +57,7 @@ initialize() {
 	
 	// parasite
 	defineDefault("MEAN_BLOOD_STAGE_DURATION", 60.0);
-	// mosquito uptake / inoculation sampling (after Wong et al. 2018, PlasmoSim).
+	// mosquito uptake / inoculation sampling (after Wong et al. 2018).
 	// !! LAMBDA_* IS THE PRE-TRUNCATION RATE, NOT THE MEAN COUNT. Conditioning away the zeros
 	// pulls the realised mean UP, so lambda canNOT be read straight off a paper's reported
 	// mean oocyst count. Poisson: realised mean = lambda/(1-exp(-lambda)) -> lambda=1 gives
@@ -111,7 +111,7 @@ initialize() {
 	// NU_HYPNOZOITE_BATCH per bite, split among the genotypes the bite delivers) - both,
 	// either, or neither can occur for the same transmitted genotype.
 	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four target bands at moderate transmission (D48; inst/validation/calibrate_nu.R), to re-fit per setting
 	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
@@ -153,8 +153,7 @@ initialize() {
 	defineDefault("P_DETECT_RELAPSE", 1.0);   // relapses (set lower, e.g. 0.15)
 	// CASE MANAGEMENT. A detected case is treated w.p. BLOODCURE_COVERAGE; radical cure is
 	// NESTED inside that, so RADCURE_COVERAGE is P(radical cure | blood-stage treatment).
-	// In practice primaquine is never given without a schizonticide, and all three reference
-	// models (White et al. 2014, White et al. 2018, malariasimulation) nest them the same way.
+	// In practice primaquine is never given without a schizonticide.
 	defineDefault("BLOODCURE_COVERAGE", 0.0); // P(a detected case is treated)
 	defineDefault("RADCURE_COVERAGE", 0.0);   // P(radical cure | treated) - LIVER stage only
 	defineDefault("P_BLOODCURE_SURVIVAL", 0.0); // P(a blood-stage clone survives treatment)
@@ -175,17 +174,14 @@ initialize() {
 	// the discrete analogue of the Exponential that the only published fit for this quantity
 	// uses. Taylor et al. (2019) model time-to-recrudescence as exponential; the ceiling of an
 	// exponential on a day scale is exactly a geometric (their own simulator rounds instead,
-	// round(rexp(1, 1/10)), which differs only in the mass at 0). It is also the house style
-	// of every reference model's state exits. NB none of White et al. (2014), the individual-based
-	// model of White et al. (2018), OpenMalaria or malariasimulation represents recrudescence at
-	// all -- in all four a failed course simply leaves the infection where it is -- so they cannot
-	// arbitrate this, and we follow Taylor et al.
+	// round(rexp(1, 1/10)), which differs only in the mass at 0). Every other duration in the
+	// model is geometric too (D29).
 	//
 	// 10.5 d is a literature assumption, pending parameterisation (D42): the reciprocal of the
 	// posterior median of Taylor et al. (2019), which sits on their strongly informative
-	// Gamma(100, 1000) prior (mean 0.1/day), so it is not an estimate from data. It keeps recrudescences inside a
-	// standard 28-day WHO therapeutic-efficacy window, where a real study can see them: the
-	// median gap is 7 d and ~94% land inside day 28.
+	// Gamma(100, 1000) prior (mean 0.1/day), so it is not an estimate from data. It keeps
+	// recrudescences inside a standard 28-day WHO therapeutic-efficacy window, where a real study
+	// can see them: the median gap is 7 d and ~94% land inside day 28.
 	//
 	// "poisson" is 1 + Poisson(mean - 1), a tight-window sensitivity arm; "fixed" is
 	// round(mean) days, halves rounded up (11 at 10.5), for debugging and sensitivity. Every
@@ -196,9 +192,10 @@ initialize() {
 	// 0.13-0.49 of a primary, so this should usually be set well below P_DETECT_PRIMARY.
 	defineDefault("P_DETECT_RECRUD", 0.5);
 	// Infectiousness of a SUBPATENT clone relative to a patent one. 0.035-0.10 in the
-	// individual-based model of White et al. (2018), 0.0062-0.068 in malariasimulation, 0.10-0.20
-	// empirically (Koepfli et al. 2021: microscopy positives are 5-10x more infective than
-	// submicroscopic). NOT 0: submicroscopic carriage is a real transmission reservoir.
+	// individual-based model of White et al. (2018); 0.10-0.20 from the mosquito-feeding studies
+	// compiled by Koepfli et al. (2021, their Fig 5: microscopy-positive carriers 5-10x more
+	// infective than submicroscopic ones, a P. vivax study in Brazil the exception). NOT 0:
+	// submicroscopic carriage is a real transmission reservoir.
 	defineDefault("SUBPATENT_INFECTIVITY", 0.15);
 	// Days from blood-stage emergence to receiving drugs: symptom onset + care seeking +
 	// diagnosis. Drawn once per course: each day after the case the course arrives with
@@ -225,13 +222,12 @@ initialize() {
 	// skipped, so a round that reaches everyone uses no random numbers.
 	defineDefault("MDA_COVERAGE",    1.0);
 	// RADICAL CURE EFFICACY, per PERSON: P_RAD_SURVIVAL is the probability that the whole
-	// reservoir survives a course. 0.29 (~71% cure) is what White et al. (2018) and
-	// malariasimulation imply for 14-day primaquine.
+	// reservoir survives a course. 0.29 (~71% cure) is near the 70% effectiveness White et al.
+	// (2018) assume for a 14-day primaquine course, given poor adherence.
 	//
 	// RADCURE_MODE selects the unit:
 	//   "person"     (default) all-or-nothing - the reservoir is cleared or it is not. This is
-	//                what every reference model does, and how clinical efficacy is reported
-	//                (recurrence prevented per patient).
+	//                how clinical efficacy is reported (recurrence prevented per patient).
 	//   "hypnozoite" EXPERIMENTAL. Each hypnozoite survives independently w.p. P_RAD_SURVIVAL,
 	//                so efficacy falls as the reservoir grows and treatment can clear PART of
 	//                it. That partial clearance is the only way a subset of genotypes survives
@@ -713,9 +709,6 @@ reproduction()
 	// batch_count = 0; the "HYPNOZOITE CLEANUP" pass at the top of early() kills every
 	// dormant batch with batch_count == 0. It runs immediately after this callback in the
 	// SAME tick, so there is no additional lag.
-	// (State shared with early() MUST be written with defineGlobal(). A plain assignment
-	// inside a callback is scoped LOCAL in Eidos, so early() would not see it and an
-	// exhausted batch would stay alive and keep activating against a stale count.)
 	// ----------------------------
 	
 	// Resurgence trigger boost on activation rate (relapse-driven) -
@@ -865,9 +858,8 @@ reproduction()
 				vcat("💀 " + n_dying + " hypnozoite(s) died without activating in 👤 human " + h.id + " (brood " + hyp.getValue("lineage_id") + ")");
 			}
 			
-			// ---- Update or retire the batch object. Spawning already happened
-			// above in this SAME callback, so there is nothing left pending -
-			// if the batch is now empty it can go straight to the kill queue.
+			// ---- Update or retire the batch: an empty one is retired (batch_count 0) for
+			// the HYPNOZOITE CLEANUP at the top of early(), later this same tick.
 			// ----------------------------------------------------------------
 			if (n_surviving > 0)
 			{
@@ -1685,12 +1677,11 @@ early() {
 		{
 			catn("🛑 EXTINCT on tick " + sim.cycle + ": no parasite in any host or mosquito, no " +
 				"hypnozoite, and no importation still to come. Ending the run - every further tick is empty.");
-			// The TREE SEQUENCE has to be written here: it is only written by the final
-			// `SIM_DAYS late()` event, which is registered for a tick we will never reach, so
-			// without this the run ends with state.tsv and events.tsv but NO plasmo.trees,
-			// exiting 0. The state snapshot is NOT written here - simulationFinished() lets the
-			// current tick finish, so this tick's late() still runs and writes it. Doing both
-			// duplicated every entity row on the final tick.
+			// The TREE SEQUENCE is written here because the `SIM_DAYS late()` event writes it
+			// only on the last day; on that day it writes it again, and prints the banner again.
+			// The state snapshot is left to late(), which still runs because simulationFinished()
+			// lets the current tick finish; writing it here as well would give this tick's rows
+			// twice.
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
 			// recorded so that R can tell a run that went extinct from one that did not (D37), also
 			// when this is the last day
@@ -2034,10 +2025,10 @@ function (integer$) drawHypnozoiteBatchSize(fi$ mean_batch)
 	return rgeom(1, p)[0];
 }
 
-// D19: is case management running right now? Expressed once so the five treatment sites
-// cannot drift apart, and so the distinction from the vector-control window is explicit:
-// this gate decides who gets drugs, INTERVENTION_* decides biting, and
-// neither may stand in for the other.
+// D19: is case management running right now? Asked once, in decideTreatment(), which every
+// case goes through (a bite, a relapse, a recrudescence or an import), so the window cannot
+// differ between them; and kept apart from the vector-control window: this gate decides who
+// gets drugs, INTERVENTION_* decides biting, and neither may stand in for the other.
 function (logical$) caseManagementOn(void)
 {
 	return (sim.cycle >= TREATMENT_START) & (sim.cycle < TREATMENT_END);
@@ -2544,7 +2535,9 @@ function (integer) establishInfectionOutcome(
 //                     only at the logEvent() boundary: unique() and getValue() elsewhere assume
 //                     a homogeneous integer type and break on a mixed one.
 //   oocyst, brood     the meiosis and co-hatching brood it came from; -1 for none we simulated
-//   founder           whether it founds its lineage (a founder or an import)
+//   founder           recorded as brood_founder, which nothing reads: T for a genome seeded in
+//                     the host (a founder, a founder's copy, an import), F for one cloned from a
+//                     genome in a mosquito or the host
 //   inoc_tick/inoc_id when and by which inoculation it entered a host (inoc_id -1 for a founder)
 //   imported          whether its infection was acquired elsewhere
 //   activation        the tick it woke from a hypnozoite or re-expanded from subpatency, or NULL
@@ -2552,8 +2545,8 @@ function (integer) establishInfectionOutcome(
 //                     batch of that many hypnozoites, at latency stage K_LATENCY
 // brood_ready_tick, the end of a mosquito product's EIP (tagMosqProduct()), is NULL in a host.
 // x, y and z are 0, as for a mosquito product: SLiM writes them into the tree sequence's individuals
-// table even in a non-spatial model and leaves them undefined until set, so without this
-// plasmo.trees could differ between two runs of one seed (D77).
+// table even in a non-spatial model and leaves them undefined until set, so without this that
+// table could differ between two runs of one seed (D77).
 function (void) setHostGenome(o<Individual>$ g, i$ birth, i$ lineage, i$ oocyst, i$ brood,
 	l$ founder, i$ inoc_tick, i$ inoc_id, l$ imported, Ni$ activation, i$ batch, s$ color)
 {
