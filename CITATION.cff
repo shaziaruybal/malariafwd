@@ -31,8 +31,11 @@ references:
       - family-names: "Messer"
         given-names: "Philipp W."
     year: 2025
-    journal: "bioRxiv"
-    doi: "10.1101/2025.08.07.669155"
+    journal: "Molecular Biology and Evolution"
+    volume: 43
+    issue: 1
+    start: "msaf313"
+    doi: "10.1093/molbev/msaf313"
   - type: article
     title: "Tree-sequence recording in SLiM opens new horizons for forward-time simulation of whole genomes"
     authors:
@@ -61,7 +64,7 @@ references:
       - family-names: "Thornton"
         given-names: "Kevin R."
       - family-names: "Ashander"
-        given-names: "Jaleal"
+        given-names: "Jaime"
       - family-names: "Ralph"
         given-names: "Peter L."
     year: 2018

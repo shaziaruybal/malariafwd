@@ -1725,7 +1725,8 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
   opens new horizons for forward-time simulation of whole genomes. *Molecular Ecology Resources*
   19(2):552–566. <https://doi.org/10.1111/1755-0998.12968>
 - Haller BC, Ralph PL, Messer PW (2025). SLiM 5: eco-evolutionary simulations across multiple
-  chromosomes and full genomes. *bioRxiv*. <https://doi.org/10.1101/2025.08.07.669155>
+  chromosomes and full genomes. *Molecular Biology and Evolution* 43(1):msaf313.
+  <https://doi.org/10.1093/molbev/msaf313>
 - Jiang H, Li N, Gopalan V, Zilversmit MM, Varma S, Nagarajan V, et al. (2011). High recombination
   rates and hotspots in a *Plasmodium falciparum* genetic cross. *Genome Biology* 12(4):R33.
   <https://doi.org/10.1186/gb-2011-12-4-r33>

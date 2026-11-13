@@ -11,13 +11,16 @@ bibentry(
 )
 
 bibentry(
-  bibtype = "Misc",
+  bibtype = "Article",
   header  = "malariafwd runs every simulation in SLiM and records its genealogy as a tree sequence; please also cite:",
   title   = "{SLiM} 5: Eco-evolutionary simulations across multiple chromosomes and full genomes",
   author  = c(person("Benjamin C.", "Haller"), person("Peter L.", "Ralph"), person("Philipp W.", "Messer")),
+  journal = "Molecular Biology and Evolution",
   year    = "2025",
-  howpublished = "bioRxiv",
-  doi     = "10.1101/2025.08.07.669155"
+  volume  = "43",
+  number  = "1",
+  pages   = "msaf313",
+  doi     = "10.1093/molbev/msaf313"
 )
 
 bibentry(
@@ -37,7 +40,7 @@ bibentry(
   bibtype = "Article",
   header  = "The relatedness, genotype and ARG functions read the tree sequence with tskit; please also cite:",
   title   = "Efficient pedigree recording for fast population genetics simulation",
-  author  = c(person("Jerome", "Kelleher"), person("Kevin R.", "Thornton"), person("Jaleal", "Ashander"),
+  author  = c(person("Jerome", "Kelleher"), person("Kevin R.", "Thornton"), person("Jaime", "Ashander"),
               person("Peter L.", "Ralph")),
   journal = "PLOS Computational Biology",
   year    = "2018",

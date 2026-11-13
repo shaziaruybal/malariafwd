@@ -10,7 +10,7 @@
   "related_identifiers": [
     { "identifier": "https://github.com/shaziaruybal/malariafwd", "relation": "isSupplementTo", "scheme": "url" },
     { "identifier": "https://shaziaruybal.github.io/malariafwd/", "relation": "isDocumentedBy", "scheme": "url" },
-    { "identifier": "10.1101/2025.08.07.669155", "relation": "references", "scheme": "doi" },
+    { "identifier": "10.1093/molbev/msaf313", "relation": "references", "scheme": "doi" },
     { "identifier": "10.1111/1755-0998.12968", "relation": "references", "scheme": "doi" },
     { "identifier": "10.1371/journal.pcbi.1006581", "relation": "references", "scheme": "doi" }
   ],
