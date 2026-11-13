@@ -96,19 +96,57 @@ test_that("ARG summaries behave on the forest genealogy", {
   }
 })
 
-test_that("every genome's coordinates are 0, so a seed gives the same tree sequence (D77)", {
+test_that("a new genome's coordinates are 0, also where SLiM reuses a dead genome's memory (D77)", {
+  skip_if_no_slim()
+  src <- readLines(slim_model(), warn = FALSE)
+  fun <- function(name) {
+    i <- grep(paste0("^function \\(.*\\) ", name, "\\("), src)
+    src[i:(i + which(src[(i + 1):length(src)] == "}")[1])]
+  }
+  ## SLiM gives a new individual the memory of one that died, coordinates included: the script gives
+  ## 40 genomes coordinates, kills them, makes 40 more and passes them through the model's two
+  ## functions that make a genome, 20 each
+  script <- tempfile(fileext = ".slim")
+  writeLines(c(fun("setHostGenome"), fun("tagMosqProduct"), "initialize() {",
+    "  initializeSLiMModelType('nonWF'); initializeSLiMOptions(keepPedigrees=T);",
+    "  defineConstant('K_LATENCY', 0); defineConstant('GAMETOCYTE_DELAY', 0); defineConstant('EIP_DAYS', 10);",
+    "  initializeChromosome(1, 100, 'H'); initializeMutationType('m1', 0.5, 'f', 0.0);",
+    "  initializeGenomicElementType('g1', m1, 1.0); initializeGenomicElement(g1, 0, 99);",
+    "  initializeMutationRate(0.0); initializeRecombinationRate(0.0); }",
+    "1 early() { old = sim.addSubpop('p1', 40).individuals; old.x = 1.5; old.y = 2.5; old.z = 3.5;",
+    "  sim.killIndividuals(old); }",
+    "2 early() { inds = sim.addSubpop('p2', 40).individuals;",
+    "  catn('BEFORE ' + paste(c(inds.x, inds.y, inds.z)));",
+    "  for (g in inds[0:19]) setHostGenome(g, birth=2, lineage=g.pedigreeID, oocyst=-1, brood=-1, founder=T,",
+    "    inoc_tick=2, inoc_id=-1, imported=F, activation=NULL, batch=0, color='grey');",
+    "  for (g in inds[20:39]) tagMosqProduct(g, g.pedigreeID, -1, -1, 'grey');",
+    "  catn('AFTER ' + paste(c(inds.x, inds.y, inds.z))); sim.simulationFinished(); }"), script)
+  res <- processx::run(slim_path(), script, error_on_status = FALSE)
+  expect_equal(res$status, 0L, info = res$stderr)
+  read <- function(w) as.numeric(strsplit(sub(paste0("^", w, " "), "",
+    grep(paste0("^", w, " "), strsplit(res$stdout, "\n")[[1]], value = TRUE)), " ")[[1]])
+  ## without memory reuse the check below would prove nothing
+  skip_if(all(read("BEFORE") == 0), "this SLiM did not reuse the dead genomes' memory")
+  expect_length(read("AFTER"), 120L)
+  expect_true(all(read("AFTER") == 0))
+})
+
+test_that("two runs of one seed give the same tree-sequence tables, provenance aside (D77)", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- tempfile("mfw-xyz")
   ## founders and their clonal copies, bites, mosquito products, relapses, imports and recrudescences
-  run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 120, BITING_RATE = 0.2, SIM_DAYS = 120, CHROMOSOMES = "1",
-                       N_FOUNDER_LINEAGES = 4, IMPORT_START = 1, IMPORT_END = 120, IMPORT_RATE_PER_TICK = 0.3,
-                       BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1),
-          seed = 2, outdir = out)
-  m <- malariafwd:::.py_module("_malariafwd_location_test", '
+  p <- vivax_params(N_HOSTS = 40, N_MOSQ = 120, BITING_RATE = 0.2, SIM_DAYS = 120, CHROMOSOMES = "1",
+                    N_FOUNDER_LINEAGES = 4, IMPORT_START = 1, IMPORT_END = 120, IMPORT_RATE_PER_TICK = 0.3,
+                    BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1)
+  a <- run_sim(p, seed = 2, outdir = tempfile("mfw-xyz-a"))
+  b <- run_sim(p, seed = 2, outdir = tempfile("mfw-xyz-b"))
+  m <- malariafwd:::.py_module("_malariafwd_repeat_test", '
+def same_tables(x, y):
+    return tskit.load(x).dump_tables().equals(tskit.load(y).dump_tables(), ignore_provenance=True)
 def locations(path):
     return tskit.load(path).tables.individuals.location.tolist()
 ')
-  loc <- unlist(reticulate::py_to_r(m$locations(file.path(out, "plasmo.trees"))))
+  expect_true(reticulate::py_to_r(m$same_tables(trees_path(a), trees_path(b))))
+  loc <- unlist(reticulate::py_to_r(m$locations(trees_path(a))))
   expect_gt(length(loc), 0)
   expect_true(all(loc == 0))
 })
