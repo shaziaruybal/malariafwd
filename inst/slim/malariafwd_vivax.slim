@@ -33,10 +33,7 @@
 
 initialize() {
 
-	// ── PARAMS SUPPLIED BY R (or empty when running in GUI) ──────
-	// __PARAMS__
-	
-	// ── DEFAULTS (used if not overridden above) ───────────────────
+	// ── DEFAULTS, for a parameter not given with -d (run_sim() gives every one) ──
 	defineDefault("SIM_ID",                  "default");
 	defineDefault("SEED",                    55);
 	defineDefault("SIM_DAYS",                365); // 365 days or one year
@@ -46,7 +43,7 @@ initialize() {
 	defineDefault("N_MOSQ",                  100);
 	
 	// epi
-	defineDefault("BITING_RATE",             0.1); // F11: per-MOSQUITO daily biting probability (realized at line ~477 as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
+	defineDefault("BITING_RATE",             0.1); // F11: per-MOSQUITO daily biting probability (drawn in reproduction() as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
 	defineDefault("P_TRANS_VH",              0.5); // b = probability an infectious mosquito bite infects a human
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
@@ -69,8 +66,8 @@ initialize() {
 	// DEFAULT lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite) =
 	// the previous behaviour. NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
 	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
-	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob; a
-	// negative-binomial option calibrated to vivax DMFA data is the planned refinement.
+	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob;
+	// K_OOCYSTS below makes the count negative binomial.
 	defineDefault("LAMBDA_OOCYSTS",          0.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
 	defineDefault("LAMBDA_SPOROZOITES",      0.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
 	// Oocyst-count OVERDISPERSION. K_OOCYSTS <= 0 (default) = Poisson; K_OOCYSTS > 0 = negative
@@ -146,12 +143,12 @@ initialize() {
 
 	// detection / observation layer: a true blood-stage episode becomes a DETECTED
 	// (reported, genotyped) case w.p. P_DETECT_[type]. Relapses are mostly sub-patent
-	// (immunity -> lower density) so detect at a lower rate. Detected cases form the
-	// observed line list + the genotyped sample, and can trigger case-based treatment
-	// during the intervention window: radical cure (LIVER-stage) at coverage RADCURE_COVERAGE
-	// (efficacy 1 - P_RAD_SURVIVAL, clears the hypnozoite reservoir) and/or blood-stage
-	// (schizonticidal) treatment at coverage BLOODCURE_COVERAGE (efficacy 1 - P_BLOODCURE_SURVIVAL,
-	// clears the active infection). Defaults = detect everything, no treatment (backward compatible).
+	// (immunity -> lower density), so set their rate lower. Detected cases form the
+	// observed line list + the genotyped sample, and during the case-management window (D19)
+	// a detected case can be treated: blood-stage (schizonticidal) treatment at coverage
+	// BLOODCURE_COVERAGE (efficacy 1 - P_BLOODCURE_SURVIVAL, clears the active infection), with
+	// radical cure (LIVER-stage, efficacy 1 - P_RAD_SURVIVAL, clears the hypnozoite reservoir)
+	// for a fraction RADCURE_COVERAGE of those treated. Defaults: detect everything, treat nothing.
 	defineDefault("P_DETECT_PRIMARY", 1.0);   // primaries + imports
 	defineDefault("P_DETECT_RELAPSE", 1.0);   // relapses (set lower, e.g. 0.15)
 	// CASE MANAGEMENT. A detected case is treated w.p. BLOODCURE_COVERAGE; radical cure is
@@ -1230,10 +1227,10 @@ reproduction()
 			new_active.color = "red";
 			h.tag = INFECTED;
 			rec_detected = asInteger(runif(1) < P_DETECT_RECRUD);
-			// inoculation_id and oocyst_id are logged as -1, as a relapse does: a
-			// recrudescence is not a V-H event, and inheriting them would put it inside
-			// another case's co-transmission group. The link back to the holder (and so to
-			// the originating bite) is carried exactly by parent1_pedigree_id.
+			// inoculation_id is logged as -1, as a relapse's is, and so is oocyst_id, unlike a
+			// relapse, which logs its batch's: a recrudescence is not a V-H event, and inheriting
+			// them would put it inside another case's co-transmission group. The link back to the
+			// holder (and so to the originating bite) is carried exactly by parent1_pedigree_id.
 			logEvent("recrudescence", -1, -1, h.id,
 				asString(new_active.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
 				0, asInteger(hold.getValue("is_imported")), new_active.pedigreeID,
@@ -1562,7 +1559,7 @@ early() {
 				next;
 			}
 
-			// Cannot be cleared on same tick as inoculation
+			// A clone cannot clear on the tick its blood stage began
 			if (bloodstage_start >= sim.cycle)
 				next;
 
@@ -1873,7 +1870,7 @@ function (void) defineDefault(s$ name, * value)
 {
 	if (!exists(name))
 		defineConstant(name, value);
-	// if it already exists (set by __PARAMS__ block), leave it alone
+	// a parameter given with -d already exists, and keeps its value
 }
 
 // vcat: verbose cat. Prints only when VERBOSE is TRUE; used for all per-event / per-tick
@@ -1890,7 +1887,7 @@ function (void) logEvent(
 	i$ inoculation_id,
 	i$ mosq_id,
 	i$ human_id,
-	s$ lineage_id,                     // genetic identity (was brood_id); parent1/2_brood_id below are PARENT lineage ids
+	s$ lineage_id,                     // genetic identity; parent1/2_lineage_id are the PARENT lineages
 	s$ parent1_lineage_id,
 	s$ parent2_lineage_id,
 	i$ is_recombinant,
@@ -2026,8 +2023,8 @@ function (void) writeStateSnapshot(void)
 // MOSQUITO HELPERS
 // -----------------------
 
-// NOTE: mosquito broods are never dormant — getActiveLineageCount() == getBroodCount() for mosquitoes
-// but we use getActiveLineageCount() consistently for clarity
+// Mosquito products are never dormant or subpatent, so for a mosquito getActiveLineageCount()
+// counts every lineage it carries.
 
 function (integer$) getActiveLineageCount(o<Subpopulation>$ s)
 {
@@ -2293,7 +2290,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 			// A clone that became patent THIS tick cannot yet have caused symptoms, prompted
 			// care-seeking or been diagnosed, so a case course cannot reach it: a course landing
 			// today treats only the clones that were already patent (D24). Natural clearance in
-			// early() follows the same rule ("Cannot be cleared on same tick as inoculation"). MDA
+			// early() follows the same rule (a clone cannot clear on the tick its blood stage began). MDA
 			// waits for no symptoms, so it reaches these clones as well (D44).
 			// Nested ifs, not `&`: Eidos does not short-circuit, and getValue() on a missing
 			// key returns NULL, which cannot be compared.
@@ -2433,24 +2430,6 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 	return sample(seqLen(size(weights)) + 1, 1, weights = weights)[0];
 }
 
-
-// -----------------------------------------------------------
-// Decoupled primary-infection / hypnozoite-batch establishment for ONE transmitted
-// genotype delivered by a mosquito bite (White et al. 2014 model). `source` is the
-// mosquito genotype being inoculated; both compartments are clones of it, so they are
-// IBD 1 to each other and to it.
-//
-// Independently rolls:
-//   (1) P_PRIMARY -> an active blood-stage infection
-//   (2) N ~ Geometric(NU_HYPNOZOITE_BATCH) -> a dormant "batch" object carrying
-//       batch_count = N (only spawned if N > 0)
-// Both, either, or neither can happen. Returns the lineage_id(s) actually established
-// (0, 1 or 2 entries) for caller-side logging.
-//
-// Callable ONLY from reproduction(), since it calls addCloned(). Imports do not come
-// through here - they have no `source` to clone and are seeded by seedImports().
-// -----------------------------------------------------------
-
 // -----------------------------------------------------------
 // D17: IMPORT SEEDING, and the one-tick deferral of the second compartment.
 //
@@ -2467,13 +2446,12 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 // NEXT_SCRATCH_SUBPOP burns one id per import-tick.
 //
 // One inoculation delivers ONE sporozoite population, so the blood-stage infection and
-// the hypnozoite batch must be the SAME genome (IMPORT_INOCULATION_BUG.md: they were two
-// unrelated roots, measured IBD 0). A genome minted this tick cannot be cloned until it
-// is visible ("parent must be visible in a subpopulation"), so when an import takes in
-// both compartments the second is queued and cloned next tick by the drain in
-// reproduction(). The migrated genome takes whichever compartment exists, so a P_PRIMARY
-// failure (hypnozoites but no blood stage) needs no special case - there is simply
-// nothing to clone.
+// the hypnozoite batch must be the SAME genome, not two unrelated roots (D17). A genome
+// minted this tick cannot be cloned until it is visible ("parent must be visible in a
+// subpopulation"), so when an import takes in both compartments the second is queued and
+// cloned next tick by the drain in reproduction(). The migrated genome takes whichever
+// compartment exists, so a P_PRIMARY failure (hypnozoites but no blood stage) needs no
+// special case - there is simply nothing to clone.
 // -----------------------------------------------------------
 function (void) seedImports(o<Subpopulation> import_hosts)
 {
@@ -2596,6 +2574,23 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 		size(PENDING_BATCH_PED) + " batch(es) queued for next tick)");
 }
 
+// -----------------------------------------------------------
+// Decoupled primary-infection / hypnozoite-batch establishment for ONE transmitted
+// genotype delivered by a mosquito bite (White et al. 2014 model). `source` is the
+// mosquito genotype being inoculated; both compartments are clones of it, so they are
+// IBD 1 to each other and to it.
+//
+// Independently:
+//   (1) P_PRIMARY -> an active blood-stage infection
+//   (2) the genotype's share of the bite's hypnozoite batch, which
+//       inoculateMosquitoToHuman() draws -> a dormant "batch" object carrying
+//       batch_count = that share (only made if it is above 0)
+// Both, either, or neither can happen. Returns the lineage_id(s) actually established
+// (0, 1 or 2 entries) for caller-side logging.
+//
+// Callable ONLY from reproduction(), since it calls addCloned(). Imports do not come
+// through here - they have no `source` to clone and are seeded by seedImports().
+// -----------------------------------------------------------
 function (integer) establishInfectionOutcome(
 	o<Subpopulation>$ h,
 	No<Individual>$ source,
@@ -2607,7 +2602,7 @@ function (integer) establishInfectionOutcome(
 	                            // genotype: one bite delivering two genotypes is one case
 	[i$ batch_override = -1])   // >=0 -> this genotype's share of the per-BITE hypnozoite batch
 {
-	// NOTE: brood_id is stored as a raw INTEGER (the pedigreeID of the genotype's founder)
+	// NOTE: lineage_id is stored as a raw INTEGER (the pedigreeID of the genotype's founder)
 	// everywhere in this script. Stringify with asString() only at the logEvent() boundary,
 	// never when calling setValue("lineage_id", ...) - unique() and getValue() elsewhere
 	// assume a homogeneous integer type and break on a mixed one.
@@ -2973,12 +2968,12 @@ function (integer) inoculateMosquitoToHuman(
 	return new_lineage_ids;
 }
 
-// The transmissible gametocyte pool of a human.
-// the transmissible GAMETOCYTE POOL of a human = active blood-stage lineages
-// that have matured (sim.cycle >= gametocyte_ready_tick) AND carry gametocytes
-// (per-infection Bernoulli(P_GAMETOCYTE), rolled once and cached in is_gametocytemic).
-// At the identity default (GAMETOCYTE_DELAY=0, P_GAMETOCYTE=1) this is simply every
-// active lineage via a fast path that consumes no RNG - preserving prior behaviour.
+// The transmissible GAMETOCYTE POOL of a human: its blood-stage clones that have matured
+// (sim.cycle >= gametocyte_ready_tick) AND carry gametocytes (per-infection
+// Bernoulli(P_GAMETOCYTE), rolled once and cached in is_gametocytemic), a subpatent one only
+// with probability SUBPATENT_INFECTIVITY. At GAMETOCYTE_DELAY = 0 and P_GAMETOCYTE = 1, the
+// defaults, every clone that passes the subpatency gate is in it, by a fast path that draws no
+// number.
 function (o<Individual>) gametocytePool(o<Subpopulation>$ h)
 {
 	if (h.individualCount == 0)
@@ -3062,8 +3057,9 @@ function (float$) computeOutcrossingProb(o<Individual> active)
 	return 1.0 - sum_sq;
 }
 
-// mosquito acquires a brood from a human. One uptake = one co-hatching brood
-// = one oocyst (meiosis). Outcrossing -> a tetrad; selfing -> a clonal product.
+// mosquito acquires a brood from a human. One uptake = one co-hatching brood of one or more
+// oocysts (LAMBDA_OOCYSTS), each its own meiosis: an outcrossed oocyst gives a tetrad, a selfed
+// one a clonal product.
 function (integer) seedBroodFromHuman(
 	o<Subpopulation>$ m,
 	o<Subpopulation>$ h,
