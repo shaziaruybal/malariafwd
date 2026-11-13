@@ -36,8 +36,9 @@ did.
 **Alternatives rejected.** *future.apply* -- another dependency for the same one call. *Keeping
 furrr* -- a dependency for one call.
 **Consequences.** Grids give the same runs and the same results. With workers, a cell's warnings
-arrive with its own result rather than with its chunk's, so a worker that is lost loses only its own
-cell's warnings.
+arrive with its own result rather than with its chunk's. A cell whose worker dies is run again on a
+new worker (future does this), its first attempt's directory left beside it; if that worker dies too,
+the grid stops with future's error, which names the cell, as each future is labelled with it.
 **How to verify.** `tests/testthat/test-grid.R`; part 3 of `inst/validation/check_parameters.R` runs
 a grid with two workers on the installed package.
 

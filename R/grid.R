@@ -147,7 +147,9 @@
 #'   repeats for each run) is given once, after the FAILED summary, with the number of cells it
 #'   came from. If the grid stops part-way with an error, that error's message lists the warnings
 #'   of the cells whose results had reached this session; with workers, a cell's warnings travel
-#'   with its result, so those of a cell lost with its worker are lost. Under
+#'   with its result. A cell whose worker dies is run again on a new worker, its first attempt's
+#'   directory left beside it as `<cell>.partial-...`; if that worker dies too, the grid stops with an
+#'   error that names the cell. Under
 #'   `options(warn = 2)` a warning in a cell fails that cell, in any plan and also inside
 #'   `suppressWarnings()`, and the FAILED summary is then an error, so nothing is returned; the
 #'   cells that ran are on disk. The caller's random-number stream is left as it was.
@@ -274,8 +276,9 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
     ## One future per cell, its value taken in order: a cell's warnings reach this session with its
     ## result. The cells draw no random numbers in R, so the futures get no seed.
     out <- tryCatch(withCallingHandlers({
+      ## labelled by the cell, so that future's error for a lost worker names it
       fs <- lapply(todo, function(i) future::future(cell(jobs$set[i], jobs$seed[i], jobs$outdir[i]),
-                                                    seed = FALSE))
+                                                    seed = FALSE, label = jobs$dir[i]))
       lapply(fs, future::value)
     }, warning = keep), error = function(e) {
       if (length(msgs)) {
