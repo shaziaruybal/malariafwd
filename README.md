@@ -219,7 +219,9 @@ each, is in [`MODEL_DESCRIPTION.md`](MODEL_DESCRIPTION.md).
 
 Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bugs and
 questions, and get in touch before building on the package — see the pre-release note above.
-A citation and archived DOI will accompany the first tagged release.
+A citation and archived DOI will accompany the first tagged release. Results from malariafwd also
+rest on SLiM and tskit, which run the model and record its genealogy; `citation("malariafwd")` lists
+their papers.
 
 ## Funding
 

@@ -9,3 +9,40 @@ bibentry(
   url     = "https://github.com/shaziaruybal/malariafwd"
   # doi   = "10.5281/zenodo.XXXXXXX"   # TODO at release; see CITATION.cff
 )
+
+bibentry(
+  bibtype = "Misc",
+  header  = "malariafwd runs every simulation in SLiM and records its genealogy as a tree sequence; please also cite:",
+  title   = "{SLiM} 5: Eco-evolutionary simulations across multiple chromosomes and full genomes",
+  author  = c(person("Benjamin C.", "Haller"), person("Peter L.", "Ralph"), person("Philipp W.", "Messer")),
+  year    = "2025",
+  howpublished = "bioRxiv",
+  doi     = "10.1101/2025.08.07.669155"
+)
+
+bibentry(
+  bibtype = "Article",
+  title   = "Tree-sequence recording in {SLiM} opens new horizons for forward-time simulation of whole genomes",
+  author  = c(person("Benjamin C.", "Haller"), person("Jared", "Galloway"), person("Jerome", "Kelleher"),
+              person("Philipp W.", "Messer"), person("Peter L.", "Ralph")),
+  journal = "Molecular Ecology Resources",
+  year    = "2019",
+  volume  = "19",
+  number  = "2",
+  pages   = "552--566",
+  doi     = "10.1111/1755-0998.12968"
+)
+
+bibentry(
+  bibtype = "Article",
+  header  = "The relatedness, genotype and ARG functions read the tree sequence with tskit; please also cite:",
+  title   = "Efficient pedigree recording for fast population genetics simulation",
+  author  = c(person("Jerome", "Kelleher"), person("Kevin R.", "Thornton"), person("Jaleal", "Ashander"),
+              person("Peter L.", "Ralph")),
+  journal = "PLOS Computational Biology",
+  year    = "2018",
+  volume  = "14",
+  number  = "11",
+  pages   = "e1006581",
+  doi     = "10.1371/journal.pcbi.1006581"
+)

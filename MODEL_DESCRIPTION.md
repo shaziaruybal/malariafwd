@@ -1631,8 +1631,10 @@ counting or drawing them (§6.3, §7).
 ## 20. Citation and licence
 
 malariafwd is released under the MIT licence (`LICENSE`). To cite it, use `citation("malariafwd")`
-or `CITATION.cff`. `DECISIONS.md` gives the reasons for the model's choices, and `NEWS.md` what
-each release contains.
+or `CITATION.cff`. Please also cite SLiM (Haller et al. 2025; Haller et al. 2019), which runs every
+simulation and records its genealogy, and tskit (Kelleher et al. 2018), which reads that genealogy;
+both files list these papers. `DECISIONS.md` gives the reasons for the model's choices, and
+`NEWS.md` what each release contains.
 
 ---
 
@@ -1663,8 +1665,6 @@ each release contains.
 - Haller BC, Galloway J, Kelleher J, Messer PW, Ralph PL (2019). Tree-sequence recording in SLiM
   opens new horizons for forward-time simulation of whole genomes. *Molecular Ecology Resources*
   19(2):552–566. <https://doi.org/10.1111/1755-0998.12968>
-- Haller BC, Messer PW (2019). SLiM 3: forward genetic simulations beyond the Wright–Fisher model.
-  *Molecular Biology and Evolution* 36(3):632–637. <https://doi.org/10.1093/molbev/msy228>
 - Haller BC, Ralph PL, Messer PW (2025). SLiM 5: eco-evolutionary simulations across multiple
   chromosomes and full genomes. *bioRxiv*. <https://doi.org/10.1101/2025.08.07.669155>
 - Jiang H, Li N, Gopalan V, Zilversmit MM, Varma S, Nagarajan V, et al. (2011). High recombination
