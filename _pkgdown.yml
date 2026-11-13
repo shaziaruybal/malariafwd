@@ -31,54 +31,75 @@ reference:
   desc: The terms used across the package, a run to try them on, and where to read more.
   contents: [malariafwd-package, example_run]
 
-- title: Running simulations
-  desc: Build a parameter set, run the model, sweep in parallel.
-  contents: [vivax_params, param_info, run_sim, run_grid, load_grid, check_setup, tskit_available,
-             slim_available, slim_version, slim_model]
+- title: Set up
+  desc: >
+    malariafwd runs the external program SLiM, and reads the tree sequence with Python's
+    tskit. Check what the package finds before anything else.
+  contents: [check_setup, slim_available, slim_version, slim_model, tskit_available]
 
-- title: Loading a run
-  desc: Tidy accessors for the files a run writes.
-  contents: [load_run, load_events, load_state, load_params, trees_path,
-             event_types, malariafwd-outputs]
+- title: Configure and run
+  desc: >
+    Build a parameter set, run one simulation, or run a grid of parameter sets and seeds in
+    parallel. Time is in days throughout.
+  contents: [vivax_params, param_info, run_sim, run_grid, load_grid]
 
-- title: Diagnostics
-  desc: Is this run healthy, and what is driving it?
-  contents: [plot_diagnostics, summarise_run, force_of_infection,
-             plot_force_of_infection]
+- title: Set the oocyst and sporozoite draws
+  desc: >
+    LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES are rates before zero-truncation, not the mean counts a
+    feeding study reports: convert between the two before setting them.
+  contents: [uptake_moments, uptake_calibrate]
+
+- title: Read a run's outputs
+  desc: >
+    The files a run writes: the event log, the daily state of every host and mosquito, the
+    parameters it was made from, and its tree sequence.
+  contents: [load_run, load_events, load_state, load_params, trees_path, event_types,
+             malariafwd-outputs]
+
+- title: Check a run
+  desc: Summary numbers and a dashboard, to see whether a run went extinct, saturated or settled.
+  contents: [summarise_run, plot_diagnostics]
+
+- title: Cases and their origin
+  desc: >
+    Every blood-stage clone and recurrence, labelled by its true origin (relapse, local
+    reinfection, import or recrudescence), beside the classes surveillance would give it, and
+    incidence and force of infection by origin.
+  contents: [episodes, recurrences, classify_cases, classify_chain, classify_travel,
+             force_of_infection, plot_force_of_infection]
+
+- title: Hosts over time
+  desc: Infection states across the population, complexity of infection, and one host's history.
+  contents: [host_state_prevalence, plot_host_state_prevalence, coi_distribution,
+             plot_host_trajectory]
+
+- title: Hypnozoites and relapse
+  desc: The dormant liver-stage reservoir and the relapses it drives.
+  contents: [relapse_fraction, dormancy_durations, time_to_relapse, plot_relapse_km]
+
+- title: Transmission chains
+  desc: Who infected whom, by a bite or through a relapse, and onward transmission by origin.
+  contents: [transmission_links, rc_by_origin]
+
+- title: Relatedness (IBD)
+  desc: >
+    Identity by descent read exactly from the recorded genealogy, not inferred from markers:
+    pairwise IBD, the segments behind it, and pairs of known relationship for testing an IBD
+    method. Needs Python with tskit.
+  contents: [ibd_pairs, ibd_lookup, ibd_segments, chrom_map, plot_ibd_pair, ibd_truth_pairs,
+             plot_relatedness_ladder, new_infection_diversity]
 
 - title: Genotype data
   desc: Marker genotypes painted on the run's genealogy, and their VCF.
   contents: [simulate_genotypes, write_vcf]
 
-- title: Epidemiology
-  desc: Cases by origin, transmission chains, and the surveillance view.
-  contents: [classify_cases, episodes, recurrences, classify_chain, host_state_prevalence,
-             coi_distribution, transmission_links, rc_by_origin, classify_travel]
-
-- title: Hypnozoites and relapses
-  desc: The latent reservoir and the recurrences it drives.
-  contents: [relapse_fraction, dormancy_durations, time_to_relapse]
-
-- title: Relatedness (IBD)
-  desc: Ground-truth identity-by-descent from the recorded genealogy.
-  contents: [ibd_pairs, ibd_lookup, ibd_segments, chrom_map, ibd_truth_pairs,
-             new_infection_diversity]
-
-- title: The ARG
+- title: Genealogy summaries
   desc: >
-    Tree-domain views of the genealogy, which is a forest: read ?arg_summary first, and use
-    arg_tmrca() for relatedness.
+    The recorded genealogy (the ancestral recombination graph, ARG) is a forest of unconnected
+    founder lineages: read ?arg_summary first, and use arg_tmrca() for relatedness.
   contents: [arg_summary, arg_tmrca]
 
-- title: Calibrating the uptake draws
-  desc: LAMBDA_* is a pre-truncation rate, not a mean count.
-  contents: [uptake_moments, uptake_calibrate]
-
-- title: Plots
-  contents: [plot_ibd_pair, plot_relatedness_ladder, plot_host_trajectory,
-             plot_host_state_prevalence, plot_relapse_km]
-
 articles:
-- title: Get started
+- title: Guides
   navbar: ~
   contents: [malariafwd, anatomy]

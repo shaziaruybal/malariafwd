@@ -1,8 +1,10 @@
 ---
-title: "Anatomy of a run: reading the outputs"
+title: "Reading the outputs"
+description: >
+  What each file a run writes holds, and how to read it.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Anatomy of a run: reading the outputs}
+  %\VignetteIndexEntry{Reading the outputs}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

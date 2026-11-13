@@ -1,5 +1,7 @@
 ---
 title: "Getting started with malariafwd"
+description: >
+  A run, from its parameters to its ground truth and IBD.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Getting started with malariafwd}

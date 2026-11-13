@@ -175,8 +175,8 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
 
 - [Getting started](https://shaziaruybal.github.io/malariafwd/articles/malariafwd.html): a run,
   from its parameters to its ground truth and IBD.
-- [Anatomy of a run](https://shaziaruybal.github.io/malariafwd/articles/anatomy.html): what each
-  output holds, and how to read it.
+- [Reading the outputs](https://shaziaruybal.github.io/malariafwd/articles/anatomy.html): what
+  each output holds, and how to read it.
 - [Reference](https://shaziaruybal.github.io/malariafwd/reference/): every function, starting with
   the terms they share (`?malariafwd`).
 - [Model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html): the
