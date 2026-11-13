@@ -1143,11 +1143,18 @@ tetrad's work is linear in its chiasmata: they are de-duplicated without keeping
 (they are sorted next), and each chiasma's two chromatids are appended to two vectors. A tetrad
 takes about 24 ms at `RECOMB_RATE = 1e-3`, against about 320-440 ms before; the products and the
 random stream are unchanged.
-**Rationale.** This is canonical meiosis, and we know of no evidence that Plasmodium departs from
-it. The split barely depends on where the centromeres sit: midpoints give 0.614 and 0.193, the
-annotated centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each chromosome about
-0.605 and 0.197. No obligate chiasma is imposed (D34); one would move sisters to about 0.58 and
-the others to about 0.21, about twice the effect of the centromere positions.
+**Rationale.** This is canonical meiosis, and sequenced Plasmodium meioses show it. Nkhoma et al.
+(2020) sequenced P. falciparum infections cell by cell and captured a complete tetrad, the four
+products of one meiosis (their Figure 6). Read against the 3D7 centromere annotation, its products
+form two pairs that carry the same parent at all 13 centromeres that can be read (chromosome 10's
+is not annotated); dealt at random, all 13 alike would happen about twice in a million tetrads.
+Its sisters share 0.67 of the genome and the other pairs 0.17. In the paper's other sibling groups
+(its Data S3), six more pairs of cells carry the same parent at every centromere that can be read,
+7 to 13 of them. These readings are ours, from the published figures; the paper does not examine
+centromeres. The split barely depends on where the centromeres sit: midpoints give 0.614 and
+0.193, the annotated centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each
+chromosome about 0.605 and 0.197. No obligate chiasma is imposed (D34); one would move sisters to
+about 0.58 and the others to about 0.21, about twice the effect of the centromere positions.
 **Supersedes.** D34's assignment of chromatids to products, and the figures that follow from it
 (unimodal around 1/3, sd about 0.08, "this is Plasmodium meiosis"); and D34's expectation that a
 sibling pair's IBD state is uncorrelated across junctions. Pooled over pairs it is about 0.09
