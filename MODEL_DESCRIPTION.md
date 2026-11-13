@@ -15,25 +15,30 @@ untreated, two-state-recurrence population.
 
 
 **A representative run** — 200 hosts, 400 mosquitoes, 3 years, `BITING_RATE` 0.08, 40 founder
-hosts carrying 10 lineages, ν = 3. Emergent: prevalence **0.246**, COI **1.14**, **13.3%**
-polyclonal, reservoir **0.9** hypnozoites/host, relapse fraction **0.657**, **2.23** relapses per
-person-year — all inside the four target bands of §13.
+hosts carrying 10 lineages, ν = 3. Over the second half of the run, as means over seeds 1 to 10
+with their range: prevalence **0.30** (0.08–0.46), COI **1.15** (1.03–1.28), **13%** polyclonal
+(3–23%), a reservoir of **1.0** hypnozoites per host (0.2–1.6), relapse fraction **0.65**
+(0.59–0.68) and **2.7** relapses per person-year at risk (1.2–4.1). The means sit inside the four
+target bands of §13. The figures below draw seed 1; `dev/make-doc-figures.R`, in the package's
+source repository, makes them and writes these numbers to `man/figures/representative-run.tsv`.
 
 ![Representative run](man/figures/README-representative-run.png)
 
-**A** one host's lineage trajectory: coloured bands are blood-stage lineages, the dashed line is
-that host's hypnozoite reservoir, and the marks below show new infections (triangles) against
-relapses (circles) — and, on a run with treatment failure, recrudescences (diamonds). **B** population host-state composition over time — note the teal
-*reservoir-only* band, which is invisible to any blood survey. **C** peak COI against the number
-of relapses a host goes on to experience (boxes drawn only where there are enough hosts; every
-level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage **clone acquisition** against the
-force from bites and imports alone; the distance between the lines is the relapse contribution. (A
-recrudescence is a new episode but not a new clone, so it enters neither series; see §9a.) **E** the
-realised IBD ladder, as the composition of each relationship class across relatedness bands.
+**A** one host's lineage trajectory, the host with the most relapses: coloured bands are
+blood-stage lineages, the dashed line is that host's hypnozoite reservoir, and the marks below show
+new infections (triangles) against relapses (circles) — and, on a run with treatment failure,
+recrudescences (diamonds). **B** population host-state composition over time — note the teal
+*reservoir-only* band, which is invisible to any blood survey. **C** each infected host's peak
+COI against the relapses it has over the run (boxes where at least 5 hosts reach that peak; every
+level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage **clone
+acquisition** against the force from bites and imports alone; the distance between the lines is
+the relapse contribution. (A recrudescence is a new episode but not a new clone, so it enters
+neither series; see §9a.) **E** the realised IBD ladder, as the composition of each relationship
+class across relatedness bands.
 
-Panel D carries the central vivax quantity: **molFOB 2.02 vs FOI 0.69 new clones per person-year,
-so 66% of blood-stage episodes are relapses**, and the gap widens through the run as the reservoir
-accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
+Panel D carries the central vivax quantity: **molFOB 3.2 vs FOI 1.1 new clones per person-year**
+(means over the ten seeds; 0.6–5.4 and 0.3–1.8), **so about two-thirds of new blood-stage clones
+are relapses**, and the gap widens through the run as the reservoir accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
 area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
 relationship classes are point masses, while same-oocyst siblings spread out, in two groups around
 0.6 and 0.2 of the genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
@@ -44,7 +49,8 @@ relationship classes are point masses, while same-oocyst siblings spread out, in
 Ground-truth IBD read from the ARG, painted along the 14 PvP01 chromosomes. A relapse is clonal to
 its originating hypnozoite (IBD 1.00); two products of one oocyst share a **mosaic** with visible
 crossover breakpoints, a third of the genome on average for unrelated parents; distinct founders
-share nothing.
+share nothing. Each pair is the one of its kind, in seed 1, whose IBD is nearest the kind's mean in
+that run.
 
 **Demonstrating the observation layer.** The same configuration rerun with
 `P_DETECT_PRIMARY = 0.60` and `P_DETECT_RELAPSE = 0.15` — relapses are often sub-patent, so a
@@ -52,15 +58,16 @@ surveillance system sees them less often than primaries.
 
 ![Detection](man/figures/README-detection.png)
 
-**A** true blood-stage episodes against detected ones. **B** the composition of each. The effect
-is not a uniform thinning but a **reweighting**: the true burden is **65.7% relapse / 34.3%
-reinfection**, while the detected line list reads **29.7% relapse / 70.3% reinfection**. Detection
+**A** true blood-stage episodes against detected ones, in seed 1. **B** the composition of each,
+over the second half of the run. The effect is not a uniform thinning but a **reweighting**: the
+true burden is **66% relapse / 34% reinfection** (63–69% relapse over the ten seeds), while the
+detected line list reads **33% relapse / 67% reinfection** (27–35%). Detection
 *inverts* the apparent mix, which is why any method that infers transmission from the observed
 origin split — Rc from case counts included — inherits a bias it cannot see.
 
-> At this transmission level outcrossing is rare — **168 recombinant against 3,277 clonal uptake
-> events (4.9%)** — so mosaics like the second panel are genuinely uncommon and most pairs sit at
-> 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
+> At this transmission level outcrossing is rare — **5.4% of uptakes are recombinant** (0.7–9.6%
+> over the ten seeds; 251 of 5,025 in seed 1) — so mosaics like the second panel are genuinely
+> uncommon and most pairs sit at 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
 > relapse hard to distinguish genetically in low-transmission settings.
 
 ---

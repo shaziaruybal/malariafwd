@@ -1,7 +1,6 @@
-## Regenerates the figures that README.md and MODEL_DESCRIPTION.md embed.
-##
-## These used to be made ad hoc, so when one went stale there was no record of the parameters
-## behind it and no way to reproduce it. Run from the package root:
+## Renders man/figures/model-structure.png, the schematic README.md embeds, from its SVG with
+## macOS's qlmanage. dev/make-doc-figures.R makes the other figures, and calls this when rsvg is
+## not installed. Run from the package root:
 ##   Rscript dev/make-readme-figures.R
 
 ## ---- model-structure.png, from the SVG --------------------------------------------------
