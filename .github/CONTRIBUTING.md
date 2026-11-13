@@ -9,11 +9,12 @@ Open an [issue](https://github.com/shaziaruybal/malariafwd/issues) and choose th
 fits. For a bug, please include:
 
 - the smallest example that shows it, ideally a run with few hosts and few days;
-- the output of `malariafwd::check_setup()`, which gives the versions of R, SLiM, the model,
-  Python, tskit and numpy that the package finds;
+- the output of `malariafwd::check_setup()`, which gives the versions of malariafwd, R, SLiM,
+  reticulate, Python, tskit and numpy, and where it found SLiM and the model;
 - the output of `sessionInfo()`;
-- for a run that did something unexpected, its `params.tsv` and `cmdline.txt`, from which it can
-  be repeated (`run_sim(load_params(run), seed = run$seed)`), and its `run.log` if it failed.
+- for a run that did something unexpected, its `params.tsv` and `cmdline.txt`, which repeat it
+  (with both in a directory `dir`, `run_sim(load_params(dir), seed = s, outdir = tempfile())`, where
+  `s` is the run's seed, `ACTUAL_SEED` in `params.tsv`), and its `run.log` if it failed.
 
 ## Proposing a change
 
@@ -27,8 +28,11 @@ on a branch of your fork:
 - for a change to what the model does, add an entry to `DECISIONS.md`, which records the reasons
   for the model's choices, and update `MODEL_DESCRIPTION.md`;
 - after a change to the model file or to a default, make the example run again with
-  `Rscript data-raw/example_run.R` (it needs SLiM 5.2 on the PATH);
-- after a change to the parameter dictionary, update the documentation's tables with
+  `Rscript data-raw/example_run.R` (it needs SLiM 5.2 on the PATH), run the validation scripts
+  with `Rscript dev/validation-results.R`, which rewrites `inst/validation/RESULTS.md`, and remake
+  the documents' figures and the numbers they quote with `Rscript dev/make-doc-figures.R`;
+- after a change to the parameter dictionary (`R/param-dictionary.R`) or the dictionary of the
+  output columns (`R/outputs.R`), update the documentation's tables with
   `Rscript dev/update-doc-tables.R`.
 
 ## Code of conduct

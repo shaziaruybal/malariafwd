@@ -246,10 +246,11 @@ trees_path <- function(run) file.path(.run_dir(run), "plasmo.trees")
 
 #' The parameter set a run was made from
 #'
-#' Reads `params.tsv` ([params.tsv][malariafwd-outputs]) into a [vivax_params()] object holding every parameter, in order and of its
-#' type: `run_sim(load_params(run), seed = run$seed)` gives the same run again. Values are not
-#' checked here ([run_sim()] checks them). The seed, the versions, the derived genome and the
-#' outcome rows are on the [load_run()] object instead.
+#' Reads `params.tsv` ([params.tsv][malariafwd-outputs]) into a [vivax_params()] object holding
+#' every parameter, in order and of its type: `run_sim(load_params(run), seed = run$seed,
+#' outdir = tempfile())` gives the same run again. Values are not checked here ([run_sim()] checks
+#' them). The seed, the versions, the derived genome and the outcome rows are on the [load_run()]
+#' object instead.
 #'
 #' A file from another version of the package can lack some parameters, which take their
 #' defaults, or hold rows that are not parameters, which are left out. Either warns, once per
