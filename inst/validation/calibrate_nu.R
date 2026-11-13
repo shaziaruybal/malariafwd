@@ -1,6 +1,6 @@
 ## calibrate_nu.R -- fit NU_HYPNOZOITE_BATCH, the mean hypnozoite batch a bite seeds, against four
-## published P. vivax bands at moderate transmission. Section 13 of the model description gives the
-## bands, their sources and the table this script makes.
+## target bands based on published P. vivax studies, at moderate transmission. Section 13 of the
+## model description gives the bands, the studies and the table this script makes.
 ##   Rscript -e 'source(system.file("validation", "calibrate_nu.R", package = "malariafwd"))'
 ## Each value of nu runs 400 hosts and 800 mosquitoes for 5 years at BITING_RATE 0.08, with 20
 ## founder hosts carrying 10 lineages, for seeds 1 to 3: 15 runs, about 6 minutes on one core, or
@@ -46,6 +46,7 @@ per_run <- rbindlist(lapply(seq_len(nrow(g)), function(i) {
              relapses_per_py = all$relapses_per_py_at_risk,
              relapses_per_py_unmasked = unm$relapses_per_py_at_risk,
              molfob_per_py = all$molfob_clones_per_py,
+             molfob_per_py_unmasked = unm$molfob_clones_per_py,
              moi_median = all$coi_median,
              relapse_frac = all$relapse_frac_acquisitions,
              relapse_frac_unmasked = unm$relapse_frac_acquisitions,
@@ -59,7 +60,7 @@ inside <- function(x, band) x >= BANDS[metric == band, lo] & x <= BANDS[metric =
 m[, in_all := inside(relapses_per_py, "relapses_per_py") & inside(molfob_per_py, "molfob_per_py") &
               inside(moi_median, "moi_median") & inside(relapse_frac, "relapse_frac")]
 m[, in_all_unmasked := inside(relapses_per_py_unmasked, "relapses_per_py") &
-                       inside(molfob_per_py, "molfob_per_py") & inside(moi_median, "moi_median") &
+                       inside(molfob_per_py_unmasked, "molfob_per_py") & inside(moi_median, "moi_median") &
                        inside(relapse_frac_unmasked, "relapse_frac")]
 fwrite(m, file.path(OUT, "calibrate_nu.tsv"), sep = "\t")
 
@@ -67,7 +68,8 @@ cat("\n  means over seeds", paste(SEEDS, collapse = ", "), "(bands: relapses per
     "molFOB 0.7-15, median MOI 1-3, relapse fraction 0.55-0.85)\n\n")
 show <- m[, .(nu, prevalence = round(prevalence, 2),
               `relapses/py` = round(relapses_per_py, 2), `relapses/py unmasked` = round(relapses_per_py_unmasked, 2),
-              molFOB = round(molfob_per_py, 2), `median MOI` = round(moi_median, 2),
+              molFOB = round(molfob_per_py, 2), `molFOB unmasked` = round(molfob_per_py_unmasked, 2),
+              `median MOI` = round(moi_median, 2),
               `relapse frac` = round(relapse_frac, 2), `relapse frac unmasked` = round(relapse_frac_unmasked, 2),
               `masked share` = round(masked_share, 2), EIR = round(eir_per_py, 2),
               `in all 4` = in_all, `in all 4 unmasked` = in_all_unmasked)]
@@ -84,4 +86,5 @@ cat("\n")
 ok(sprintf("the shipped value, %g, sits inside all four bands", shipped),
    isTRUE(m[nu == shipped, in_all]),
    sprintf("(counting every relapse; inside all four: nu = %s)", paste(m[in_all == TRUE, nu], collapse = ", ")))
-cat(sprintf("\n  Tables: %s\n  %d passed, %d failed\n", OUT, PASS, FAIL))
+cat(sprintf("\n  Tables: %s\n\n================ %d passed, %d failed ================\n", OUT, PASS, FAIL))
+if (FAIL > 0) quit(status = 1)
