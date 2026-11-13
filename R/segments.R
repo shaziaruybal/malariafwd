@@ -178,7 +178,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
         ggplot2::facet_wrap(~ lab, nrow = 1) +
         ggplot2::scale_y_continuous(NULL, breaks = seq_len(nrow(cm)),
                                     labels = rev(cm$chrom), expand = ggplot2::expansion(add = .8)) +
-        ggplot2::scale_x_continuous("position within chromosome (Mb)", expand = c(0.01, 0)) +
+        ggplot2::scale_x_continuous("Position within chromosome (Mb)", expand = c(0.01, 0)) +
         ggplot2::labs(caption = "rows = PvP01 chromosomes (1-14); grey = chromosome, colour = shared IBD") +
         th
     )
@@ -195,7 +195,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
                        label = sprintf("IBD = %.2f", ibd)), hjust = 1.05, size = 3.3,
                        colour = "grey25") +
     ggplot2::facet_wrap(~ lab, ncol = 1, strip.position = "left") +
-    ggplot2::scale_x_continuous("position along the concatenated genome (Mb)", expand = c(0, 0)) +
+    ggplot2::scale_x_continuous("Position along the concatenated genome (Mb)", expand = c(0, 0)) +
     ggplot2::labs(y = NULL, caption = "dividers = PvP01 chromosome boundaries") +
     th + ggplot2::theme(axis.text.y = ggplot2::element_blank(),
                         strip.text.y.left = ggplot2::element_text(angle = 0, hjust = 1))
@@ -265,7 +265,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
     ggplot2::geom_text(data = key, ggplot2::aes(x = L / 1e6, y = row, label = sprintf("IBD = %.2f", ibd)),
                        hjust = -0.1, size = 3.2, colour = "grey25") +
     ggplot2::facet_grid(grp ~ ., scales = "free_y", space = "free_y", switch = "y") +
-    ggplot2::scale_x_continuous("position along the concatenated genome (Mb)",
+    ggplot2::scale_x_continuous("Position along the concatenated genome (Mb)",
                                 expand = ggplot2::expansion(mult = c(0, .12))) +
     ggplot2::labs(caption = "dividers = PvP01 chromosome boundaries; colour = shared IBD") +
     common
@@ -379,7 +379,7 @@ plot_relatedness_ladder <- function(x, style = c("points", "bars")) {
         ggplot2::geom_text(data = n_by, ggplot2::aes(cls, 1.04, label = paste0("n = ", n)),
                            inherit.aes = FALSE, size = 3, colour = "grey30") +
         ggplot2::scale_fill_manual(values = pal2, name = "IBD band", drop = FALSE) +
-        ggplot2::scale_y_continuous("fraction of pairs",
+        ggplot2::scale_y_continuous("Fraction of pairs",
                                     labels = function(x) paste0(round(100 * x), "%"),
                                     limits = c(0, 1.08), breaks = c(0, .25, .5, .75, 1)) +
         ggplot2::labs(x = NULL) +

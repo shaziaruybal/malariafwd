@@ -216,7 +216,7 @@ test_that("plot_diagnostics() gives summarise_run()'s numbers for the days after
   ## the day-22 recrudescence is a new episode, not a new clone
   expect_true(any(p[[2]]$data[origin == "recrudescence"]$y > 0))
   expect_false(any(p[[3]]$data[origin == "recrudescence"]$y > 0))
-  expect_identical(p[[5]]$labels$y, "mean hypnozoites/host")
+  expect_identical(p[[5]]$labels$y, "Mean hypnozoites/host")
   for (x in list(extinct_fixture_run(), never_fixture_run())) {
     s <- sub(plot_diagnostics(x, bin = 5))
     expect_match(s, "days 11-20: prevalence 0% | COI NA", fixed = TRUE)

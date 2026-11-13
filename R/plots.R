@@ -31,8 +31,8 @@ plot_relapse_km <- function(x, title = NULL) {
   ggplot2::ggplot(tab, ggplot2::aes(time, surv)) +
     ggplot2::geom_step(linewidth = .8, colour = "firebrick") +
     ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(title = title, x = "days since the infection that laid down the batch",
-                  y = "fraction of batches not yet relapsed") +
+    ggplot2::labs(title = title, x = "Days since the infection that laid down the batch",
+                  y = "Fraction of batches not yet relapsed") +
     theme_malariafwd()
 }
 
@@ -54,7 +54,7 @@ plot_host_state_prevalence <- function(x) {
   hsp[, cls := factor(cls, levels = names(.HOST_STATE_FILL))]
   ggplot2::ggplot(hsp, ggplot2::aes(tick, frac, fill = cls)) + ggplot2::geom_area() +
     ggplot2::scale_fill_manual(values = .HOST_STATE_FILL) +
-    ggplot2::labs(x = "day", y = "fraction of hosts", fill = NULL) +
+    ggplot2::labs(x = "Day", y = "Fraction of hosts", fill = NULL) +
     theme_malariafwd()
 }
 
@@ -113,7 +113,7 @@ plot_host_trajectory <- function(run, host_id,
                                             "relapse" = "firebrick", "new infection" = "grey40",
                                             "recrudescence" = "#b4472e")) +
     ggplot2::labs(title = paste0("Within-host trajectory - host ", host_id),
-                  x = "day", y = "count", colour = NULL) +
+                  x = "Day", y = "Count", colour = NULL) +
     ggplot2::expand_limits(x = sim_days) +
     theme_malariafwd()
 }
@@ -208,12 +208,12 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   p1 <- lp(prev, "#2166ac", "Prevalence", NULL, "% infected", 100)
   p2 <- gg(inc, ae(w, y, fill = origin)) + vbl + ggplot2::geom_area(alpha = .85) + fillsc +
     ggplot2::guides(fill = "none") +   # one shared origin legend (kept on the force panel)
-    ggplot2::labs(title = "Incidence by origin (new cases)", x = NULL, y = paste0("cases / ", bin, " d")) + th
+    ggplot2::labs(title = "Incidence by origin (new cases)", x = NULL, y = paste0("Cases / ", bin, " d")) + th
   p3 <- gg(fo, ae(w, y, fill = origin)) + vbl + ggplot2::geom_area(alpha = .9) + fillsc +
-    ggplot2::labs(title = "Force of blood-stage infection (new clones)", x = NULL, y = "new clones / host-year") + th
+    ggplot2::labs(title = "Force of blood-stage infection (new clones)", x = NULL, y = "New clones / host-year") + th
   p4 <- lp(coi, "#8e6bbf", "Mean COI (infected hosts)", NULL, "MOI")
-  p5 <- lp(res, "#cc5500", "Hypnozoite reservoir", "day", "mean hypnozoites/host")
-  p6 <- lp(lin, "#2e7d5b", "Circulating lineages", "day", "distinct / window")
+  p5 <- lp(res, "#cc5500", "Hypnozoite reservoir", "Day", "Mean hypnozoites/host")
+  p6 <- lp(lin, "#2e7d5b", "Circulating lineages", "Day", "Distinct / window")
 
   patchwork::wrap_plots(p1, p2, p3, p4, p5, p6, ncol = 2, guides = "collect") +
     patchwork::plot_annotation(
@@ -270,9 +270,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ## draws nothing, silently, so it has to be caught before it reaches the scale.
     ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL) +
     ggplot2::scale_y_continuous(
-      "blood-stage lineages",
-      sec.axis = ggplot2::sec_axis(~ . / sf, name = "hypnozoite reservoir")) +
-    ggplot2::labs(x = "day") +
+      "Blood-stage lineages",
+      sec.axis = ggplot2::sec_axis(~ . / sf, name = "Hypnozoite reservoir")) +
+    ggplot2::labs(x = "Day") +
     theme_malariafwd() +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                    legend.position = "bottom",
@@ -344,7 +344,7 @@ plot_force_of_infection <- function(x, smooth = 0.4) {
                                   linewidth = 1, formula = y ~ x)
   p +
     ggplot2::scale_colour_manual(values = stats::setNames(c("#b2182b", "#2166ac"), lv), name = NULL) +
-    ggplot2::labs(x = "day", y = "episodes per person-year",
+    ggplot2::labs(x = "Day", y = "Episodes per person-year",
                   subtitle = "the distance between the lines is the relapse contribution") +
     theme_malariafwd() +
     ggplot2::theme(legend.position = "top")
