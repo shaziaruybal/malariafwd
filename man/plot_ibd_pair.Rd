@@ -20,7 +20,8 @@ plot_ibd_pair(
 
 \item{ids_a, ids_b}{equal-length vectors of pedigree ids, compared pairwise.}
 
-\item{labels}{optional labels, one per pair (defaults to \verb{a vs b}).}
+\item{labels}{optional labels, one per pair (defaults to \verb{a vs b}). A pair with a genome the
+tree sequence lacks is drawn empty, its IBD shown as \code{NA}.}
 
 \item{group}{optional, one value per pair: pairs with the same value are drawn in one panel,
 the panels in the order the values first appear, or in the order of the levels of a factor.}

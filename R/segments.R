@@ -54,8 +54,9 @@ chrom_map <- function(run) {
 #'   chromosome, `end` exclusive), `gstart` and `gend` (bp along the concatenated genome), `length`
 #'   (bp), `mrca_id` (the pedigree id of the common ancestor), `mrca_time` and `depth` (its age;
 #'   see [ibd_pairs()]). A pair sharing nothing has no rows, and nor does a pair with a genome the
-#'   tree sequence does not hold, which warns. A genome with itself is shared end to end: one row
-#'   per chromosome, its own ancestor at depth 0. A pair given twice has its rows twice.
+#'   tree sequence does not hold, which warns; the table's `"missing"` attribute lists those ids. A
+#'   genome with itself is shared end to end: one row per chromosome, its own ancestor at depth 0. A
+#'   pair given twice has its rows twice.
 #' @examplesIf tskit_available()
 #' run <- example_run()
 #' rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
@@ -89,6 +90,8 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
   out <- data.table::rbindlist(list(two[, cols, with = FALSE], if (!is.null(one)) one[, cols, with = FALSE]),
                                use.names = TRUE)
   data.table::setorder(out, pair, gstart)
+  ## the requested ids the tree sequence lacks, whose pairs have no rows, for plot_ibd_pair()
+  data.table::setattr(out, "missing", x$missing)
   out[]
 }
 
@@ -112,7 +115,8 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
 #'
 #' @inheritParams load_events
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
-#' @param labels optional labels, one per pair (defaults to `a vs b`).
+#' @param labels optional labels, one per pair (defaults to `a vs b`). A pair with a genome the
+#'   tree sequence lacks is drawn empty, its IBD shown as `NA`.
 #' @param group optional, one value per pair: pairs with the same value are drawn in one panel,
 #'   the panels in the order the values first appear, or in the order of the levels of a factor.
 #' @param min_span detection floor in bp, passed to [ibd_segments()].
@@ -138,6 +142,10 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
                           layout = c("chromosome", "concatenated"), fill = "#2166ac") {
   .need_ggplot()
   layout <- match.arg(layout)
+  if (!is.null(labels) && (length(labels) != length(ids_a) || anyNA(labels)))
+    stop("`labels` must give one label per pair, with no NA: there are ", length(ids_a),
+         " pairs, and it has ", length(labels), " values", if (anyNA(labels)) ", some NA", ".",
+         call. = FALSE)
   if (!is.null(group)) {
     if (length(group) != length(ids_a) || anyNA(group))
       stop("`group` must give one group per pair, with no NA: there are ", length(ids_a),
@@ -148,14 +156,17 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
   }
   .require_python("plot_ibd_pair()", c("tskit", "numpy"))
   seg <- ibd_segments(run, ids_a, ids_b, min_span = min_span)
+  ## a pair with a genome the tree sequence lacks has no IBD to show, rather than none shared
+  absent <- ids_a %in% attr(seg, "missing") | ids_b %in% attr(seg, "missing")
   cm <- chrom_map(run); L <- max(cm$end)
   if (is.null(labels)) labels <- sprintf("%s vs %s", ids_a, ids_b)
-  if (!is.null(group)) return(.plot_ibd_groups(seg, cm, L, labels, group, cols, layout))
+  if (!is.null(group)) return(.plot_ibd_groups(seg, cm, L, labels, group, cols, layout, absent))
   lv <- unique(labels)
   key <- data.table::data.table(pair = seq_along(ids_a), lab = factor(labels, lv),
                                 x0 = 0, x1 = L / 1e6)
   ibd <- merge(key, seg[, .(ibd = sum(length) / L), by = pair], by = "pair", all.x = TRUE)
   ibd[is.na(ibd), ibd := 0]
+  ibd[pair %in% which(absent), ibd := NA_real_]
   segl <- merge(seg, key[, .(pair, lab)], by = "pair")
   th <- theme_malariafwd(grid = FALSE)
 
@@ -226,9 +237,10 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
 
 ## plot_ibd_pair() with `group`: a panel per group, a row per pair (the first at the top; keyed by
 ## pair, so a label given twice keeps both rows), the shared blocks in the group's colour.
-.plot_ibd_groups <- function(seg, cm, L, labels, group, cols, layout) {
+.plot_ibd_groups <- function(seg, cm, L, labels, group, cols, layout, absent) {
   n <- length(group)
   ibd <- numeric(n); v <- seg[, .(ibd = sum(length) / L), by = pair]; ibd[v$pair] <- v$ibd
+  ibd[absent] <- NA_real_
   key <- data.table::data.table(pair = seq_len(n), grp = group, row = factor(seq_len(n), rev(seq_len(n))),
                                 ibd = ibd)
   segl <- merge(seg, key[, .(pair, grp, row)], by = "pair")

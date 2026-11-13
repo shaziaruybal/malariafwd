@@ -21,8 +21,9 @@ a data.table, by pair and position: \code{pair} (the position in \code{ids_a} an
 chromosome, \code{end} exclusive), \code{gstart} and \code{gend} (bp along the concatenated genome), \code{length}
 (bp), \code{mrca_id} (the pedigree id of the common ancestor), \code{mrca_time} and \code{depth} (its age;
 see \code{\link[=ibd_pairs]{ibd_pairs()}}). A pair sharing nothing has no rows, and nor does a pair with a genome the
-tree sequence does not hold, which warns. A genome with itself is shared end to end: one row
-per chromosome, its own ancestor at depth 0. A pair given twice has its rows twice.
+tree sequence does not hold, which warns; the table's \code{"missing"} attribute lists those ids. A
+genome with itself is shared end to end: one row per chromosome, its own ancestor at depth 0. A
+pair given twice has its rows twice.
 }
 \description{
 The stretches of genome over which two parasites are identical by descent -- the detail

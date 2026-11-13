@@ -322,6 +322,28 @@ test_that("plot_relatedness_ladder(style = \"bars\") keys every band's colour, u
   expect_identical(nrow(ggplot2::get_guide_data(p, "fill")), 6L)
 })
 
+test_that("plot_ibd_pair() refuses labels that are not one per pair", {
+  skip_if_not_installed("ggplot2")
+  expect_error(plot_ibd_pair(NULL, 1:3, 4:6, labels = c("x", "y")),
+               "`labels` must give one label per pair, with no NA: there are 3 pairs, and it has 2 values.",
+               fixed = TRUE)
+  expect_error(plot_ibd_pair(NULL, 1:2, 3:4, labels = c("x", NA)), "some NA", fixed = TRUE)
+})
+
+test_that("plot_ibd_pair() shows NA, not 0, for a pair with a genome the tree sequence lacks", {
+  skip_if_not_installed("ggplot2"); skip_if_no_tskit()
+  run <- example_run()
+  tp <- ibd_truth_pairs(run)[cls == "relapse vs its origin"][1]
+  ids_a <- c(tp$a, tp$a); ids_b <- c(tp$b, 999999999)
+  expect_warning(p <- plot_ibd_pair(run, ids_a, ids_b, labels = c("real", "absent")),
+                 "not in the tree sequence")
+  txt <- ggplot2::layer_data(p, 3)$label
+  expect_identical(sort(txt), sort(c("IBD = 1.00", "IBD = NA")))
+  expect_warning(pg <- plot_ibd_pair(run, ids_a, ids_b, labels = c("real", "absent"), group = c("g", "g")),
+                 "not in the tree sequence")
+  expect_identical(pg$scales$get_scales("y")$labels(c("1", "2")), c("real (IBD 1.00)", "absent (IBD NA)"))
+})
+
 test_that("plot_ibd_pair(group =) draws a panel per group, a row per pair and a colour per group", {
   skip_if_no_tskit(); skip_if_not_installed("ggplot2")
   run <- example_run(); pk <- grouped_pairs(run)
