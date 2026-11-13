@@ -1727,5 +1727,5 @@ Software named in this document, without a paper cited here: EMOD
 (<https://github.com/EMOD-Hub/EMOD>), malariasimulation
 (<https://github.com/mrc-ide/malariasimulation>), OpenMalaria
 (<https://github.com/OpenMalaria-Org/openmalaria>), PlasmoSim (<https://github.com/mrc-ide/PlasmoSim>),
-recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>), SIMPLEGEN
-(<https://github.com/mrc-ide/SIMPLEGEN>) and tskit (<https://tskit.dev>).
+recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>) and SIMPLEGEN
+(<https://github.com/mrc-ide/SIMPLEGEN>). tskit's documentation is at <https://tskit.dev>.
