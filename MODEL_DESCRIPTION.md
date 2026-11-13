@@ -1101,10 +1101,11 @@ with its date, commit, versions and what each script found.
 
 #### Event-log integrity
 
-`audit_events_and_ibd.R` runs three configurations of 80 hosts and 160 mosquitoes for 400 days:
-the defaults; several oocysts an uptake, with negative-binomial counts, several products a bite and
-imports; and blood-stage treatment whose failures recrudesce. The observed column gives the three in
-that order.
+`audit_events_and_ibd.R` runs three configurations of 80 hosts and 160 mosquitoes for 400 days,
+with 8 founder lineages: biting at 0.12, every other setting at its default; the same with several
+oocysts an uptake, negative-binomial counts, several products a bite and imports; and biting at
+0.16 with several oocysts, blood-stage treatment whose failures recrudesce and radical cure. The
+observed column gives the three in that order.
 
 | property | expectation | observed |
 |---|---|---|
@@ -1131,7 +1132,7 @@ transmission history implies.
 |---|---|---|
 | tree sequence loads | — | 4,406 trees / 4,560 nodes, 42,139 / 18,778 and 27,531 / 19,340, each 24.21 Mb |
 | logged cases retained in the tree sequence | 100% | 100.0% of 415, 723 and 1,079 cases |
-| ARG recombines | > 1 local tree | 271, 1,581 and 1,022 trees |
+| ARG recombines (`arg_summary()`, over the cases and founders) | > 1 local tree | 271, 1,581 and 1,022 trees |
 | **genealogy is a forest** | founders never coalesce | 8, 51 and 8 roots a tree, **0% coalesced** |
 | **relapse-to-origin IBD** | **exactly 1** | **at least 1.000 over 218, 362 and 265 relapses** |
 | distinct founder lineages unrelated | IBD ≈ 0 | median 0.000, max 0.000 over 28 pairs in each |
@@ -1205,14 +1206,16 @@ against bands based on published *P. vivax* studies:
 
 | quantity | band | what the studies report |
 |---|---|---|
-| relapses per person-year at risk | 0.5–5 | about 6 a year in highly endemic Papua New Guinea: in the 3 months after primaquine, children acquired 1.90 new blood-stage clones a year, against 7.75 without it (Robinson et al. 2015) |
+| relapses per person-year at risk | 0.5–5 | about 3 a year in highly endemic Papua New Guinea: over 8 months of follow-up, children aged 5–10 acquired 1.62 new blood-stage clones a year after primaquine, against 4.74 without it; about 6 a year in the first 3 months and 2 in the next 5 (Robinson et al. 2015, Table 3) |
 | molFOB: new blood-stage clones per person-year, relapses included | 0.7–15 | 1.06 per child-year at risk in residual transmission in Solomon Islands, 0.62–0.75 by single markers (Quah et al. 2019); 14.0 in highly endemic Papua New Guinea (Koepfli et al. 2013) |
 | median MOI over infected host-days | 1–3 | MOI 1 to 3, with 73% of infections single-clone, in Solomon Islands (Quah et al. 2019) |
 | relapse fraction: relapses ÷ acquisitions | 0.55–0.85 | about four of every five infections in Papua New Guinean children (Robinson et al. 2015); at least 79% of recurrences after treatment, pooled over seven countries (Commons et al. 2020) |
 
 The studies follow children and count per year at risk, while the model's molFOB is over every
-host; the comparison is one of order of magnitude. The bands are wider than the studies: none
-reports a relapse rate near 0.5 a year or a relapse fraction near 0.55.
+host; the comparison is one of order of magnitude. The bands are a judgement, not taken from these
+studies: the relapse band's upper edge, 5, lies below the first 3 months of Robinson et al. (about
+6 a year); the single-marker molFOB of Quah et al. (0.62) lies below the molFOB band's 0.7; and no
+study here reports a relapse rate near 0.5 a year or a relapse fraction near 0.55.
 
 **ν against the bands**, as `inst/validation/calibrate_nu.R` measures it at this version: 400
 hosts, 800 mosquitoes, 5 years, `BITING_RATE` 0.08, 20 founder hosts carrying 10 lineages, the first
@@ -1231,7 +1234,8 @@ the 3 years after burn-in. A *masked* relapse is one into a patent clone of its 
 | 12 | 0.78 | 20.74 / 2.48 | 22.43 | 2 | 0.89 / 0.48 | 5.06 |
 
 Counting every relapse, ν = 2 and 3 sit inside all four bands; from ν = 5 relapses per person-year
-are above their band, and at ν = 12 molFOB is too. Two-thirds of the relapses at ν = 3 are masked.
+are above their band, and at ν = 12 molFOB and the relapse fraction (0.89) are too. Two-thirds of
+the relapses at ν = 3 are masked.
 With the masked relapses left out of both, relapses per person-year are inside their band from
 ν = 3 to ν = 12, but the relapse fraction stays below its band at every ν tried (0.48 at ν = 12).
 
@@ -1468,7 +1472,7 @@ pool runs, sum the counts and the person-years rather than average the rates.
 | EIR | infectious bites per person-year: the sum of `infectious_bites` over hosts and days ÷ person-years (§4.1) | `eir_per_py` |
 | FOI | new blood-stage clones from bites and imports per person-year — *not* the same as molFOB | `foi_per_py` |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). A recrudescence is a new episode but not a new clone, so only the episode reading counts it. `force_of_infection()` gives the same counts window by window: sum its `is_acquisition` rows | `molfob_clones_per_py`, `molfob_episodes_per_py` |
-| relapses per person-year | relapses ÷ person-years at risk: each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to the window's end, also after an extinction. §13's band table states its own definition | `relapses_per_py_at_risk` |
+| relapses per person-year | relapses ÷ person-years at risk: each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to the window's end, also after an extinction | `relapses_per_py_at_risk` |
 | relapse fraction | two readings, counted per clone onset (§9a): relapses ÷ **acquisitions**, the unit of the 0.55–0.85 target band (§13), and relapses ÷ **every case**, recrudescence included; equal when a run has no recrudescence. Both include each host's first case, which is not a recurrence. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13) | `relapse_frac_acquisitions`, `relapse_frac_episodes` |
 | imported share | imports among the new clones from bites and imports | `imported_frac` |
 | Rc | the case reproduction number (Fraser 2007), by the case's true origin: secondary cases per case, through bites and the relapses they leave; each secondary case counts once, 1/2 to each parent of an outcrossed oocyst. Cases near the end are right-censored, above all through relapses; `from` and `followup` choose the onsets counted (`rc_by_origin()`) | — |
