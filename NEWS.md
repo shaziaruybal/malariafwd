@@ -33,7 +33,8 @@ two parasite genomes are. It is a pre-release: the interface and the model may c
 
 ## Before drawing conclusions
 
-* `NU_HYPNOZOITE_BATCH = 3` is fitted to four published vivax bands at moderate transmission. The
+* `NU_HYPNOZOITE_BATCH = 3` is fitted to four target bands based on published *P. vivax* studies,
+  at moderate transmission (`inst/validation/calibrate_nu.R` repeats the fit). The
   other defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
 * Imported parasites are unrelated to local ones, so an import-detection result is an upper bound.
 * At the defaults a bite delivers one genotype: raise `LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES`

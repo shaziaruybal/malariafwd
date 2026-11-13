@@ -20,7 +20,8 @@ rscript(paste0("s <- malariafwd::check_setup(); v <- stats::setNames(s$version, 
 ver <- utils::read.delim(vf, header = FALSE, col.names = c("component", "version"), colClasses = "character")
 v <- function(x) { y <- ver$version[ver$component == x]; if (length(y) && !is.na(y[1]) && nzchar(y[1])) y[1] else "not found" }
 
-scripts <- c("audit_events_and_ibd.R", "check_parameters.R", "audit_arg_recombination.R", "audit_arg_junctions.R")
+scripts <- c("audit_events_and_ibd.R", "check_parameters.R", "calibrate_nu.R", "audit_arg_recombination.R",
+             "audit_arg_junctions.R")
 res <- do.call(rbind, lapply(scripts, function(s) {
   log <- tempfile(fileext = ".log"); t0 <- Sys.time()
   status <- rscript(sprintf("source(system.file('validation', '%s', package = 'malariafwd'))", s), log)

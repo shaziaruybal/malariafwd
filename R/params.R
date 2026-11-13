@@ -14,11 +14,13 @@
 #' [run_sim()], not here.
 #'
 #' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting: at them
-#' the relapse rate is above the published band even with `NU_HYPNOZOITE_BATCH = 3`.
-#' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to published vivax bands at moderate
-#' transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and 400 hosts; section 13 of the
-#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)); re-fit it when transmission or scale change, since both move the
-#' relapse rate.
+#' the relapse rate is above its target band even with `NU_HYPNOZOITE_BATCH = 3`.
+#' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to four target bands, based on published
+#' *P. vivax* studies, at moderate transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and
+#' 400 hosts): section 13 of the
+#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html) gives the
+#' bands and their sources, and `inst/validation/calibrate_nu.R` repeats the fit. Re-fit it when
+#' transmission or scale change, since both move the relapse rate.
 #' `BITING_RATE`, with `N_MOSQ / N_HOSTS`, sets the transmission intensity and is for each study to
 #' choose.
 #'

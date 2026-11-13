@@ -30,11 +30,13 @@ mirror the SLiM model) and overriding any you name. \code{SEED} and \code{OUTDIR
 }
 \details{
 The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting: at them
-the relapse rate is above the published band even with \code{NU_HYPNOZOITE_BATCH = 3}.
-\code{NU_HYPNOZOITE_BATCH = 3} is the value fitted to published vivax bands at moderate
-transmission (\code{BITING_RATE} 0.08 with 2 mosquitoes per host and 400 hosts; section 13 of the
-\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}); re-fit it when transmission or scale change, since both move the
-relapse rate.
+the relapse rate is above its target band even with \code{NU_HYPNOZOITE_BATCH = 3}.
+\code{NU_HYPNOZOITE_BATCH = 3} is the value fitted to four target bands, based on published
+\emph{P. vivax} studies, at moderate transmission (\code{BITING_RATE} 0.08 with 2 mosquitoes per host and
+400 hosts): section 13 of the
+\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description} gives the
+bands and their sources, and \code{inst/validation/calibrate_nu.R} repeats the fit. Re-fit it when
+transmission or scale change, since both move the relapse rate.
 \code{BITING_RATE}, with \code{N_MOSQ / N_HOSTS}, sets the transmission intensity and is for each study to
 choose.
 
@@ -168,7 +170,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 
 \subsection{Hypnozoite reservoir}{The liver-stage batches a bite seeds, and their activation and death.
 \describe{
-\item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the model description); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
+\item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four target bands at moderate transmission (section 13 of the model description); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
 \item{\code{ALPHA_ACTIVATE}}{Daily probability that a hypnozoite activates: a relapse. Unit: per hypnozoite per day. Default 1/170; number in [0, 1]. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332.}
 \item{\code{MU_HYPNOZOITE}}{Daily probability that a hypnozoite dies, also while latent. Unit: per hypnozoite per day. Default 1/442; number in (0, 1]. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425.}
 \item{\code{K_LATENCY}}{Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Unit: stages. Default 0; whole number >= 0. Source: White et al. (2014).}

@@ -17,7 +17,7 @@ untreated, two-state-recurrence population.
 **A representative run** — 200 hosts, 400 mosquitoes, 3 years, `BITING_RATE` 0.08, 40 founder
 hosts carrying 10 lineages, ν = 3. Emergent: prevalence **0.246**, COI **1.14**, **13.3%**
 polyclonal, reservoir **0.9** hypnozoites/host, relapse fraction **0.657**, **2.23** relapses per
-person-year — all inside published vivax bands.
+person-year — all inside the four target bands of §13.
 
 ![Representative run](man/figures/README-representative-run.png)
 
@@ -899,7 +899,7 @@ The liver-stage batches a bite seeds, and their activation and death.
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the model description); re-fit it per setting. Source: White et al. (2014), section 2. |
+| `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four target bands at moderate transmission (section 13 of the model description); re-fit it per setting. Source: White et al. (2014), section 2. |
 | `ALPHA_ACTIVATE` | 1/170 | per hypnozoite per day | number in [0, 1] | Daily probability that a hypnozoite activates: a relapse. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332. |
 | `MU_HYPNOZOITE` | 1/442 | per hypnozoite per day | number in (0, 1] | Daily probability that a hypnozoite dies, also while latent. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425. |
 | `K_LATENCY` | 0 | stages | whole number >= 0 | Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Source: White et al. (2014). |
@@ -1011,7 +1011,7 @@ Stated plainly, because several matter for interpretation.
 | 9 | **Imports unrelated to local parasites** | imports maximally distinguishable; an upper bound on import-detection performance |
 | 10 | **Detection not origin-dependent** | active vs passive surveillance indistinguishable |
 | 11 | **Homogeneous mixing** | no spatial structure, no household clustering, no heterogeneous biting |
-| 12 | **`NU_HYPNOZOITE_BATCH` is fitted to one setting** | shipped at 3, inside the four published bands at moderate transmission (§13); re-fit it per setting against relapse rate / fraction |
+| 12 | **`NU_HYPNOZOITE_BATCH` is fitted to one setting** | shipped at 3, inside the four target bands at moderate transmission (§13); re-fit it per setting against relapse rate / fraction |
 | 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor et al. 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
 | 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces unless an MDA round clears it, which is what makes `P_RECRUD_GIVEN_FAIL`, without MDA, exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
 | 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
@@ -1075,14 +1075,15 @@ recombination machinery (§13.1), and which parameters are calibrated to data an
 
 ### Validation suite
 
-`inst/validation/` ships five scripts: 163 assertion checks, two numeric audits of the
-recombination machinery and an explainer. `inst/validation/RESULTS.md` records the last full run,
+`inst/validation/` ships six scripts: 165 assertion checks, the calibration of
+`NU_HYPNOZOITE_BATCH`, two numeric audits of the recombination machinery and an explainer. `inst/validation/RESULTS.md` records the last full run,
 with its date, commit, versions and what each script found.
 
 | script | checks | result |
 |---|---|---|
 | `audit_events_and_ibd.R` | 123 (20 event-log, 4 transmission-link, 13 ARG/IBD and 4 genotype checks on each of three configurations) | all pass |
 | `check_parameters.R` | 40 | all pass |
+| `calibrate_nu.R` | 2, and the table of ν against the bands below | all pass |
 | `audit_arg_recombination.R` | numeric audit | see §13.1 |
 | `audit_arg_junctions.R` | numeric audit | see §13.1 |
 | `explain_ibd.R` | worked explainer | — |
@@ -1172,31 +1173,45 @@ junctions (φ about 0.09), because meiosis I pairs the products alike on every c
 
 | quantity | status |
 |---|---|
-| `NU_HYPNOZOITE_BATCH` | fitted against four published bands at moderate transmission, and shipped at 3 (measured below) |
+| `NU_HYPNOZOITE_BATCH` | fitted against four target bands at moderate transmission, and shipped at 3 (below) |
 | `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI move with `N_MOSQ / N_HOSTS`, and with the founder and import counts and chance fade-out at small scale), so calibrate at the scale you will publish |
 | hypnozoite rates | literature values (White et al. 2014; Mehra et al. 2024a, b), not fitted |
 | genome, recombination | reference values, not fitted |
 
-**ν against the bands, measured at this version**: 400 hosts, 800 mosquitoes, 5 years,
-`BITING_RATE` 0.08, 20 founder hosts carrying 10 lineages, the first 2 years as burn-in, means of
-3 seeds. Relapses per person-year are the relapses after burn-in per year of the hosts ever
-infected; molFOB is the new blood-stage clones, relapses included, per person-year of all hosts;
-the median MOI is over infected host-days; the EIR is over the 3 years after burn-in. A *masked*
-relapse is one into a patent clone of its own lineage (`into_patent_lineage = 1`, §5), which an
-observer could not see as a recurrence.
+**The target bands.** The fit scores four quantities of a run, as `summarise_run()` gives them,
+against bands based on published *P. vivax* studies:
+
+| quantity | band | what the studies report |
+|---|---|---|
+| relapses per person-year at risk | 0.5–5 | about 6 a year in highly endemic Papua New Guinea: in the 3 months after primaquine, children acquired 1.90 new blood-stage clones a year, against 7.75 without it (Robinson et al. 2015) |
+| molFOB: new blood-stage clones per person-year, relapses included | 0.7–15 | 1.06 per child-year at risk in residual transmission in Solomon Islands, 0.62–0.75 by single markers (Quah et al. 2019); 14.0 in highly endemic Papua New Guinea (Koepfli et al. 2013) |
+| median MOI over infected host-days | 1–3 | MOI 1 to 3, with 73% of infections single-clone, in Solomon Islands (Quah et al. 2019) |
+| relapse fraction: relapses ÷ acquisitions | 0.55–0.85 | about four of every five infections in Papua New Guinean children (Robinson et al. 2015); at least 79% of recurrences after treatment, pooled over seven countries (Commons et al. 2020) |
+
+The studies follow children and count per year at risk, while the model's molFOB is over every
+host; the comparison is one of order of magnitude. The bands are wider than the studies: none
+reports a relapse rate near 0.5 a year or a relapse fraction near 0.55.
+
+**ν against the bands**, as `inst/validation/calibrate_nu.R` measures it at this version: 400
+hosts, 800 mosquitoes, 5 years, `BITING_RATE` 0.08, 20 founder hosts carrying 10 lineages, the first
+2 years as burn-in, means over seeds 1 to 3. Relapses are per person-year at risk (each host from
+the day after its first infection, §16.3); molFOB is the new blood-stage clones, relapses
+included, per person-year of all hosts; the median MOI is over infected host-days; the EIR is over
+the 3 years after burn-in. A *masked* relapse is one into a patent clone of its own lineage
+(`into_patent_lineage = 1`, §5), which an observer could not see as a recurrence.
 
 | ν | prevalence | relapses per person-year (0.5–5): all / masked left out | molFOB (0.7–15) | median MOI (1–3) | relapse fraction (0.55–0.85): all / masked left out | EIR |
 |---|---|---|---|---|---|---|
-| 2 | 0.11 | 0.66 / 0.27 | 0.92 | 1 | 0.56 / 0.34 | 0.80 |
-| **3** | 0.33 | 2.32 / 0.76 | 3.44 | 1 | 0.66 / 0.39 | 2.35 |
-| 5 | 0.53 | 5.81 / 1.40 | 7.59 | 1 | 0.76 / 0.44 | 3.58 |
-| 8 | 0.62 | 10.21 / 1.60 | 12.20 | 1 | 0.83 / 0.44 | 4.00 |
-| 12 | 0.78 | 19.91 / 2.38 | 22.44 | 2 | 0.89 / 0.48 | 5.06 |
+| 2 | 0.11 | 0.90 / 0.37 | 0.92 | 1 | 0.56 / 0.34 | 0.80 |
+| **3** | 0.33 | 2.72 / 0.89 | 3.44 | 1 | 0.66 / 0.39 | 2.35 |
+| 5 | 0.53 | 6.46 / 1.56 | 7.58 | 1 | 0.76 / 0.44 | 3.58 |
+| 8 | 0.62 | 11.28 / 1.76 | 12.19 | 1 | 0.83 / 0.44 | 4.00 |
+| 12 | 0.78 | 20.74 / 2.48 | 22.43 | 2 | 0.89 / 0.48 | 5.06 |
 
 Counting every relapse, ν = 2 and 3 sit inside all four bands; from ν = 5 relapses per person-year
 are above their band, and at ν = 12 molFOB is too. Two-thirds of the relapses at ν = 3 are masked.
-With the masked relapses left out of both, relapses per person-year stay inside their band up to
-ν = 12, but the relapse fraction stays below its band at every ν tried (0.48 at ν = 12).
+With the masked relapses left out of both, relapses per person-year are inside their band from
+ν = 3 to ν = 12, but the relapse fraction stays below its band at every ν tried (0.48 at ν = 12).
 
 > **Identification warning.** COI is jointly determined by biting rate *and* the uptake/inoculation
 > parameters. Fitting both to COI leaves them confounded. Set the parasite-side parameters from
@@ -1432,7 +1447,7 @@ pool runs, sum the counts and the person-years rather than average the rates.
 | FOI | new blood-stage clones from bites and imports per person-year — *not* the same as molFOB | `foi_per_py` |
 | molFOB | new blood-stage **clone acquisitions** per person-year, relapses included (Koepfli et al. 2013). A recrudescence is a new episode but not a new clone, so only the episode reading counts it. `force_of_infection()` gives the same counts window by window: sum its `is_acquisition` rows | `molfob_clones_per_py`, `molfob_episodes_per_py` |
 | relapses per person-year | relapses ÷ person-years at risk: each host from the day after its first establishment (a primary or a hypnozoite batch, from a bite or an import; founder seeding does not start it) to the window's end, also after an extinction. §13's band table states its own definition | `relapses_per_py_at_risk` |
-| relapse fraction | two readings, counted per clone onset (§9a): relapses ÷ **acquisitions**, the unit of the published 0.55–0.85 band, and relapses ÷ **every case**, recrudescence included; equal when a run has no recrudescence. Both include each host's first case, which is not a recurrence. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13) | `relapse_frac_acquisitions`, `relapse_frac_episodes` |
+| relapse fraction | two readings, counted per clone onset (§9a): relapses ÷ **acquisitions**, the unit of the 0.55–0.85 target band (§13), and relapses ÷ **every case**, recrudescence included; equal when a run has no recrudescence. Both include each host's first case, which is not a recurrence. ν was fitted with every relapse counted; leaving the masked ones out gives a reading below the band (§13) | `relapse_frac_acquisitions`, `relapse_frac_episodes` |
 | imported share | imports among the new clones from bites and imports | `imported_frac` |
 | Rc | the case reproduction number (Fraser 2007), by the case's true origin: secondary cases per case, through bites and the relapses they leave; each secondary case counts once, 1/2 to each parent of an outcrossed oocyst. Cases near the end are right-censored, above all through relapses; `from` and `followup` choose the onsets counted (`rc_by_origin()`) | — |
 | time to first relapse | per hypnozoite batch, from the day it was established (for an import that also brought a blood-stage infection, the day after) to its first relapse; censored on the day it empties without relapsing, or at `SIM_DAYS` (`time_to_relapse()`, `emptied = "follow"` to follow emptied batches to the end) | — |
@@ -1672,6 +1687,10 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
   343:108750. <https://doi.org/10.1016/j.mbs.2021.108750>
 - Childs LM, Prosper OF (2017). Simulating within-vector generation of the malaria parasite
   diversity. *PLOS ONE* 12(5):e0177941. <https://doi.org/10.1371/journal.pone.0177941>
+- Commons RJ, Simpson JA, Watson J, White NJ, Price RN (2020). Estimating the proportion of
+  *Plasmodium vivax* recurrences caused by relapse: a systematic review and meta-analysis. *The
+  American Journal of Tropical Medicine and Hygiene* 103(3):1094–1099.
+  <https://doi.org/10.4269/ajtmh.20-0186>
 - Fraser C (2007). Estimating individual and household reproduction numbers in an emerging
   epidemic. *PLoS ONE* 2(8):e758. <https://doi.org/10.1371/journal.pone.0000758>
 - Haller BC, Galloway J, Kelleher J, Messer PW, Ralph PL (2019). Tree-sequence recording in SLiM
@@ -1716,6 +1735,13 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 - Nkhoma SC, Trevino SG, Gorena KM, Nair S, Khoswe S, Jett C, et al. (2020). Co-transmission of
   related malaria parasite lineages shapes within-host parasite diversity. *Cell Host & Microbe*
   27(1):93–103. <https://doi.org/10.1016/j.chom.2019.12.001>
+- Quah YW, Waltmann A, Karl S, White MT, Vahi V, Darcy A, et al. (2019). Molecular epidemiology of
+  residual *Plasmodium vivax* transmission in a paediatric cohort in Solomon Islands. *Malaria
+  Journal* 18:106. <https://doi.org/10.1186/s12936-019-2727-9>
+- Robinson LJ, Wampfler R, Betuela I, Karl S, White MT, Li Wai Suen CSN, et al. (2015). Strategies
+  for understanding and reducing the *Plasmodium vivax* and *Plasmodium ovale* hypnozoite reservoir
+  in Papua New Guinean children: a randomised placebo-controlled trial and mathematical model.
+  *PLOS Medicine* 12(10):e1001891. <https://doi.org/10.1371/journal.pmed.1001891>
 - Ross A, Koepfli C, Timinao L, Hardy D, Thüring T, Loeffel M, et al. (2025). The probability of
   *Plasmodium vivax* acute illness following primary infection and relapse in Papua New Guinea.
   *PLOS Neglected Tropical Diseases* 19(10):e0013567. <https://doi.org/10.1371/journal.pntd.0013567>

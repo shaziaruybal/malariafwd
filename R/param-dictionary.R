@@ -92,7 +92,7 @@
 
   NU_HYPNOZOITE_BATCH = .param(3, "hypnozoites per bite",
     paste("Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it",
-          "delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the",
+          "delivers. Fitted to four target bands at moderate transmission (section 13 of the",
           "model description); re-fit it per setting."),
     min = 0, max = 1e6, rule = "times its boost, at most 1e6 once the trigger falls inside the run",
     source = "White et al. (2014), section 2"),
