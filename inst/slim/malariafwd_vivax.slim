@@ -816,23 +816,7 @@ reproduction()
 					// invariant is asserted in inst/validation/audit_events_and_ibd.R.
 					new_active = h.addCloned(hyp);
 					h.setValue("new_lineages", c(h.getValue("new_lineages"), hyp.getValue("lineage_id")));
-					new_active.setValue("brood_birth_tick",      hyp.getValue("brood_birth_tick"));
-					new_active.setValue("lineage_id",               hyp.getValue("lineage_id"));
-					new_active.setValue("oocyst_id",              hyp.getValue("oocyst_id"));  // relapse keeps its meiosis of origin
-					new_active.setValue("brood_id",               hyp.getValue("brood_id"));
-					new_active.setValue("brood_founder",          F);
-					new_active.setValue("inoculation_tick",       hyp.getValue("inoculation_tick"));
-					new_active.setValue("inoculation_id",         hyp.getValue("inoculation_id"));
-					new_active.setValue("activation_tick",        sim.cycle);
-					new_active.setValue("brood_ready_tick",       NULL);
-					new_active.setValue("is_imported",            hyp.getValue("is_imported"));  // carry the imported origin of the source hypnozoite (imported relapse is a distinct truth category)
-					new_active.setValue("is_dormant",             F);
-					new_active.setValue("is_subpatent", F);
-					new_active.setValue("bloodstage_start_tick",  sim.cycle);
-					new_active.setValue("gametocyte_ready_tick",  sim.cycle + GAMETOCYTE_DELAY);
-					new_active.setValue("latency_stage",          0);
-					new_active.setValue("batch_count",            NULL);
-					new_active.color = "darkorange";
+					setHostClone(new_active, hyp, activation=sim.cycle, batch=0, color="darkorange");
 					h.tag = INFECTED;
 
 					// detection layer: relapses are mostly sub-patent -> lower detection
@@ -929,23 +913,9 @@ reproduction()
 				next;
 			n_hyp = PENDING_BATCH_N[idx];
 			new_batch = h.addCloned(prim);          // IBD 1 to the primary, by construction
-			new_batch.setValue("brood_birth_tick", prim.getValue("brood_birth_tick"));
-			new_batch.setValue("lineage_id", prim.getValue("lineage_id"));
-			new_batch.setValue("oocyst_id", -1);
-			new_batch.setValue("brood_id", -1);
-			new_batch.setValue("brood_founder", F); // the PRIMARY is the founder, not this copy
-			new_batch.setValue("inoculation_tick", prim.getValue("inoculation_tick"));
-			new_batch.setValue("inoculation_id", PENDING_BATCH_INOC[idx]);
-			new_batch.setValue("activation_tick", NULL);
-			new_batch.setValue("brood_ready_tick", NULL);
-			new_batch.setValue("is_imported", T);
-			new_batch.setValue("is_dormant", T);
-			new_batch.setValue("is_subpatent", F);
-			new_batch.setValue("bloodstage_start_tick", NULL);
-			new_batch.setValue("gametocyte_ready_tick", NULL);
-			new_batch.setValue("latency_stage", K_LATENCY);
-			new_batch.setValue("batch_count", n_hyp);
-			new_batch.color = "turquoise4";
+			// the import's origin (no meiosis we simulated, its inoculation, imported); the PRIMARY
+			// is the founder, not this copy
+			setHostClone(new_batch, prim, activation=NULL, batch=n_hyp, color="turquoise4");
 			logEvent("vh_inoculation_import", PENDING_BATCH_INOC[idx], -1, h.id,
 				asString(prim.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
 				1, 1, new_batch.pedigreeID,
@@ -1186,23 +1156,7 @@ reproduction()
 				next;
 			new_active = h.addCloned(hold);
 			h.setValue("new_lineages", c(h.getValue("new_lineages"), hold.getValue("lineage_id")));
-			new_active.setValue("brood_birth_tick",      hold.getValue("brood_birth_tick"));
-			new_active.setValue("lineage_id",            hold.getValue("lineage_id"));
-			new_active.setValue("oocyst_id",             hold.getValue("oocyst_id"));
-			new_active.setValue("brood_id",              hold.getValue("brood_id"));
-			new_active.setValue("brood_founder",         F);
-			new_active.setValue("inoculation_tick",      hold.getValue("inoculation_tick"));
-			new_active.setValue("inoculation_id",        hold.getValue("inoculation_id"));
-			new_active.setValue("activation_tick",       sim.cycle);
-			new_active.setValue("brood_ready_tick",      NULL);
-			new_active.setValue("is_imported",           hold.getValue("is_imported"));
-			new_active.setValue("is_dormant",            F);
-			new_active.setValue("is_subpatent",          F);
-			new_active.setValue("bloodstage_start_tick", sim.cycle);
-			new_active.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-			new_active.setValue("latency_stage",         0);
-			new_active.setValue("batch_count",           NULL);
-			new_active.color = "red";
+			setHostClone(new_active, hold, activation=sim.cycle, batch=0, color="red");
 			h.tag = INFECTED;
 			rec_detected = asInteger(runif(1) < P_DETECT_RECRUD);
 			// inoculation_id is logged as -1, as a relapse's is, and so is oocyst_id, unlike a
@@ -1241,23 +1195,9 @@ reproduction()
 		tmpl = tsp.individuals[tsp.individuals.getValue("is_imported") == F][0];
 		clone = tsub.addCloned(tmpl);            // genetic clone -> IBD 1 to the template lineage in the tree
 
-		// founder flags/values, mirroring the human seed branch in 1 early()
-		clone.setValue("brood_birth_tick", sim.cycle);
-		clone.setValue("lineage_id", tmpl.getValue("lineage_id"));  // inherit the template's lineage id, not a new one
-		clone.setValue("oocyst_id", -1);         // founders arise from no meiosis
-		clone.setValue("brood_id", -1);
-		clone.setValue("brood_founder", T);
-		clone.setValue("is_dormant", F);
-		clone.setValue("is_subpatent", F);
-		clone.setValue("is_imported", F);
-		clone.setValue("activation_tick", NULL);
-		clone.setValue("latency_stage", 0);
-		clone.setValue("inoculation_id", -1);
-		clone.setValue("brood_ready_tick", -1);
-		clone.setValue("bloodstage_start_tick", sim.cycle);
-		clone.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-		clone.setValue("inoculation_tick", sim.cycle);
-		clone.color = "grey";
+		// a founder, as in 1 early(), of the template's lineage rather than a new one
+		setHostGenome(clone, birth=sim.cycle, lineage=tmpl.getValue("lineage_id"), oocyst=-1, brood=-1,
+			founder=T, inoc_tick=sim.cycle, inoc_id=-1, imported=F, activation=NULL, batch=0, color="grey");
 		tsub.tag = INFECTED;
 
 		// log a synthetic seed event so founder provenance / transmission chains stay complete
@@ -1317,26 +1257,11 @@ reproduction()
 
 		subpop.tag = (subpop.individualCount == 1) ? INFECTED else SUSCEPTIBLE;
 		
-		subpop.individuals.color = "grey";
-		
+		// founders arise from no meiosis and belong to no co-hatching brood; seeded directly in the
+		// host, the seed is their 'inoculation'
 		for (lin in subpop.individuals)
-		{
-			lin.setValue("brood_birth_tick", sim.cycle);
-			lin.setValue("lineage_id", lin.pedigreeID);
-			lin.setValue("oocyst_id", -1);   // founders arise from no meiosis
-			lin.setValue("brood_id", -1);    // founders belong to no co-hatching brood
-			lin.setValue("brood_founder", T);
-			lin.setValue("is_dormant", F);
-			lin.setValue("is_subpatent", F);
-			lin.setValue("is_imported", F);
-			lin.setValue("activation_tick", NULL);
-			lin.setValue("latency_stage", 0);
-			lin.setValue("inoculation_id", -1); // seeds have no inoculation event
-			lin.setValue("brood_ready_tick", -1);
-			lin.setValue("bloodstage_start_tick", sim.cycle);  // founders start in blood stage
-			lin.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-			lin.setValue("inoculation_tick", sim.cycle); // seeded directly in the host, so the seed is its 'inoculation'
-		}
+			setHostGenome(lin, birth=sim.cycle, lineage=lin.pedigreeID, oocyst=-1, brood=-1, founder=T,
+				inoc_tick=sim.cycle, inoc_id=-1, imported=F, activation=NULL, batch=0, color="grey");
 	}
 	
 	// A run with founders has had a parasite from tick 1, even if something cleared them all
@@ -2445,39 +2370,10 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 		h = import_hosts[i];
 		as_batch = !has_primary[i];        // no blood stage -> the migrant IS the batch
 
-		// NOTE: the field list below must stay in step with establishInfectionOutcome().
-		// This is a genome-creation site; anything added to the others (e.g. a subpatent
-		// flag) has to be added here too.
-		g.setValue("brood_birth_tick", sim.cycle);
-		g.setValue("lineage_id", g.pedigreeID);
-		g.setValue("oocyst_id", -1);       // no meiosis we simulated: it happened in the source
-		g.setValue("brood_id", -1);
-		g.setValue("brood_founder", T);
-		g.setValue("inoculation_tick", sim.cycle);
-		g.setValue("inoculation_id", inoc_ids[i]);
-		g.setValue("activation_tick", NULL);
-		g.setValue("brood_ready_tick", NULL);
-		g.setValue("is_imported", T);
-		if (as_batch)
-		{
-			g.setValue("is_dormant", T);
-			g.setValue("is_subpatent", F);
-			g.setValue("bloodstage_start_tick", NULL);
-			g.setValue("gametocyte_ready_tick", NULL);
-			g.setValue("latency_stage", K_LATENCY);
-			g.setValue("batch_count", batch_size[i]);
-			g.color = "turquoise4";
-		}
-		else
-		{
-			g.setValue("is_dormant", F);
-			g.setValue("is_subpatent", F);
-			g.setValue("bloodstage_start_tick", sim.cycle);
-			g.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-			g.setValue("latency_stage", 0);
-			g.setValue("batch_count", NULL);
-			g.color = "goldenrod2";
-		}
+		// a lineage of its own, from no meiosis we simulated (it happened in the source)
+		setHostGenome(g, birth=sim.cycle, lineage=g.pedigreeID, oocyst=-1, brood=-1, founder=T,
+			inoc_tick=sim.cycle, inoc_id=inoc_ids[i], imported=T, activation=NULL,
+			batch=(as_batch ? batch_size[i] else 0), color=(as_batch ? "turquoise4" else "goldenrod2"));
 
 		h.takeMigrants(g);                 // legal outside reproduction(); keeps all state
 
@@ -2548,11 +2444,6 @@ function (integer) establishInfectionOutcome(
 	                            // genotype: one bite delivering two genotypes is one case
 	i$ batch_size)              // this genotype's share of the per-BITE hypnozoite batch
 {
-	// NOTE: lineage_id is stored as a raw INTEGER (the pedigreeID of the genotype's founder)
-	// everywhere in this script. Stringify with asString() only at the logEvent() boundary,
-	// never when calling setValue("lineage_id", ...) - unique() and getValue() elsewhere
-	// assume a homogeneous integer type and break on a mixed one.
-	//
 	// A human infection inherits the meiosis (oocyst) and the co-hatching brood of the
 	// mosquito genotype that seeded it.
 	inf_oocyst = source.getValue("oocyst_id");
@@ -2584,23 +2475,11 @@ function (integer) establishInfectionOutcome(
 		new_active = h.addCloned(source);
 		h.setValue("new_lineages", c(h.getValue("new_lineages"), source.getValue("lineage_id")));
 		
-		new_active.setValue("brood_birth_tick", source.getValue("brood_birth_tick"));
-		new_active.setValue("lineage_id", source.getValue("lineage_id"));
-		new_active.setValue("oocyst_id", inf_oocyst);
-		new_active.setValue("brood_id", inf_brood);
-		new_active.setValue("brood_founder", F);   // a bite never founds a lineage; the seed or import did
-		new_active.setValue("inoculation_tick", sim.cycle);
-		new_active.setValue("inoculation_id", inoculation_id);
-		new_active.setValue("activation_tick", NULL);
-		new_active.setValue("brood_ready_tick", NULL);
-		new_active.setValue("is_imported", F);
-		new_active.setValue("is_dormant", F);
-		new_active.setValue("is_subpatent", F);
-		new_active.setValue("bloodstage_start_tick", sim.cycle);
-		new_active.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
-		new_active.setValue("latency_stage", 0);
-		new_active.setValue("batch_count", NULL);
-		new_active.color = "goldenrod2";
+		// a bite never founds a lineage; the seed or import did
+		setHostGenome(new_active, birth=source.getValue("brood_birth_tick"),
+			lineage=source.getValue("lineage_id"), oocyst=inf_oocyst, brood=inf_brood, founder=F,
+			inoc_tick=sim.cycle, inoc_id=inoculation_id, imported=F, activation=NULL, batch=0,
+			color="goldenrod2");
 		h.tag = INFECTED;
 
 		logEvent(
@@ -2629,23 +2508,9 @@ function (integer) establishInfectionOutcome(
 
 		batch_lineage_id = source.getValue("lineage_id");
 		
-		new_batch.setValue("brood_birth_tick", source.getValue("brood_birth_tick"));
-		new_batch.setValue("lineage_id", batch_lineage_id);
-		new_batch.setValue("oocyst_id", inf_oocyst);
-		new_batch.setValue("brood_id", inf_brood);
-		new_batch.setValue("brood_founder", F);
-		new_batch.setValue("inoculation_tick", sim.cycle);
-		new_batch.setValue("inoculation_id", inoculation_id);
-		new_batch.setValue("activation_tick", NULL);
-		new_batch.setValue("brood_ready_tick", NULL);
-		new_batch.setValue("is_imported", F);
-		new_batch.setValue("is_dormant", T);
-		new_batch.setValue("is_subpatent", F);
-		new_batch.setValue("bloodstage_start_tick", NULL);
-		new_batch.setValue("gametocyte_ready_tick", NULL);
-		new_batch.setValue("latency_stage", K_LATENCY);
-		new_batch.setValue("batch_count", batch_size); // hypnozoites represented by this single object
-		new_batch.color = "turquoise4";
+		setHostGenome(new_batch, birth=source.getValue("brood_birth_tick"), lineage=batch_lineage_id,
+			oocyst=inf_oocyst, brood=inf_brood, founder=F, inoc_tick=sim.cycle, inoc_id=inoculation_id,
+			imported=F, activation=NULL, batch=batch_size, color="turquoise4");
 		
 		logEvent(
 			"vh_inoculation",
@@ -2664,6 +2529,67 @@ function (integer) establishInfectionOutcome(
 	}
 
 	return established_lineage_ids;
+}
+
+// Every field a new genome in a host carries, set here for each way one enters a host - a
+// founder, a founder's clonal copy, an import, a bite's genotype, a relapse, a recrudescence and
+// the hypnozoite batch of an import or a bite - so that no route can leave one unset.
+//   birth             the tick its brood was born (a bite's oocyst, or the day it was seeded)
+//   lineage           its genetic identity, the pedigreeID of its lineage's founder. It is stored
+//                     as a raw INTEGER everywhere in this script and stringified with asString()
+//                     only at the logEvent() boundary: unique() and getValue() elsewhere assume
+//                     a homogeneous integer type and break on a mixed one.
+//   oocyst, brood     the meiosis and co-hatching brood it came from; -1 for none we simulated
+//   founder           whether it founds its lineage (a founder or an import)
+//   inoc_tick/inoc_id when and by which inoculation it entered a host (inoc_id -1 for a founder)
+//   imported          whether its infection was acquired elsewhere
+//   activation        the tick it woke from a hypnozoite or re-expanded from subpatency, or NULL
+//   batch             0 for a blood-stage clone, patent from this tick; above 0 for a dormant
+//                     batch of that many hypnozoites, at latency stage K_LATENCY
+// brood_ready_tick, the end of a mosquito product's EIP (tagMosqProduct()), is NULL in a host.
+function (void) setHostGenome(o<Individual>$ g, i$ birth, i$ lineage, i$ oocyst, i$ brood,
+	l$ founder, i$ inoc_tick, i$ inoc_id, l$ imported, Ni$ activation, i$ batch, s$ color)
+{
+	g.setValue("brood_birth_tick", birth);
+	g.setValue("lineage_id", lineage);
+	g.setValue("oocyst_id", oocyst);
+	g.setValue("brood_id", brood);
+	g.setValue("brood_founder", founder);
+	g.setValue("inoculation_tick", inoc_tick);
+	g.setValue("inoculation_id", inoc_id);
+	g.setValue("activation_tick", activation);
+	g.setValue("brood_ready_tick", NULL);
+	g.setValue("is_imported", imported);
+	g.setValue("is_subpatent", F);
+	if (batch > 0)
+	{
+		g.setValue("is_dormant", T);
+		g.setValue("bloodstage_start_tick", NULL);
+		g.setValue("gametocyte_ready_tick", NULL);
+		g.setValue("latency_stage", K_LATENCY);
+		g.setValue("batch_count", batch);
+	}
+	else
+	{
+		g.setValue("is_dormant", F);
+		g.setValue("bloodstage_start_tick", sim.cycle);
+		g.setValue("gametocyte_ready_tick", sim.cycle + GAMETOCYTE_DELAY);
+		g.setValue("latency_stage", 0);
+		g.setValue("batch_count", NULL);
+	}
+	g.color = color;
+}
+
+// A clone of `parent`, a genome already in the host - a relapse or a recrudescence (`activation`
+// is the tick it woke or re-expanded), or an import's hypnozoite batch - keeps the parent's
+// origin: its brood, lineage, meiosis, inoculation and imported origin (an imported relapse is a
+// distinct truth category). It never founds its lineage.
+function (void) setHostClone(o<Individual>$ g, o<Individual>$ parent, Ni$ activation, i$ batch, s$ color)
+{
+	setHostGenome(g, birth=parent.getValue("brood_birth_tick"), lineage=parent.getValue("lineage_id"),
+		oocyst=parent.getValue("oocyst_id"), brood=parent.getValue("brood_id"), founder=F,
+		inoc_tick=parent.getValue("inoculation_tick"), inoc_id=parent.getValue("inoculation_id"),
+		imported=parent.getValue("is_imported"), activation=activation, batch=batch, color=color);
 }
 
 // set the standard tags on a freshly-created mosquito-stage oocyst product.
