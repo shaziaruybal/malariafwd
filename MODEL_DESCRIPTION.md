@@ -554,7 +554,10 @@ by cell and captured a complete tetrad, the four products of one meiosis (their 
 against the 3D7 centromere annotation, its products form two pairs that carry the same parent at
 all 13 centromeres that can be read, and its sisters share 0.67 of the genome and the other pairs
 0.17. In the paper's other sibling groups (its Data S3), six more pairs of cells carry the same
-parent at every centromere that can be read. These readings are ours, from the published figures.
+parent at every centromere that can be read. These readings are ours, from the published figures
+(D79). The same tetrad also shows two tracts of gene conversion, 872 bp at the right end of
+chromosome 2 and 181 kb at the left end of chromosome 4, which the model leaves out (assumption
+19).
 
 ### 6.3 Recombination
 
@@ -1028,7 +1031,7 @@ Stated plainly, because several matter for interpretation.
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
 | 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled: protection that wanes after each course |
-| 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres, the pairing a sequenced P. falciparum tetrad shows (Nkhoma et al. 2020; section 6.2); crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2. With no obligate chiasma, about a quarter of the bivalents of the shortest chromosomes have none; an obligate chiasma would move meiosis II sisters from about 0.60 to 0.58 and the other pairs from 0.20 to 0.21 |
+| 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres, the pairing a sequenced P. falciparum tetrad shows (Nkhoma et al. 2020; section 6.2); crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2, though the sequenced tetrad shows two conversion tracts (section 6.2). With no obligate chiasma, about a quarter of the bivalents of the shortest chromosomes have none; an obligate chiasma would move meiosis II sisters from about 0.60 to 0.58 and the other pairs from 0.20 to 0.21 |
 
 ---
 

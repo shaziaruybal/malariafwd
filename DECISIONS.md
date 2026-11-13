@@ -25,6 +25,35 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D79 — A sequenced tetrad supports meiosis I pairing, and shows the gene conversion the model leaves out · 2026-11-13 · Accepted
+**Context.** D41 chose meiosis I as canonical meiosis, with no Plasmodium evidence for its pairing.
+Nkhoma et al. (2020) sequenced P. falciparum infections cell by cell and captured one complete
+tetrad, the four products of one meiosis (their Figure 6, from infection MAL15), and nine more groups
+of two to four cells that share reciprocal breakpoints (their Data S3).
+**Decision.** D41 stands, citing the tetrad as evidence for its pairing (MODEL_DESCRIPTION section
+6.2 and assumption 19), with the departure the same tetrad shows: two tracts of gene conversion,
+which the model leaves out. The tetrad test also checks each chromosome's reciprocal pairing.
+**Rationale.** Read against the 3D7 centromere annotation, the tetrad's products form two pairs that
+carry the same parent at all 13 centromeres that can be read (chromosome 10's is not annotated);
+dealt at random (D34), all 13 alike would happen about twice in a million tetrads, (1/3)^12. Its
+sisters share 0.67 of the genome and the other pairs 0.17, against the model's 0.60 and 0.20. In
+Data S3, six more pairs of cells carry the same parent at every centromere that can be read, 7 to
+13 of them. These readings are ours, from the published figures; the paper does not examine
+centromeres. The same tetrad has two tracts of skewed inheritance from gene conversion, 872 bp at
+the right end of chromosome 2 and 181 kb at the left end of chromosome 4, among 33 recombination
+events (the paper's "non-Mendelian inheritance"); citing the tetrad only for its pairing would be
+selective.
+**Alternatives rejected.** *Modelling gene conversion now* -- one tetrad gives two tracts and no
+rate to fit.
+**Consequences.** Docs and two checks in the tetrad test; the model and every run are unchanged.
+**How to verify.** Nkhoma et al. (2020), Figure 6 and Data S3, read against the 3D7 centromere
+annotation. `tests/testthat/test-model-invariants.R`: on chromosomes with one crossover, its two
+products are never products 0 and 1 or 2 and 3 (the sisters), and two such chromosomes of one
+oocyst share the pairing it makes half the time (a random deal gives a third, and sisters among the
+reciprocal pairs).
+
+---
+
 ## D78 — run_grid() runs one future per cell, without furrr · 2026-11-13 · Accepted
 **Context.** `run_grid()` used furrr for a single call, `future_pmap()`, which made furrr and its own
 dependencies hard dependencies of the package (review m116).
@@ -1169,7 +1198,7 @@ the model's `initialize()`.
 
 ---
 
-## D41 — Meiosis I keeps sister chromatids together · 2026-11-05 · Accepted
+## D41 — Meiosis I keeps sister chromatids together · 2026-11-05 · Accepted; evidence and checks added in D79
 **Context.** D34 dealt each chromosome's four chromatids to the four products at random,
 independently per chromosome, as the simulator of Wong et al. (2018) does. A review of that change
 found that this drops meiosis I: the two chromatids attached to one centromere go to the same pole,
@@ -1189,15 +1218,8 @@ tetrad's work is linear in its chiasmata: they are de-duplicated without keeping
 (they are sorted next), and each chiasma's two chromatids are appended to two vectors. A tetrad
 takes about 24 ms at `RECOMB_RATE = 1e-3`, against about 320-440 ms before; the products and the
 random stream are unchanged.
-**Rationale.** This is canonical meiosis, and sequenced Plasmodium meioses show it. Nkhoma et al.
-(2020) sequenced P. falciparum infections cell by cell and captured a complete tetrad, the four
-products of one meiosis (their Figure 6). Read against the 3D7 centromere annotation, its products
-form two pairs that carry the same parent at all 13 centromeres that can be read (chromosome 10's
-is not annotated); dealt at random, all 13 alike would happen about twice in a million tetrads.
-Its sisters share 0.67 of the genome and the other pairs 0.17. In the paper's other sibling groups
-(its Data S3), six more pairs of cells carry the same parent at every centromere that can be read,
-7 to 13 of them. These readings are ours, from the published figures; the paper does not examine
-centromeres. The split barely depends on where the centromeres sit: midpoints give 0.614 and
+**Rationale.** This is canonical meiosis, and we know of no evidence that Plasmodium departs from
+it. The split barely depends on where the centromeres sit: midpoints give 0.614 and
 0.193, the annotated centromeres 0.603 and 0.198, and centromeres anywhere in 20-80% of each
 chromosome about 0.605 and 0.197. No obligate chiasma is imposed (D34); one would move sisters to
 about 0.58 and the others to about 0.21, about twice the effect of the centromere positions.
@@ -1226,10 +1248,7 @@ values in MODEL_DESCRIPTION section 13 are regenerated with the release (M33).
 400 tetrads with a probe at every centromere: 2:2 segregation at every probe, two sister pairs per
 oocyst carrying the same parent at all 14 centromeres, sister and other pairs' sharing against
 1/3 + 2/3 e^(-3rt) and 1/3 - 1/3 e^(-3rt) at map distance rt from the centromere, each product's
-crossovers against the map (mean and variance), and a junction switch probability of 1/2. On
-chromosomes with one crossover, its two products are never products 0 and 1 or 2 and 3 (the
-sisters), and two such chromosomes of one oocyst share the pairing it makes half the time (a
-random deal gives a third, and sisters among the reciprocal pairs).
+crossovers against the map (mean and variance), and a junction switch probability of 1/2.
 
 ---
 
