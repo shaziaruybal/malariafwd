@@ -899,7 +899,7 @@ The liver-stage batches a bite seeds, and their activation and death.
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Source: White et al. (2014), section 2. |
+| `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the model description); re-fit it per setting. Source: White et al. (2014), section 2. |
 | `ALPHA_ACTIVATE` | 1/170 | per hypnozoite per day | number in [0, 1] | Daily probability that a hypnozoite activates: a relapse. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332. |
 | `MU_HYPNOZOITE` | 1/442 | per hypnozoite per day | number in (0, 1] | Daily probability that a hypnozoite dies, also while latent. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425. |
 | `K_LATENCY` | 0 | stages | whole number >= 0 | Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Source: White et al. (2014). |

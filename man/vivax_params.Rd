@@ -32,8 +32,9 @@ mirror the SLiM model) and overriding any you name. \code{SEED} and \code{OUTDIR
 The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting: at them
 the relapse rate is above the published band even with \code{NU_HYPNOZOITE_BATCH = 3}.
 \code{NU_HYPNOZOITE_BATCH = 3} is the value fitted to published vivax bands at moderate
-transmission (\code{BITING_RATE} 0.08 with 2 mosquitoes per host and 400 hosts; MODEL_DESCRIPTION
-section 13); re-fit it when transmission or scale change, since both move the relapse rate.
+transmission (\code{BITING_RATE} 0.08 with 2 mosquitoes per host and 400 hosts; section 13 of the
+\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}); re-fit it when transmission or scale change, since both move the
+relapse rate.
 \code{BITING_RATE}, with \code{N_MOSQ / N_HOSTS}, sets the transmission intensity and is for each study to
 choose.
 
@@ -50,8 +51,8 @@ multipliers is capped at 1.
 Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
 \emph{Parameters} section below gives what each may be, and \code{\link[=param_info]{param_info()}} the same as a table. Each
 value is a number, \code{TRUE}/\code{FALSE} or a string, as its default is; numbers are finite, and
-strings are UTF-8 text without control characters. The tables are also in MODEL_DESCRIPTION
-section 10, on the package website (\url{https://shaziaruybal.github.io/malariafwd/}).
+strings are UTF-8 text without control characters. The tables are also in section 10 of the
+\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}.
 
 A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
 uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYSTS} either 0 or at least 0.001;
@@ -121,7 +122,7 @@ White MT, et al. (2018) Nat Commun 9:3300. \doi{10.1038/s41467-018-05860-8}
 \code{\link[=param_info]{param_info()}}, \code{\link[=run_sim]{run_sim()}}, \code{\link[=load_params]{load_params()}}, \code{\link[=uptake_calibrate]{uptake_calibrate()}}
 }
 \section{Parameters}{
-Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package website for the same tables.
+Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description} holds the same tables.
 
 \subsection{Run}{Length, label and what is recorded.
 \describe{
@@ -167,7 +168,7 @@ Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package websi
 
 \subsection{Hypnozoite reservoir}{The liver-stage batches a bite seeds, and their activation and death.
 \describe{
-\item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
+\item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the model description); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
 \item{\code{ALPHA_ACTIVATE}}{Daily probability that a hypnozoite activates: a relapse. Unit: per hypnozoite per day. Default 1/170; number in [0, 1]. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332.}
 \item{\code{MU_HYPNOZOITE}}{Daily probability that a hypnozoite dies, also while latent. Unit: per hypnozoite per day. Default 1/442; number in (0, 1]. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425.}
 \item{\code{K_LATENCY}}{Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Unit: stages. Default 0; whole number >= 0. Source: White et al. (2014).}

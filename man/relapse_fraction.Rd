@@ -38,8 +38,8 @@ Masked relapses, into a patent clone of their own lineage (see \code{\link[=clas
 unless \code{exclude_masked = TRUE} leaves them out of the numerator and both denominators, as a study
 that sees only the relapses that bring a new clone would. Neither is the band's own reading:
 \code{NU_HYPNOZOITE_BATCH} was fitted with every relapse counted (0.66 at its shipped value of 3,
-inside the band), and leaving the masked relapses out gives 0.39, below it (MODEL_DESCRIPTION.md,
-section 13).
+inside the band), and leaving the masked relapses out gives 0.39, below it (section 13 of the
+\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}).
 }
 \examples{
 relapse_fraction(example_run())

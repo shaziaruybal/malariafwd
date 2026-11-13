@@ -3,7 +3,7 @@
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/shaziaruybal/malariafwd/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/shaziaruybal/malariafwd/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://shaziaruybal.github.io/malariafwd/LICENSE.html)
 <!-- badges: end -->
 
 > **Pre-release (0.1.0).** The package is under active development and both the interface and
@@ -199,7 +199,7 @@ full per-event narration; the default is quiet.
 ## Limitations
 
 Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind
-each, is in [`MODEL_DESCRIPTION.md`](MODEL_DESCRIPTION.md).
+each, is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
 
 * **Imported parasites are unrelated to local ones.** Imports are drawn as fresh founders, so
   they are maximally distinguishable — any import-detection result is an **upper bound**.

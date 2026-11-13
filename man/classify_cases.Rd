@@ -42,8 +42,9 @@ alone ("relapse") does not expose. So the four truth classes are: imported new i
 \code{imported}), and local relapse (\code{origin == "relapse"} & \code{!imported}).
 
 A relapse into a patent clone of its own lineage, born on an earlier day, is \emph{masked}: a study
-that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). \code{into_patent_lineage}
-marks it, and \code{exclude_masked = TRUE} leaves it out.
+that genotypes the host sees no new clone (section 5 of the
+\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}).
+\code{into_patent_lineage} marks it, and \code{exclude_masked = TRUE} leaves it out.
 }
 \examples{
 cs <- classify_cases(example_run())

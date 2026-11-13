@@ -6,6 +6,7 @@
 ^cran-comments\.md$
 ^LICENSE\.md$
 ^DECISIONS\.md$
+^MODEL_DESCRIPTION\.md$
 ^CITATION\.cff$
 ^\.zenodo\.json$
 ^scratch$

@@ -16,8 +16,9 @@
 #' The defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting: at them
 #' the relapse rate is above the published band even with `NU_HYPNOZOITE_BATCH = 3`.
 #' `NU_HYPNOZOITE_BATCH = 3` is the value fitted to published vivax bands at moderate
-#' transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and 400 hosts; MODEL_DESCRIPTION
-#' section 13); re-fit it when transmission or scale change, since both move the relapse rate.
+#' transmission (`BITING_RATE` 0.08 with 2 mosquitoes per host and 400 hosts; section 13 of the
+#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)); re-fit it when transmission or scale change, since both move the
+#' relapse rate.
 #' `BITING_RATE`, with `N_MOSQ / N_HOSTS`, sets the transmission intensity and is for each study to
 #' choose.
 #'
@@ -34,8 +35,8 @@
 #' Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
 #' *Parameters* section below gives what each may be, and [param_info()] the same as a table. Each
 #' value is a number, `TRUE`/`FALSE` or a string, as its default is; numbers are finite, and
-#' strings are UTF-8 text without control characters. The tables are also in MODEL_DESCRIPTION
-#' section 10, on the package website (<https://shaziaruybal.github.io/malariafwd/>).
+#' strings are UTF-8 text without control characters. The tables are also in section 10 of the
+#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
 #'
 #' A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
 #' uptake (see [uptake_moments()]), with `K_OOCYSTS` either 0 or at least 0.001;

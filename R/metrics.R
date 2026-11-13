@@ -95,8 +95,8 @@ coi_distribution <- function(state, from = 0, to = NULL) {
 #' unless `exclude_masked = TRUE` leaves them out of the numerator and both denominators, as a study
 #' that sees only the relapses that bring a new clone would. Neither is the band's own reading:
 #' `NU_HYPNOZOITE_BATCH` was fitted with every relapse counted (0.66 at its shipped value of 3,
-#' inside the band), and leaving the masked relapses out gives 0.39, below it (MODEL_DESCRIPTION.md,
-#' section 13).
+#' inside the band), and leaving the masked relapses out gives 0.39, below it (section 13 of the
+#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)).
 #'
 #' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
 #' @param exclude_masked if `TRUE`, leave out the masked relapses.
@@ -203,8 +203,9 @@ dormancy_durations <- function(events) {
 #' `imported`), and local relapse (`origin == "relapse"` & `!imported`).
 #'
 #' A relapse into a patent clone of its own lineage, born on an earlier day, is *masked*: a study
-#' that genotypes the host sees no new clone (MODEL_DESCRIPTION section 5). `into_patent_lineage`
-#' marks it, and `exclude_masked = TRUE` leaves it out.
+#' that genotypes the host sees no new clone (section 5 of the
+#' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)).
+#' `into_patent_lineage` marks it, and `exclude_masked = TRUE` leaves it out.
 #' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
 #' @param exclude_masked if `TRUE`, leave out the masked relapses. It needs the flag on every
 #'   relapse, which runs made before it was recorded lack.

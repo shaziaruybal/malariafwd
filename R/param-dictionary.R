@@ -92,8 +92,8 @@
 
   NU_HYPNOZOITE_BATCH = .param(3, "hypnozoites per bite",
     paste("Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it",
-          "delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION",
-          "section 13); re-fit it per setting."),
+          "delivers. Fitted to four published vivax bands at moderate transmission (section 13 of the",
+          "model description); re-fit it per setting."),
     min = 0, max = 1e6, rule = "times its boost, at most 1e6 once the trigger falls inside the run",
     source = "White et al. (2014), section 2"),
   ALPHA_ACTIVATE = .param(1/170, "per hypnozoite per day", "Daily probability that a hypnozoite activates: a relapse.",
@@ -315,7 +315,7 @@
     sprintf("\\subsection{%s}{%s\n\\describe{\n%s\n}}", g, .rd_escape(.param_groups[[g]]$lead),
             paste(items, collapse = "\n"))
   }, "")
-  sprintf("\\section{Parameters}{\nEvery parameter, by group. See MODEL_DESCRIPTION section 10 on the package website for the same tables.\n\n%s\n}",
+  sprintf("\\section{Parameters}{\nEvery parameter, by group. Section 10 of the \\href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description} holds the same tables.\n\n%s\n}",
           paste(sub, collapse = "\n\n"))
 }
 
