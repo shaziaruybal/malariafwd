@@ -25,6 +25,24 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D78 — run_grid() runs one future per cell, without furrr · 2026-11-13 · Accepted
+**Context.** `run_grid()` used furrr for a single call, `future_pmap()`, which made furrr and its own
+dependencies hard dependencies of the package (review m116).
+**Decision.** Each cell is one `future::future()`, and the grid takes their values in order. The
+futures get no seed: the cells draw no random numbers in R, so the caller's stream is left as it was
+(D59). furrr is no longer imported.
+**Rationale.** future is already the backend (D15), and one future per cell does what the one call
+did.
+**Alternatives rejected.** *future.apply* -- another dependency for the same one call. *Keeping
+furrr* -- a dependency for one call.
+**Consequences.** Grids give the same runs and the same results. With workers, a cell's warnings
+arrive with its own result rather than with its chunk's, so a worker that is lost loses only its own
+cell's warnings.
+**How to verify.** `tests/testthat/test-grid.R`; part 3 of `inst/validation/check_parameters.R` runs
+a grid with two workers on the installed package.
+
+---
+
 ## D77 — Every genome's coordinates are 0, so one seed gives one tree sequence · 2026-11-13 · Accepted
 **Context.** SLiM writes each individual's x, y and z into the location column of the tree
 sequence's individuals table even in a non-spatial model, and leaves them undefined until a model
@@ -585,7 +603,7 @@ set) and the sync test in `tests/testthat/test-params.R`.
 
 ---
 
-## D59 — A grid resumes from what is on disk, and grid.tsv records it · 2026-11-08 · Accepted
+## D59 — A grid resumes from what is on disk, and grid.tsv records it · 2026-11-08 · Accepted; partly superseded by D78 (furrr)
 **Context.** `run_grid()` renamed every set `setNN` unless all were named, ran a set whose name
 repeated into the directory of the first and reported both as ok, ran seed 2.5 as 2 and `c(1, 1)`
 twice into one directory, found a refused set only cell by cell, ran every cell again on every call,
@@ -2338,7 +2356,7 @@ speed win (logging isn't the bottleneck) — the point is log-disk noise at swee
 **Alternatives rejected.** Two model files (drift); deleting the narration (loses the debug mode).
 **Consequences.** Default quiet; set VERBOSE=T to debug a single run.
 
-## D15 — R↔SLiM interface: subprocess + processx + future, tskit via reticulate · 2026-08-05 · Accepted
+## D15 — R↔SLiM interface: subprocess + processx + future, tskit via reticulate · 2026-08-05 · Accepted; partly superseded by D78 (furrr)
 **Context.** Deciding how the `malariafwd` package runs SLiM from R, esp. for multi-seed/multi-param
 sweeps. Prior ad-hoc use of `slimr` felt slow/awkward.
 **Decision.** (1) Run `slim` as a **subprocess** (static model template + `-d` param overrides + file

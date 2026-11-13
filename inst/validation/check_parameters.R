@@ -277,7 +277,7 @@ ok("composite China-like scenario runs and exercises every lever",
 ## ==========================================================================================
 ## PART 3 -- run_grid(): the parallel sweep entry point most users will actually reach for.
 ## Worth its own check because a sweep failing would be a bad first experience, and because
-## future/furrr workers load the INSTALLED package -- a failure here would not show up in any
+## future workers load the INSTALLED package -- a failure here would not show up in any
 ## test run under devtools::load_all().
 ## ==========================================================================================
 cat("\n================ run_grid (parallel sweep) ================\n")

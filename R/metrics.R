@@ -59,7 +59,7 @@ coi_distribution <- function(state, from = 0, to = NULL) {
 .sample_fixed <- function(x, n, seed) if (length(x) <= n) x else .with_seed(seed, sample(x, n))
 
 ## `expr`, evaluated with the RNG seeded by `seed` under one fixed set of kinds, so that a seed gives
-## the same draw whatever kinds the caller uses (a future or furrr worker runs L'Ecuyer-CMRG). The
+## the same draw whatever kinds the caller uses (a future worker runs L'Ecuyer-CMRG). The
 ## caller's kinds and stream, or its having none, are restored, so this cannot perturb a
 ## surrounding simulation.
 .with_seed <- function(seed, expr) {

@@ -147,7 +147,7 @@
 #'   repeats for each run) is given once, after the FAILED summary, with the number of cells it
 #'   came from. If the grid stops part-way with an error, that error's message lists the warnings
 #'   of the cells whose results had reached this session; with workers, a cell's warnings travel
-#'   with its chunk's result, so those of a chunk lost with its worker are lost. Under
+#'   with its result, so those of a cell lost with its worker are lost. Under
 #'   `options(warn = 2)` a warning in a cell fails that cell, in any plan and also inside
 #'   `suppressWarnings()`, and the FAILED summary is then an error, so nothing is returned; the
 #'   cells that ran are on disk. The caller's random-number stream is left as it was.
@@ -251,28 +251,33 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
       oldplan <- future::plan(future::multisession, workers = workers)
       on.exit(future::plan(oldplan), add = TRUE)
     }
-    out <- tryCatch(withCallingHandlers(furrr::future_pmap(
-      list(jobs$set[todo], jobs$seed[todo], jobs$outdir[todo]),
-      function(set, seed, outdir) {
-        ## Keep the error TEXT: a cell that failed because SLiM is not on PATH and one that failed
-        ## on a bad parameter must be told apart. The grid still does not abort - one bad cell
-        ## should not lose a grid - and the cell's directory is left as it was, its files and log
-        ## in <cell>.failed.
-        err <- NA_character_; extinct <- NA_integer_; never <- NA
-        run <- function() run_sim(sets[[set]], seed = seed, outdir = outdir, model = model,
-                                  verbose = verbose, overwrite = overwrite, skip_existing = FALSE, ...)
-        ok <- tryCatch({
-          ## the extinction message is summed up once for the grid, below
-          r <- suppressMessages(if (warn_level < 2) run() else withCallingHandlers(run(), warning =
-            function(w) stop("(converted from warning) ", conditionMessage(w), call. = FALSE)))
-          extinct <- r$extinct_tick; never <- isTRUE(r$never_started)
-          TRUE
-        }, error = function(e) { err <<- conditionMessage(e); FALSE })
-        data.frame(set = set, seed = seed, outdir = outdir, ok = ok, skipped = FALSE, error = err,
-                   extinct_tick = extinct, never_started = never, stringsAsFactors = FALSE)
-      },
-      .options = furrr::furrr_options(seed = FALSE)
-    ), warning = keep), error = function(e) {
+    dots <- list(...)
+    cell <- function(set, seed, outdir) {
+      ## Keep the error TEXT: a cell that failed because SLiM is not on PATH and one that failed
+      ## on a bad parameter must be told apart. The grid still does not abort - one bad cell
+      ## should not lose a grid - and the cell's directory is left as it was, its files and log
+      ## in <cell>.failed.
+      err <- NA_character_; extinct <- NA_integer_; never <- NA
+      run <- function() do.call(run_sim, c(list(sets[[set]], seed = seed, outdir = outdir, model = model,
+                                                verbose = verbose, overwrite = overwrite,
+                                                skip_existing = FALSE), dots))
+      ok <- tryCatch({
+        ## the extinction message is summed up once for the grid, below
+        r <- suppressMessages(if (warn_level < 2) run() else withCallingHandlers(run(), warning =
+          function(w) stop("(converted from warning) ", conditionMessage(w), call. = FALSE)))
+        extinct <- r$extinct_tick; never <- isTRUE(r$never_started)
+        TRUE
+      }, error = function(e) { err <<- conditionMessage(e); FALSE })
+      data.frame(set = set, seed = seed, outdir = outdir, ok = ok, skipped = FALSE, error = err,
+                 extinct_tick = extinct, never_started = never, stringsAsFactors = FALSE)
+    }
+    ## One future per cell, its value taken in order: a cell's warnings reach this session with its
+    ## result. The cells draw no random numbers in R, so the futures get no seed.
+    out <- tryCatch(withCallingHandlers({
+      fs <- lapply(todo, function(i) future::future(cell(jobs$set[i], jobs$seed[i], jobs$outdir[i]),
+                                                    seed = FALSE))
+      lapply(fs, future::value)
+    }, warning = keep), error = function(e) {
       if (length(msgs)) {
         e$message <- paste0(conditionMessage(e), "\nThe cells that had reported gave these warnings:\n",
                             paste0("  ", counted(), collapse = "\n"))

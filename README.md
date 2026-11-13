@@ -193,7 +193,7 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
 The model runs as a **subprocess** (`processx`, shell-free) with parameters passed as `-d`
 overrides; it writes `events.tsv`, `state.tsv`, `plasmo.trees`, and a provenance snapshot into
 each run directory (`?events.tsv` and `?state.tsv` describe the columns). `reticulate` + `tskit` are used only to compute IBD from the recorded tree
-sequence. Multi-run sweeps parallelise via `future`/`furrr`. Set `VERBOSE = TRUE` to see the
+sequence. Multi-run sweeps parallelise via `future`. Set `VERBOSE = TRUE` to see the
 full per-event narration; the default is quiet.
 
 ## Limitations

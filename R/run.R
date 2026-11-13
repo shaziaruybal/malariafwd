@@ -1,7 +1,7 @@
 ## run.R -- launching the SLiM subprocess (single runs and parallel sweeps).
 ## Design (see DECISIONS.md D15): SLiM runs as a subprocess via processx (NO shell, so
 ## Eidos string quotes survive), the model writes its own output files, and reticulate+
-## tskit are used only later for IBD. run_grid() parallelises via future/furrr.
+## tskit are used only later for IBD. run_grid() parallelises via future.
 
 #' Run one simulation
 #'
