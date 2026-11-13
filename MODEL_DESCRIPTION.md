@@ -90,9 +90,9 @@ recurrence, and where does that break down?"*: relapse vs reinfection identifiab
 sequencing effort, reservoir dynamics under control and resurgence.
 
 **It is not** a tool for predicting case counts, fitting incidence time series, or costing
-interventions. Compartmental vivax models (White et al. 2014, 2018; Mehra et al. 2024a; Champagne
-et al. 2022) do those far better and
-faster. See §12.
+interventions. Population-level vivax models (White et al. 2014, 2016; Mehra et al. 2024a;
+Champagne et al. 2022) and the individual-based model of White et al. (2018) do those far better
+and faster. See §12.
 
 ---
 
