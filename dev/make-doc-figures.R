@@ -5,7 +5,9 @@
 ##   Rscript dev/make-doc-figures.R
 ##
 ## The runs go one at a time (about 10 minutes): run_grid()'s workers would load the installed
-## package rather than this source.
+## package rather than this source. Set MALARIAFWD_DOC_RUNS to a directory to keep the runs there:
+## a second call then redraws from them, as run_grid() skips the cells that already hold their run
+## (and refuses ones a different model made).
 ## The representative configuration of the model description's opening runs for seeds 1 to 10, and
 ## again with the observation layer of its detection example. Each quoted number is the mean over
 ## the ten seeds with its range, over the second half of each run, and is written to
@@ -21,8 +23,11 @@ suppressPackageStartupMessages({
 })
 SEEDS <- 1:10
 FIG_SEED <- 1L
-out <- file.path(tempdir(), "doc-figures")
-unlink(out, recursive = TRUE)
+out <- Sys.getenv("MALARIAFWD_DOC_RUNS")
+if (!nzchar(out)) {
+  out <- file.path(tempdir(), "doc-figures")
+  unlink(out, recursive = TRUE)
+}
 figs <- file.path("man", "figures")
 save_png <- function(p, file, w, h) {
   ggsave(file.path(figs, file), p, width = w, height = h, dpi = 150, bg = "white",
@@ -90,9 +95,9 @@ pC <- ggplot(peak, aes(factor(peak_coi), relapses)) +
   geom_text(data = counts, aes(factor(peak_coi), Inf, label = paste("n =", N)), vjust = 1.4,
             size = 3, colour = "grey30", inherit.aes = FALSE) +
   scale_y_continuous(expand = expansion(mult = c(0.02, 0.12))) +
-  labs(x = "peak COI (distinct lineages ever co-active in the host)", y = "relapses in the host") +
+  labs(x = "Peak COI (distinct lineages ever co-active in the host)", y = "Relapses in the host") +
   theme_bw(base_size = 11) + theme(panel.grid.minor = element_blank())
-pD <- plot_force_of_infection(run)
+pD <- plot_force_of_infection(run) + labs(subtitle = NULL)   # the caption says what the gap is
 pE <- plot_relatedness_ladder(run, style = "bars")
 rep_fig <- pA / (pB | pC) / (pD | pE) + plot_annotation(tag_levels = "A") +
   plot_layout(heights = c(1, 1, 1.15))
@@ -125,7 +130,7 @@ series <- rbind(dcs[, .(episodes = .N, view = "true"), by = win],
 series[, view := factor(view, c("true", "detected"))]
 pA2 <- ggplot(series, aes(win, episodes, colour = view)) + geom_line(linewidth = 0.8) +
   scale_colour_manual(values = c(true = "grey25", detected = "#b2182b"), name = NULL) +
-  labs(x = "day", y = "blood-stage episodes per 30 d",
+  labs(x = "Day", y = "Blood-stage episodes per 30 d",
        subtitle = "true burden against what the surveillance system sees") +
   theme_bw(base_size = 11) + theme(panel.grid.minor = element_blank())
 w <- second_half(drun)
@@ -135,7 +140,7 @@ mix[, view := factor(view, c("true", "detected"))]
 pB2 <- ggplot(mix, aes(view, fill = origin)) + geom_bar(position = "fill", width = 0.6, colour = "grey40") +
   scale_y_continuous(labels = function(x) paste0(100 * x, "%")) +
   scale_fill_manual(values = c(relapse = "#C99722", `local reinfection` = "#4393C3"), name = NULL) +
-  labs(x = NULL, y = "share of episodes", subtitle = "detection shifts the observed mix away from relapses") +
+  labs(x = NULL, y = "Share of episodes", subtitle = "detection shifts the observed mix away from relapses") +
   theme_bw(base_size = 11) + theme(panel.grid.minor = element_blank())
 save_png(pA2 + pB2 + plot_annotation(tag_levels = "A"), "README-detection.png", 11, 3.8)
 cat(sprintf("figures: seed %d; karyotype: seed %d (host %d in panel A)\n", FIG_SEED, karyo_seed, host))
