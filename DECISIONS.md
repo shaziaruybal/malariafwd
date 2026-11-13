@@ -1180,7 +1180,10 @@ values in MODEL_DESCRIPTION section 13 are regenerated with the release (M33).
 400 tetrads with a probe at every centromere: 2:2 segregation at every probe, two sister pairs per
 oocyst carrying the same parent at all 14 centromeres, sister and other pairs' sharing against
 1/3 + 2/3 e^(-3rt) and 1/3 - 1/3 e^(-3rt) at map distance rt from the centromere, each product's
-crossovers against the map (mean and variance), and a junction switch probability of 1/2.
+crossovers against the map (mean and variance), and a junction switch probability of 1/2. On
+chromosomes with one crossover, its two products are never products 0 and 1 or 2 and 3 (the
+sisters), and two such chromosomes of one oocyst share the pairing it makes half the time (a
+random deal gives a third, and sisters among the reciprocal pairs).
 
 ---
 

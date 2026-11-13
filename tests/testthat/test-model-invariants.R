@@ -235,13 +235,14 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
     "  p1.individuals[0].setValue('lineage_id', -1); p1.individuals[1].setValue('lineage_id', -2); }",
     "reproduction(p1) { if (individual.index == 0) for (t in seqLen(400)) seedTetrad(p2, p1.individuals[0], p1.individuals[1], 'x', t, t); }",
     "1 late() { for (ind in p2.individuals) catn('P ' + ind.getValue('oocyst_id') + ' ' + ind.getValue('lineage_id') + ' ' +",
-    "  paste(asInteger(match(PROBES, ind.haplosomes.mutations.position) >= 0), sep = '')); sim.simulationFinished(); }"), script)
+    "  ind.pedigreeID + ' ' + paste(asInteger(match(PROBES, ind.haplosomes.mutations.position) >= 0), sep = '')); sim.simulationFinished(); }"), script)
   res <- processx::run(slim_path(), script, error_on_status = FALSE)
   expect_equal(res$status, 0L, info = res$stderr)
   L <- grep("^P ", strsplit(res$stdout, "\n")[[1]], value = TRUE)
   x <- do.call(rbind, strsplit(L, " "))
+  x <- x[order(as.numeric(x[, 4])), ]                               # each oocyst's products in the order made
   oocyst <- as.integer(x[, 2]); lineage <- as.integer(x[, 3])
-  g <- do.call(rbind, lapply(strsplit(x[, 4], ""), as.integer))     # 1 = parent1's allele
+  g <- do.call(rbind, lapply(strsplit(x[, 5], ""), as.integer))     # 1 = parent1's allele
   expect_equal(nrow(g), 1600)
   expect_equal(ncol(g), length(probes))
   tetrads <- split(seq_len(nrow(g)), oocyst)
@@ -285,6 +286,23 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
   ibd <- g[pairs[, 1], ] == g[pairs[, 2], ]
   within_phi <- sapply(1:14, function(ch) { k <- which(chr == ch)[10]; stats::cor(as.numeric(ibd[, k]), as.numeric(ibd[, k + 1])) })
   expect_gt(mean(within_phi), 0.5)
+  ## a crossover's two products are one from each pole. On a chromosome where one crossover shows
+  ## (two products switch once, between the same probes), they are never the first two products
+  ## made or the last two (seedTetrad()'s 0 and 1, 2 and 3: the meiosis II sisters). The pairing
+  ## they make is drawn for each chromosome, so two such chromosomes of one oocyst share it half
+  ## the time; a random deal of chromatids would give a third, one pairing for the genome always.
+  one <- do.call(rbind, lapply(tetrads, function(i) do.call(rbind, lapply(1:14, function(ch) {
+    k <- which(chr == ch); s <- g[i, k[-1], drop = FALSE] != g[i, k[-length(k)], drop = FALSE]
+    who <- which(rowSums(s) > 0)
+    if (length(who) != 2 || any(rowSums(s)[who] != 1) || which(s[who[1], ]) != which(s[who[2], ])) return(NULL)
+    data.frame(oocyst = oocyst[i[1]], pair = paste(who, collapse = ""))
+  }))))
+  expect_gt(nrow(one), 500)
+  expect_false(any(one$pair %in% c("12", "34")))
+  pairing <- ifelse(one$pair %in% c("13", "24"), "13|24", ifelse(one$pair %in% c("14", "23"), "14|23", "12|34"))
+  same <- unlist(lapply(split(pairing, one$oocyst), function(p) if (length(p) < 2) NULL else {
+    ij <- utils::combn(length(p), 2); p[ij[1, ]] == p[ij[2, ]] }))
+  expect_equal(mean(same), 1 / 2, tolerance = 0.15)
 })
 
 test_that("infectious_bites counts each host's bites from a mosquito past the EIP", {
