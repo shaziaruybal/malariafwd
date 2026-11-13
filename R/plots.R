@@ -60,9 +60,12 @@ plot_host_state_prevalence <- function(x) {
 
 #' Within-host trajectory for one host
 #'
-#' `layout = "lineages"` (the default) stacks the individual blood-stage lineages, each in its
-#' own colour, so you can see which genotypes are present at any moment, when a lineage clears
-#' and when the same one returns; the hypnozoite reservoir is overlaid on a second axis.
+#' `layout = "lineages"` (the default) stacks the host's blood-stage clones, a colour for each
+#' lineage, so you can see which genotypes are present at any moment, when a lineage clears and
+#' when the same one returns. A band is as tall as its lineage's clones, so a relapse into a patent
+#' clone of the same lineage stacks on it; the COI, which counts distinct lineages, is the number of
+#' bands. The hypnozoite reservoir, every dormant hypnozoite the host carries, is overlaid on a
+#' second axis.
 #' `layout = "summary"` plots active COI and the reservoir as two lines instead. Each clone is
 #' drawn from [episodes()]: from its onset to its end, and to the last day of the state table if it
 #' was still patent when the run ended. The x axis runs to `SIM_DAYS`; on a run that went extinct the
@@ -71,7 +74,7 @@ plot_host_state_prevalence <- function(x) {
 #' Each call reads the run's `state.tsv` and `events.tsv`.
 #' @inheritParams load_events
 #' @param host_id the host, one whole number (a run's hosts are 0 to `N_HOSTS - 1`).
-#' @param layout `"lineages"` (stacked per-lineage areas) or `"summary"` (COI + reservoir lines).
+#' @param layout `"lineages"` (each lineage's clones, stacked) or `"summary"` (COI + reservoir lines).
 #' @param palette colours cycled across lineages.
 #' @return a ggplot object.
 #' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
@@ -270,7 +273,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ## draws nothing, silently, so it has to be caught before it reaches the scale.
     ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL) +
     ggplot2::scale_y_continuous(
-      "Blood-stage lineages",
+      "Blood-stage clones",
       sec.axis = ggplot2::sec_axis(~ . / sf, name = "Hypnozoite reservoir")) +
     ggplot2::labs(x = "Day") +
     theme_malariafwd() +
