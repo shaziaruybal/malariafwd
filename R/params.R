@@ -465,16 +465,6 @@ validate_params <- function(p) {
   invisible(TRUE)
 }
 
-## Each value must have its default's type, since SLiM reads numbers, T/F and strings
-## differently: a wrong type stops the run at its first use, or runs with another meaning (a string
-## P_TRANS_VH is compared as text). Strings must be valid UTF-8, which SLiM and the tree-sequence
-## provenance it writes require. Numbers must be finite and
-## survive SLiM's command line, which cannot read a number between 0 and about 2.2e-308; the
-## floor of 1e-300 leaves room for the 15 digits as_slim_args() writes. Where the
-## default is an integer (a count, SIM_DAYS, a day the run is scheduled on, or a fixed delay) the
-## value must be whole. A non-whole count stops the run or silently changes it (12.5 founder
-## hosts seed 13), a non-whole SIM_DAYS stops SLiM at launch, a non-whole MDA_TICK or
-## IMPORT_TICK never comes, and the other days and delays act as the next whole day.
 ## The control characters a text parameter must not hold, matched byte-wise so that accented and
 ## other non-ASCII labels pass in every locale: the C0 controls and DEL, and the C1 controls
 ## U+0080-U+009F, which are C2 80 to C2 9F in UTF-8. The pattern is marked as bytes: a plain
@@ -486,6 +476,16 @@ validate_params <- function(p) {
   p
 })
 
+## Each value must have its default's type, since SLiM reads numbers, T/F and strings
+## differently: a wrong type stops the run at its first use, or runs with another meaning (a string
+## P_TRANS_VH is compared as text). Strings must be valid UTF-8, which SLiM and the tree-sequence
+## provenance it writes require. Numbers must be finite and
+## survive SLiM's command line, which cannot read a number between 0 and about 2.2e-308; the
+## floor of 1e-300 leaves room for the 15 digits as_slim_args() writes. Where the
+## default is an integer (a count, SIM_DAYS, a day the run is scheduled on, or a fixed delay) the
+## value must be whole. A non-whole count stops the run or silently changes it (12.5 founder
+## hosts seed 13), a non-whole SIM_DAYS stops SLiM at launch, a non-whole MDA_TICK or
+## IMPORT_TICK never comes, and the other days and delays act as the next whole day.
 .check_types <- function(p) {
   d <- .malariafwd_defaults
   day <- function(nm) nm %in% c("MDA_TICK", "IMPORT_TICK", "RESURGENCE_TRIGGER_TICK") ||

@@ -482,9 +482,9 @@ test_that("strings that SLiM or params.tsv cannot carry are refused", {
   ## non-ASCII labels are not control characters, in any locale
   expect_no_error(vivax_params(SIM_ID = "Côte d’Ivoire 日本"))
   ## the byte pattern is marked as bytes, so a session in a locale other than the installing one
-  ## does not warn that it cannot translate it
+  ## does not warn that it cannot translate it (a warning this session, in the installing locale,
+  ## would not show)
   expect_identical(Encoding(malariafwd:::.control_bytes), "bytes")
-  expect_no_warning(vivax_params(SIM_ID = "plain"))
   ## bytes that are not UTF-8 (a latin1 file read without its encoding) cannot run
   expect_error(vivax_params(SIM_ID = "Par\xe1"), "SIM_ID must be valid UTF-8.*CP1252")
   expect_no_warning(expect_error(vivax_params(CHROMOSOMES = "\xe9"), "CHROMOSOMES must be valid UTF-8"))
