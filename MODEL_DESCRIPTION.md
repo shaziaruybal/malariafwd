@@ -24,10 +24,12 @@ source repository, makes them and writes these numbers to `man/figures/represent
 
 ![Representative run](man/figures/README-representative-run.png)
 
-**A** one host's lineage trajectory, the host with the most relapses: coloured bands are
-blood-stage lineages, the dashed line is that host's hypnozoite reservoir, and the marks below show
-new infections (triangles) against relapses (circles) — and, on a run with treatment failure,
-recrudescences (diamonds). **B** population host-state composition over time — note the teal
+**A** one host's lineage trajectory, the host with the most relapses: each colour is a lineage,
+its band as tall as that lineage's blood-stage clones (a relapse into a patent clone of its own
+lineage stacks on it, so the bands' total can exceed the COI, which counts lineages); the dashed
+line is that host's hypnozoite reservoir, every dormant hypnozoite it carries; and the marks
+below show new infections (triangles) against relapses (circles) — and, on a run with treatment
+failure, recrudescences (diamonds). **B** population host-state composition over time — note the teal
 *reservoir-only* band, which is invisible to any blood survey. **C** each infected host's peak
 COI against the relapses it has over the run (boxes where at least 5 hosts reach that peak; every
 level labelled with its n). **D** **molFOB vs FOI** — the compound force of blood-stage **clone
@@ -38,11 +40,13 @@ class across relatedness bands.
 
 Panel D carries the central vivax quantity: **molFOB 3.2 vs FOI 1.1 new clones per person-year**
 (means over the ten seeds; 0.6–5.4 and 0.3–1.8), **so about two-thirds of new blood-stage clones
-are relapses**, and the gap widens through the run as the reservoir accumulates. Any method that reads new episodes as new transmission is reading that whole shaded
-area as something it is not. (Panel E is deliberately a composition plot rather than a box: most
+are relapses**, and the gap widens through the run as the reservoir accumulates. Any method that
+reads new episodes as new transmission is reading the whole gap between the two lines as
+something it is not. (Panel E is deliberately a composition plot rather than a box: most
 relationship classes are point masses, while same-oocyst siblings spread out, in two groups around
-0.6 and 0.2 of the genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives the continuous view, and
-`plot_relapse_km()` the time from an infection to its batch's first relapse.)
+0.6 and 0.2 of the genome, and this shows both. `plot_relatedness_ladder(style = "points")` gives
+the continuous view, and `plot_relapse_km()` the time from an infection to its batch's first
+relapse.)
 
 ![IBD karyotype](man/figures/README-ibd-karyotype.png)
 
@@ -65,9 +69,9 @@ detected line list reads **33% relapse / 67% reinfection** (27–35%). Detection
 *inverts* the apparent mix, which is why any method that infers transmission from the observed
 origin split — Rc from case counts included — inherits a bias it cannot see.
 
-> At this transmission level outcrossing is rare — **5.4% of uptakes are recombinant** (0.7–9.6%
-> over the ten seeds; 251 of 5,025 in seed 1) — so mosaics like the second panel are genuinely
-> uncommon and most pairs sit at 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
+> At this transmission level outcrossing is rare — over the second half of the run **6.6% of
+> uptakes are recombinant** (1.2–11.6% over the ten seeds; 213 of 3,469 in seed 1) — so mosaics
+> like the second panel are genuinely uncommon and most pairs sit at 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
 > relapse hard to distinguish genetically in low-transmission settings.
 
 ---

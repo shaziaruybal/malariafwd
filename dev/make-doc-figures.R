@@ -50,7 +50,9 @@ per_seed <- rbindlist(lapply(SEEDS, function(s) {
   r <- run_of("representative", s)
   m <- summarise_run(r)
   ev <- load_events(r)
-  up <- ev[event_type %in% c("hv_uptake_recombinant", "hv_uptake_clonal"), .N, by = event_type]
+  w0 <- second_half(r)
+  up <- ev[tick >= w0[["from"]] & tick <= w0[["to"]] &
+           event_type %in% c("hv_uptake_recombinant", "hv_uptake_clonal"), .N, by = event_type]
   n_up <- function(t) if (t %in% up$event_type) up[event_type == t, N] else 0L
   d <- run_of("detection", s)
   w <- second_half(d)
@@ -124,9 +126,15 @@ save_png(kfig, "README-ibd-karyotype.png", 12, 7.5)
 ## ---- the observation layer -----------------------------------------------------------------
 drun <- run_of("detection", FIG_SEED)
 dcs <- classify_cases(load_events(drun))[origin %in% c("relapse", "local reinfection")]
+## 30-day windows, each as a rate per 30 days: the last holds what is left of the run (15 days), and
+## a window without an episode is a zero
 dcs[, win := (tick - 1L) %/% 30L * 30L]
-series <- rbind(dcs[, .(episodes = .N, view = "true"), by = win],
-                dcs[detected == 1, .(episodes = .N, view = "detected"), by = win])
+sim_days <- drun$params$SIM_DAYS
+wins <- data.table(win = seq(0L, sim_days - 1L, by = 30L))
+wins[, days := pmin(win + 30L, sim_days) - win]
+per30 <- function(d, view) merge(wins, d[, .N, by = win], by = "win", all.x = TRUE)[
+  is.na(N), N := 0L][, .(win, view = view, episodes = N / days * 30)]
+series <- rbind(per30(dcs, "true"), per30(dcs[detected == 1], "detected"))
 series[, view := factor(view, c("true", "detected"))]
 pA2 <- ggplot(series, aes(win, episodes, colour = view)) + geom_line(linewidth = 0.8) +
   scale_colour_manual(values = c(true = "grey25", detected = "#b2182b"), name = NULL) +
