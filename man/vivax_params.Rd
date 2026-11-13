@@ -219,7 +219,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 \item{\code{MEAN_RECRUD_DELAY}}{Mean days from suppression to recrudescence, at least one; a literature assumption pending parameterisation. Geometric at the default: a median of 7 days, about 94\% within 28 days. Unit: days. Default 10.5; number in [1, 1e6]. Source: close to the prior of Taylor et al. (2019).}
 \item{\code{RECRUD_DELAY_DIST}}{Shape of that delay: "geometric", the discrete form of an exponential delay; "poisson", 1 + Poisson(D - 1) with mean D, a tight-window sensitivity arm; or "fixed", round(D) days with halves rounded up (11 days at 10.5). Every shape is at least one day. Default "geometric"; "geometric" or "poisson" or "fixed".}
 \item{\code{P_DETECT_RECRUD}}{A recrudescence is detected; it should usually sit well below P_DETECT_PRIMARY. Unit: probability. Default 0.5; number in [0, 1]. Source: Ross et al. (2025) put recurrence detectability at 0.13 to 0.49 of a primary's.}
-\item{\code{SUBPATENT_INFECTIVITY}}{Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Unit: relative. Default 0.15; number in [0, 1]. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 measured (Koepfli et al. 2021).}
+\item{\code{SUBPATENT_INFECTIVITY}}{Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Unit: relative. Default 0.15; number in [0, 1]. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 from the feeding studies compiled by Koepfli et al. (2021, Fig 5).}
 }}
 
 \subsection{Resurgence}{Multipliers that switch on from one day, to start a resurgence.

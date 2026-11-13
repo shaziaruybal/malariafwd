@@ -787,9 +787,10 @@ gap between the two sums estimates that bias.
 
 **Subpatent clones and transmission.** Patency and infectiousness are separate properties. A
 suppressed clone is undetectable but still transmissible at `SUBPATENT_INFECTIVITY` (0.15 by
-default; 0.035–0.10 in the individual-based model of White et al. 2018, 0.10–0.20 measured by
-Koepfli et al. 2021, where
-microscopy-positives are 5–10× more infective than submicroscopic). Internally this required
+default; 0.035–0.10 in the individual-based model of White et al. 2018; 0.10–0.20 from the
+mosquito-feeding studies compiled by Koepfli et al. 2021, their Fig 5, in which microscopy-positive
+carriers are 5–10× more infective than submicroscopic ones, a *P. vivax* study in Brazil the
+exception). Internally this required
 splitting one lineage counter into three — patent (`moi_active`, episodes), transmissible (the
 host's infectious state and the bite loop), and present-at-all (the `MAX_MOI` capacity check).
 With them fused, `SUBPATENT_INFECTIVITY` cannot do anything; see D25 item 7.
@@ -974,7 +975,7 @@ A clone that survives a course can be suppressed below patency and return. Off b
 | `MEAN_RECRUD_DELAY` | 10.5 | days | number in [1, 1e6] | Mean days from suppression to recrudescence, at least one; a literature assumption pending parameterisation. Geometric at the default: a median of 7 days, about 94% within 28 days. Source: close to the prior of Taylor et al. (2019). |
 | `RECRUD_DELAY_DIST` | "geometric" | - | "geometric" or "poisson" or "fixed" | Shape of that delay: "geometric", the discrete form of an exponential delay; "poisson", 1 + Poisson(D - 1) with mean D, a tight-window sensitivity arm; or "fixed", round(D) days with halves rounded up (11 days at 10.5). Every shape is at least one day. |
 | `P_DETECT_RECRUD` | 0.5 | probability | number in [0, 1] | A recrudescence is detected; it should usually sit well below P_DETECT_PRIMARY. Source: Ross et al. (2025) put recurrence detectability at 0.13 to 0.49 of a primary's. |
-| `SUBPATENT_INFECTIVITY` | 0.15 | relative | number in [0, 1] | Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 measured (Koepfli et al. 2021). |
+| `SUBPATENT_INFECTIVITY` | 0.15 | relative | number in [0, 1] | Infectiousness of a suppressed clone relative to a patent one. Neither 0 nor 1 is defensible. Source: 0.035 to 0.10 in the model of White et al. (2018); 0.10 to 0.20 from the feeding studies compiled by Koepfli et al. (2021, Fig 5). |
 
 ### Resurgence
 
