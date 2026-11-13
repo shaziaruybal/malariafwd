@@ -1070,6 +1070,9 @@ and Anwar et al. 2022 (i.i.d. batches across bites). Independent, uniform gamete
 
 ## 13. Verification and calibration status
 
+How the model is checked: the validation scripts and what they found, the audit of the
+recombination machinery (§13.1), and which parameters are calibrated to data and which are not.
+
 ### Validation suite
 
 `inst/validation/` ships five scripts: 163 assertion checks, two numeric audits of the
@@ -1103,6 +1106,9 @@ The over-draw check guards the retirement of exhausted batches, which the Eidos 
 would break silently: an unretired batch keeps activating after it has run out.
 
 #### ARG and IBD
+
+Checks that the recorded genealogy keeps every case and gives the relatedness that the
+transmission history implies.
 
 | property | expectation | observed |
 |---|---|---|
@@ -1219,6 +1225,8 @@ Ordered by how much the answer is likely to move.
 ---
 
 ## 15. Planned extensions
+
+The extensions planned for later versions, each with the reason for it.
 
 | extension | motivation |
 |---|---|
@@ -1534,6 +1542,8 @@ genomes in batches with one seed. `write_vcf()` writes that object in about a se
 
 ## 17. Scope: what the model can and cannot answer
 
+The questions the model is built to answer, beside those it cannot answer.
+
 | can | cannot |
 |---|---|
 | Can genetic data distinguish relapse from reinfection, and where does that fail? | Forecast case counts or fit an incidence time series |
@@ -1591,6 +1601,8 @@ counting or drawing them (§6.3, §7).
 ---
 
 ## 19. Glossary
+
+The terms used across the package, its help pages and this document.
 
 | term | meaning |
 |---|---|
