@@ -54,7 +54,7 @@ each modelling choice.
   of its own bite. This will change every default run.
 * **A structured source population for imports**, so that imported parasites carry real ancestry
   and can be related to one another.
-* **Post-treatment prophylaxis**, following the malariasimulation protection curves.
+* **Post-treatment prophylaxis**: protection that wanes after each course.
 * **More extensive calibration of the treatment and recurrence machinery**, including a
   chloroquine-resistant setting, in which recrudescence is material rather than negligible.
 

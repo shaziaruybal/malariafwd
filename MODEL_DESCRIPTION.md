@@ -669,7 +669,8 @@ overlap 0.03). A structured source pool is planned (§15).
   P(radical cure | treated), so it is inert unless `BLOODCURE_COVERAGE > 0` — primaquine is never
   given without a schizonticide (D20). Liver-stage only; it deliberately does not clear the
   current blood-stage infection. Efficacy is per **person** by default (`RADCURE_MODE = "person"`,
-  one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, White et al. 2018; malariasimulation).
+  one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, near the 70% effectiveness White et
+  al. (2018) assume for a 14-day primaquine course, given poor adherence).
   `RADCURE_MODE = "hypnozoite"` restores per-hypnozoite thinning — the only mode that can
   **partially** clear a reservoir, and so the only one that reshapes post-treatment relapse
   diversity.
@@ -682,11 +683,10 @@ overlap 0.03). A structured source pool is planned (§15).
   relapse, the very next day. Real schizonticides protect for weeks — chloroquine for roughly a
   month — and radical cure additionally blocks new hypnozoite batches for a time. The
   consequence is that **recurrence is overstated** in any scenario with appreciable treatment
-  coverage, and short recurrence intervals most of all. OpenMalaria makes the same
-  simplification, so it is defensible, but it is a simplification. The design is settled
-  (malariasimulation Weibull protection curves, with a blocked relapse still consuming its
-  hypnozoites, bites still seeding batches, and imports and recrudescences bypassing
-  protection) and implementation is planned for the next release.
+  coverage, and short recurrence intervals most of all. The design is settled (protection that
+  wanes after each course, with a blocked relapse still consuming its hypnozoites, bites still
+  seeding batches, and imports and recrudescences bypassing protection) and implementation is
+  planned for the next release.
 - **MDA** (`MDA_TICK`) is one round of the case-management course — blood-stage drugs plus radical
   cure — given through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can suppress
   clones subpatent. The round reaches each host with probability `MDA_COVERAGE` (D28). The draw is
@@ -756,9 +756,7 @@ The mean of 10.5 d is a **literature assumption, pending parameterisation**: it 
 of Taylor et al.'s posterior median (0.095 a day), but they fix the rate with a strongly informative
 Gamma(100, 1000) prior (mean 0.1 a day) for identifiability, and the posterior barely moves from it,
 so it is not an estimate from data. Vary it in sensitivity analyses (§14). At 10.5 d the median gap
-is 7 d, and ~94% fall within day 28. See D26, D32 and D42; none of White et al. (2014), the
-individual-based model of White et al. (2018), OpenMalaria or malariasimulation represents
-recrudescence at all, so they cannot arbitrate this.
+is 7 d, and ~94% fall within day 28. See D26, D32 and D42.
 
 **A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
 relapse does. That keeps one episode to one `pedigree_id`, gives the recurrence its own ARG node
@@ -950,7 +948,7 @@ A case is detected, decided where it arises and treated later, on the host; radi
 | `BLOODCURE_COVERAGE` | 0 | probability | number in [0, 1] | A detected case is treated: a course clears each patent clone the host carries, unless the clone survives. 0 turns the whole treatment path off. |
 | `P_BLOODCURE_SURVIVAL` | 0 | probability | number in [0, 1] | A clone survives a course: a patent one, or under MDA a subpatent one too. Source: about 0.10 in the literature. |
 | `RADCURE_COVERAGE` | 0 | probability | number in [0, 1] | A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. |
-| `P_RAD_SURVIVAL` | 0.29 | probability | number in [0, 1] | Radical cure fails: the patient's whole reservoir survives (RADCURE_MODE "person"), about 71% cure; or each hypnozoite survives ("hypnozoite"), where the same number would mean 95% efficacy. Source: White et al. (2018); malariasimulation. |
+| `P_RAD_SURVIVAL` | 0.29 | probability | number in [0, 1] | Radical cure fails: the patient's whole reservoir survives (RADCURE_MODE "person"), about 71% cure; or each hypnozoite survives ("hypnozoite"), where the same number would mean 95% efficacy. Source: near the 70% effectiveness White et al. (2018) assume for a 14-day primaquine course, given poor adherence. |
 | `RADCURE_MODE` | "person" | - | "person" or "hypnozoite" | The unit of radical-cure failure: "person", or "hypnozoite", which thins the reservoir hypnozoite by hypnozoite and is the only mode that can clear part of it. |
 | `TREATMENT_DELAY` | 7 | days | number in [1, 1e6] | Mean days from a case to its course: geometric, at least one day, so a course never lands on the day the case arises. |
 | `TREATMENT_START` | 0 | day | whole number | First day on which a detected case can be prescribed a course; case management has its own window, separate from vector control. |
@@ -1029,7 +1027,7 @@ Stated plainly, because several matter for interpretation.
 | 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
 | 17 | **One course at a time per host** | a second case arising while a course is pending does not schedule another; `tx_pending` gates it |
-| 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled (malariasimulation Weibull curves); OpenMalaria makes the same simplification |
+| 18 | **No post-treatment prophylaxis** (ongoing work) | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day. Recurrence is therefore **overstated** wherever treatment coverage is appreciable, and short intervals most of all — which also means the recrudescence delay distribution should be calibrated *after* prophylaxis lands, not before. Design settled: protection that wanes after each course |
 | 19 | **Canonical meiosis at fixed centromeres, without interference** | meiosis I pairs the products at the annotated PvP01 centromeres, the pairing a sequenced P. falciparum tetrad shows (Nkhoma et al. 2020; section 6.2); crossovers fall as a Poisson process (no crossover or chromatid interference) and there is no gene conversion, so every locus segregates 2:2. With no obligate chiasma, about a quarter of the bivalents of the shortest chromosomes have none; an obligate chiasma would move meiosis II sisters from about 0.60 to 0.58 and the other pairs from 0.20 to 0.21 |
 
 ---
@@ -1074,9 +1072,8 @@ inoculation-step decisions have no precedent to defer to.
 
 ### Conventions we follow
 
-Per-bite (not per-genotype) hypnozoite batches: White et al. 2014, malariasimulation (batch = one
-infective bite), OpenMalaria ("brood" = primary + relapses from the same bite), Mehra et al. 2024c
-and Anwar et al. 2022 (i.i.d. batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢpⱼ: Wong et al. 2018.
+Per-bite (not per-genotype) hypnozoite batches: White et al. 2014, Mehra et al. 2024c and Anwar et
+al. 2022 (i.i.d. batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢpⱼ: Wong et al. 2018.
 
 ---
 
@@ -1274,7 +1271,7 @@ The extensions planned for later versions, each with the reason for it.
 |---|---|
 | **Co-transmission on by default**, and genotyping each hypnozoite independently of the inoculated primaries | at present a bite delivers one genotype and the reservoir is a subset of the blood-stage infection, so heterologous relapse can only arise across separate bites. Both changes make it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
-| Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (§11); planned to follow the malariasimulation protection curves |
+| Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (§11); planned, with protection that wanes after each course |
 | Calibration of the treatment and recurrence machinery | including a chloroquine-resistant setting, in which recrudescence is material rather than negligible |
 | Founder genomes from recombuddy | root genomes painted with background relatedness and linkage disequilibrium, which independent painting leaves out (§16.7) |
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Kanatani et al. 2024); heavily-infected mosquitoes should seed proportionally more |
@@ -1799,8 +1796,6 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
   Biology* 14(1):e1005923. <https://doi.org/10.1371/journal.pcbi.1005923>
 
 Software named in this document, without a paper cited here: EMOD
-(<https://github.com/EMOD-Hub/EMOD>), malariasimulation
-(<https://github.com/mrc-ide/malariasimulation>), OpenMalaria
-(<https://github.com/OpenMalaria-Org/openmalaria>), PlasmoSim (<https://github.com/mrc-ide/PlasmoSim>),
+(<https://github.com/EMOD-Hub/EMOD>), PlasmoSim (<https://github.com/mrc-ide/PlasmoSim>),
 recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>) and SIMPLEGEN
 (<https://github.com/mrc-ide/SIMPLEGEN>). tskit's documentation is at <https://tskit.dev>.
