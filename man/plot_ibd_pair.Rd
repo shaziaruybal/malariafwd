@@ -9,6 +9,7 @@ plot_ibd_pair(
   ids_a,
   ids_b,
   labels = NULL,
+  group = NULL,
   min_span = 1000,
   layout = c("chromosome", "concatenated"),
   fill = "#2166ac"
@@ -21,11 +22,15 @@ plot_ibd_pair(
 
 \item{labels}{optional labels, one per pair (defaults to \verb{a vs b}).}
 
+\item{group}{optional, one value per pair: pairs with the same value are drawn in one panel,
+the panels in the order the values first appear, or in the order of the levels of a factor.}
+
 \item{min_span}{detection floor in bp, passed to \code{\link[=ibd_segments]{ibd_segments()}}.}
 
-\item{layout}{\code{"chromosome"} (one bar per chromosome, pairs as facets) or \code{"concatenated"}.}
+\item{layout}{\code{"chromosome"} (one bar per chromosome) or \code{"concatenated"}.}
 
-\item{fill}{colour for the shared (IBD) blocks.}
+\item{fill}{colour for the shared (IBD) blocks. With \code{group}, one colour for every group, or one
+for each group, in group order or named by group; left out, each group gets its own.}
 }
 \value{
 a ggplot object.
@@ -41,6 +46,12 @@ unrelated genomes share nothing.
 each pair in its own facet -- the conventional karyotype view, and the one that shows
 whether shared blocks respect chromosome boundaries. \code{layout = "concatenated"} draws the
 single linkage group the model actually simulates, with chromosome dividers marked.
+
+\code{group} sets kinds of pair side by side, such as relapses against their origin, siblings and
+unrelated pairs: the pairs of a group are drawn in one panel under its name, one row per pair
+from the top in the order given, and each group's shared blocks take a colour of their own. In
+the chromosome layout each panel then has a column per chromosome, as wide as the chromosome is
+long, and each row's label gives the pair's IBD.
 }
 \section{Python}{
 
@@ -61,5 +72,10 @@ rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
 founders <- ev[event_type == "vh_inoculation_seed"]$pedigree_id[1:2]
 plot_ibd_pair(run, c(rel$pedigree_id, founders[1]), c(rel$parent1_pedigree_id, founders[2]),
               labels = c("a relapse vs its batch", "two founders"))
+
+# three pairs of each kind, a panel and a colour each
+tp <- ibd_truth_pairs(run)
+tp <- tp[cls \%in\% c("relapse vs its origin", "same-oocyst sibs"), head(.SD, 3), by = cls]
+plot_ibd_pair(run, tp$a, tp$b, group = tp$cls, layout = "concatenated")
 \dontshow{\}) # examplesIf}
 }

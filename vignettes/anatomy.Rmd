@@ -160,16 +160,18 @@ new_infection_diversity(run, bin = 90, cap = 40)   # mean IBD, clonal share and 
 ## Seeing the relatedness, not just the number
 
 `ibd_pairs()` gives one number per pair. `ibd_segments()` gives the stretches behind it, and
-`plot_ibd_pair()` draws them as a karyotype -- a clonal pair (or a relapse against its origin)
-is shared end to end, same-oocyst siblings show a recombination mosaic, unrelated genomes
-share nothing:
+`plot_ibd_pair()` draws them along the chromosomes. Its `group` sets kinds of pair side by side:
+a clonal pair (or a relapse against its origin) is shared end to end, same-oocyst siblings show
+a recombination mosaic, unrelated genomes share nothing:
 
-```{r, eval = has_tskit && has_gg, fig.height = 5}
-rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
-plot_ibd_pair(run, rel$pedigree_id, rel$parent1_pedigree_id, labels = "relapse vs origin")
+```{r, eval = has_tskit && has_gg, fig.height = 4.5}
+tp <- ibd_truth_pairs(run)   # pairs whose true relationship the event log gives
+show <- tp[cls %in% c("relapse vs its origin", "same-oocyst sibs", "distinct founders"),
+           head(.SD, 2), by = cls]
+plot_ibd_pair(run, show$a, show$b, group = show$cls)
 
 # and the model-validation view: IBD by known relationship against the textbook rungs
-plot_relatedness_ladder(ibd_truth_pairs(run))
+plot_relatedness_ladder(tp)
 ```
 
 ## The ARG itself

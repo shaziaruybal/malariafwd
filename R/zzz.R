@@ -43,7 +43,8 @@ utils::globalVariables(c(
   "prior_tick", "prior_pedigree_id", "prior_lineage_id", "prior_origin", "prior_imported", "prior_detected",
   "days_since", "x.prior_tick", "i.tick", "is_imported",
   # segments / ladder
-  "gstart", "gend", "segid", "cs", "ce", "gs", "ge", "chrom", "x0", "x1", "lab", "cls", "ped",
+  "gstart", "gend", "segid", "cs", "ce", "gs", "ge", "chrom", "x0", "x1", "lab", "cls", "ped", "grp", "row",
+  "len",
   # data.table columns that shadow stats::start / stats::end
   "start", "end", "pair", "len_mb", "ypos", "lineage", "r", "V1"
 ))

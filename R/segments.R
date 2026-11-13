@@ -104,12 +104,21 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
 #' whether shared blocks respect chromosome boundaries. `layout = "concatenated"` draws the
 #' single linkage group the model actually simulates, with chromosome dividers marked.
 #'
+#' `group` sets kinds of pair side by side, such as relapses against their origin, siblings and
+#' unrelated pairs: the pairs of a group are drawn in one panel under its name, one row per pair
+#' from the top in the order given, and each group's shared blocks take a colour of their own. In
+#' the chromosome layout each panel then has a column per chromosome, as wide as the chromosome is
+#' long, and each row's label gives the pair's IBD.
+#'
 #' @inheritParams load_events
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
 #' @param labels optional labels, one per pair (defaults to `a vs b`).
+#' @param group optional, one value per pair: pairs with the same value are drawn in one panel,
+#'   the panels in the order the values first appear, or in the order of the levels of a factor.
 #' @param min_span detection floor in bp, passed to [ibd_segments()].
-#' @param layout `"chromosome"` (one bar per chromosome, pairs as facets) or `"concatenated"`.
-#' @param fill colour for the shared (IBD) blocks.
+#' @param layout `"chromosome"` (one bar per chromosome) or `"concatenated"`.
+#' @param fill colour for the shared (IBD) blocks. With `group`, one colour for every group, or one
+#'   for each group, in group order or named by group; left out, each group gets its own.
 #' @return a ggplot object.
 #' @examplesIf tskit_available() && requireNamespace("ggplot2", quietly = TRUE)
 #' run <- example_run()
@@ -118,16 +127,30 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
 #' founders <- ev[event_type == "vh_inoculation_seed"]$pedigree_id[1:2]
 #' plot_ibd_pair(run, c(rel$pedigree_id, founders[1]), c(rel$parent1_pedigree_id, founders[2]),
 #'               labels = c("a relapse vs its batch", "two founders"))
+#'
+#' # three pairs of each kind, a panel and a colour each
+#' tp <- ibd_truth_pairs(run)
+#' tp <- tp[cls %in% c("relapse vs its origin", "same-oocyst sibs"), head(.SD, 3), by = cls]
+#' plot_ibd_pair(run, tp$a, tp$b, group = tp$cls, layout = "concatenated")
 #' @inheritSection tskit_available Python
 #' @export
-plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
+plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_span = 1000,
                           layout = c("chromosome", "concatenated"), fill = "#2166ac") {
   .need_ggplot()
   layout <- match.arg(layout)
+  if (!is.null(group)) {
+    if (length(group) != length(ids_a) || anyNA(group))
+      stop("`group` must give one group per pair, with no NA: there are ", length(ids_a),
+           " pairs, and it has ", length(group), " values", if (anyNA(group)) ", some NA", ".",
+           call. = FALSE)
+    group <- if (is.factor(group)) droplevels(group) else factor(group, unique(group))
+    cols <- .ibd_group_fill(fill, levels(group), missing(fill))
+  }
   .require_python("plot_ibd_pair()", c("tskit", "numpy"))
   seg <- ibd_segments(run, ids_a, ids_b, min_span = min_span)
   cm <- chrom_map(run); L <- max(cm$end)
   if (is.null(labels)) labels <- sprintf("%s vs %s", ids_a, ids_b)
+  if (!is.null(group)) return(.plot_ibd_groups(seg, cm, L, labels, group, cols, layout))
   lv <- unique(labels)
   key <- data.table::data.table(pair = seq_along(ids_a), lab = factor(labels, lv),
                                 x0 = 0, x1 = L / 1e6)
@@ -176,6 +199,76 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, min_span = 1000,
     ggplot2::labs(y = NULL, caption = "dividers = PvP01 chromosome boundaries") +
     th + ggplot2::theme(axis.text.y = ggplot2::element_blank(),
                         strip.text.y.left = ggplot2::element_text(angle = 0, hjust = 1))
+}
+
+## plot_ibd_pair()'s colours for its groups, named by group: its own palette when `fill` is left
+## out, else one colour for all, one per group in group order, or one named for each group.
+.GROUP_FILL <- c("#2166ac", "#c8971f", "#2a9d8f", "#b4472e", "#8e6bbf", "#2e7d5b")
+.ibd_group_fill <- function(fill, lv, default) {
+  n <- length(lv)
+  if (default) {
+    fill <- if (n <= length(.GROUP_FILL)) .GROUP_FILL[seq_len(n)]
+            else grDevices::colorRampPalette(.GROUP_FILL)(n)
+  } else if (!is.null(names(fill))) {
+    gone <- setdiff(lv, names(fill))
+    if (length(gone))
+      stop("`fill` names no colour for group", if (length(gone) > 1L) "s", " ",
+           .and_list(paste0("\"", gone, "\"")), ".", call. = FALSE)
+    fill <- fill[lv]
+  } else if (length(fill) == 1L) {
+    fill <- rep(fill, n)
+  } else if (length(fill) != n) {
+    stop("`fill` must be one colour, or one for each of the ", n, " groups (in group order, or ",
+         "named by group); it has ", length(fill), ".", call. = FALSE)
+  }
+  stats::setNames(unname(fill), lv)
+}
+
+## plot_ibd_pair() with `group`: a panel per group, a row per pair (the first at the top; keyed by
+## pair, so a label given twice keeps both rows), the shared blocks in the group's colour.
+.plot_ibd_groups <- function(seg, cm, L, labels, group, cols, layout) {
+  n <- length(group)
+  ibd <- numeric(n); v <- seg[, .(ibd = sum(length) / L), by = pair]; ibd[v$pair] <- v$ibd
+  key <- data.table::data.table(pair = seq_len(n), grp = group, row = factor(seq_len(n), rev(seq_len(n))),
+                                ibd = ibd)
+  segl <- merge(seg, key[, .(pair, grp, row)], by = "pair")
+  rowlab <- if (layout == "chromosome") sprintf("%s (IBD %.2f)", labels, ibd) else labels
+  common <- list(
+    ggplot2::scale_y_discrete(NULL, labels = function(b) rowlab[as.integer(b)]),
+    ggplot2::scale_fill_manual(values = cols, limits = names(cols), guide = "none"),
+    theme_malariafwd(grid = FALSE),
+    ggplot2::theme(strip.placement = "outside",
+                   strip.text.y.left = ggplot2::element_text(angle = 0, hjust = 1, face = "bold")))
+
+  if (layout == "chromosome") {
+    ## a column per chromosome, as wide as it is long
+    bg <- key[, cm[, .(chrom, len = length / 1e6)], by = .(pair, grp, row)]
+    return(
+      ggplot2::ggplot() +
+        ggplot2::geom_tile(data = bg, ggplot2::aes(x = len / 2, width = len, y = row), height = .7,
+                           fill = "grey92", colour = "grey15", linewidth = .25) +
+        ggplot2::geom_tile(data = segl, ggplot2::aes(x = (start + end) / 2e6, width = (end - start) / 1e6,
+                           y = row, fill = grp), height = .7) +
+        ggplot2::facet_grid(grp ~ chrom, scales = "free", space = "free", switch = "y") +
+        ggplot2::scale_x_continuous("PvP01 chromosome", breaks = NULL, expand = c(0.02, 0)) +
+        ggplot2::labs(caption = "columns = PvP01 chromosomes (1-14), width by length; colour = shared IBD") +
+        common + ggplot2::theme(panel.spacing.x = ggplot2::unit(1.5, "pt"))
+    )
+  }
+  ggplot2::ggplot() +
+    ggplot2::geom_tile(data = key, ggplot2::aes(x = L / 2e6, width = L / 1e6, y = row), height = .7,
+                       fill = "grey92", colour = "grey15", linewidth = .3) +
+    ggplot2::geom_tile(data = segl, ggplot2::aes(x = (gstart + gend) / 2e6, width = (gend - gstart) / 1e6,
+                       y = row, fill = grp), height = .7) +
+    ggplot2::geom_vline(data = cm[-nrow(cm)], ggplot2::aes(xintercept = end / 1e6),
+                        colour = "grey15", linewidth = .3) +
+    ggplot2::geom_text(data = key, ggplot2::aes(x = L / 1e6, y = row, label = sprintf("IBD = %.2f", ibd)),
+                       hjust = -0.1, size = 3.2, colour = "grey25") +
+    ggplot2::facet_grid(grp ~ ., scales = "free_y", space = "free_y", switch = "y") +
+    ggplot2::scale_x_continuous("position along the concatenated genome (Mb)",
+                                expand = ggplot2::expansion(mult = c(0, .12))) +
+    ggplot2::labs(caption = "dividers = PvP01 chromosome boundaries; colour = shared IBD") +
+    common
 }
 
 #' Pairs of genomes with a known true relationship, and their IBD

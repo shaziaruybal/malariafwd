@@ -304,3 +304,67 @@ test_that("new_infection_diversity() compares only the pairs within a window, ea
     else expect_true(is.na(row$mean_ibd))
   }
 })
+
+## a relapse pair twice under one label, a sibling pair, and two founders: four pairs, three groups
+grouped_pairs <- function(run) {
+  tp <- ibd_truth_pairs(run)
+  rbind(tp[cls == "relapse vs its origin"][1:2], tp[cls == "same-oocyst sibs"][1],
+        tp[cls == "distinct founders"][1])
+}
+
+test_that("plot_ibd_pair(group =) draws a panel per group, a row per pair and a colour per group", {
+  skip_if_no_tskit(); skip_if_not_installed("ggplot2")
+  run <- example_run(); pk <- grouped_pairs(run)
+  grp <- c("relapse", "relapse", "siblings", "founders")
+  lab <- c("r", "r", "s", "f")   # a label given twice in a group still gets two rows
+  seg <- ibd_segments(run, pk$a, pk$b)
+  for (layout in c("chromosome", "concatenated")) {
+    p <- plot_ibd_pair(run, pk$a, pk$b, labels = lab, group = grp, layout = layout)
+    b <- ggplot2::ggplot_build(p)
+    lay <- data.table::as.data.table(b$layout$layout)
+    expect_identical(levels(lay$grp), c("relapse", "siblings", "founders"), label = layout)
+    expect_identical(nrow(lay), if (layout == "chromosome") 3L * 14L else 3L, label = layout)
+    ## rows top to bottom in the order given, two rows for the relapse pairs
+    first <- lay[, .SD[1], by = grp]
+    rows <- lapply(first$PANEL, function(k) b$layout$panel_params[[k]]$y$get_labels())
+    if (layout == "chromosome") rows <- lapply(rows, sub, pattern = " \\(IBD .*", replacement = "")
+    expect_identical(lapply(rows, rev), list(c("r", "r"), "s", "f"), label = layout)
+    ## every segment drawn, each in its group's colour
+    sg <- data.table::as.data.table(ggplot2::layer_data(p, 2))
+    expect_identical(nrow(sg), nrow(seg), label = layout)
+    sg <- merge(sg, lay[, .(PANEL, grp)], by = "PANEL")
+    expect_identical(sort(unique(sg[, paste(grp, fill)])),
+                     sort(paste(unique(grp[seg$pair]), c(relapse = "#2166ac", siblings = "#c8971f")[unique(grp[seg$pair])])),
+                     label = layout)
+  }
+  ## a factor's levels set the order, unused ones dropped; colours one per group, or named
+  f <- factor(grp, c("unused", "founders", "siblings", "relapse"))
+  p <- plot_ibd_pair(run, pk$a, pk$b, group = f, fill = c(relapse = "black", siblings = "red", founders = "grey"),
+                     layout = "concatenated")
+  lay <- data.table::as.data.table(ggplot2::ggplot_build(p)$layout$layout)
+  expect_identical(levels(lay$grp), c("founders", "siblings", "relapse"))
+  sg <- merge(data.table::as.data.table(ggplot2::layer_data(p, 2)), lay[, .(PANEL, grp)], by = "PANEL")
+  expect_identical(sort(unique(sg[, paste(grp, fill)])), c("relapse black", "siblings red"))
+  p <- plot_ibd_pair(run, pk$a, pk$b, group = grp, fill = "black", layout = "concatenated")
+  expect_identical(unique(ggplot2::layer_data(p, 2)$fill), "black")
+})
+
+test_that("plot_ibd_pair() refuses a group or a fill that does not fit the pairs", {
+  skip_if_no_tskit(); skip_if_not_installed("ggplot2")
+  run <- example_run(); pk <- grouped_pairs(run)
+  grp <- c("relapse", "relapse", "siblings", "founders")
+  expect_error(plot_ibd_pair(run, pk$a, pk$b, group = grp[1:3]), "one group per pair")
+  expect_error(plot_ibd_pair(run, pk$a, pk$b, group = replace(grp, 2, NA)), "one group per pair")
+  expect_error(plot_ibd_pair(run, pk$a, pk$b, group = grp, fill = c("red", "blue")), "one for each of the 3 groups")
+  expect_error(plot_ibd_pair(run, pk$a, pk$b, group = grp, fill = c(relapse = "red", siblings = "blue")),
+               "no colour for group \"founders\"")
+})
+
+test_that("plot_ibd_pair() without group keeps a panel per label", {
+  skip_if_no_tskit(); skip_if_not_installed("ggplot2")
+  run <- example_run(); pk <- grouped_pairs(run)
+  for (layout in c("chromosome", "concatenated")) {
+    lay <- ggplot2::ggplot_build(plot_ibd_pair(run, pk$a, pk$b, labels = c("r", "r", "s", "f"), layout = layout))$layout$layout
+    expect_identical(as.character(lay$lab), c("r", "s", "f"), label = layout)
+  }
+})
