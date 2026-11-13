@@ -373,7 +373,9 @@ plot_relatedness_ladder <- function(x, style = c("points", "bars")) {
       c("#f0f0f0", "#d9e7f0", "#9ecae1", "#fdd49e", "#fc8d59", "#b2182b"), lab)
     return(
       ggplot2::ggplot(d, ggplot2::aes(cls, frac, fill = band)) +
-        ggplot2::geom_col(width = .68, colour = "grey40", linewidth = .25) +
+        ## show.legend = TRUE: every band keeps its colour in the legend, also one no pair falls in
+        ## (ggplot2 leaves the key of an unused level blank)
+        ggplot2::geom_col(width = .68, colour = "grey40", linewidth = .25, show.legend = TRUE) +
         ggplot2::geom_text(data = n_by, ggplot2::aes(cls, 1.04, label = paste0("n = ", n)),
                            inherit.aes = FALSE, size = 3, colour = "grey30") +
         ggplot2::scale_fill_manual(values = pal2, name = "IBD band", drop = FALSE) +

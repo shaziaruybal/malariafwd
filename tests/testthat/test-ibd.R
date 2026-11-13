@@ -312,6 +312,16 @@ grouped_pairs <- function(run) {
         tp[cls == "distinct founders"][1])
 }
 
+test_that("plot_relatedness_ladder(style = \"bars\") keys every band's colour, used or not", {
+  skip_if_not_installed("ggplot2", "3.5.0")
+  ## two pairs, so four of the six bands hold no pair
+  tp <- data.table::data.table(cls = factor(c("relapse vs its origin", "distinct founders"),
+                                            levels = malariafwd:::.LADDER), ibd = c(1, 0))
+  p <- plot_relatedness_ladder(tp, style = "bars")
+  expect_true(isTRUE(p$layers[[1]]$show.legend))
+  expect_identical(nrow(ggplot2::get_guide_data(p, "fill")), 6L)
+})
+
 test_that("plot_ibd_pair(group =) draws a panel per group, a row per pair and a colour per group", {
   skip_if_no_tskit(); skip_if_not_installed("ggplot2")
   run <- example_run(); pk <- grouped_pairs(run)
