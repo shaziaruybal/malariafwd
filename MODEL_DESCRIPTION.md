@@ -1601,8 +1601,11 @@ The questions the model is built to answer, beside those it cannot answer.
 Traps for anyone who changes the model script or reads its tree sequence.
 
 **Eidos scoping.** A plain assignment to a global *inside a callback or function creates a local*.
-Use `defineGlobal()`. The trap is silent: a queue filled this way inside a callback never reaches
-`early()`. The validation suite's over-draw check (§13) catches it for the batch-retirement queue.
+Use `defineGlobal()`. The trap is silent: a list filled this way inside a callback never reaches
+`early()`, which is why `RECRUD_RETIRE`, the genomes a recrudescence replaces, is kept with
+`defineGlobal()`. A hypnozoite batch is retired differently, by setting its own count to 0, which the
+validation suite's over-draw check (§13) watches: a batch left unretired would keep activating
+after it had run out.
 
 **Vacant tskit nodes.** SLiM haploid individuals get **two** nodes — the real haplosome
 (`is_vacant = [0]`) and an isolated null placeholder (`is_vacant = [1]`, IBD 0 with everything).
