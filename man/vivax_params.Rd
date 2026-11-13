@@ -93,6 +93,30 @@ vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")
 p <- vivax_params(N_HOSTS = 300)
 subset(as.data.frame(p), changed)
 }
+\references{
+The works the sources column cites (full list: the model description's references):
+
+Ayele T, et al. (2023) Curr Res Parasitol Vector Borne Dis 4:100137.
+\doi{10.1016/j.crpvbd.2023.100137}
+
+Jiang H, et al. (2011) Genome Biol 12:R33. \doi{10.1186/gb-2011-12-4-r33}
+
+Koepfli C, et al. (2021) PLoS Negl Trop Dis 15:e0009672. \doi{10.1371/journal.pntd.0009672}
+
+Mehra S, Taylor PG, McCaw JM, Flegg JA (2024a) J Math Biol 89:7.
+\doi{10.1007/s00285-024-02088-7}
+
+Mehra S, Nosten F, Luxemburger C, White NJ, Watson JA (2024b) Proc Natl Acad Sci USA
+121:e2401024121. \doi{10.1073/pnas.2401024121}
+
+Ross A, et al. (2025) PLoS Negl Trop Dis 19:e0013567. \doi{10.1371/journal.pntd.0013567}
+
+Taylor AR, et al. (2019) Nat Commun 10:5595. \doi{10.1038/s41467-019-13412-x}
+
+White MT, et al. (2014) eLife 3:e04692. \doi{10.7554/eLife.04692}
+
+White MT, et al. (2018) Nat Commun 9:3300. \doi{10.1038/s41467-018-05860-8}
+}
 \seealso{
 \code{\link[=param_info]{param_info()}}, \code{\link[=run_sim]{run_sim()}}, \code{\link[=load_params]{load_params()}}, \code{\link[=uptake_calibrate]{uptake_calibrate()}}
 }
@@ -136,7 +160,7 @@ Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package websi
 
 \subsection{Mosquito uptake and co-transmission}{How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates, and 0 for both gives one oocyst per uptake and one genotype per bite.
 \describe{
-\item{\code{LAMBDA_OOCYSTS}}{Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Unit: oocysts. Default 0; number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000. Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut.}
+\item{\code{LAMBDA_OOCYSTS}}{Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Unit: oocysts. Default 0; number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000. Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023).}
 \item{\code{K_OOCYSTS}}{Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. Default 0; number >= 0; 0, or at least 0.001.}
 \item{\code{LAMBDA_SPOROZOITES}}{Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. Unit: products per bite. Default 0; number in [0, 1000].}
 }}
@@ -144,8 +168,8 @@ Every parameter, by group. See MODEL_DESCRIPTION section 10 on the package websi
 \subsection{Hypnozoite reservoir}{The liver-stage batches a bite seeds, and their activation and death.
 \describe{
 \item{\code{NU_HYPNOZOITE_BATCH}}{Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Unit: hypnozoites per bite. Default 3; number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run. Source: White et al. (2014), section 2.}
-\item{\code{ALPHA_ACTIVATE}}{Daily probability that a hypnozoite activates: a relapse. Unit: per hypnozoite per day. Default 1/170; number in [0, 1]. Source: Mehra et al.; White et al. (2014) use 1/344.}
-\item{\code{MU_HYPNOZOITE}}{Daily probability that a hypnozoite dies, also while latent. Unit: per hypnozoite per day. Default 1/442; number in (0, 1]. Source: White et al. (2014).}
+\item{\code{ALPHA_ACTIVATE}}{Daily probability that a hypnozoite activates: a relapse. Unit: per hypnozoite per day. Default 1/170; number in [0, 1]. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332.}
+\item{\code{MU_HYPNOZOITE}}{Daily probability that a hypnozoite dies, also while latent. Unit: per hypnozoite per day. Default 1/442; number in (0, 1]. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425.}
 \item{\code{K_LATENCY}}{Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Unit: stages. Default 0; whole number >= 0. Source: White et al. (2014).}
 \item{\code{DELTA_LATENCY}}{Daily probability that a latent batch moves on one stage. Unit: per day. Default 1/100; number in (0, 1]; checked only when K_LATENCY > 0.}
 }}

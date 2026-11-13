@@ -79,6 +79,28 @@
 #'   overrides, checked. `print()` shows the values that differ from the defaults, and
 #'   `as.data.frame()` gives the table: `name`, `value` (as SLiM is given it), `default`,
 #'   `changed`, `group`, `unit` and `meaning`.
+#' @references The works the sources column cites (full list: the model description's references):
+#'
+#' Ayele T, et al. (2023) Curr Res Parasitol Vector Borne Dis 4:100137.
+#'   \doi{10.1016/j.crpvbd.2023.100137}
+#'
+#' Jiang H, et al. (2011) Genome Biol 12:R33. \doi{10.1186/gb-2011-12-4-r33}
+#'
+#' Koepfli C, et al. (2021) PLoS Negl Trop Dis 15:e0009672. \doi{10.1371/journal.pntd.0009672}
+#'
+#' Mehra S, Taylor PG, McCaw JM, Flegg JA (2024a) J Math Biol 89:7.
+#'   \doi{10.1007/s00285-024-02088-7}
+#'
+#' Mehra S, Nosten F, Luxemburger C, White NJ, Watson JA (2024b) Proc Natl Acad Sci USA
+#'   121:e2401024121. \doi{10.1073/pnas.2401024121}
+#'
+#' Ross A, et al. (2025) PLoS Negl Trop Dis 19:e0013567. \doi{10.1371/journal.pntd.0013567}
+#'
+#' Taylor AR, et al. (2019) Nat Commun 10:5595. \doi{10.1038/s41467-019-13412-x}
+#'
+#' White MT, et al. (2014) eLife 3:e04692. \doi{10.7554/eLife.04692}
+#'
+#' White MT, et al. (2018) Nat Commun 9:3300. \doi{10.1038/s41467-018-05860-8}
 #' @seealso [param_info()], [run_sim()], [load_params()], [uptake_calibrate()]
 #' @examples
 #' vivax_params(N_HOSTS = 300, BITING_RATE = 0.09, GENOME_MODE = "core")

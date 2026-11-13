@@ -79,7 +79,8 @@ recurrence, and where does that break down?"*: relapse vs reinfection identifiab
 sequencing effort, reservoir dynamics under control and resurgence.
 
 **It is not** a tool for predicting case counts, fitting incidence time series, or costing
-interventions. Compartmental vivax models (White, Mehra/Flegg, Champagne) do those far better and
+interventions. Compartmental vivax models (White et al. 2014, 2018; Mehra et al. 2024a; Champagne
+et al. 2022) do those far better and
 faster. See §12.
 
 ---
@@ -315,12 +316,14 @@ Follows the **White et al. 2014** batch model.
   and batch can occur for a given genotype.
 - **Founder hosts** are seeded with a blood-stage clone and no batch: a founder carries hypnozoites
   only once a bite or an import gives it a batch.
-- **Activation:** each hypnozoite activates at `ALPHA_ACTIVATE` = 1/170 per day (Mehra; White 2014
-  would give 1/344). An activation produces **one blood-stage episode** representing however many
+- **Activation:** each hypnozoite activates at `ALPHA_ACTIVATE` = 1/170 per day, an average carriage
+  of about 170 days (Mehra et al. 2024b, as Mehra & Taylor 2026 use it; White et al. 2014 estimate
+  1/332). An activation produces **one blood-stage episode** representing however many
   clonal hypnozoites activated that tick.
-- **Death:** `MU_HYPNOZOITE` = 1/442 per day (White 2014), competing with activation.
+- **Death:** `MU_HYPNOZOITE` = 1/442 per day (as in Mehra et al. 2024a, who credit White et al. 2014,
+  whose table gives 1/425), competing with activation.
 - **Latency:** `K_LATENCY` = 0 (tropical) or 2 (temperate), with `DELTA_LATENCY` = 1/100 governing
-  progression when enabled; latent hypnozoites die at `MU_HYPNOZOITE` too, as in White 2014.
+  progression when enabled; latent hypnozoites die at `MU_HYPNOZOITE` too, as in White et al. 2014.
 - **No age ceiling:** a batch empties only by activation and death, as in White et al. (2014), so
   the long late-relapse tail survives; `MU_HYPNOZOITE` must be above 0 so every batch ends.
 
@@ -565,7 +568,7 @@ code that reads tskit's segments directly must do the same, with `chrom_map()`.
 
 - **PvP01 reference** (Auburn et al. 2016; GCA_900093555), 14 nuclear chromosomes.
 - Implemented as **one concatenated linkage group** with **7.4 × 10⁻⁷ /bp within chromosomes**
-  (13.5 kb/cM, euchromatic core rate, Jiang 2011); the chromosomes assort independently at meiosis
+  (13.5 kb/cM, euchromatic core rate, Jiang et al. 2011); the chromosomes assort independently at meiosis
   (§6.3). Genetically equivalent to explicit multi-chromosome for every IBD quantity the package
   reports, and keeps a single `.trees` file.
 - `GENOME_MODE` is a pure **coordinate** switch: `"full"` (24.2 Mb, default) or `"core"`
@@ -655,7 +658,7 @@ overlap 0.03). A structured source pool is planned (§15).
   P(radical cure | treated), so it is inert unless `BLOODCURE_COVERAGE > 0` — primaquine is never
   given without a schizonticide (D20). Liver-stage only; it deliberately does not clear the
   current blood-stage infection. Efficacy is per **person** by default (`RADCURE_MODE = "person"`,
-  one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, White 2018 / malariasimulation).
+  one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, White et al. 2018; malariasimulation).
   `RADCURE_MODE = "hypnozoite"` restores per-hypnozoite thinning — the only mode that can
   **partially** clear a reservoir, and so the only one that reshapes post-treatment relapse
   diversity.
@@ -742,7 +745,8 @@ The mean of 10.5 d is a **literature assumption, pending parameterisation**: it 
 of Taylor et al.'s posterior median (0.095 a day), but they fix the rate with a strongly informative
 Gamma(100, 1000) prior (mean 0.1 a day) for identifiability, and the posterior barely moves from it,
 so it is not an estimate from data. Vary it in sensitivity analyses (§14). At 10.5 d the median gap
-is 7 d, and ~94% fall within day 28. See D26, D32 and D42; none of White 2014, the White 2018 IBM, OpenMalaria or malariasimulation represents
+is 7 d, and ~94% fall within day 28. See D26, D32 and D42; none of White et al. (2014), the
+individual-based model of White et al. (2018), OpenMalaria or malariasimulation represents
 recrudescence at all, so they cannot arbitrate this.
 
 **A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
@@ -772,7 +776,8 @@ gap between the two sums estimates that bias.
 
 **Subpatent clones and transmission.** Patency and infectiousness are separate properties. A
 suppressed clone is undetectable but still transmissible at `SUBPATENT_INFECTIVITY` (0.15 by
-default; 0.035–0.10 in White's IBM, 0.10–0.20 empirically from Koepfli et al. 2021, where
+default; 0.035–0.10 in the individual-based model of White et al. 2018, 0.10–0.20 measured by
+Koepfli et al. 2021, where
 microscopy-positives are 5–10× more infective than submicroscopic). Internally this required
 splitting one lineage counter into three — patent (`moi_active`, episodes), transmissible (the
 host's infectious state and the bite loop), and present-at-all (the `MAX_MOI` capacity check).
@@ -884,7 +889,7 @@ How many oocysts an uptake forms, and how many genotypes a bite delivers. Both l
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `LAMBDA_OOCYSTS` | 0 | oocysts | number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000 | Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut. |
+| `LAMBDA_OOCYSTS` | 0 | oocysts | number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000 | Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023). |
 | `K_OOCYSTS` | 0 | - | number >= 0; 0, or at least 0.001 | Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. |
 | `LAMBDA_SPOROZOITES` | 0 | products per bite | number in [0, 1000] | Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. |
 
@@ -895,8 +900,8 @@ The liver-stage batches a bite seeds, and their activation and death.
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
 | `NU_HYPNOZOITE_BATCH` | 3 | hypnozoites per bite | number in [0, 1e6]; times its boost, at most 1e6 once the trigger falls inside the run | Mean of the geometric hypnozoite batch an infectious bite seeds, split over the genotypes it delivers. Fitted to four published vivax bands at moderate transmission (MODEL_DESCRIPTION section 13); re-fit it per setting. Source: White et al. (2014), section 2. |
-| `ALPHA_ACTIVATE` | 1/170 | per hypnozoite per day | number in [0, 1] | Daily probability that a hypnozoite activates: a relapse. Source: Mehra et al.; White et al. (2014) use 1/344. |
-| `MU_HYPNOZOITE` | 1/442 | per hypnozoite per day | number in (0, 1] | Daily probability that a hypnozoite dies, also while latent. Source: White et al. (2014). |
+| `ALPHA_ACTIVATE` | 1/170 | per hypnozoite per day | number in [0, 1] | Daily probability that a hypnozoite activates: a relapse. Source: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332. |
+| `MU_HYPNOZOITE` | 1/442 | per hypnozoite per day | number in (0, 1] | Daily probability that a hypnozoite dies, also while latent. Source: as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425. |
 | `K_LATENCY` | 0 | stages | whole number >= 0 | Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate. Source: White et al. (2014). |
 | `DELTA_LATENCY` | 1/100 | per day | number in (0, 1]; checked only when K_LATENCY > 0 | Daily probability that a latent batch moves on one stage. |
 
@@ -1007,7 +1012,7 @@ Stated plainly, because several matter for interpretation.
 | 10 | **Detection not origin-dependent** | active vs passive surveillance indistinguishable |
 | 11 | **Homogeneous mixing** | no spatial structure, no household clustering, no heterogeneous biting |
 | 12 | **`NU_HYPNOZOITE_BATCH` is fitted to one setting** | shipped at 3, inside the four published bands at moderate transmission (§13); re-fit it per setting against relapse rate / fraction |
-| 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
+| 13 | **The third recurrence state is inert at the shipped default** | `P_RECRUD_GIVEN_FAIL = 0` and `BLOODCURE_COVERAGE = 0`, so a default run has no recrudescence. That matches the evidence (0.2–0.3% of recurrences after CQ/artesunate, Taylor et al. 2019), but it means the state is only material in a chloroquine-resistant arm, which is not calibrated |
 | 14 | **No natural clearance while subpatent** | every suppressed clone eventually recrudesces unless an MDA round clears it, which is what makes `P_RECRUD_GIVEN_FAIL`, without MDA, exactly P(recrudescence \| failure) and comparable to a WHO TES rate. Immune clearance of a suppressed infection is not represented |
 | 15 | **Clearance does not depend on how long a clone has been in the blood** | every patent clone clears with the same daily probability, 1/`MEAN_BLOOD_STAGE_DURATION`, so a recrudescent episode is as likely to clear as a new infection, and a clone cycling through repeated suppression has no ceiling on its total persistence |
 | 16 | **Subpatent infectivity is a single constant** | `SUBPATENT_INFECTIVITY` applies one relative weight to every suppressed clone; real infectivity is a continuous function of gametocyte density |
@@ -1025,17 +1030,18 @@ Two literatures, which this model sits between.
 
 | model | inoculation step | genotypes |
 |---|---|---|
-| White 2014 (eLife) | primary **+** Geom(ν) batch per bite | no |
-| White 2016 / 2018 | same, + exposure heterogeneity | no |
-| Mehra 2022 (superinfection), 2024 (hybrid), Mehra & Taylor 2025 | same, + MOB / immunity / branching process | no |
-| Anwar 2022 multiscale | White-derived | no |
-| Champagne 2022 (Swiss TPH, `VivaxModelR`) | extends White 2016; case management + importation; **inverts an endemic steady state** to get λ and Rc from routine incidence | no |
+| White et al. 2014 | primary **+** Geom(ν) batch per bite | no |
+| White et al. 2016, 2018 | same, + exposure heterogeneity | no |
+| Mehra et al. 2024c (superinfection), 2024a (hybrid); Mehra & Taylor 2026 | same, + MOB / immunity / branching process | no |
+| Anwar et al. 2022 (multiscale) | White-derived | no |
+| Champagne et al. 2022 (Swiss TPH, `VivaxModelR`) | extends White et al. 2016; case management + importation; **inverts an endemic steady state** to get λ and Rc from routine incidence | no |
 
-The Anwar 2024 scoping review covers **48** vivax transmission models (38 compartmental, 9
-agent-based): **none represent genotypes**, and White 2018 and descendants "do not account for the
-variability in hypnozoites across mosquito bites" — which our per-bite geometric draw does.
+The scoping review of Anwar et al. (2024) covers **48** vivax transmission models (38
+compartmental, 9 agent-based): **none represent genotypes**, and White et al. (2018) and the models
+derived from it "do not account for the variability in hypnozoites across mosquito bites" — which
+our per-bite geometric draw does.
 
-Notably, Mehra 2022 **states** the biology we do not model — "a *P. vivax* parasite (sporozoite)
+Notably, Mehra et al. (2024c) **state** the biology we do not model — "a *P. vivax* parasite (sporozoite)
 injected into a human host has two possible fates: it either gives rise to a primary (blood-stage)
 infection … or develops into a hypnozoite" — but implements primary **and** batch in parallel, as
 we do. Without genotypes the two are observationally identical, so there was nothing to gain.
@@ -1045,20 +1051,20 @@ we do. Without genotypes the two are observationally identical, so there was not
 | model | inoculation step | hypnozoites |
 |---|---|---|
 | Wong et al. 2018 | oocyst count **and infected hepatocyte count** drawn; sporozoites sampled abundance-weighted into hepatocytes; hepatocyte count = 1 excluded as degenerate | no (Pf) |
-| IDM within-vector 2017 | ~3,000 spz/oocyst (Poisson), 20% reach glands, **10 sporozoites per bite drawn from the pool, duplicates retained** | no (Pf) |
+| Childs & Prosper 2017 (within-vector) | ~3,000 spz/oocyst (Poisson), 20% reach glands, **10 sporozoites per bite drawn from the pool, duplicates retained** | no (Pf) |
 | EMOD genetics module | genotype-resolved Pf: chromosome structure, 25 loci, trackable recombination | vivax module unverified |
 | SIMPLEGEN / PlasmoSim | genetic-model docs still in development | — |
 | recombuddy | no mosquito stage; block-mosaic painting of genotypes, which `simulate_genotypes()` does on the recorded genealogy instead (its PLAF is the REF frequency: pass `1 - PLAF`) | — |
 
-**Our position:** we are, as far as this review found, the only model with **both** genotype
-resolution and a hypnozoite reservoir. That is the contribution, and it also means several
+**Our position:** we are, as far as we found (literature and software, November 2026), the only
+model with **both** genotype resolution and a hypnozoite reservoir. That is the contribution, and it also means several
 inoculation-step decisions have no precedent to defer to.
 
 ### Conventions we follow
 
-Per-bite (not per-genotype) hypnozoite batches: White 2014, malariasimulation (batch = one
-infective bite), OpenMalaria ("brood" = primary + relapses from the same bite), Mehra/Anwar (i.i.d.
-batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢpⱼ: Wong et al. 2018.
+Per-bite (not per-genotype) hypnozoite batches: White et al. 2014, malariasimulation (batch = one
+infective bite), OpenMalaria ("brood" = primary + relapses from the same bite), Mehra et al. 2024c
+and Anwar et al. 2022 (i.i.d. batches across bites). Independent, uniform gamete draws giving P(i,j) ∝ pᵢpⱼ: Wong et al. 2018.
 
 ---
 
@@ -1162,7 +1168,7 @@ junctions (φ about 0.09), because meiosis I pairs the products alike on every c
 |---|---|
 | `NU_HYPNOZOITE_BATCH` | fitted against four published bands at moderate transmission, and shipped at 3 (measured below) |
 | `BITING_RATE` | **not** calibrated at shipped defaults. Transmission targets are scale-dependent (prevalence and COI move with `N_MOSQ / N_HOSTS`, and with the founder and import counts and chance fade-out at small scale), so calibrate at the scale you will publish |
-| hypnozoite rates | literature values (White, Mehra), not fitted |
+| hypnozoite rates | literature values (White et al. 2014; Mehra et al. 2024a, b), not fitted |
 | genome, recombination | reference values, not fitted |
 
 **ν against the bands, measured at this version**: 400 hosts, 800 mosquitoes, 5 years,
@@ -1221,7 +1227,7 @@ Ordered by how much the answer is likely to move.
 | Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (§11); planned to follow the malariasimulation protection curves |
 | Calibration of the treatment and recurrence machinery | including a chloroquine-resistant setting, in which recrudescence is material rather than negligible |
 | Founder genomes from recombuddy | root genomes painted with background relatedness and linkage disequilibrium, which independent painting leaves out (§16.7) |
-| Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Andolina 2024); heavily-infected mosquitoes should seed proportionally more |
+| Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Kanatani et al. 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
 | Origin-dependent detection | to separate active vs passive surveillance |
 | Fate determination (`P_HYPNOZOITE`) | measured at 0.58–0.63 and strain-dependent; **deferred** — would make ν emergent but trades one well-identified parameter for two poorly-identified ones |
@@ -1627,3 +1633,99 @@ counting or drawing them (§6.3, §7).
 malariafwd is released under the MIT licence (`LICENSE`). To cite it, use `citation("malariafwd")`
 or `CITATION.cff`. `DECISIONS.md` gives the reasons for the model's choices, and `NEWS.md` what
 each release contains.
+
+---
+
+## 21. References
+
+- Anwar MN, Hickson RI, Mehra S, McCaw JM, Flegg JA (2022). A multiscale mathematical model of
+  *Plasmodium vivax* transmission. *Bulletin of Mathematical Biology* 84:81.
+  <https://doi.org/10.1007/s11538-022-01036-0>
+- Anwar MN, Smith L, Devine A, Mehra S, Walker CR, Ivory E, et al. (2024). Mathematical models of
+  *Plasmodium vivax* transmission: a scoping review. *PLOS Computational Biology* 20(3):e1011931.
+  <https://doi.org/10.1371/journal.pcbi.1011931>
+- Auburn S, Böhme U, Steinbiss S, Trimarsanto H, Hostetler J, Sanders M, et al. (2016). A new
+  *Plasmodium vivax* reference sequence with improved assembly of the subtelomeres reveals an
+  abundance of *pir* genes. *Wellcome Open Research* 1:4.
+  <https://doi.org/10.12688/wellcomeopenres.9876.1>
+- Ayele T, Wondale B, Tamiru G, Eligo N, Lindtjørn B, Massebo F (2023). Infectivity of symptomatic
+  *Plasmodium vivax* cases to different generations of wild-caught and laboratory-adapted *Anopheles
+  arabiensis* using a membrane feeding assay, Ethiopia. *Current Research in Parasitology &
+  Vector-Borne Diseases* 4:100137. <https://doi.org/10.1016/j.crpvbd.2023.100137>
+- Champagne C, Gerhards M, Lana J, García Espinosa B, Bradley C, González O, et al. (2022). Using
+  observed incidence to calibrate the transmission level of a mathematical model for *Plasmodium
+  vivax* dynamics including case management and importation. *Mathematical Biosciences*
+  343:108750. <https://doi.org/10.1016/j.mbs.2021.108750>
+- Childs LM, Prosper OF (2017). Simulating within-vector generation of the malaria parasite
+  diversity. *PLOS ONE* 12(5):e0177941. <https://doi.org/10.1371/journal.pone.0177941>
+- Fraser C (2007). Estimating individual and household reproduction numbers in an emerging
+  epidemic. *PLoS ONE* 2(8):e758. <https://doi.org/10.1371/journal.pone.0000758>
+- Haller BC, Galloway J, Kelleher J, Messer PW, Ralph PL (2019). Tree-sequence recording in SLiM
+  opens new horizons for forward-time simulation of whole genomes. *Molecular Ecology Resources*
+  19(2):552–566. <https://doi.org/10.1111/1755-0998.12968>
+- Haller BC, Messer PW (2019). SLiM 3: forward genetic simulations beyond the Wright–Fisher model.
+  *Molecular Biology and Evolution* 36(3):632–637. <https://doi.org/10.1093/molbev/msy228>
+- Haller BC, Ralph PL, Messer PW (2025). SLiM 5: eco-evolutionary simulations across multiple
+  chromosomes and full genomes. *bioRxiv*. <https://doi.org/10.1101/2025.08.07.669155>
+- Jiang H, Li N, Gopalan V, Zilversmit MM, Varma S, Nagarajan V, et al. (2011). High recombination
+  rates and hotspots in a *Plasmodium falciparum* genetic cross. *Genome Biology* 12(4):R33.
+  <https://doi.org/10.1186/gb-2011-12-4-r33>
+- Kanatani S, Stiffler D, Bousema T, Yenokyan G, Sinnis P (2024). Revisiting the *Plasmodium*
+  sporozoite inoculum and elucidating the efficiency with which malaria parasites progress through
+  the mosquito. *Nature Communications* 15:748. <https://doi.org/10.1038/s41467-024-44962-4>
+- Kelleher J, Thornton KR, Ashander J, Ralph PL (2018). Efficient pedigree recording for fast
+  population genetics simulation. *PLOS Computational Biology* 14(11):e1006581.
+  <https://doi.org/10.1371/journal.pcbi.1006581>
+- Koepfli C, Colborn KL, Kiniboro B, Lin E, Speed TP, Siba PM, et al. (2013). A high force of
+  *Plasmodium vivax* blood-stage infection drives the rapid acquisition of immunity in Papua New
+  Guinean children. *PLoS Neglected Tropical Diseases* 7(9):e2403.
+  <https://doi.org/10.1371/journal.pntd.0002403>
+- Koepfli C, Nguitragool W, de Almeida ACG, Kuehn A, Waltmann A, Kattenberg E, et al. (2021).
+  Identification of the asymptomatic *Plasmodium falciparum* and *Plasmodium vivax* gametocyte
+  reservoir under different transmission intensities. *PLOS Neglected Tropical Diseases*
+  15(8):e0009672. <https://doi.org/10.1371/journal.pntd.0009672>
+- Mehra S, Taylor PG, McCaw JM, Flegg JA (2024a). A hybrid transmission model for *Plasmodium
+  vivax* accounting for superinfection, immunity and the hypnozoite reservoir. *Journal of
+  Mathematical Biology* 89:7. <https://doi.org/10.1007/s00285-024-02088-7>
+- Mehra S, Nosten F, Luxemburger C, White NJ, Watson JA (2024b). Modeling the within-host dynamics
+  of *Plasmodium vivax* hypnozoite activation: an analysis of the SPf66 vaccine trial. *Proceedings
+  of the National Academy of Sciences* 121(51):e2401024121.
+  <https://doi.org/10.1073/pnas.2401024121>
+- Mehra S, McCaw JM, Taylor PG (2024c). Superinfection and the hypnozoite reservoir for
+  *Plasmodium vivax*: a general framework. *Journal of Mathematical Biology* 88:7.
+  <https://doi.org/10.1007/s00285-023-02014-3>
+- Mehra S, Taylor PG (2026). Superinfection and the hypnozoite reservoir for *Plasmodium vivax*: a
+  multitype branching process approximation. *Journal of Mathematical Biology* 93:6.
+  <https://doi.org/10.1007/s00285-026-02356-8>
+- Miura K, Swihart BJ, Fay MP, Kumpitak C, Kiattibutr K, Sattabongkot J, et al. (2020). Evaluation
+  and modeling of direct membrane-feeding assay with *Plasmodium vivax* to support development of
+  transmission blocking vaccines. *Scientific Reports* 10:12569.
+  <https://doi.org/10.1038/s41598-020-69513-x>
+- Nkhoma SC, Trevino SG, Gorena KM, Nair S, Khoswe S, Jett C, et al. (2020). Co-transmission of
+  related malaria parasite lineages shapes within-host parasite diversity. *Cell Host & Microbe*
+  27(1):93–103. <https://doi.org/10.1016/j.chom.2019.12.001>
+- Ross A, Koepfli C, Timinao L, Hardy D, Thüring T, Loeffel M, et al. (2025). The probability of
+  *Plasmodium vivax* acute illness following primary infection and relapse in Papua New Guinea.
+  *PLOS Neglected Tropical Diseases* 19(10):e0013567. <https://doi.org/10.1371/journal.pntd.0013567>
+- Taylor AR, Watson JA, Chu CS, Puaprasert K, Duanguppama J, Day NPJ, et al. (2019). Resolving the
+  cause of recurrent *Plasmodium vivax* malaria probabilistically. *Nature Communications*
+  10:5595. <https://doi.org/10.1038/s41467-019-13412-x>
+- White MT, Karl S, Battle KE, Hay SI, Mueller I, Ghani AC (2014). Modelling the contribution of
+  the hypnozoite reservoir to *Plasmodium vivax* transmission. *eLife* 3:e04692.
+  <https://doi.org/10.7554/eLife.04692>
+- White MT, Shirreff G, Karl S, Ghani AC, Mueller I (2016). Variation in relapse frequency and the
+  transmission potential of *Plasmodium vivax* malaria. *Proceedings of the Royal Society B*
+  283:20160048. <https://doi.org/10.1098/rspb.2016.0048>
+- White MT, Walker P, Karl S, Hetzel MW, Freeman T, Waltmann A, et al. (2018). Mathematical
+  modelling of the impact of expanding levels of malaria control interventions on *Plasmodium
+  vivax*. *Nature Communications* 9:3300. <https://doi.org/10.1038/s41467-018-05860-8>
+- Wong W, Wenger EA, Hartl DL, Wirth DF (2018). Modeling the genetic relatedness of *Plasmodium
+  falciparum* parasites following meiotic recombination and cotransmission. *PLOS Computational
+  Biology* 14(1):e1005923. <https://doi.org/10.1371/journal.pcbi.1005923>
+
+Software named in this document, without a paper cited here: EMOD
+(<https://github.com/EMOD-Hub/EMOD>), malariasimulation
+(<https://github.com/mrc-ide/malariasimulation>), OpenMalaria
+(<https://github.com/OpenMalaria-Org/openmalaria>), PlasmoSim (<https://github.com/mrc-ide/PlasmoSim>),
+recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>), SIMPLEGEN
+(<https://github.com/mrc-ide/SIMPLEGEN>) and tskit (<https://tskit.dev>).
