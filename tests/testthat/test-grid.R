@@ -109,6 +109,19 @@ test_that("load_grid() says what to do without grid.tsv, and warns for a cell th
   expect_warning(load_grid(base), "1 cell\\(s\\) recorded as ok no longer hold their whole run: set01_seed1")
 })
 
+test_that("run_grid() passes ... on to run_sim()", {
+  got <- NULL
+  local_mocked_bindings(run_sim = function(...) {
+    got <<- list(...)
+    list(extinct_tick = NA_integer_, never_started = FALSE)
+  }, .require_slim = function() "5.2")
+  base <- withr::local_tempdir()
+  suppressMessages(run_grid(tiny(), seeds = 1, outdir_base = base, timeout = 12, echo = TRUE))
+  expect_identical(got$timeout, 12)
+  expect_true(got$echo)
+  expect_false(got$skip_existing)
+})
+
 test_that("a cell that fails leaves its directory as it was, and its log in <cell>.failed", {
   skip_on_os("windows")
   fake <- tempfile("fakeslim")
