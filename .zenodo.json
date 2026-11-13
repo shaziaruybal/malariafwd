@@ -2,10 +2,17 @@
   "title": "malariafwd: Forward Simulation of Plasmodium vivax Transmission and Genetics",
   "description": "An R interface to a SLiM (Eidos) + tskit individual-based forward simulator of Plasmodium vivax malaria. Models blood-stage infection, the hypnozoite reservoir and relapses, meiotic recombination in the mosquito, and importation/interventions on a neutral 14-chromosome PvP01 genome, recording a tree sequence for ground-truth identity-by-descent.",
   "upload_type": "software",
-  "license": "MIT",
+  "license": "mit",
   "version": "0.1.0",
   "creators": [
     { "name": "Ruybal-Pesántez, Shazia", "affiliation": "ISGlobal", "orcid": "0000-0002-0495-179X" }
+  ],
+  "related_identifiers": [
+    { "identifier": "https://github.com/shaziaruybal/malariafwd", "relation": "isSupplementTo", "scheme": "url" },
+    { "identifier": "https://shaziaruybal.github.io/malariafwd/", "relation": "isDocumentedBy", "scheme": "url" },
+    { "identifier": "10.1101/2025.08.07.669155", "relation": "references", "scheme": "doi" },
+    { "identifier": "10.1111/1755-0998.12968", "relation": "references", "scheme": "doi" },
+    { "identifier": "10.1371/journal.pcbi.1006581", "relation": "references", "scheme": "doi" }
   ],
   "notes": "This work was supported by the \"la Caixa\" Foundation (ID 100010434), Junior Leader Fellowship LCF/BQ/PI25/12100035.",
   "keywords": [
