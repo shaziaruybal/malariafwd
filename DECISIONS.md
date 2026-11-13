@@ -25,6 +25,29 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D77 — Every genome's coordinates are 0, so one seed gives one tree sequence · 2026-11-13 · Accepted
+**Context.** SLiM writes each individual's x, y and z into the location column of the tree
+sequence's individuals table even in a non-spatial model, and leaves them undefined until a model
+sets them. The model never set them, so a genome could carry whatever its memory held. In two runs of
+one configuration and seed, 8,674 of 17,710 individuals had values such as 1.8e-306 in one and 0 in
+the other, while the nodes, the edges, the individuals' metadata, `events.tsv` and `state.tsv` were
+identical (found while checking review m52).
+**Decision.** Every genome's x, y and z are 0, set where the genome is made: in `setHostGenome()` for
+a genome in a host and in `tagMosqProduct()` for a mosquito product.
+**Rationale.** The coordinates mean nothing in this model, and a run repeated from its seed should
+give the same files (§16.4), as `events.tsv` and `state.tsv` already did. Every genome is made in one
+of the two functions, so setting them there covers every row of the table.
+**Alternatives rejected.** *Leaving the column out of comparisons* -- the files would still differ,
+and two runs of one seed would have different checksums. *Setting every living genome's coordinates
+once a day* -- a genome made and remembered on the same day would be written before it.
+**Consequences.** The location column of `plasmo.trees` is 0 for every individual. Nothing else
+changes, and runs draw the same random numbers; a run made before this differs from the same run
+made after only in that column.
+**How to verify.** `tests/testthat/test-model-invariants.R`: every individual's location is 0 in a run
+with founders and their copies, bites, mosquito products, relapses, imports and recrudescences.
+
+---
+
 ## D76 — The 0.1.0 API: one function per question, every reader takes a run, no plumbing · 2026-11-08 · Accepted
 **Context.** The pre-release review tabulated the 55 exports (Q24): some overlap (two functions
 answer one question), some are plumbing the user never needs, and some argue against themselves in

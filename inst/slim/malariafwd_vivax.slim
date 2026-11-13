@@ -2547,9 +2547,15 @@ function (integer) establishInfectionOutcome(
 //   batch             0 for a blood-stage clone, patent from this tick; above 0 for a dormant
 //                     batch of that many hypnozoites, at latency stage K_LATENCY
 // brood_ready_tick, the end of a mosquito product's EIP (tagMosqProduct()), is NULL in a host.
+// x, y and z are 0, as for a mosquito product: SLiM writes them into the tree sequence's individuals
+// table even in a non-spatial model and leaves them undefined until set, so without this
+// plasmo.trees could differ between two runs of one seed (D77).
 function (void) setHostGenome(o<Individual>$ g, i$ birth, i$ lineage, i$ oocyst, i$ brood,
 	l$ founder, i$ inoc_tick, i$ inoc_id, l$ imported, Ni$ activation, i$ batch, s$ color)
 {
+	g.x = 0.0;
+	g.y = 0.0;
+	g.z = 0.0;
 	g.setValue("brood_birth_tick", birth);
 	g.setValue("lineage_id", lineage);
 	g.setValue("oocyst_id", oocyst);
@@ -2592,9 +2598,13 @@ function (void) setHostClone(o<Individual>$ g, o<Individual>$ parent, Ni$ activa
 		imported=parent.getValue("is_imported"), activation=activation, batch=batch, color=color);
 }
 
-// set the standard tags on a freshly-created mosquito-stage oocyst product.
+// set the standard tags on a freshly-created mosquito-stage oocyst product, with x, y and z 0 as in
+// setHostGenome() (D77).
 function (void) tagMosqProduct(o<Individual>$ prod, i$ lineage, i$ oocyst, i$ brood, s$ color, [f$ spz_weight = 1.0])
 {
+	prod.x = 0.0;
+	prod.y = 0.0;
+	prod.z = 0.0;
 	prod.setValue("spz_weight", spz_weight);      // share of the oocyst's sporozoite output this Individual represents (4 = a selfed oocyst's 4 identical products)
 	prod.setValue("brood_birth_tick", sim.cycle); // oocyst created now
 	prod.setValue("inoculation_tick", NULL);      // not yet in a human

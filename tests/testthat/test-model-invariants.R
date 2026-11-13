@@ -96,6 +96,23 @@ test_that("ARG summaries behave on the forest genealogy", {
   }
 })
 
+test_that("every genome's coordinates are 0, so a seed gives the same tree sequence (D77)", {
+  skip_if_no_slim(); skip_if_no_tskit()
+  out <- tempfile("mfw-xyz")
+  ## founders and their clonal copies, bites, mosquito products, relapses, imports and recrudescences
+  run_sim(vivax_params(N_HOSTS = 40, N_MOSQ = 120, BITING_RATE = 0.2, SIM_DAYS = 120, CHROMOSOMES = "1",
+                       N_FOUNDER_LINEAGES = 4, IMPORT_START = 1, IMPORT_END = 120, IMPORT_RATE_PER_TICK = 0.3,
+                       BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1),
+          seed = 2, outdir = out)
+  m <- malariafwd:::.py_module("_malariafwd_location_test", '
+def locations(path):
+    return tskit.load(path).tables.individuals.location.tolist()
+')
+  loc <- unlist(reticulate::py_to_r(m$locations(file.path(out, "plasmo.trees"))))
+  expect_gt(length(loc), 0)
+  expect_true(all(loc == 0))
+})
+
 test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
   skip_if_no_slim(); skip_if_no_tskit()
   out <- tempfile("mfw-ibdseg")
