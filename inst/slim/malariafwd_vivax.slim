@@ -695,7 +695,7 @@ reproduction()
 	// once reproduction() is over; the MAX_MOI check counts them (D51)
 	humans.setValue("new_lineages", integer(0));
 	
-	// DEBUGGING
+	// VERBOSE narration: the day's infected and susceptible hosts and mosquitoes
 	vcat("⏱️----------" + " tick " + sim.cycle + " ------------⏱️");
 	vcat("DEBUG states (start of reproduction callback) on tick " + sim.cycle);
 	vcat("Infected 👤: " + sum(humans.tag == INFECTED) + ", susceptible 👤: " + sum(humans.tag == SUSCEPTIBLE));
@@ -982,10 +982,7 @@ reproduction()
 		
 		// does this mosquito bite today?
 		if (runif(1) >= effective_biting_rate)
-		{
-			// vcat("⚠️🦟 mosquito " + m.id + " does not bite today. Going to the next mosquito.");
 			next;
-		}
 		
 		
 		// find a human to bite
@@ -997,9 +994,6 @@ reproduction()
 		// SUBPATENT_INFECTIVITY permits (D25 item 7).
 		human_MOI = getTransmissibleLineageCount(h);
 		
-		// DEBUGGING: to check who bit whom (only prints the 'bite' event not any transmission)
-		// vcat("👤 human " + h.id + " was bitten by 🦟 mosquito " + m.id + " and had MOI of " + human_MOI);
-		
 		// is the mosquito infectious?
 		mosq_MOI = getActiveLineageCount(m);
 		transmissible_mosq_broods = sampleTransmissibleMosqBroods(m);
@@ -1008,9 +1002,6 @@ reproduction()
 		// returns nothing exactly when no product has completed the EIP, so this draws no number.
 		if (size(transmissible_mosq_broods) > 0)
 			h.setValue("inf_bites", h.getValue("inf_bites") + 1);
-		
-		// DEBUGGING: to check whether the mosquito has any transmission plasmo broods today
-		// vcat("🦟 mosquito " + m.id + " has " + size(transmissible_mosq_broods) + " transmissible broods today");
 		
 		vcat("---Event info---");
 		// --------------------------------------------------
@@ -1324,7 +1315,6 @@ reproduction()
 		else                                         // a susceptible host, or a mosquito: every mosquito starts uninfected
 			subpop = sim.addSubpop(s, 0);
 
-		// subpop = sim.addSubpop(s, (s % 10 < 3) ? 1 else 0); // TODO try to do this vectorized
 		subpop.tag = (subpop.individualCount == 1) ? INFECTED else SUSCEPTIBLE;
 		
 		subpop.individuals.color = "grey";
@@ -1332,7 +1322,7 @@ reproduction()
 		for (lin in subpop.individuals)
 		{
 			lin.setValue("brood_birth_tick", sim.cycle);
-			if (isNULL(lin.getValue("lineage_id"))) lin.setValue("lineage_id", lin.pedigreeID);  // clones already carry the template's lineage_id
+			lin.setValue("lineage_id", lin.pedigreeID);
 			lin.setValue("oocyst_id", -1);   // founders arise from no meiosis
 			lin.setValue("brood_id", -1);    // founders belong to no co-hatching brood
 			lin.setValue("brood_founder", T);
@@ -1384,7 +1374,7 @@ reproduction()
 	vcat("Infected 👤: " + sum(humans.tag == INFECTED) + ", susceptible 👤: " + sum(humans.tag == SUSCEPTIBLE));
 	vcat("Infected 🦟: " + sum(mosq.tag == INFECTED) + ", susceptible 🦟: " + sum(mosq.tag == SUSCEPTIBLE));
 	
-	// DEBUGGING: 
+	// VERBOSE narration: each subpopulation's starting count
 	for (subpop in sim.subpopulations)
 		vcat("subpop " + subpop.id + " has " + subpop.individualCount + " plasmodiums and tag " + subpop.tag);
 	
@@ -1434,7 +1424,6 @@ reproduction()
 					);
 			}
 		}
-		self.active = 0;
 	}
 }
 
@@ -1551,19 +1540,17 @@ early() {
 				cleared_natural = c(cleared_natural, lin);
 		}
 
-		all_cleared = cleared_natural;
-		if (size(all_cleared) > 0)
+		if (size(cleared_natural) > 0)
 		{
 			// retain cleared blood-stage infections (the prior-primary an IBD
 			// comparison needs) - permanent=T keeps their ancestry from being simplified away
-			sim.treeSeqRememberIndividuals(all_cleared, permanent=RETAIN_FULL_HISTORY);
-			sim.killIndividuals(all_cleared);
+			sim.treeSeqRememberIndividuals(cleared_natural, permanent=RETAIN_FULL_HISTORY);
+			sim.killIndividuals(cleared_natural);
 
-			if (size(cleared_natural) > 0)
-				for (lin in cleared_natural)
-					logEvent("human_clearance", -1, -1, h.id,
-						asString(lin.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
-						0, asInteger(lin.getValue("is_imported")), lin.pedigreeID);
+			for (lin in cleared_natural)
+				logEvent("human_clearance", -1, -1, h.id,
+					asString(lin.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
+					0, asInteger(lin.getValue("is_imported")), lin.pedigreeID);
 		}
 	}
 	
@@ -1606,8 +1593,6 @@ early() {
 			
 			m.tag = SUSCEPTIBLE;
 			m.setValue("mosq_birth_tick", sim.cycle);
-			
-			// vcat("☠️ Mosquito " + m.id + " died and was replaced on tick " + sim.cycle);
 		}
 	}
 	
@@ -1620,18 +1605,6 @@ early() {
 	for (m in mosq)
 		m.tag = (m.individualCount > 0) ? INFECTED else SUSCEPTIBLE;
 	
-	infected_humans = humans[humans.tag == INFECTED];
-	susc_humans = humans[humans.tag == SUSCEPTIBLE];
-	infected_mosq = mosq[mosq.tag == INFECTED];
-	susc_mosq = mosq[mosq.tag == SUSCEPTIBLE];
-	
-	//	vcat("⏱️----------" + " tick " + sim.cycle + " ------------⏱️");
-	//	vcat("Infected 👤: " + sum(humans.tag == INFECTED) + ", susceptible 👤: " + sum(humans.tag == SUSCEPTIBLE));
-	//	vcat("Infected 🦟: " + sum(mosq.tag == INFECTED) + ", susceptible 🦟: " + sum(mosq.tag == SUSCEPTIBLE));
-	
-	// Remember all currently alive individuals so their ancestry is preserved
-	// even if they clear before the final output tick
-	// sim.treeSeqRememberIndividuals(sim.subpopulations.individuals);
 	
 	// ----------------------------------------
 	// Optional MDA event (assume both blood-stage and liver-stage drugs used)
@@ -1645,10 +1618,9 @@ early() {
 		// which a case course does not (D44); the day's imports arrive after it. Only hosts not
 		// empty at the round are drawn, so the mda_*_given counts are courses to those hosts; the
 		// draw does not depend on infection, so the coverage is that of everyone.
-		humans_mda = sim.subpopulations[HUMANS];
 		vcat("💊 MDA administered on tick " + sim.cycle);
 		n_reached = 0;
-		for (h in humans_mda)
+		for (h in humans)
 		{
 			if (h.individualCount == 0)
 				next;
@@ -2572,11 +2544,9 @@ function (integer) establishInfectionOutcome(
 	No<Individual>$ source,
 	i$ inoculation_id,
 	i$ mosq_id,
-	s$ event_type,
-	i$ is_imported,
 	i$ detected,                // detection is drawn ONCE PER EPISODE by the caller, not per
 	                            // genotype: one bite delivering two genotypes is one case
-	[i$ batch_override = -1])   // >=0 -> this genotype's share of the per-BITE hypnozoite batch
+	i$ batch_size)              // this genotype's share of the per-BITE hypnozoite batch
 {
 	// NOTE: lineage_id is stored as a raw INTEGER (the pedigreeID of the genotype's founder)
 	// everywhere in this script. Stringify with asString() only at the logEvent() boundary,
@@ -2591,10 +2561,6 @@ function (integer) establishInfectionOutcome(
 	has_primary = (runif(1) < P_PRIMARY);
 	// read by inoculateMosquitoToHuman(): only a bite that makes a blood stage is a case (D36)
 	defineGlobal("LAST_HAS_PRIMARY", has_primary);
-	// Resurgence trigger boost on batch size (relapse-driven, reservoir
-	// version) - same trigger tick as the activation-rate boost, applied
-	// independently since a scenario might want one, the other, or both.
-	batch_size  = (batch_override >= 0) ? batch_override else drawHypnozoiteBatchSize(effectiveNuBatch());
 	has_batch   = (batch_size > 0);
 	
 	established_lineage_ids = integer(0);
@@ -2602,12 +2568,12 @@ function (integer) establishInfectionOutcome(
 	if (!has_primary & !has_batch)
 	{
 		logEvent(
-			event_type + "_no_take",
+			"vh_inoculation_no_take",
 			inoculation_id, mosq_id, h.id,
 			asString(source.getValue("lineage_id")),
 			"NA", "NA", 0, 0.0, "human",
 			-1, // is_dormant: N/A, nothing established
-			is_imported
+			0
 			);
 		return established_lineage_ids;
 	}
@@ -2627,7 +2593,7 @@ function (integer) establishInfectionOutcome(
 		new_active.setValue("inoculation_id", inoculation_id);
 		new_active.setValue("activation_tick", NULL);
 		new_active.setValue("brood_ready_tick", NULL);
-		new_active.setValue("is_imported", asLogical(is_imported));
+		new_active.setValue("is_imported", F);
 		new_active.setValue("is_dormant", F);
 		new_active.setValue("is_subpatent", F);
 		new_active.setValue("bloodstage_start_tick", sim.cycle);
@@ -2638,11 +2604,11 @@ function (integer) establishInfectionOutcome(
 		h.tag = INFECTED;
 
 		logEvent(
-			event_type,
+			"vh_inoculation",
 			inoculation_id, mosq_id, h.id,
 			asString(new_active.getValue("lineage_id")),
 			"NA", "NA", 0, 0.0, "human",
-			0, is_imported,
+			0, 0,
 			new_active.pedigreeID,
 			source.pedigreeID,
 			-1, 1, inf_oocyst, detected
@@ -2672,7 +2638,7 @@ function (integer) establishInfectionOutcome(
 		new_batch.setValue("inoculation_id", inoculation_id);
 		new_batch.setValue("activation_tick", NULL);
 		new_batch.setValue("brood_ready_tick", NULL);
-		new_batch.setValue("is_imported", asLogical(is_imported));
+		new_batch.setValue("is_imported", F);
 		new_batch.setValue("is_dormant", T);
 		new_batch.setValue("is_subpatent", F);
 		new_batch.setValue("bloodstage_start_tick", NULL);
@@ -2682,11 +2648,11 @@ function (integer) establishInfectionOutcome(
 		new_batch.color = "turquoise4";
 		
 		logEvent(
-			event_type,
+			"vh_inoculation",
 			inoculation_id, mosq_id, h.id,
 			asString(batch_lineage_id),
 			"NA", "NA", 0, 0.0, "human",
-			1, is_imported,
+			1, 0,
 			new_batch.pedigreeID,
 			source.pedigreeID,
 			-1,
@@ -2877,12 +2843,7 @@ function (o<Individual>) sampleTransmissibleMosqBroods(o<Subpopulation>$ m)
 	if (size(ready) == 0)
 		return ready;
 
-	w = float(size(ready));
-	for (i in seqAlong(ready))
-	{
-		wi = ready[i].getValue("spz_weight");
-		w[i] = isNULL(wi) ? 1.0 else wi;   // founders / legacy objects count as 1
-	}
+	w = ready.getValue("spz_weight");   // tagMosqProduct() sets it on every product
 
 	draws = sample(ready, drawZTCount(LAMBDA_SPOROZOITES), replace=T, weights=w);
 
@@ -2924,10 +2885,7 @@ function (integer) inoculateMosquitoToHuman(
 	any_primary = F;
 	for (i in seqLen(k))
 	{
-		established = establishInfectionOutcome(
-			h, broods[i], inoculation_id, mosq_id,
-			"vh_inoculation", 0, det, shares[i]
-			);
+		established = establishInfectionOutcome(h, broods[i], inoculation_id, mosq_id, det, shares[i]);
 
 		new_lineage_ids = c(new_lineage_ids, established);
 		any_primary = any_primary | LAST_HAS_PRIMARY;
