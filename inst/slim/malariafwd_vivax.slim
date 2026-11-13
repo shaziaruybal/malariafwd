@@ -1,5 +1,38 @@
+// malariafwd_vivax.slim: the model the malariafwd R package runs, an individual-based forward
+// simulation of Plasmodium vivax transmission and genetics
+// (https://github.com/shaziaruybal/malariafwd). One SLiM individual is one parasite genome (a
+// dormant one stands for a batch of identical hypnozoites); each human host and each mosquito is a
+// subpopulation.
+//
+// It needs SLiM 5.2 or newer, which initialize() checks. run_sim() starts it in the run's directory
+// as `slim -s SEED -d NAME=value ... model.slim` (the run's cmdline.txt holds the whole command) and
+// passes the package version as MALARIAFWD_VERSION, which params.tsv records. A parameter not given
+// with -d takes the default set in initialize().
+//
+// Part of malariafwd, released under the MIT licence (the package's LICENSE). To cite it, use
+// citation("malariafwd") in R or the package's CITATION.cff, and please also cite SLiM (Haller et
+// al. 2025) and tskit (Kelleher et al. 2018).
+//
+// The package's MODEL_DESCRIPTION.md describes the model, and its section 21 lists the works cited
+// here by author and year. DECISIONS.md gives the reasons for the model's choices; the D numbers in
+// these comments (D17, D25, ...) refer to it.
+//
+// One tick is one day, in SLiM's nonWF order:
+//   reproduction()  relapses; the hypnozoite batch of an import that arrived the day before (D17);
+//                   bites, which carry parasites both ways, with meiosis in the mosquito;
+//                   recrudescences. On day 2 a second callback gives each founder host that shares a
+//                   founding genome its copy. Neither runs on a day with no parasite.
+//   early()         on day 1 first, the founders and the output files. Then every day: emptied
+//                   hypnozoite batches, and the subpatent clones that recrudesced, are removed;
+//                   courses that are due are given; blood-stage clones clear; mosquitoes die and are
+//                   replaced; an MDA round on MDA_TICK; imports arrive; and the run ends early if no
+//                   parasite is left and none can still come.
+//   late()          the day's rows of state.tsv; on the last day, also the tree sequence
+//                   (plasmo.trees).
+// Events are written to events.tsv as they happen.
+
 initialize() {
-	
+
 	// ── PARAMS SUPPLIED BY R (or empty when running in GUI) ──────
 	// __PARAMS__
 	
