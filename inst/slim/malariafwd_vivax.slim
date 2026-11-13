@@ -43,13 +43,13 @@ initialize() {
 	defineDefault("N_MOSQ",                  100);
 	
 	// epi
-	defineDefault("BITING_RATE",             0.1); // F11: per-MOSQUITO daily biting probability (drawn in reproduction() as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
+	defineDefault("BITING_RATE",             0.1); // per-MOSQUITO daily biting probability (drawn in reproduction() as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
 	defineDefault("P_TRANS_VH",              0.5); // b = probability an infectious mosquito bite infects a human
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D38): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value (measured: max 5 with MAX_MOI=2 in check_parameters.R's maxmoi_cap configuration). At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
-	defineDefault("MAX_BROODS_PER_MOSQ",     20); // capping the max brood carrying capacity per mosquito - TODO later make mosq mortality and transmissibility decline with increasing broods (ie high burden = lower fitness)
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D38): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value. At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
+	defineDefault("MAX_BROODS_PER_MOSQ",     20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); carrying many costs it nothing, as its survival and infectiousness do not depend on them
 	
 	// parasite
 	defineDefault("MEAN_BLOOD_STAGE_DURATION", 60.0);
@@ -63,8 +63,8 @@ initialize() {
 	// variance) from the literature into the lambda / K to set here.
 	// Zero-truncation is correct because P_TRANS_HV / P_TRANS_VH already decide whether the
 	// event succeeds - allowing 0 would count a failure twice.
-	// DEFAULT lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite) =
-	// the previous behaviour. NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
+	// DEFAULT lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite).
+	// NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
 	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
 	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob;
 	// K_OOCYSTS below makes the count negative binomial.
@@ -78,11 +78,11 @@ initialize() {
 	// double-count them. Between-donor gametocytaemia variation is likewise already emergent.
 	// K_OOCYSTS therefore captures only the RESIDUAL within-feed overdispersion.
 	defineDefault("K_OOCYSTS",               0.0); // NB dispersion for the oocyst count; 0 = Poisson
-	// GAMETOCYTE gating (WS: F1). A blood-stage infection becomes transmissible to
+	// GAMETOCYTE gating. A blood-stage infection becomes transmissible to
 	// mosquitoes only from gametocyte_ready_tick = bloodstage_start + GAMETOCYTE_DELAY,
 	// and only if it carries gametocytes (per-infection roll, prob P_GAMETOCYTE).
-	// DEFAULTS = identity (immediate, always-gametocytemic) so existing calibration is
-	// unchanged; these knobs exist for sensitivity analysis. P. vivax gametocytes appear
+	// DEFAULTS = identity (immediate, always-gametocytemic), so the gate does nothing unless
+	// set; these knobs exist for sensitivity analysis. P. vivax gametocytes appear
 	// early (at/near symptom onset, unlike ~10-12 d in P. falciparum), so a realistic
 	// preset is a SHORT delay + high carriage, e.g. GAMETOCYTE_DELAY=3, P_GAMETOCYTE=0.9.
 	defineDefault("GAMETOCYTE_DELAY",        0);   // days blood-stage -> transmissible (0 = immediate; vivax realistic ~2-3)
@@ -101,15 +101,13 @@ initialize() {
 	defineDefault("CHROMOSOMES",   "1-14");
 	defineDefault("RECOMB_RATE",   -1.0);
 	
-	// hypnozoite
-	// DEPRECATED: P_DORMANT (single per-sporozoite either/or fate coin flip).
-	// Superseded by the decoupled White et al. (2014) batch model below: every
-	// transmitted genotype independently rolls (1) whether it causes an active
-	// primary infection (P_PRIMARY) and (2) how many hypnozoites it establishes
-	// as a single "batch" object (geometric, mean NU_HYPNOZOITE_BATCH) - both,
+	// hypnozoite: the batch model of White et al. (2014). Every transmitted genotype
+	// independently rolls (1) whether it causes an active primary infection (P_PRIMARY) and
+	// (2) how many hypnozoites it establishes, as a single "batch" object (geometric, mean
+	// NU_HYPNOZOITE_BATCH per bite, split among the genotypes the bite delivers) - both,
 	// either, or neither can occur for the same transmitted genotype.
 	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per transmitted genotype (geometric distribution, as in White et al. 2014); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to the published vivax bands at moderate transmission (D48), to re-fit per setting
 	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
@@ -122,11 +120,9 @@ initialize() {
 	defineDefault("INTERVENTION_END",        99999);
 	defineDefault("INTERVENTION_EFFICACY",   0.0);
 
-	// CASE MANAGEMENT window (D19). Previously all case-based treatment was gated on
-	// INTERVENTION_START/END, the vector-control window, so setting a
-	// coverage without opening that window gave zero treatments and no warning, and turning
-	// treatment on forced a change in biting. Defaults are "always on", so a coverage alone
-	// is now sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
+	// CASE MANAGEMENT window (D19), separate from the vector-control window INTERVENTION_*, so
+	// treatment can run without a change in biting. Defaults are "always on", so a coverage
+	// alone is sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
 	// The window gates when a case is DECIDED (presents and is prescribed), not when the
 	// drugs land. A case detected just before TREATMENT_END still completes its course
 	// TREATMENT_DELAY days later, which may fall outside the window - a patient who presents
@@ -135,9 +131,9 @@ initialize() {
 	defineDefault("TREATMENT_END",           99999);
 
 	// seasonality: effective biting = BITING_RATE * (1 + SEASONAL_AMP*cos(2pi(t-SEASONAL_PHASE)/365)).
-	// SEASONAL_AMP 0 = no seasonality (default, backward compatible); ~0.85 = strong annual peaks
+	// SEASONAL_AMP 0 = no seasonality (default); ~0.85 = strong annual peaks
 	// (biting swings ~0.15x..1.85x the mean). Clamped >= 0. SEASONAL_PHASE = day-of-year of the
-	// PEAK (F4: cos peaks at t=PHASE; the earlier sin() put the peak ~91 d after PHASE).
+	// PEAK (the cosine peaks at t = SEASONAL_PHASE).
 	defineDefault("SEASONAL_AMP",    0.0);
 	defineDefault("SEASONAL_PHASE",  0.0);
 
@@ -165,7 +161,7 @@ initialize() {
 	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder, unless an MDA
 	// round clears it first (D44). Natural clearance while subpatent is OFF, so without MDA
 	// P_RECRUD_GIVEN_FAIL is exactly P(recrudescence | the course failed) and maps onto a WHO
-	// therapeutic-efficacy failure rate. 0.0 = today's behaviour: a failed course leaves the
+	// therapeutic-efficacy failure rate. At 0.0, the default, a failed course leaves the
 	// clone fully patent.
 	defineDefault("P_RECRUD_GIVEN_FAIL", 0.0);
 	// Mean days suppressed before re-expansion, and the shape of that waiting time.
@@ -213,18 +209,16 @@ initialize() {
 	// parameter already has - lets a single scenario run a quiet baseline
 	// period and then "switch on" one specific mechanism (transmission,
 	// relapse reservoir, or both) without changing anything else about the
-	// baseline. All default to 1.0 (no boost / no-op) so existing scenarios
-	// that don't set a trigger are completely unaffected.
+	// baseline. All default to 1.0 (no boost).
 	defineDefault("RESURGENCE_TRIGGER_TICK",      99999);
-	defineDefault("BITING_RATE_BOOST",            1.0);  // R2: transmission-driven resurgence
-	defineDefault("ALPHA_ACTIVATE_BOOST",         1.0);  // R1: faster relapse activation
-	defineDefault("NU_HYPNOZOITE_BATCH_BOOST",    1.0);  // R1: bigger hypnozoite batches
+	defineDefault("BITING_RATE_BOOST",            1.0);  // transmission-driven resurgence
+	defineDefault("ALPHA_ACTIVATE_BOOST",         1.0);  // relapse-driven: faster activation
+	defineDefault("NU_HYPNOZOITE_BATCH_BOOST",    1.0);  // relapse-driven: bigger hypnozoite batches
 	defineDefault("MDA_TICK",        99999);
 	// Fraction of the population a round actually reaches. Coverage is the whole policy question
 	// for MDA - it is what distinguishes a feasible campaign from an idealised one - and without
-	// it a round is all-or-nothing, which is not a scenario anyone runs. 1.0 reproduces the
-	// previous behaviour exactly: the draw is skipped entirely, so existing MDA runs are
-	// unchanged bit for bit.
+	// it a round is all-or-nothing, which is not a scenario anyone runs. At 1.0 the draw is
+	// skipped, so a round that reaches everyone uses no random numbers.
 	defineDefault("MDA_COVERAGE",    1.0);
 	// RADICAL CURE EFFICACY, per PERSON: P_RAD_SURVIVAL is the probability that the whole
 	// reservoir survives a course. 0.29 (~71% cure) is what White et al. (2018) and
@@ -254,7 +248,7 @@ initialize() {
 	// schedule. Additive with N_IMPORTS_PER_TICK if both are set (the
 	// latter stays available for anyone who wants a hard guaranteed floor).
 	defineDefault("IMPORT_RATE_PER_TICK", 0.0);
-	// R3/R4: import-driven resurgence — multiplies IMPORT_RATE_PER_TICK from
+	// import-driven resurgence: multiplies IMPORT_RATE_PER_TICK from
 	// RESURGENCE_TRIGGER_TICK onward (the "leaky border opens wider"), matching the
 	// BITING_RATE_BOOST / ALPHA_ACTIVATE_BOOST pattern. 1.0 = no boost.
 	defineDefault("IMPORT_RATE_BOOST", 1.0);
@@ -270,16 +264,16 @@ initialize() {
 	// only console/log narration. Recommended F for sweeps (cuts log-disk noise).
 	defineDefault("VERBOSE", F);
 
-	// tree-sequence recording // T = permanently retain cleared/dead infections (hypnozoite batches + cleared
-	// blood-stage broods) in the tree sequence so IBD can be computed between a
+	// tree-sequence recording. T = permanently retain cleared/dead infections (hypnozoite
+	// batches + cleared blood-stage broods) in the tree sequence so IBD can be computed between a
 	// recurrence and an EARLIER, already-cleared infection (relapse-to-prior,
 	// attribution networks, WHO-vs-genetics reclassification all need this).
-	// F = original lean behaviour (permanent=F): cleared infections may be
+	// F = retain them without the permanent flag (permanent=F): cleared infections may be
 	// simplified away, losing their ancestry - only safe when IBD to prior
 	// infections is NOT needed.
 	defineDefault("RETAIN_FULL_HISTORY", T);
 
-	// ── PARAMETER TYPES, for runs started directly with -d (m62) ────────────
+	// ── PARAMETER TYPES, for runs started directly with -d (D45) ────────────
 	// validate_params() checks every parameter's type before SLiM starts; a run started with -d
 	// bypasses R, so the same checks are made here. A number may be written either way, 7 or 7.0,
 	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
@@ -424,8 +418,8 @@ initialize() {
 	if (!(MAX_MOI >= 1))
 		stop("MAX_MOI must be at least 1, got " + MAX_MOI + ": a host takes a new inoculation only " +
 			"while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.");
-	// The rest of validate_params()'s refusals (m62). Without them a direct run starts and means
-	// something else (RADCURE_MODE = 'Person' ran the per-hypnozoite mode, and a probability
+	// The rest of validate_params()'s refusals (D45). Without them a direct run starts and means
+	// something else (RADCURE_MODE = 'Person' would run the per-hypnozoite mode, and a probability
 	// above 1 is always true) or stops part-way.
 	for (nm in c("P_TRANS_VH", "P_TRANS_HV", "P_GAMETOCYTE", "P_PRIMARY", "P_DETECT_PRIMARY",
 		"P_DETECT_RELAPSE", "RADCURE_COVERAGE", "P_RAD_SURVIVAL", "BLOODCURE_COVERAGE",
@@ -503,8 +497,8 @@ initialize() {
 
 	// ---- configurations that cannot produce a single parasite ----------------------------
 	// Mirrored in validate_params() on the R side; repeated here because the model can be run
-	// directly with -d, bypassing R entirely. These configurations used to complete with exit
-	// status 0 and an EMPTY event log, which is indistinguishable from a cell that simply saw
+	// directly with -d, bypassing R entirely. Unchecked, these configurations would complete with
+	// exit status 0 and an EMPTY event log, which is indistinguishable from a cell that simply saw
 	// no transmission - the worst kind of failure in a 100-run sweep.
 	// NOTE: unreachable in practice. SLiM evaluates tick-range expressions (the model has a
 	// `1:(SIM_DAYS - 1) late()` event) BEFORE initialize() runs, so SIM_DAYS < 2 already dies
@@ -569,8 +563,7 @@ initialize() {
 	                               2093556, 3153402));
 	// CORE (subtelomere-masked) lengths. APPROXIMATION = 90% of full length, a proxy
 	// for the MalariaGEN Pv4 core genome (subtelomeric pir/vir-rich content excluded;
-	// ~21.8 Mb core of the 24.2 Mb assembly). TODO: replace with the exact Pv4
-	// core-region coordinates (regions BED) when available - a one-line data swap.
+	// ~21.8 Mb core of the 24.2 Mb assembly), not the exact Pv4 core-region coordinates (D5).
 	defineConstant("PVP01_CORE", asInteger(round(PVP01_FULL * 0.90)));
 	// Where each chromosome's centromere sits, as a fraction of its length, chr 1..14: the centres
 	// of the centromere features PVP01_CEN01..PVP01_CEN14 of the PvP01 annotation (Sanger/GeneDB,
@@ -596,7 +589,7 @@ initialize() {
 			// build a range of 1e11 entries, and would stop without naming CHROMOSOMES
 			if (any(asFloat(parts) < 1) | any(asFloat(parts) > 14))
 				stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
-			// Eidos counts down a high-low range; validate_params() refuses one (m62)
+			// Eidos counts down a high-low range; validate_params() refuses one (D45)
 			if (asInteger(parts[0]) > asInteger(parts[1]))
 				stop("CHROMOSOMES has a range that runs high-low: " + CHROMOSOMES);
 			chr_idx = c(chr_idx, asInteger(parts[0]):asInteger(parts[1]));
@@ -674,7 +667,7 @@ initialize() {
 	// subpopulation each import-tick mints its genomes in - SLiM refuses to reuse a
 	// subpopulation id, so this only ever counts up. It starts just above the host and mosquito
 	// range so the two can never collide, but NOT far above: SLiM materialises a DENSE
-	// population table up to the highest id used, so a base of 1e6 added ~1,000,000 empty rows
+	// population table up to the highest id used, so a base of 1e6 would add ~1,000,000 empty rows
 	// and ~8 MB of padding to every tree sequence from a run with imports.
 	defineGlobal("NEXT_SCRATCH_SUBPOP", asInteger(N_HOSTS + N_MOSQ) + 1000);
 	// the second compartment of an import, awaiting its clone on the next tick
@@ -689,8 +682,7 @@ initialize() {
 	defineGlobal("RECRUD_RETIRE", integer(0));
 	// liveness: has a parasite existed at any point? See the guard at the end of early().
 	// A run that never started ends no earlier than LIVENESS_TICK, unless its last day comes
-	// first: a margin of a few days after a first-day import pulse. Before D43 the guard stopped
-	// such a run with an error, and the tick was set to fail a mis-specified sweep cell quickly.
+	// first: a margin of a few days after a first-day import pulse (D43).
 	defineGlobal("EVER_LIVE", F);
 	defineConstant("LIVENESS_TICK", 10);
 }
@@ -722,12 +714,12 @@ reproduction()
 	// exhausted batch would stay alive and keep activating against a stale count.)
 	// ----------------------------
 	
-	// Resurgence trigger boost on activation rate (R1: relapse-driven) -
+	// Resurgence trigger boost on activation rate (relapse-driven) -
 	// computed once per tick, not per-batch, since it only depends on
 	// sim.cycle.
 	effective_alpha_activate = (sim.cycle >= RESURGENCE_TRIGGER_TICK) ?
 		ALPHA_ACTIVATE * ALPHA_ACTIVATE_BOOST else ALPHA_ACTIVATE;
-	// F7: keep the competing-risks probabilities valid under a large activation boost -
+	// Keep the competing-risks probabilities valid under a large activation boost -
 	// need alpha < 1 and death-thinning MU/(1-alpha) <= 1, i.e. alpha <= 1 - MU.
 	effective_alpha_activate = min(asFloat(effective_alpha_activate), 1.0 - MU_HYPNOZOITE);
 	
@@ -786,9 +778,9 @@ reproduction()
 			
 			// ----------------------------
 			// Non-latent: thin the batch between activation and death.
-			// Sequential-binomial decomposition of the same per-member
+			// Sequential-binomial decomposition of the per-member
 			// multinomial (activate w.p. ALPHA_ACTIVATE, die w.p.
-			// MU_HYPNOZOITE, survive otherwise) used previously per-individual.
+			// MU_HYPNOZOITE, survive otherwise).
 			// ----------------------------
 			n_activating = rbinom(1, batch_count, effective_alpha_activate);
 			remaining    = batch_count - n_activating;
@@ -803,9 +795,8 @@ reproduction()
 			n_surviving = remaining - n_dying;
 			
 			// ---- Activation: the n_activating clonal hypnozoites leaving dormancy this
-			// tick merge into ONE blood-stage relapse EPISODE (F6: was one Individual per
-			// activating member, which over-counted relapses and re-rolled detection /
-			// radical cure per member). Batch depletion by n_activating is handled above.
+			// tick merge into ONE blood-stage relapse EPISODE, with one detection draw and at
+			// most one course. Batch depletion by n_activating is handled above.
 			if (n_activating > 0)
 			{
 				{
@@ -853,7 +844,7 @@ reproduction()
 						asString(new_active.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human", 0, asInteger(hyp.getValue("is_imported")),  // is_imported carried from the source hypnozoite -> imported relapses are labelled directly
 						new_active.pedigreeID,
 						hyp.pedigreeID,  // parent1_pedigree_id links back to the source batch object
-						// F6: ONE episode row, but n_hypnozoites = the n_activating clonal hypnozoites
+						// ONE episode row, but n_hypnozoites = the n_activating clonal hypnozoites
 						// it represents (so hypnozoite-activation counts stay correct downstream).
 						-1, n_activating, hyp.getValue("oocyst_id"), rel_detected, into_patent
 						);
@@ -1000,14 +991,10 @@ reproduction()
 		// find a human to bite
 		h = sample(humans, 1);
 		
-		// what MOI does that human have? 
-		// INFECTIOUSNESS, not patency. The "tagged infected but MOI=0" guard below reads as a
-		// defensive check against an impossible state, but a host carrying only subpatent clones
-		// is reachable and legitimate once subpatency exists -- and the patent count there
-		// silently blocks exactly the transmission SUBPATENT_INFECTIVITY is supposed to permit.
-		// Measured: uptakes from a host with NO patent clone go 0 -> 68 -> 233 -> 918 across
-		// SUBPATENT_INFECTIVITY 0/0.15/0.5/1.0 with this as the transmissible count, and stay
-		// flat at 0 with the patent count (D25 item 7).
+		// what MOI does that human have?
+		// INFECTIOUSNESS, not patency: a host carrying only subpatent clones can still infect a
+		// mosquito, and counting patent clones here would block exactly the transmission
+		// SUBPATENT_INFECTIVITY permits (D25 item 7).
 		human_MOI = getTransmissibleLineageCount(h);
 		
 		// DEBUGGING: to check who bit whom (only prints the 'bite' event not any transmission)
@@ -1095,7 +1082,7 @@ reproduction()
 				
 				plasmo_mosq = transmissible_mosq_broods; // one Individual per DISTINCT lineage drawn by sampleTransmissibleMosqBroods()
 				
-				defineGlobal("INOCULATION_ID", INOCULATION_ID + 1); // plain assignment was scoped LOCAL, so ids restarted every tick
+				defineGlobal("INOCULATION_ID", INOCULATION_ID + 1); // defineGlobal(): a plain assignment here would be local to the callback
 				
 				new_lineage_ids = inoculateMosquitoToHuman(plasmo_mosq, h, m.id, INOCULATION_ID);
 				
@@ -1134,7 +1121,7 @@ reproduction()
 					{
 						plasmo_mosq = transmissible_mosq_broods; // one Individual per DISTINCT lineage drawn by sampleTransmissibleMosqBroods()
 						
-						defineGlobal("INOCULATION_ID", INOCULATION_ID + 1); // plain assignment was scoped LOCAL, so ids restarted every tick
+						defineGlobal("INOCULATION_ID", INOCULATION_ID + 1); // defineGlobal(): a plain assignment here would be local to the callback
 						
 						new_lineage_ids = inoculateMosquitoToHuman(plasmo_mosq, h, m.id, INOCULATION_ID);
 						
@@ -1244,7 +1231,7 @@ reproduction()
 	self.active = 0;
 }
 
-// v3: one-shot clonal founder seeding. addCloned() is only legal inside reproduction(), and at tick 1
+// One-shot clonal founder seeding. addCloned() is only legal inside reproduction(), and at tick 1
 // reproduction() never fires (no individuals exist until 1 early() seeds them), so the clonal founder
 // HOSTS recorded during setup are copied here at tick 2 - the first tick individuals exist. Runs once,
 // then self-deactivates. Default N_FOUNDER_LINEAGES == N_FOUNDER_HOSTS => nothing pending => no-op.
@@ -1312,9 +1299,9 @@ reproduction()
 
 	n_subpops = asInteger(N_HOSTS + N_MOSQ);
 
-	founder_templates = c();          // v3: distinct founder-lineage template individuals (genome roots)
-	pending_clone_hosts     = c();    // v3: subpop IDs of founder HOSTS awaiting a clonal copy (seeded tick 2; addCloned needs reproduction())
-	pending_clone_templates = c();    // v3: subpop ID of the founder LINEAGE each pending clone-host copies
+	founder_templates = c();          // distinct founder-lineage template individuals (genome roots)
+	pending_clone_hosts     = c();    // subpop IDs of founder HOSTS awaiting a clonal copy (seeded tick 2; addCloned needs reproduction())
+	pending_clone_templates = c();    // subpop ID of the founder LINEAGE each pending clone-host copies
 
 	for (s in seqLen(n_subpops))
 	{
@@ -1345,7 +1332,7 @@ reproduction()
 		for (lin in subpop.individuals)
 		{
 			lin.setValue("brood_birth_tick", sim.cycle);
-			if (isNULL(lin.getValue("lineage_id"))) lin.setValue("lineage_id", lin.pedigreeID);  // v3: clones already carry the template's lineage_id
+			if (isNULL(lin.getValue("lineage_id"))) lin.setValue("lineage_id", lin.pedigreeID);  // clones already carry the template's lineage_id
 			lin.setValue("oocyst_id", -1);   // founders arise from no meiosis
 			lin.setValue("brood_id", -1);    // founders belong to no co-hatching brood
 			lin.setValue("brood_founder", T);
@@ -1366,7 +1353,7 @@ reproduction()
 	// before the liveness check at the end of early() (D43).
 	if (N_FOUNDER_HOSTS > 0)
 		defineGlobal("EVER_LIVE", T);
-	// v3: hand the pending clonal-founder assignments (integer subpop IDs) to the one-shot 2 reproduction() seeder (tick 2)
+	// hand the pending clonal-founder assignments (integer subpop IDs) to the one-shot 2 reproduction() seeder (tick 2)
 	defineGlobal("PENDING_CLONE_HOSTS", pending_clone_hosts);
 	defineGlobal("PENDING_CLONE_TEMPLATES", pending_clone_templates);
 
@@ -1392,10 +1379,6 @@ reproduction()
 		h.setValue("tx_tick", -1);
 		h.setValue("tx_liver", F);
 	}
-
-	// D17: the per-host pending_imports counter is gone. It existed only because seeding
-	// had to happen in reproduction(); seedImports() now seeds in early(), where it is
-	// scheduled, so there is nothing to carry between callbacks.
 
 	vcat("---- Initial seeding : -----");
 	vcat("Infected 👤: " + sum(humans.tag == INFECTED) + ", susceptible 👤: " + sum(humans.tag == SUSCEPTIBLE));
@@ -1591,9 +1574,7 @@ early() {
 		if(runif(1) < MU_MOSQ)
 		{
 			// capture the individuals BEFORE killing so we can log each
-			// one's own pedigreeID (previously this deduped by brood_id,
-			// which loses per-individual granularity if >1 individual
-			// ever shares a brood_id within the same mosquito)
+			// one's own pedigreeID
 			dying_inds = m.individuals;
 			
 			// Log one event per killed individual
@@ -1659,8 +1640,7 @@ early() {
 	{
 		// MDA is the same course as case management, given to each host it reaches (MDA_COVERAGE)
 		// rather than to detected cases: blood-stage drugs plus radical cure, through
-		// applyTreatment() so the two paths cannot diverge. It used to carry its own copy of the
-		// hypnozoite thinning, which would now disagree with RADCURE_MODE. Because it waits for no
+		// applyTreatment() so the two paths cannot diverge. Because it waits for no
 		// symptoms, it also reaches subpatent clones and clones that became patent earlier today,
 		// which a case course does not (D44); the day's imports arrive after it. Only hosts not
 		// empty at the round are drawn, so the mda_*_given counts are courses to those hosts; the
@@ -1674,8 +1654,7 @@ early() {
 				next;
 			// Draw ONLY below full coverage. Eidos does not short-circuit, so a bare
 			// `runif(1) >= MDA_COVERAGE` would consume a draw per host even at 1.0 and shift
-			// the whole RNG stream - every existing MDA run would change despite the round
-			// still reaching everyone.
+			// the rest of the run's random numbers, although the round still reaches everyone.
 			if (MDA_COVERAGE < 1.0)
 				if (runif(1) >= MDA_COVERAGE)
 					next;
@@ -1697,7 +1676,7 @@ early() {
 	// Imports go to hosts chosen uniformly at random, as bites do, at most one per host a tick
 	// (D38); a host already at MAX_MOI takes none. Each import is logged as
 	// "vh_inoculation_import" with inoculation_id.
-	// TODO: In future, we will create a subpopulation of import pool parasite individuals and we will use takeMigrants() from that subpopulation, this will also support modeling of importation rates.
+	// Each import is an independent founder genome, unrelated to every other (D18).
 	// ----------------------------
 	
 	// determine desired imports this tick
@@ -1752,8 +1731,8 @@ early() {
 		}
 		import_hosts = import_hosts[!full];
 
-		// D17: seed HERE, not in reproduction(). reproduction() is called once per existing
-		// individual, so an empty parasite population never drained the old queue.
+		// Seeded HERE, in early(): SLiM calls reproduction() only while a parasite exists, so
+		// seeding there could never reach an empty population (D17).
 		if (size(import_hosts) > 0)
 			seedImports(import_hosts);
 	}
@@ -1903,7 +1882,7 @@ function (void) logEvent(
 	[i$ detected = -1],                // detection layer: 1 = detected/reported case, 0 = true-but-undetected episode, -1 = N/A (non-case event)
 	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage, born on an earlier day, was in the host (D40), 0 if not; -1 elsewhere
 {
-	defineGlobal("TICK_EVENT_ID", TICK_EVENT_ID + 1); // was LOCAL inside this function, so every event_id was <tick>_1
+	defineGlobal("TICK_EVENT_ID", TICK_EVENT_ID + 1); // defineGlobal(): a plain assignment here would be local to the function
 	event_id = asString(sim.cycle) + "_" + asString(TICK_EVENT_ID);
 
 	line = paste(c(
@@ -1946,11 +1925,11 @@ function (void) writeStateSnapshot(void)
 	for (h in humans)
 	{
 		// Count only lineages that are actually PRESENT: a dormant batch retired to
-		// batch_count == 0 lives until the next tick's cleanup, and listing it here made
+		// batch_count == 0 lives until the next tick's cleanup, and listing it here would make
 		// state.tsv contradict itself - rows reporting moi_active 0, moi_dormant 0 and
 		// hyp_reservoir_size 0 while still naming a lineage. That happens on exactly the tick
 		// a liver drug clears a reservoir, which is the tick its efficacy is measured on.
-		// getDormantLineageCount() already applies this filter.
+		// getDormantLineageCount() applies the same filter.
 		// Per-individual loop, not a vectorised getValue(): batch_count is NULL on an ACTIVE
 		// individual, so reading it across the whole subpopulation returns a shorter vector
 		// than it was indexed with.
@@ -2032,8 +2011,8 @@ function (integer$) getActiveLineageCount(o<Subpopulation>$ s)
 		return 0;
 	// PATENT blood-stage only. A subpatent clone is present but undetectable, so it is not an
 	// episode and does not belong in moi_active. See getTransmissibleLineageCount() for the
-	// infectiousness question and getBloodStageLineageCount() for the capacity question --
-	// this function used to answer all three, and subpatency separates them (D25 item 7).
+	// infectiousness question and getBloodStageLineageCount() for the capacity question;
+	// subpatency separates the three (D25 item 7).
 	active = s.individuals[s.individuals.getValue("is_dormant") == F &
 	                       s.individuals.getValue("is_subpatent") == F];
 	if (size(active) == 0)
@@ -2167,17 +2146,16 @@ function (logical$) caseManagementOn(void)
 // CASE MANAGEMENT: decide now, apply later.
 //
 // Treatment is decided where a case ARISES (in reproduction(), or in seedImports() for an
-// import) and applied in early() TREATMENT_DELAY days later. Splitting it this way fixes four
-// things at once that a per-genotype flag could not:
+// import) and applied in early() TREATMENT_DELAY days later. Splitting it this way does four
+// things a per-genotype flag could not:
 //
 //   * radical cure reaches the hypnozoite batch seeded by the very bite that caused the case.
 //     Applying from reproduction() cannot: SLiM does not make a juvenile visible until the
 //     callback ends, so a cure applied there only ever sees OLDER batches.
-//   * a relapse gets a schizonticide. A flag set only in the inoculation path meant a detected
-//     relapse could trigger radical cure but never blood-stage treatment.
+//   * a detected relapse gets a schizonticide, as any other case does, not only radical cure.
 //   * the PATIENT is treated, not one clone. Drugs clear every blood-stage parasite in a
 //     person; a flag on a single lineage leaves the host's other clones alive.
-//   * treatment stops being instantaneous, so a treated case is still infectious until the
+//   * treatment is not instantaneous, so a treated case is still infectious until the
 //     drugs arrive.
 //
 // One course at a time per host: a second case while a course is pending does not re-draw.
@@ -2275,7 +2253,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 		// course given for a different case does not re-roll it. Without this a holder is re-drawn
 		// by every later course, emitting a second episode-ending event for a pedigree_id
 		// that already has one and tripping the "no blood-stage infection clears twice"
-		// audit (measured 8 of 193 suppressions in prototype). MDA treats everyone it reaches,
+		// audit in inst/validation/audit_events_and_ibd.R. MDA treats everyone it reaches,
 		// symptoms or not, so it reaches holders too; see below.
 		is_mda = (src == "mda");
 		if (is_mda)
@@ -2315,8 +2293,8 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 			else
 			{
 				// Draw ONLY when the feature is on. Eidos does not short-circuit, so a bare
-				// `runif(1) < P_RECRUD_GIVEN_FAIL` consumes a draw at 0 and shifts the whole
-				// RNG stream - every existing run would change despite the feature being off.
+				// `runif(1) < P_RECRUD_GIVEN_FAIL` consumes a draw at 0 and shifts the rest of the
+				// run's random numbers, although the feature is off.
 				suppressed = F;
 				if (P_RECRUD_GIVEN_FAIL > 0)
 					if (runif(1) < P_RECRUD_GIVEN_FAIL)
@@ -2366,7 +2344,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 	h.tag = (getTransmissibleLineageCount(h) > 0) ? INFECTED else SUSCEPTIBLE;
 }
 
-// mean hypnozoite batch size per infectious bite, including the R1 resurgence boost.
+// mean hypnozoite batch size per infectious bite, including the resurgence boost.
 function (float$) effectiveNuBatch(void)
 {
 	return asFloat((sim.cycle >= RESURGENCE_TRIGGER_TICK) ?
@@ -2410,8 +2388,7 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 	// 3e-3. The count is then drawn exactly, by inversion: the zero-truncated negative binomial has
 	// P(x + 1) / P(x) = (x + k) / (x + 1) * p with p = lambda / (k + lambda). Wherever an uptake
 	// gets here with a probability above 1e-12 (lambda below about 0.015 at k = 0.001), p is at
-	// most about 0.94, so at most about 500 terms carry all but about 1e-16 of the mass. Runs that
-	// never get here draw exactly as before.
+	// most about 0.94, so at most about 500 terms carry all but about 1e-16 of the mass.
 	p = lambda / (k + lambda);
 	w = 1.0;
 	weights = 1.0;
@@ -2433,10 +2410,9 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 // -----------------------------------------------------------
 // D17: IMPORT SEEDING, and the one-tick deferral of the second compartment.
 //
-// Imports used to be seeded inside reproduction(), which SLiM calls once per EXISTING
-// individual - so with zero parasites alive it never ran, the queue accumulated forever,
-// and the run ended with exit 0 and no events. That meant a naive population could never be
-// seeded by imports, and no run reaching elimination could ever be re-seeded.
+// Imports are seeded here, in early(), not in reproduction(), which SLiM calls once per
+// EXISTING individual: with zero parasites alive it never runs, so an import seeded there
+// could never reach a naive population or re-seed a run that reached elimination.
 //
 // addEmpty()/addCloned() are reproduction()-only, so the genome is minted HERE with
 // sim.addSubpop() - the same idiom the founder lineages use at tick 1 - and moved into
@@ -2615,7 +2591,7 @@ function (integer) establishInfectionOutcome(
 	has_primary = (runif(1) < P_PRIMARY);
 	// read by inoculateMosquitoToHuman(): only a bite that makes a blood stage is a case (D36)
 	defineGlobal("LAST_HAS_PRIMARY", has_primary);
-	// Resurgence trigger boost on batch size (R1: relapse-driven, reservoir
+	// Resurgence trigger boost on batch size (relapse-driven, reservoir
 	// version) - same trigger tick as the activation-rate boost, applied
 	// independently since a scenario might want one, the other, or both.
 	batch_size  = (batch_override >= 0) ? batch_override else drawHypnozoiteBatchSize(effectiveNuBatch());
@@ -2702,7 +2678,7 @@ function (integer) establishInfectionOutcome(
 		new_batch.setValue("bloodstage_start_tick", NULL);
 		new_batch.setValue("gametocyte_ready_tick", NULL);
 		new_batch.setValue("latency_stage", K_LATENCY);
-		new_batch.setValue("batch_count", batch_size); // NEW: hypnozoites represented by this single object
+		new_batch.setValue("batch_count", batch_size); // hypnozoites represented by this single object
 		new_batch.color = "turquoise4";
 		
 		logEvent(
@@ -2747,8 +2723,8 @@ function (void) tagMosqProduct(o<Individual>$ prod, i$ lineage, i$ oocyst, i$ br
 }
 
 // SELFING oocyst - one product, genome + lineage INHERITED from the single
-// parent (clonal). Inheriting the lineage (vs minting a fresh one) is the fix that
-// stops clonal duplicates from being counted as distinct genotypes in COI.
+// parent (clonal). Inheriting the lineage (vs minting a fresh one) keeps clonal
+// duplicates from being counted as distinct genotypes in COI.
 function (integer$) seedSelfedOocyst(o<Subpopulation>$ m, o<Individual>$ parent, s$ color, i$ oocyst, i$ brood)
 {
 	prod = m.addCloned(parent);
@@ -2934,8 +2910,8 @@ function (integer) inoculateMosquitoToHuman(
 
 	// ONE hypnozoite batch per infectious BITE (White et al. 2014 parameterise nu per
 	// bite, not per genotype), split uniformly among the k co-inoculated genotypes - so
-	// co-transmission does not inflate the reservoir. k == 1 reproduces the previous
-	// per-genotype draw exactly, which is the shipped default (LAMBDA_SPOROZOITES = 0).
+	// co-transmission does not inflate the reservoir. With one genotype (k == 1, as at the
+	// default LAMBDA_SPOROZOITES = 0) the whole batch goes to it.
 	k = size(broods);
 	det = asInteger(runif(1) < P_DETECT_PRIMARY);   // one draw for the BITE, not per genotype
 	bite_batch = drawHypnozoiteBatchSize(effectiveNuBatch());
@@ -3030,8 +3006,8 @@ function (o<Individual>) gametocytePool(o<Subpopulation>$ h)
 // of the event log so the realised rate can be checked against it. The realised outcome is
 // produced in seedBroodFromHuman() by drawing two gametes independently and uniformly per
 // oocyst, which reproduces this as a marginal AND gives the correct pairing P(i,j) ~ p_i*p_j
-// (Wong et al. 2018). The earlier design - roll Bernoulli(1 - Simpson), then pick two DISTINCT
-// lineages - matched the marginal but not the pairing, and no longer exists.
+// (Wong et al. 2018). Rolling Bernoulli(1 - Simpson) and then picking two DISTINCT lineages
+// would match the marginal but not the pairing.
 function (float$) computeOutcrossingProb(o<Individual> active)
 {
 	if (size(active) == 0)
@@ -3074,7 +3050,7 @@ function (integer) seedBroodFromHuman(
 		return integer(0);
 
 	// EXPECTED outcrossing rate for this pool - logged only (the p_outcross column); the
-	// REALISED outcome now emerges from the independent gamete draws below and is recorded
+	// REALISED outcome emerges from the independent gamete draws below and is recorded
 	// per oocyst by is_recombinant / the hv_uptake_* event type.
 	p_outcross = computeOutcrossingProb(active);
 
@@ -3090,8 +3066,8 @@ function (integer) seedBroodFromHuman(
 
 		// Two gametes drawn INDEPENDENTLY and UNIFORMLY (with replacement) from the gametocyte
 		// pool. This reproduces P(outcross) = 1 - sum(p_i^2) as a marginal AND gives the correct
-		// pairing P(i,j) ~ p_i*p_j (Wong et al. 2018), which the old "roll outcross, then pick
-		// two DISTINCT lineages" did not.
+		// pairing P(i,j) ~ p_i*p_j (Wong et al. 2018), which "roll outcross, then pick two
+		// DISTINCT lineages" would not.
 		gam = sample(active, 2, replace=T);
 		lin1 = gam[0].getValue("lineage_id");
 		lin2 = gam[1].getValue("lineage_id");
