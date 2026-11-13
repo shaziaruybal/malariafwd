@@ -221,9 +221,12 @@ jobs:
       - name: The other validation scripts (weekly, release tags, on demand)
         if: env.FULL_VALIDATION == 'true' && runner.os == 'Linux'
         shell: bash
+        env:
+          MALARIAFWD_WORKERS: 2   # calibrate_nu.R's 15 runs, two at a time
         run: |
           # bash -e: the loop stops at the first script that exits non-zero
-          for s in check_parameters.R audit_arg_recombination.R audit_arg_junctions.R explain_ibd.R; do
+          for s in check_parameters.R audit_arg_recombination.R audit_arg_junctions.R explain_ibd.R \
+                   calibrate_nu.R; do
             echo "::group::$s"
             Rscript -e "source(system.file('validation', '$s', package = 'malariafwd'))"
             echo "::endgroup::"
