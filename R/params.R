@@ -472,6 +472,17 @@ validate_params <- function(p) {
 ## value must be whole. A non-whole count stops the run or silently changes it (12.5 founder
 ## hosts seed 13), a non-whole SIM_DAYS stops SLiM at launch, a non-whole MDA_TICK or
 ## IMPORT_TICK never comes, and the other days and delays act as the next whole day.
+## The control characters a text parameter must not hold, matched byte-wise so that accented and
+## other non-ASCII labels pass in every locale: the C0 controls and DEL, and the C1 controls
+## U+0080-U+009F, which are C2 80 to C2 9F in UTF-8. The pattern is marked as bytes: a plain
+## literal is stored in the encoding of the session that installed the package, and a session in
+## another locale then warns, at every check, that it cannot translate it.
+.control_bytes <- local({
+  p <- "[\001-\037\177]|\302[\200-\237]"
+  Encoding(p) <- "bytes"
+  p
+})
+
 .check_types <- function(p) {
   d <- .malariafwd_defaults
   day <- function(nm) nm %in% c("MDA_TICK", "IMPORT_TICK", "RESURGENCE_TRIGGER_TICK") ||
@@ -495,9 +506,7 @@ validate_params <- function(p) {
            "Encoding(x) <- \"latin1\" (R reads it as Windows-1252) or convert it with ",
            "iconv(x, from = \"CP1252\", to = \"UTF-8\"), or read the file it came from with its ",
            "encoding declared.", call. = FALSE)
-    ## byte-wise, so that accented and other non-ASCII labels pass in every locale: the C0
-    ## controls and DEL, and the C1 controls U+0080-U+009F, which are C2 80 to C2 9F in UTF-8
-    if (is.character(v) && grepl("[\001-\037\177]|\302[\200-\237]", v, useBytes = TRUE))
+    if (is.character(v) && grepl(.control_bytes, v, useBytes = TRUE))
       stop(nm, " must not contain control characters (newlines, tabs): SLiM and params.tsv ",
            "cannot carry them.", call. = FALSE)
     if (!is.numeric(v)) next
