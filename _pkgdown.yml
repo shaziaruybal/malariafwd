@@ -2,6 +2,29 @@ url: https://shaziaruybal.github.io/malariafwd/
 
 template:
   bootstrap: 5
+  light-switch: true
+
+navbar:
+  structure:
+    left: [intro, reference, articles, model, news]
+    right: [search, github, lightswitch]
+  components:
+    model:
+      text: The model
+      menu:
+      - text: Model description
+        href: MODEL_DESCRIPTION.html
+      - text: Decision log
+        href: DECISIONS.html
+      - text: Validation scripts and their results
+        href: https://github.com/shaziaruybal/malariafwd/tree/main/inst/validation
+
+home:
+  links:
+  - text: Model description
+    href: MODEL_DESCRIPTION.html
+  - text: Decision log
+    href: DECISIONS.html
 
 reference:
 - title: Start here
