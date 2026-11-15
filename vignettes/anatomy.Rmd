@@ -109,7 +109,7 @@ rc_by_origin(run, from = 100, followup = 100)    # secondary cases per case, by 
 ## A single host's trajectory
 
 `state.tsv` records every host each tick. Take the host with the most relapses and plot its
-active blood-stage lineages and hypnozoite reservoir through time:
+blood-stage clones, a colour for each lineage, and its dormant hypnozoites through time:
 
 ```{r, eval = has_gg}
 st <- load_state(run)      # each host's state, day by day

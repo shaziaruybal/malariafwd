@@ -64,9 +64,8 @@ plot_host_state_prevalence <- function(x) {
 #' lineage, so you can see which genotypes are present at any moment, when a lineage clears and
 #' when the same one returns. A band is as tall as its lineage's clones, so a relapse into a patent
 #' clone of the same lineage stacks on it; the COI, which counts distinct lineages, is the number of
-#' bands. The hypnozoite reservoir, every dormant hypnozoite the host carries, is overlaid on a
-#' second axis.
-#' `layout = "summary"` plots active COI and the reservoir as two lines instead. Each clone is
+#' bands. A dashed line counts the host's dormant hypnozoites, of every lineage, on a second axis.
+#' `layout = "summary"` plots the active COI and the dormant hypnozoites as two lines instead. Each clone is
 #' drawn from [episodes()]: from its onset to its end, and to the last day of the state table if it
 #' was still patent when the run ended. The x axis runs to `SIM_DAYS`; on a run that went extinct the
 #' lines end where `state.tsv` does.
@@ -74,7 +73,8 @@ plot_host_state_prevalence <- function(x) {
 #' Each call reads the run's `state.tsv` and `events.tsv`.
 #' @inheritParams load_events
 #' @param host_id the host, one whole number (a run's hosts are 0 to `N_HOSTS - 1`).
-#' @param layout `"lineages"` (each lineage's clones, stacked) or `"summary"` (COI + reservoir lines).
+#' @param layout `"lineages"` (each lineage's clones, stacked) or `"summary"` (lines for the COI and
+#'   the dormant hypnozoites).
 #' @param palette colours cycled across lineages.
 #' @return a ggplot object.
 #' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
@@ -107,12 +107,12 @@ plot_host_trajectory <- function(run, host_id,
   ## the host's clone onsets, from episodes(), which takes them from the event dictionary
   ev <- episodes(events)[human_id == host_id, .(tick = onset_tick, kind = .onset_kind(onset_event))]
   ggplot2::ggplot() +
-    ggplot2::geom_line(data = st, ggplot2::aes(tick, hyp_reservoir_size, colour = "hypnozoite reservoir"), linewidth = .7) +
+    ggplot2::geom_line(data = st, ggplot2::aes(tick, hyp_reservoir_size, colour = "dormant hypnozoites"), linewidth = .7) +
     ggplot2::geom_line(data = st, ggplot2::aes(tick, moi_active, colour = "active COI"), linewidth = .7) +
     ggplot2::geom_rug(data = ev, ggplot2::aes(x = tick, colour = kind), sides = "b",
                       length = grid::unit(.05, "npc")) +
     ggplot2::scale_colour_manual(values = c("active COI" = "goldenrod3",
-                                            "hypnozoite reservoir" = "turquoise4",
+                                            "dormant hypnozoites" = "turquoise4",
                                             "relapse" = "firebrick", "new infection" = "grey40",
                                             "recrudescence" = "#b4472e")) +
     ggplot2::labs(title = paste0("Within-host trajectory - host ", host_id),
@@ -231,7 +231,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::theme(legend.position = "bottom")
 }
 
-## Stacked per-lineage blood-stage areas for one host, reservoir overlaid on a second axis.
+## Stacked per-lineage blood-stage areas for one host, its dormant hypnozoites on a second axis.
 ## Spans are the host's clones from episodes(), from onset to their first end (every way a patent
 ## episode can end, event_types()$ends_episode); a clone still patent when the run ended runs to
 ## the last day of state. An MDA round can end a clone on its first patent day (D44), a one-day
@@ -274,7 +274,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
     ggplot2::scale_shape_manual(values = .KIND_SHAPE, name = NULL) +
     ggplot2::scale_y_continuous(
       "Blood-stage clones",
-      sec.axis = ggplot2::sec_axis(~ . / sf, name = "Hypnozoite reservoir")) +
+      sec.axis = ggplot2::sec_axis(~ . / sf, name = "Dormant hypnozoites")) +
     ggplot2::labs(x = "Day") +
     theme_malariafwd() +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),

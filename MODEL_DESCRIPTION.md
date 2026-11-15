@@ -27,7 +27,7 @@ source repository, makes them and writes these numbers to `man/figures/represent
 **A** one host's lineage trajectory, the host with the most relapses: each colour is a lineage,
 its band as tall as that lineage's blood-stage clones (a relapse into a patent clone of its own
 lineage stacks on it, so the bands' total can exceed the COI, which counts lineages); the dashed
-line is that host's hypnozoite reservoir, every dormant hypnozoite it carries; and the marks
+line, on the right axis, counts that host's dormant hypnozoites, of every lineage; and the marks
 below show new infections (triangles) against relapses (circles) — and, on a run with treatment
 failure, recrudescences (diamonds). **B** population host-state composition over time — note the teal
 *reservoir-only* band, which is invisible to any blood survey. **C** each infected host's peak

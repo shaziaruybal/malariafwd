@@ -18,7 +18,8 @@ plot_host_trajectory(
 
 \item{host_id}{the host, one whole number (a run's hosts are 0 to \code{N_HOSTS - 1}).}
 
-\item{layout}{\code{"lineages"} (each lineage's clones, stacked) or \code{"summary"} (COI + reservoir lines).}
+\item{layout}{\code{"lineages"} (each lineage's clones, stacked) or \code{"summary"} (lines for the COI and
+the dormant hypnozoites).}
 
 \item{palette}{colours cycled across lineages.}
 }
@@ -30,9 +31,8 @@ a ggplot object.
 lineage, so you can see which genotypes are present at any moment, when a lineage clears and
 when the same one returns. A band is as tall as its lineage's clones, so a relapse into a patent
 clone of the same lineage stacks on it; the COI, which counts distinct lineages, is the number of
-bands. The hypnozoite reservoir, every dormant hypnozoite the host carries, is overlaid on a
-second axis.
-\code{layout = "summary"} plots active COI and the reservoir as two lines instead. Each clone is
+bands. A dashed line counts the host's dormant hypnozoites, of every lineage, on a second axis.
+\code{layout = "summary"} plots the active COI and the dormant hypnozoites as two lines instead. Each clone is
 drawn from \code{\link[=episodes]{episodes()}}: from its onset to its end, and to the last day of the state table if it
 was still patent when the run ended. The x axis runs to \code{SIM_DAYS}; on a run that went extinct the
 lines end where \code{state.tsv} does.
