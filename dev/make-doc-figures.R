@@ -162,7 +162,7 @@ if (requireNamespace("rsvg", quietly = TRUE)) {
   rsvg::rsvg_png(svg, png, width = 2400)
   cat("wrote", png, "\n")
 } else if (Sys.info()[["sysname"]] == "Darwin" && nzchar(Sys.which("qlmanage"))) {
-  source(file.path("dev", "make-readme-figures.R"))
+  source(file.path("dev", "render-schematic.R"))
 } else {
   message("model-structure.png not rendered: install rsvg, or run on macOS")
 }

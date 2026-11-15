@@ -1,7 +1,7 @@
 ## Renders man/figures/model-structure.png, the schematic README.md embeds, from its SVG with
 ## macOS's qlmanage. dev/make-doc-figures.R makes the other figures, and calls this when rsvg is
 ## not installed. Run from the package root:
-##   Rscript dev/make-readme-figures.R
+##   Rscript dev/render-schematic.R
 
 ## ---- model-structure.png, from the SVG --------------------------------------------------
 ## Both documents embed the schematic; MODEL_DESCRIPTION uses the SVG and README the PNG, so
