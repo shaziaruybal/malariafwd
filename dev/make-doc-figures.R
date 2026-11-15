@@ -101,7 +101,7 @@ pC <- ggplot(peak, aes(factor(peak_coi), relapses)) +
   scale_y_continuous(expand = expansion(mult = c(0.02, 0.12))) +
   labs(x = "Peak COI (distinct lineages ever co-active in the host)", y = "Relapses in the host") +
   theme_bw(base_size = 11) + theme(panel.grid.minor = element_blank())
-pD <- plot_force_of_infection(run) + labs(subtitle = NULL)   # the caption says what the gap is
+pD <- plot_force_of_infection(run)
 pE <- plot_relatedness_ladder(run, style = "bars")
 rep_fig <- pA / (pB | pC) / (pD | pE) + plot_annotation(tag_levels = "A") +
   plot_layout(heights = c(1, 1, 1.15))

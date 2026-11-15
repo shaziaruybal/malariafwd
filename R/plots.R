@@ -347,8 +347,7 @@ plot_force_of_infection <- function(x, smooth = 0.4) {
                                   linewidth = 1, formula = y ~ x)
   p +
     ggplot2::scale_colour_manual(values = stats::setNames(c("#b2182b", "#2166ac"), lv), name = NULL) +
-    ggplot2::labs(x = "Day", y = "Episodes per person-year",
-                  subtitle = "the distance between the lines is the relapse contribution") +
+    ggplot2::labs(x = "Day", y = "Episodes per person-year") +
     theme_malariafwd() +
     ggplot2::theme(legend.position = "top")
 }
