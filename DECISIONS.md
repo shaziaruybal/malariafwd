@@ -782,7 +782,7 @@ fewer.
 **Context.** `N_OOCYSTS_PER_BITE` was kept as a tripwire after `LAMBDA_SPOROZOITES` replaced it: any
 value but 1 stopped the run, yet it was still a parameter, in every set and every `params.tsv`
 (review n20). It capped the lineages a bite delivered, not oocysts. Retiring it is the review's fix,
-taken as the Phase B plan's default; the author can reverse it at the B1 review stop.
+accepted on 2026-11-07.
 **Decision.** It is retired as `N_FOUNDERS` is (D54): `vivax_params(N_OOCYSTS_PER_BITE = )`, a set
 edited to hold it, and a direct run that defines it are refused, whatever the value, with a message
 naming `LAMBDA_SPOROZOITES`; `params.tsv` has no row for it; a saved `params.tsv`'s row is left out
@@ -898,7 +898,7 @@ dropped both ways: 0-1% of infectious bites in untreated runs and 2.8-5.5% with 
 (`BLOODCURE_COVERAGE` 0.8), where hosts whose only clone is that day's relapse are common. The
 `MAX_MOI` check (D38) counted only visible clones, so same-day bites took a host past it: at
 `MAX_MOI = 2` with no relapses, blood-stage MOI reached 4. The author chose to fix it before
-Phase B (2026-11-07).
+the release (2026-11-07).
 **Decision.** Each host keeps the lineages of the blood-stage clones it gained that day, cleared at
 the start of each day's `reproduction()`, and a bite's `MAX_MOI` check counts them with the clones
 the host carries. A bite on a host tagged infected is inoculated as any other: only the mosquito's
@@ -1857,9 +1857,9 @@ hazard estimate for falciparum is non-monotonic), and a reviewer suggested mean 
 shape 4. Not shipped: it needs a second parameter, and the family with a published fit behind it
 should be the default. A clean extension if the biology argument wins later.
 **Consequences.** Runs with `P_RECRUD_GIVEN_FAIL > 0` change -- the delay halves. Runs at the
-shipped default are unaffected and remain byte-identical to the pre-Step-4 model (re-verified
-after this change on 4 runs). `RECRUD_DELAY_DIST` joins `.malariafwd_string_params` and is fenced
-on both sides. The plan documents' Poisson spec is now superseded and must be marked historical.
+shipped default are unaffected and remain byte-identical to the model before recrudescence was
+added (re-verified after this change on 4 runs). `RECRUD_DELAY_DIST` joins `.malariafwd_string_params` and is fenced
+on both sides.
 **How to verify.** Each option produces its own signature on a run with
 `P_RECRUD_GIVEN_FAIL = 1`, pairing each recrudescence to its holder via `parent1_pedigree_id`
 (the holder keeps its own id; the recurrence mints a new one): geometric median 7 / sd 11.8 /
