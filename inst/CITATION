@@ -7,7 +7,6 @@ bibentry(
   year    = "2026",
   note    = paste("R package version", meta$Version),
   url     = "https://github.com/shaziaruybal/malariafwd"
-  # doi   = "10.5281/zenodo.XXXXXXX"   # TODO at release; see CITATION.cff
 )
 
 bibentry(
