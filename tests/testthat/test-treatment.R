@@ -14,9 +14,8 @@ run_counts <- function(p, tag) {
 
 test_that("treatment is driven by coverage alone, not by the vector-control window", {
   skip_if_no_slim()
-  ## D19. Every case-based treatment used to be gated on INTERVENTION_START/END - the same
-  ## window that scales biting and importation - so setting a coverage without also opening
-  ## that window produced zero treatments and no warning. That is how the issue was found.
+  ## D19. Case-based treatment is not gated on INTERVENTION_START/END, the window that scales
+  ## biting and importation: a coverage treats cases without that window being opened.
   expect_equal(run_counts(shared(), "none")$bloodcure, 0)
 
   blood <- run_counts(shared(BLOODCURE_COVERAGE = 1), "blood")
@@ -105,8 +104,7 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
 })
 
 test_that("a coverage against a closed treatment window is refused", {
-  ## The failure mode D19 fixed was silence, so re-creating it in the NEW parameter has to
-  ## be an error rather than a quietly empty result.
+  ## A coverage that can never act would give a quietly empty result, so it is an error.
   expect_error(vivax_params(BLOODCURE_COVERAGE = 1, TREATMENT_START = 50L, TREATMENT_END = 50L),
                "case-management window is closed")
   ## suppressWarnings: this also trips the nested-radical-cure warning, which is correct

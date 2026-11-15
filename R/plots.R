@@ -316,8 +316,8 @@ plot_force_of_infection <- function(x, smooth = 0.4) {
   ## after any relabelling, so it survives both.
   acq  <- d[is_acquisition == TRUE]
   mosq <- grep("^relapse", unique(acq$origin), value = TRUE, invert = TRUE)
-  ## named ONCE: these strings are both the series labels and the factor levels, and writing
-  ## them twice is how the molFOB series ended up factored to NA - drawn grey, no legend entry.
+  ## named ONCE: these strings are both the series labels and the factor levels, and two copies
+  ## that differ would factor a series to NA - drawn grey, with no legend entry.
   lv <- c("molFOB (all clone acquisitions)", "FOI (bites and imports)")
   w <- rbind(
     acq[, .(rate = sum(rate), series = lv[1]), by = win],

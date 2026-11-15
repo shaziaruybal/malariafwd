@@ -1,4 +1,4 @@
-## Model invariants that guard against regressions. These need SLiM, so they skip when it is
+## Invariants the model must keep. These need SLiM, so they skip when it is
 ## unavailable (e.g. on CRAN / CI without the engine) via skip_if_no_slim() in helper-slim.R.
 
 test_that("hypnozoite batches never draw more than they hold, and ids are unique", {
@@ -10,9 +10,8 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
   run <- run_sim(p, seed = 1, outdir = out)
   ev <- data.table::as.data.table(load_events(run))
 
-  ## (WS-G bug 1) a batch's activations + deaths must never exceed the size it was
-  ## established with. The old PENDING_HYP_DEATHS queue was scoped local, so retired
-  ## batches stayed alive and kept activating (64% of batches over-drew).
+  ## a batch's activations + deaths must never exceed the size it was established with:
+  ## a retired batch draws nothing more
   est <- ev[grepl("^vh_inoculation", event_type) & is_dormant == 1,
             .(batch = pedigree_id, held = n_hypnozoites)]
   act <- ev[event_type == "hypnozoite_activation", .(batch = parent1_pedigree_id, n = n_hypnozoites)]
@@ -21,7 +20,7 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
   chk <- merge(est, drawn, by = "batch", all.x = TRUE)[is.na(drew), drew := 0]
   expect_equal(sum(chk$drew > chk$held), 0)
 
-  ## (WS-G bugs 2 & 3) event ids unique; inoculation ids do not restart each tick
+  ## event ids are unique, and inoculation ids do not restart each tick
   expect_equal(data.table::uniqueN(ev$event_id), nrow(ev))
   inoc <- ev[inoculation_id > 0, inoculation_id]
   expect_gt(max(inoc), 0.5 * data.table::uniqueN(inoc))
@@ -36,7 +35,7 @@ test_that("classify_cases labels imported relapses", {
   run <- run_sim(p, seed = 1, outdir = out)
   cs <- classify_cases(load_events(run))
   expect_true("imported" %in% names(cs))
-  ## a relapse of an imported genotype must be labelled imported (was hard-coded FALSE)
+  ## a relapse of an imported genotype must be labelled imported
   expect_gt(nrow(cs[origin == "relapse" & imported == TRUE]), 0)
 })
 
@@ -83,8 +82,7 @@ test_that("ARG summaries behave on the forest genealogy", {
   }
 
   ## D22: tmrca is a DEPTH, so one fixed relationship gives one number wherever it was
-  ## sampled. Before the fix this returned the ancestor's raw node time and the same
-  ## relapse-vs-origin relationship spanned 43-391 ticks on a 400-tick run.
+  ## sampled. The ancestor's raw node time would instead change with the day the pair was sampled.
   spread <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   if (nrow(spread) >= 8) {
     spread <- spread[order(tick)][unique(round(seq(1, .N, length.out = 8)))]
@@ -176,10 +174,8 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
 
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
   skip_if_no_slim(); skip_if_no_tskit()
-  ## Regression for D17. The import path used to build the batch with addEmpty(NULL), giving
-  ## two genetically unrelated founders (measured IBD 0) under one lineage_id, while an
-  ## ordinary bite gave IBD 1. Imports are now seeded in early() and the second compartment is
-  ## cloned one tick later, so both paths must give IBD 1.
+  ## D17: an import is seeded in early() and its second compartment is cloned one tick later,
+  ## so an import, like an ordinary bite, must give IBD 1 between its two compartments.
   out <- tempfile("mfw-import-clone")
   unlink(out, recursive = TRUE)
   ## imports on, so both the founder path and the ordinary path are exercised
@@ -190,10 +186,9 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   ev <- data.table::as.data.table(load_events(run))
 
   ## One inoculation delivers one sporozoite population, so the blood-stage infection and the
-  ## hypnozoite batch established alongside it must be clones. The import path used to build
-  ## the batch with addEmpty(NULL), giving two unrelated founders (IBD 0) under one lineage_id
-  ## while a normal bite gave IBD 1 -- undetectable from the event log alone, which is why
-  ## this check goes through the tree sequence.
+  ## hypnozoite batch established alongside it must be clones. Two unrelated genomes under one
+  ## lineage_id would not show in the event log alone, which is why this check goes through the
+  ## tree sequence.
   ## grouped on inoculation_id, NOT (tick, human_id): under D17 an import's two compartments
   ## land on CONSECUTIVE ticks, because the batch cannot be cloned until the primary is
   ## visible. inoculation_id is the thing that identifies one bite in both paths.
@@ -210,7 +205,7 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   take[, ibd := ibd_lookup(x, primary, batch)]
   expect_equal(take$ibd, rep(1, nrow(take)), tolerance = 1e-8)
 
-  ## and the import path specifically, since that is where the defect was
+  ## and the import path on its own, since it makes the two compartments on different ticks
   imp <- take[grepl("import", kind)]
   if (nrow(imp)) expect_true(all(imp$ibd == 1))
 })

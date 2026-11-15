@@ -208,7 +208,7 @@ jobs:
                   seed = 42, outdir = od)
           got  <- unname(tools::md5sum(file.path(od, c("events.tsv", "state.tsv"))))
           want <- c("4a7fab76d115350ddcf76fde739955f7",   # events.tsv: macOS arm64, SLiM 5.2,
-                    "dbbcd295c5b9897df5f5320488d6d2ff")   # state.tsv   the model at d37079a
+                    "dbbcd295c5b9897df5f5320488d6d2ff")   # state.tsv   malariafwd 0.1.0
           print(data.frame(file = c("events.tsv", "state.tsv"), got = got, want = want))
           if (!identical(got, want))
             cat("::warning::seed 42 gives other output than the macOS / SLiM 5.2 reference.",

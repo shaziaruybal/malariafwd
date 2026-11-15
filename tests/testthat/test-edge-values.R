@@ -1,5 +1,5 @@
 ## Values that validate_params() accepts must run to the end: the model may not stop part-way
-## with an Eidos error. Each case below stopped the run before the guard it tests, and each
+## with an Eidos error. Without the guard it tests, each case below stops the run, and each
 ## checks that the run reached the state the guard handles, so a lucky seed cannot pass it.
 
 edge_run <- function(tag, ...) {

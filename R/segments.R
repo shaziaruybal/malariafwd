@@ -322,7 +322,7 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
   ct <- cs[origin %in% c("imported", "local reinfection"), .(ped = pedigree_id, human_id, lineage_id)]
   ## Each pair's second member is the first genome of another host (or lineage), NA when there is
   ## none. The expression is unconditional, so a and b are there, typed, also when no group has a
-  ## pair: one that returned nothing for such a group left them out, and filtering on b failed.
+  ## pair, and the filter on b always finds its column.
   ctp <- ct[, .(a = ped[1], b = ped[which(human_id != human_id[1])[1]]), by = lineage_id][!is.na(b)]
   add(.LADDER[4], utils::head(ctp$a, max_per_class), utils::head(ctp$b, max_per_class))
   oo <- ev[event_type == "vh_inoculation" & is_dormant == 0 & oocyst_id != -1,

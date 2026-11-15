@@ -264,10 +264,10 @@ audit_run("wsf_nb_imports",
                        IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.1))
 
 ## ...and the three-state recurrence path (D25). Without a configuration that actually
-## produces recrudescences, every assertion about the new vocabulary passes vacuously.
+## produces recrudescences, every assertion about recrudescence passes vacuously.
 ## Partial coverage and a multi-oocyst path on purpose: full coverage suppresses transmission
 ## so hard that no oocyst ever outcrosses, and the "ARG recombines" assertion then has nothing
-## to measure (observed: 1 local tree).
+## to measure (the tree sequence holds a single local tree).
 audit_run("recrudescence",
           vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.16, SIM_DAYS = 400,
                        N_FOUNDER_LINEAGES = 8,

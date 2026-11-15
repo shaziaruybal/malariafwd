@@ -52,10 +52,9 @@ coi_distribution <- function(state, from = 0, to = NULL) {
   out[, frac := n / sum(n)][]
 }
 
-## Deterministic subsampling. Both metrics below cap the number of genomes they compare, and
-## an unseeded sample() made repeat calls on the SAME run disagree -- new_infection_diversity()
-## returned 0.0529 / 0.0544 / 0.0526 / 0.0523 across four identical calls. A metric must not do
-## that. The draw stays random (so it is unbiased in time and lineage) but is reproducible.
+## Deterministic subsampling. Both metrics below cap the number of genomes they compare, and the
+## draw is seeded so that repeat calls on the SAME run give the same value, as a metric must. The
+## draw stays random (so it is unbiased in time and lineage) but is reproducible.
 .sample_fixed <- function(x, n, seed) if (length(x) <= n) x else .with_seed(seed, sample(x, n))
 
 ## `expr`, evaluated with the RNG seeded by `seed` under one fixed set of kinds, so that a seed gives
@@ -296,10 +295,10 @@ force_of_infection <- function(run, bin = 30, split_imported = TRUE, exclude_mas
   nh <- as.numeric(.params_of(run)$N_HOSTS)
   cs <- classify_cases(load_events(run), exclude_masked)
   if (detected_only) cs <- cs[detected == 1L]
-  ## Unconditional, and with fixed levels. The old "auto" relabelled relapses only when the run
-  ## contained imports, so the returned vocabulary depended on run CONTENT: `baseline` came
-  ## back with `relapse` and `imports` with `relapse (local)` for the same thing, and a pooled
-  ## dcast over a grid made them separate columns without erroring.
+  ## Unconditional, and with fixed levels, so the returned vocabulary does not depend on what
+  ## the run contains: relabelling relapses only in runs with imports would give the same thing
+  ## as `relapse` in one run and `relapse (local)` in another, and a pooled dcast over a grid
+  ## would make them separate columns without an error.
   lv <- if (isTRUE(split_imported)) .ORIGINS_SPLIT else .ORIGINS
   if (isTRUE(split_imported))
     cs[origin == "relapse", origin := fifelse(imported, "relapse (imported)", "relapse (local)")]
@@ -378,15 +377,12 @@ classify_travel <- function(events, window = 60) {
   window <- .check_day(window, "window")
   cases <- classify_cases(ev)
   ## Group by WHATEVER classify_cases() returns, so the output schema is the same table for
-  ## every run. Naming four columns here meant an import-free run returned all of them plus
-  ## `surveillance` while a run WITH imports returned only the four -- and `imported`, the
-  ## truth flag, was present exactly where it is trivially FALSE and absent on the one run
+  ## every run, with or without imports, and `imported`, the truth flag, is kept on the runs
   ## where it carries signal. Safe because pedigree_id is already unique per case row.
   keys <- names(cases)
   ## Any import establishment marks the trip, dormant or not; a no-take import established
-  ## nothing and is not one. Requiring is_dormant == 0 meant a traveller who returned carrying only
-  ## hypnozoites never registered as having travelled -- 43 of 91 import-exposed hosts on the audit
-  ## run. A surveillance system records the journey, not which compartment the parasite ended in.
+  ## nothing and is not one. A traveller who returns carrying only hypnozoites has travelled too:
+  ## a surveillance system records the journey, not which compartment the parasite ended in.
   ## one trip per import, on its arrival day: an import that also lays down hypnozoites logs the
   ## batch the next day under the same inoculation_id (D17). A row without an id is a trip of its own.
   imports <- ev[event_type == "vh_inoculation_import", .(human_id, inoculation_id, imp_tick = tick)]

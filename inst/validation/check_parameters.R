@@ -57,7 +57,7 @@ run_cfg <- function(tag, ...) {
 ## "<" decides nothing whenever the true effect is comparable to that spread.
 ## Outcrossing needs hosts that carry several lineages, so it is compared where transmission gives
 ## them (BITING_RATE 0.2), over 3 seeds: at the base's COI of about 1 the share of outcrossed
-## oocysts is a few percent either way, and one seed decided the order. Co-transmission raises it,
+## oocysts is a few percent either way, and one seed can decide the order. Co-transmission raises it,
 ## by raising COI; more oocysts per uptake does not, as each oocyst draws its two gametes from the
 ## same pool.
 mean_recomb <- function(tag, ...) {
@@ -126,10 +126,9 @@ ok("more founder lineages -> more circulating lineages",
    sprintf("%d vs %d", g("founders_40","lineages"), g("founders_2","lineages")))
 ok("NU_HYPNOZOITE_BATCH = 0 -> no relapses at all", g("no_relapse","relapses") == 0,
    sprintf("%d relapses, reservoir %.2f", g("no_relapse","relapses"), g("no_relapse","reservoir")))
-## 3-seed, like every other directional comparison on the reservoir: single-seed, this class
-## of check has already flipped once with no change in behaviour (see the radical-cure efficacy
-## check below). The standing reservoir swings roughly 0.7-1.9 between RNG streams, so a single
-## "<" decides nothing whenever the true effect is of that order.
+## 3-seed, like every other directional comparison on the reservoir: the standing reservoir
+## swings roughly 0.7-1.9 between RNG streams, so a single "<" decides nothing whenever the true
+## effect is of that order.
 rc_res <- mean_reservoir("rcbase", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
                          RADCURE_COVERAGE = 0.9)
 bl0_res <- mean_reservoir("base0")
@@ -192,7 +191,7 @@ ok("same seed -> byte-identical event log", md5("seed_a1") == md5("seed_a2"))
 ok("different seed -> different realisation", md5("seed_a1") != md5("seed_b"))
 
 
-## The directional checks on PREVALENCE and RELAPSE FRACTION below are still single-seed.
+## The directional checks on PREVALENCE and RELAPSE FRACTION below are single-seed.
 ## That is a deliberate asymmetry: those effects are large relative to the between-seed spread
 ## (biting high-vs-low moves prevalence by tens of points), whereas every reservoir comparison
 ## has an effect of the same order as its own noise and so is run at 3 seeds. If one of them

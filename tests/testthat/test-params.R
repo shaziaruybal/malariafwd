@@ -131,7 +131,7 @@ test_that("print.vivax_params reports non-defaults", {
 })
 
 test_that("float parameters always carry a decimal point, integers never do", {
-  ## Eidos types `-d P=0` as an integer and will not promote it, which crashed the model
+  ## Eidos types `-d P=0` as an integer and will not promote it, which would stop the model
   ## mid-run: rbinom() rejects an integer `prob`, and min() refuses mixed argument types.
   a <- as_slim_args(vivax_params(P_RAD_SURVIVAL = 0, BLOODCURE_COVERAGE = 1,
                                  ALPHA_ACTIVATE = 0, N_HOSTS = 100))
@@ -146,8 +146,8 @@ test_that("float parameters always carry a decimal point, integers never do", {
 })
 
 test_that("as_slim_args does not round float parameters", {
-  ## format()'s default of 7 significant digits silently truncated ALPHA_ACTIVATE = 1/170
-  ## to 0.005882353, and params.tsv then recorded the rounded value as provenance.
+  ## format()'s default of 7 significant digits would truncate ALPHA_ACTIVATE = 1/170
+  ## to 0.005882353, and params.tsv would record the rounded value as provenance.
   a <- as_slim_args(vivax_params(ALPHA_ACTIVATE = 1 / 170))
   v <- sub("^ALPHA_ACTIVATE=", "", grep("^ALPHA_ACTIVATE=", a, value = TRUE))
   expect_equal(as.numeric(v), 1 / 170, tolerance = 1e-12)
@@ -156,7 +156,7 @@ test_that("as_slim_args does not round float parameters", {
 test_that("probabilities of exactly 0 and 1 run to completion", {
   skip_if_no_slim()
   ## Both crash paths. They are LATENT: the same parameter set completes if the code path
-  ## never fires, so a sweep failed in only some cells. rbinom() needs radical cure or MDA
+  ## never fires, so a sweep would fail in only some cells. rbinom() needs radical cure or MDA
   ## to actually fire; min() is reached on any tick with a hypnozoite.
   base <- list(SIM_DAYS = 60L, N_HOSTS = 20L, N_MOSQ = 40L)
   cases <- list(
