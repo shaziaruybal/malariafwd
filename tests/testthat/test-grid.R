@@ -115,7 +115,7 @@ test_that("run_grid() passes ... on to run_sim()", {
     got <<- list(...)
     list(extinct_tick = NA_integer_, never_started = FALSE)
   }, .require_slim = function() "5.2")
-  base <- withr::local_tempdir()
+  base <- tempfile("mfwd_grid_")
   suppressMessages(run_grid(tiny(), seeds = 1, outdir_base = base, timeout = 12, echo = TRUE))
   expect_identical(got$timeout, 12)
   expect_true(got$echo)
