@@ -19,7 +19,7 @@
 #' @return named numeric of `mean` and `var` (the realised, zero-truncated values).
 #' @examples
 #' uptake_moments(2)          # Poisson lambda = 2 -> realised mean ~2.31
-#' uptake_moments(2, k = 1)   # NB, same lambda   -> realised mean ~3.0, far more spread
+#' uptake_moments(2, k = 1)   # negative binomial, same lambda -> realised mean ~3.0, more spread
 #' @seealso [uptake_calibrate()] for the inverse (target moments -> lambda, k).
 #' @export
 uptake_moments <- function(lambda, k = 0) {

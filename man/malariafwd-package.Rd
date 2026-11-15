@@ -12,8 +12,8 @@ defines the terms the help pages share.
 }
 \section{Start here}{
 
-\code{\link[=example_run]{example_run()}} returns a small run that ships with the package, so every reader can be tried
-without SLiM. \code{vignette("malariafwd")} shows how to run a simulation and reads the bundled run,
+\code{\link[=example_run]{example_run()}} returns a small run that ships with the package, so every function that reads a
+run can be tried without SLiM. \code{vignette("malariafwd")} shows how to run a simulation and reads the bundled run,
 and \code{vignette("anatomy")} walks through what a run records (both are also on the
 \href{https://shaziaruybal.github.io/malariafwd/}{website}); \code{\link[=event_types]{event_types()}} lists every event a run
 logs. The model is described in full in
@@ -27,7 +27,7 @@ validate the model are installed in \code{system.file("validation", package = "m
 
 A \emph{run} is one simulation: \code{\link[=run_sim]{run_sim()}} writes it to a directory, and \code{\link[=load_run]{load_run()}} reads that
 directory back as a \code{vivax_run}. Every function that reads a run takes either. A run's outputs
-are four files, each with its reader: \code{params.tsv}, the parameter set it was made from
+are four files, each read by its own function: \code{params.tsv}, the parameter set it was made from
 (\code{\link[=load_params]{load_params()}}); \code{events.tsv}, one row per event (\code{\link[=load_events]{load_events()}}, described in
 \link[=malariafwd-outputs]{events.tsv}); \code{state.tsv}, every host and mosquito on every day
 (\code{\link[=load_state]{load_state()}}, hosts by default); and \code{plasmo.trees}, the genealogy of every genome as a tree
@@ -66,7 +66,7 @@ episode (\code{\link[=episodes]{episodes()}}, \code{\link[=recurrences]{recurren
 clone in its host: an import, a local reinfection or a relapse. A recrudescence is a case but not
 an acquisition, since it re-expands a clone already counted. A relapse into a patent clone of its
 own lineage is flagged by \code{into_patent_lineage}, and \code{exclude_masked = TRUE} leaves such relapses
-out of a reader's counts.
+out of the counts.
 }
 
 \section{COI and MOI}{

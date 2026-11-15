@@ -1,17 +1,14 @@
 ## events.R -- the events.tsv event-type vocabulary + helpers.
 
-# Event types that END a blood-stage episode (natural clearance + drug-induced).
-# Use this wherever you reconstruct blood-stage episode spans, so treated / MDA'd
-# cases are not silently missed -- they clear via these events, NOT `human_clearance`
-# alone. (Reconstructing spans off `human_clearance` only over-counts durations when
-# any blood-stage treatment or MDA is switched on.)
-## Derived, not restated: duplicating the dictionary here meant the two could disagree, and
-## they did - bloodcure_subpatent ends a patent episode and would have been missed.
+## Event types that end a blood-stage episode, by natural clearance or by a drug. Use them wherever
+## an episode's span is reconstructed: a treated or MDA'd clone ends with one of these rather than
+## `human_clearance`, so spans read from `human_clearance` alone run too long when treatment or MDA
+## is on. Both lists are derived from event_types(), so adding an event type to the dictionary is
+## the only edit needed.
 .bloodstage_clear_events <- function()
   event_types()$event_type[event_types()$ends_episode]
 
-## ...and the same for the other side. Both sides of the episode vocabulary are now derived,
-## so adding an event type to the dictionary is the only edit needed.
+## Event types that begin a blood-stage episode.
 .onset_events <- function()
   event_types()$event_type[event_types()$is_onset]
 
@@ -33,9 +30,8 @@
 #' import whose host already carries `MAX_MOI` blood-stage lineages
 #' (`vh_inoculation_import_no_take`); a local bite refused at `MAX_MOI` leaves no row.
 #'
-#' **Derive filters from this table rather than restating event names.** `ends_episode`
-#' marks every way a patent blood-stage episode can end and `is_onset` every way one can
-#' begin, so episode reconstruction stays correct as the vocabulary grows.
+#' `ends_episode` marks every way a patent blood-stage episode can end and `is_onset` every way
+#' one can begin: filter on them rather than listing event names by hand.
 #'
 #' `mosq_death` is one row per parasite genome an infected mosquito carried when it died; the
 #' deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.
@@ -48,10 +44,8 @@
 #' @seealso [events.tsv][malariafwd-outputs]
 #' @export
 event_types <- function() {
-  ## ONE RECORD PER ROW, deliberately. This used to be four positionally aligned vectors,
-  ## and inserting seven rows into them at the wrong offset put another event's text on 9 of
-  ## 23 rows of a public dictionary - caught by a regression sweep, not by the test suite.
-  ## Here a mis-edit is a visibly short row, not a silent shift.
+  ## One record per row, so that a mis-edit shows as a short row rather than moving another event's
+  ## text onto the wrong row.
   r <- function(event_type, stage, ends_episode, is_onset, description)
     data.table::data.table(event_type = event_type, stage = stage, ends_episode = ends_episode,
                            is_onset = is_onset, description = description)

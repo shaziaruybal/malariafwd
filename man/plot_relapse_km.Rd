@@ -16,8 +16,7 @@ a ggplot object.
 }
 \description{
 The fraction of hypnozoite batches not yet relapsed against the days since the infection that
-laid each down, from \code{\link[=time_to_relapse]{time_to_relapse()}}. No survival-package dependency:
-\code{S(t) = prod(1 - d_i/n_i)}.
+laid each down, from \code{\link[=time_to_relapse]{time_to_relapse()}}, as the Kaplan-Meier estimate.
 }
 \examples{
 \dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}

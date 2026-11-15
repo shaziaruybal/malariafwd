@@ -29,7 +29,7 @@ truncated moments are \eqn{E[X] = \lambda/(1-p_0)} and
 }
 \examples{
 uptake_moments(2)          # Poisson lambda = 2 -> realised mean ~2.31
-uptake_moments(2, k = 1)   # NB, same lambda   -> realised mean ~3.0, far more spread
+uptake_moments(2, k = 1)   # negative binomial, same lambda -> realised mean ~3.0, more spread
 }
 \seealso{
 \code{\link[=uptake_calibrate]{uptake_calibrate()}} for the inverse (target moments -> lambda, k).

@@ -44,7 +44,8 @@ of 0, or an \code{IMPORT_RATE_PER_TICK} window whose rate is 0 throughout, as un
 \code{IMPORT_RATE_BOOST = 0} from a trigger before the window). It ends on the first tick after its
 last import day, but not before tick 10, or on its last day if that comes first, and its
 \code{params.tsv} ends with a \code{NEVER_STARTED} row. It holds no parasite: its tree sequence has no
-nodes and its events are at most imports that did not take. Every reader takes such a run: its
+nodes and its events are at most imports that did not take. Every function that reads a run
+takes such a run: its
 tables have their usual columns and no rows, its counts are 0, and a quantity that needs a
 parasite is \code{NA} (\code{\link[=arg_summary]{arg_summary()}} reports no samples).
 
@@ -54,7 +55,8 @@ after an extinction count as days with no parasite.
 A directory without \code{params.tsv} or \code{events.tsv} is not a run and is refused. One whose \code{DONE}
 file is missing, or whose files have changed since the run finished (see \code{\link[=run_sim]{run_sim()}}), loads
 with \code{complete = FALSE} and a warning of class \code{malariafwd_incomplete_run}, given once per
-directory per session by every reader of the directory. A run started with \code{slim} directly
+directory per session by every function that reads the directory. A run started with \code{slim}
+directly
 has no \code{DONE}.
 \code{suppressWarnings(..., classes = "malariafwd_incomplete_run")} silences it.
 }

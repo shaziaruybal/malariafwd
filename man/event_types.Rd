@@ -19,9 +19,8 @@ import whose host already carries \code{MAX_MOI} blood-stage lineages
 (\code{vh_inoculation_import_no_take}); a local bite refused at \code{MAX_MOI} leaves no row.
 }
 \details{
-\strong{Derive filters from this table rather than restating event names.} \code{ends_episode}
-marks every way a patent blood-stage episode can end and \code{is_onset} every way one can
-begin, so episode reconstruction stays correct as the vocabulary grows.
+\code{ends_episode} marks every way a patent blood-stage episode can end and \code{is_onset} every way
+one can begin: filter on them rather than listing event names by hand.
 
 \code{mosq_death} is one row per parasite genome an infected mosquito carried when it died; the
 deaths of uninfected mosquitoes are not logged, so its rows do not count deaths.

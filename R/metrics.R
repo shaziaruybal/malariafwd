@@ -84,8 +84,8 @@ coi_distribution <- function(state, from = 0, to = NULL) {
 #'   and recrudescence.
 #' * `relapse_frac_acquisitions` -- relapses over the **acquisitions**: imported, local reinfection
 #'   and relapse. A recrudescence is a new clinical episode but not a newly acquired parasite (its
-#'   genotype was already in the host), so it is left out. This is the unit of the published
-#'   0.55-0.85 vivax band.
+#'   genotype was already in the host), so it is left out. This is the fraction the calibration in
+#'   section 13 of the model description compares with published studies.
 #'
 #' The two are equal when a run has no recrudescence, as at the default `P_RECRUD_GIVEN_FAIL = 0`.
 #' Both count each host's first case, which is not a recurrence; [recurrences()] gives the
@@ -207,12 +207,10 @@ dormancy_durations <- function(events) {
 #' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)).
 #' `into_patent_lineage` marks it, and `exclude_masked = TRUE` leaves it out.
 #' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).
-#' @param exclude_masked if `TRUE`, leave out the masked relapses. It needs the flag on every
-#'   relapse, which runs made before it was recorded lack.
+#' @param exclude_masked if `TRUE`, leave out the masked relapses.
 #' @return a data.table, one row per clone onset: `tick` (the day it became patent), `human_id`,
 #'   `episode_id`, `lineage_id`, `oocyst_id`, `pedigree_id`, `origin`, `imported`, `detected` (1
-#'   or 0) and `into_patent_lineage` (`TRUE` for a masked relapse, `FALSE` for every other row,
-#'   `NA` for a relapse whose run does not record the flag).
+#'   or 0) and `into_patent_lineage` (`TRUE` for a masked relapse, `FALSE` for every other row).
 #' @seealso [episodes()] for every clone's span, [recurrences()] for each episode against the
 #'   earlier ones.
 #' @examples
@@ -555,9 +553,9 @@ host_state_prevalence <- function(state) {
 #'   * fractions: `relapse_frac_episodes` and `relapse_frac_acquisitions`, as
 #'     [relapse_fraction()] gives them, and `imported_frac` (imports among the new clones from bites
 #'     and imports), each `NA` with nothing to divide;
-#'   * counts (integer): `n_imported`, `n_local_reinfection`, `n_relapse`, `n_relapse_masked` (`NA`
-#'     for an event log without the flag), `n_recrudescence` and `n_bloodstage_courses` (blood-stage
-#'     courses, by case management or MDA);
+#'   * counts (integer): `n_imported`, `n_local_reinfection`, `n_relapse`, `n_relapse_masked`,
+#'     `n_recrudescence` and `n_bloodstage_courses` (blood-stage courses, by case management or
+#'     MDA);
 #'   * denominators: `person_years` and `person_years_at_risk`.
 #' @seealso [force_of_infection()], [relapse_fraction()], [classify_cases()], [plot_diagnostics()]
 #' @examples
@@ -692,14 +690,9 @@ new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL
   if (!is.numeric(min_pairs) || length(min_pairs) != 1L || is.na(min_pairs) || min_pairs < 1 ||
       min_pairs != round(min_pairs))
     stop("`min_pairs` must be a whole number, at least 1.", call. = FALSE)
-  ## Every non-relapse acquisition route, derived from classify_cases() rather than from a
-  ## literal event type. Matching "vh_inoculation" alone dropped imported genomes, which
-  ## overstated mean IBD and clonal fraction and understated lineage richness by 44% at a 17%
-  ## import share and 4.3x at 61% -- all three biases pointing the same way as a genuine
-  ## transmission decline, i.e. in the direction of the signal this metric is read for.
-  ## acquisitions only. `origin != "relapse"` would now admit recrudescences, which are not
-  ## newly acquired genomes - they were already in the host - and would bias this toward the
-  ## clonality it exists to measure.
+  ## Every newly acquired genome, imported or a local reinfection, from classify_cases(): leaving
+  ## out the imports would read like a transmission decline. Relapses and recrudescences are left
+  ## out, as their genomes were already in the host and would bias the result toward clonality.
   cs <- classify_cases(ev)[origin %in% c("imported", "local reinfection") & tick >= w$from & tick <= w$to]
   grid <- if (is.null(bin)) data.table(win = w$from, days = w$n_days) else .window_grid(sim_days, bin, w$from, w$to)
   cs[, win := if (is.null(bin)) w$from else as.integer((tick %/% bin) * bin)]

@@ -217,8 +217,7 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 #' Ground-truth IBD from a run's tree sequence
 #'
 #' Computes genome-wide identity-by-descent (shared-segment length / sequence length) among a set
-#' of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model. The tree
-#' is simplified to the genomes asked for, and SLiM's vacant nodes are left out.
+#' of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model.
 #'
 #' @section What is counted:
 #' A pair's `ibd` counts **all** shared ancestry: every stretch over which the two genomes descend
@@ -271,8 +270,8 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 #' `mrca_time` alone scores a pair by when its ancestry last branched, not by how related the two
 #' genomes are.
 #' @section Cost:
-#' One simplification and one pass over the pairs; `segments = TRUE` costs a few times as long and
-#' gives one row per segment per pair, so restrict it with `ids` and `min_span`.
+#' `segments = TRUE` takes a few times as long and gives one row per segment per pair, so restrict
+#' it with `ids` and `min_span`.
 #' @examplesIf tskit_available()
 #' run <- example_run()
 #' x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id[1:30])

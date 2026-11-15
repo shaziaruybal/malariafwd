@@ -40,9 +40,9 @@ recrudescences) and \code{relapses_per_py_at_risk} (\code{NA} with no time at ri
 \item fractions: \code{relapse_frac_episodes} and \code{relapse_frac_acquisitions}, as
 \code{\link[=relapse_fraction]{relapse_fraction()}} gives them, and \code{imported_frac} (imports among the new clones from bites
 and imports), each \code{NA} with nothing to divide;
-\item counts (integer): \code{n_imported}, \code{n_local_reinfection}, \code{n_relapse}, \code{n_relapse_masked} (\code{NA}
-for an event log without the flag), \code{n_recrudescence} and \code{n_bloodstage_courses} (blood-stage
-courses, by case management or MDA);
+\item counts (integer): \code{n_imported}, \code{n_local_reinfection}, \code{n_relapse}, \code{n_relapse_masked},
+\code{n_recrudescence} and \code{n_bloodstage_courses} (blood-stage courses, by case management or
+MDA);
 \item denominators: \code{person_years} and \code{person_years_at_risk}.
 }
 }

@@ -75,15 +75,11 @@ on \code{IMPORT_TICK}, \code{N_IMPORTS_PER_TICK} in the window, or both on the s
 and with \code{N_IMPORTS_PER_TICK}, draws more than \code{N_HOSTS} imports on a day with probability above
 0.01.
 
-A named number (such as \code{coef(fit)["k"]}), a value wrapped in \code{I()}, a whole number carrying
-floating-point noise (such as \code{1.1 * 100}, or \code{0.1 * 3 - 0.3} for 0), a number or factor given
-for a string parameter, latin1 text, and spaces around the commas and dashes of \code{CHROMOSOMES} are
-stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
-a \code{bit64::integer64}, is refused: give the number itself.
-
-Each value is stored as its default's type and as SLiM is given it: a whole number as an integer
-(a double beyond the integer range), and a double as the 15 significant digits \code{\link[=run_sim]{run_sim()}}
-passes, so \code{1 + 2e-16} is 1 and a set rebuilt from a run's \code{params.tsv} is the set it used.
+Each value is stored as its default's type and as SLiM is given it (a double to the 15
+significant digits \code{\link[=run_sim]{run_sim()}} passes), so a set rebuilt from a run's \code{params.tsv} is the set it
+used. Common forms are converted, such as a named number or a whole number carrying
+floating-point noise; a number of another class, such as a \code{bit64::integer64}, is refused: give
+the number itself.
 
 \strong{Editing a set.} A set edited with \verb{$<-}, \verb{[[<-} or \code{\link[=modifyList]{modifyList()}} keeps its class and is not
 checked at the edit. It is checked in full when it is used: \code{\link[=run_sim]{run_sim()}} and \code{\link[=run_grid]{run_grid()}} build

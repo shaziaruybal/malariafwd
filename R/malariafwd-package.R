@@ -5,8 +5,8 @@
 #' defines the terms the help pages share.
 #'
 #' @section Start here:
-#' [example_run()] returns a small run that ships with the package, so every reader can be tried
-#' without SLiM. `vignette("malariafwd")` shows how to run a simulation and reads the bundled run,
+#' [example_run()] returns a small run that ships with the package, so every function that reads a
+#' run can be tried without SLiM. `vignette("malariafwd")` shows how to run a simulation and reads the bundled run,
 #' and `vignette("anatomy")` walks through what a run records (both are also on the
 #' [website](https://shaziaruybal.github.io/malariafwd/)); [event_types()] lists every event a run
 #' logs. The model is described in full in
@@ -18,7 +18,7 @@
 #' @section Runs and their tables:
 #' A *run* is one simulation: [run_sim()] writes it to a directory, and [load_run()] reads that
 #' directory back as a `vivax_run`. Every function that reads a run takes either. A run's outputs
-#' are four files, each with its reader: `params.tsv`, the parameter set it was made from
+#' are four files, each read by its own function: `params.tsv`, the parameter set it was made from
 #' ([load_params()]); `events.tsv`, one row per event ([load_events()], described in
 #' [events.tsv][malariafwd-outputs]); `state.tsv`, every host and mosquito on every day
 #' ([load_state()], hosts by default); and `plasmo.trees`, the genealogy of every genome as a tree
@@ -51,7 +51,7 @@
 #' clone in its host: an import, a local reinfection or a relapse. A recrudescence is a case but not
 #' an acquisition, since it re-expands a clone already counted. A relapse into a patent clone of its
 #' own lineage is flagged by `into_patent_lineage`, and `exclude_masked = TRUE` leaves such relapses
-#' out of a reader's counts.
+#' out of the counts.
 #'
 #' @section COI and MOI:
 #' Here the complexity of infection (COI) and the multiplicity of infection (MOI) are one quantity:

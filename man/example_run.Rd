@@ -13,7 +13,8 @@ a \code{vivax_run} (see \code{\link[=load_run]{load_run()}}).
 A run of the package's own model, small enough to bundle: 60 hosts and 150 mosquitoes for 400
 days, with imports, case management, recrudescence and co-transmission switched on, so that
 every kind of case, recurrence and transmission link the package names occurs in it. Every
-reader takes it, so the examples, the vignettes and a first look at the package need no SLiM;
+function that reads a run takes it, so the examples, the vignettes and a first look at the
+package need no SLiM;
 the relatedness functions still need Python with tskit (\code{\link[=tskit_available]{tskit_available()}}).
 }
 \details{

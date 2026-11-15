@@ -26,8 +26,8 @@ Relapses as a share of a run's blood-stage cases, in two readings, both counted 
 and recrudescence.
 \item \code{relapse_frac_acquisitions} -- relapses over the \strong{acquisitions}: imported, local reinfection
 and relapse. A recrudescence is a new clinical episode but not a newly acquired parasite (its
-genotype was already in the host), so it is left out. This is the unit of the published
-0.55-0.85 vivax band.
+genotype was already in the host), so it is left out. This is the fraction the calibration in
+section 13 of the model description compares with published studies.
 }
 
 The two are equal when a run has no recrudescence, as at the default \code{P_RECRUD_GIVEN_FAIL = 0}.

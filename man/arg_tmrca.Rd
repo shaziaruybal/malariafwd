@@ -2,7 +2,8 @@
 % Please edit documentation in R/arg.R
 \name{arg_tmrca}
 \alias{arg_tmrca}
-\title{Pairwise time to the most recent common ancestor (the ARG-native relatedness measure)}
+\title{Pairwise time to the most recent common ancestor, the relatedness measure of the ancestral
+recombination graph}
 \usage{
 arg_tmrca(run, ids_a, ids_b)
 }

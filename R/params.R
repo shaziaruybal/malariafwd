@@ -59,15 +59,11 @@
 #' and with `N_IMPORTS_PER_TICK`, draws more than `N_HOSTS` imports on a day with probability above
 #' 0.01.
 #'
-#' A named number (such as `coef(fit)["k"]`), a value wrapped in `I()`, a whole number carrying
-#' floating-point noise (such as `1.1 * 100`, or `0.1 * 3 - 0.3` for 0), a number or factor given
-#' for a string parameter, latin1 text, and spaces around the commas and dashes of `CHROMOSOMES` are
-#' stored in the form SLiM is given. A number with any other class, such as a lubridate duration or
-#' a `bit64::integer64`, is refused: give the number itself.
-#'
-#' Each value is stored as its default's type and as SLiM is given it: a whole number as an integer
-#' (a double beyond the integer range), and a double as the 15 significant digits [run_sim()]
-#' passes, so `1 + 2e-16` is 1 and a set rebuilt from a run's `params.tsv` is the set it used.
+#' Each value is stored as its default's type and as SLiM is given it (a double to the 15
+#' significant digits [run_sim()] passes), so a set rebuilt from a run's `params.tsv` is the set it
+#' used. Common forms are converted, such as a named number or a whole number carrying
+#' floating-point noise; a number of another class, such as a `bit64::integer64`, is refused: give
+#' the number itself.
 #'
 #' **Editing a set.** A set edited with `$<-`, `[[<-` or [modifyList()] keeps its class and is not
 #' checked at the edit. It is checked in full when it is used: [run_sim()] and [run_grid()] build
@@ -143,8 +139,7 @@ vivax_params <- function(...) {
                              "exactly one)."))
 
 ## Refuses names that are not parameters: a retired one with what to set instead, any other listed.
-## A set already built (`built`) that holds a retired name is told how to drop it, since every set
-## an earlier version built holds the retired names.
+## A set already built (`built`) that holds a retired name is told how to drop it.
 .refuse_unknown <- function(nms, built = FALSE) {
   unknown <- setdiff(nms, names(.malariafwd_defaults))
   if (!length(unknown)) return(invisible())
@@ -152,8 +147,7 @@ vivax_params <- function(...) {
   other <- setdiff(unknown, retired)
   stop(paste(c(unlist(.RETIRED_PARAMS[retired]),
                if (built && length(retired))
-                 paste0("This set holds ", paste(retired, collapse = " and "), ", as every set built by ",
-                        "an earlier version of malariafwd does: remove ",
+                 paste0("This set holds ", paste(retired, collapse = " and "), ": remove ",
                         if (length(retired) == 1L) "it" else "them", " with ",
                         paste0("p$", retired, " <- NULL", collapse = " and "), "."),
                if (length(other))
@@ -379,27 +373,24 @@ validate_params <- function(p) {
          "day 2 or later.", call. = FALSE)
 
   ## ---- configurations that cannot produce a single parasite -------------------------------
-  ## These used to run to completion with exit status 0 and an EMPTY event log, so a
-  ## mis-specified cell in a sweep was indistinguishable from one that simply saw no
-  ## transmission. Each is refused before SLiM is launched.
+  ## Each would run to the end with an empty event log, which in a sweep cannot be told apart from
+  ## a cell that saw no transmission, so each is refused before SLiM is launched.
   if (p$SIM_DAYS < 2)
     stop("SIM_DAYS must be >= 2 (founder seeding completes on tick 2), got ", p$SIM_DAYS,
          call. = FALSE)
   if (p$N_FOUNDER_HOSTS > 0 && p$N_FOUNDER_LINEAGES < 1)
     stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: ", p$N_FOUNDER_HOSTS,
          " founder host(s) cannot share 0 distinct genomes.", call. = FALSE)
-  ## A naive population IS legitimate (D17: importation can now seed an empty population),
-  ## but only if an import path is actually open. No founders AND no imports is a run that
-  ## can never contain a parasite.
+  ## A population without founders is legitimate when an import path is open (D17: importation
+  ## can seed it); with no founders and no imports, a run can never contain a parasite.
   if (p$N_FOUNDER_HOSTS < 1 && !has_import_path(p))
     stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is configured\n",
          "  inside the run. Set N_FOUNDER_HOSTS >= 1, or open an import path on a day from 1 to\n",
          "  SIM_DAYS (IMPORT_TICK + N_IMPORTS, or IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK\n",
          "  or IMPORT_RATE_PER_TICK).", call. = FALSE)
 
-  ## A coverage set against a closed case-management window gives silently zero treatments.
-  ## This is the shape of the bug D19 fixed, so it is worth refusing rather than repeating in
-  ## a new parameter.
+  ## A coverage set against a closed case-management window would silently give no treatment
+  ## (see D19), so it is refused.
   if ((p$RADCURE_COVERAGE > 0 || p$BLOODCURE_COVERAGE > 0) &&
       (p$TREATMENT_END <= p$TREATMENT_START || p$TREATMENT_START > p$SIM_DAYS))
     stop("a treatment coverage is set but the case-management window is closed:\n",
@@ -451,11 +442,9 @@ validate_params <- function(p) {
   if (p$P_RECRUD_GIVEN_FAIL > 0 && p$P_BLOODCURE_SURVIVAL <= 0)
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)
-  ## Radical cure is nested inside blood-stage treatment, so a coverage without one is
-  ## silently inert - the same failure shape as the window bug in D19. But MDA delivers radical
-  ## cure to everyone it reaches regardless of BLOODCURE_COVERAGE, so an MDA-only scenario is a
-  ## legitimate configuration and must not be warned about: the fence was firing on exactly the
-  ## scenario MDA exists for.
+  ## Radical cure is nested inside blood-stage treatment, so a coverage without one silently does
+  ## nothing (see D19). MDA gives radical cure to everyone it reaches whatever BLOODCURE_COVERAGE
+  ## is, so a scenario with MDA alone is not warned about.
   mda_on <- p$MDA_TICK <= p$SIM_DAYS && p$MDA_COVERAGE > 0
   if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0 && !mda_on)
     warning("RADCURE_COVERAGE > 0 has no effect while BLOODCURE_COVERAGE is 0 and no MDA round\n",
@@ -627,8 +616,8 @@ has_import_path <- function(p) {
 ## type, not the value's, so `P_RAD_SURVIVAL = 0L` is given as 0.0 while `N_HOSTS = 100` stays an
 ## integer.
 as_slim_args <- function(params) {
-  ## 15 significant digits, not format()'s default 7: the old setting silently rounded
-  ## ALPHA_ACTIVATE = 1/170 to 0.005882353, and params.tsv then recorded the rounded value.
+  ## 15 significant digits, not format()'s default 7, which would round ALPHA_ACTIVATE = 1/170 to
+  ## 0.005882353 in the run and in params.tsv.
   num <- .slim_num
   as_float <- function(x) {
     v <- num(x)

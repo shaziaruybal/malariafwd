@@ -9,8 +9,7 @@
 #' Kaplan-Meier curve of the time to first relapse, per hypnozoite batch
 #'
 #' The fraction of hypnozoite batches not yet relapsed against the days since the infection that
-#' laid each down, from [time_to_relapse()]. No survival-package dependency:
-#' `S(t) = prod(1 - d_i/n_i)`.
+#' laid each down, from [time_to_relapse()], as the Kaplan-Meier estimate.
 #' @param x a run, or the table [time_to_relapse()] returns.
 #' @param title plot title.
 #' @return a ggplot object.

@@ -55,7 +55,7 @@ test_that("N_FOUNDERS is refused, naming the founder parameters to set instead",
   expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
   old <- structure(c(unclass(vivax_params()), list(N_FOUNDERS = 12L)), class = "vivax_params")
   expect_error(run_sim(old, outdir = tempfile("mfwd_nf_")),
-               "This set holds N_FOUNDERS, as every set built by an earlier version of malariafwd does: remove it with p\\$N_FOUNDERS <- NULL")
+               "This set holds N_FOUNDERS: remove it with p\\$N_FOUNDERS <- NULL")
 })
 
 test_that("N_OOCYSTS_PER_BITE is refused, naming LAMBDA_SPOROZOITES", {

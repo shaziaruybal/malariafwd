@@ -57,14 +57,16 @@ went extinct, those that never started, and those not run again are counted in o
 each. A failed cell does not abort the grid -- its directory is left as it was and its files
 and log are in \verb{<cell>.failed} -- but it warns, and the reason travels with the result. A
 warning given in the cells (such as a parameter set's own warnings, which \code{\link[=run_sim]{run_sim()}}
-repeats for each run) is given once, after the FAILED summary, with the number of cells it
+repeats for each run) is given once, after the warning that lists the failed cells, with the
+number of cells it
 came from. If the grid stops part-way with an error, that error's message lists the warnings
 of the cells whose results had reached this session; with workers, a cell's warnings travel
 with its result. A cell whose worker dies is run again on a new worker, its first attempt's
 directory left beside it as \verb{<cell>.partial-...}; if that worker dies too, the grid stops with an
 error that names the cell. Under
 \code{options(warn = 2)} a warning in a cell fails that cell, in any plan and also inside
-\code{suppressWarnings()}, and the FAILED summary is then an error, so nothing is returned; the
+\code{suppressWarnings()}, and the warning that lists the failed cells is then an error, so nothing
+is returned; the
 cells that ran are on disk. The caller's random-number stream is left as it was.
 }
 \description{

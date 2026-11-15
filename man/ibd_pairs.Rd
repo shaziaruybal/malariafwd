@@ -46,8 +46,7 @@ Read a pair's value with \code{\link[=ibd_lookup]{ibd_lookup()}}, or the table w
 }
 \description{
 Computes genome-wide identity-by-descent (shared-segment length / sequence length) among a set
-of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model. The tree
-is simplified to the genomes asked for, and SLiM's vacant nodes are left out.
+of genomes, keyed by pedigree id, from the tskit tree sequence recorded by the model.
 }
 \section{What is counted}{
 
@@ -84,8 +83,8 @@ genomes are.
 
 \section{Cost}{
 
-One simplification and one pass over the pairs; \code{segments = TRUE} costs a few times as long and
-gives one row per segment per pair, so restrict it with \code{ids} and \code{min_span}.
+\code{segments = TRUE} takes a few times as long and gives one row per segment per pair, so restrict
+it with \code{ids} and \code{min_span}.
 }
 
 \section{Python}{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/arg.R
 \name{arg_summary}
 \alias{arg_summary}
-\title{Structure of the recorded ARG}
+\title{Structure of the recorded ancestral recombination graph (ARG)}
 \usage{
 arg_summary(run, ids = NULL)
 }

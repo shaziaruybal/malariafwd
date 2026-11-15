@@ -72,7 +72,7 @@ def arg_tmrca(trees, ids_a, ids_b):
     stop(what, ": none of the ", length(unique(ids)), " ids given is a genome in this run's tree sequence (a run ",
          "with RETAIN_FULL_HISTORY = FALSE keeps only some genomes).", call. = FALSE)
 
-#' Structure of the recorded ARG
+#' Structure of the recorded ancestral recombination graph (ARG)
 #'
 #' Whole-genealogy summary: how many local trees and edges, how deep it goes, and -- the key
 #' diagnostic for a forward run -- how many ROOTS each local tree has. A fully coalesced
@@ -109,7 +109,8 @@ arg_summary <- function(run, ids = NULL) {
                          max_root_time = if (got) .na_nan(r$max_root_time) else NA_real_)
 }
 
-#' Pairwise time to the most recent common ancestor (the ARG-native relatedness measure)
+#' Pairwise time to the most recent common ancestor, the relatedness measure of the ancestral
+#' recombination graph
 #'
 #' For each pair, the span-weighted mean TMRCA **over the part of the genome where a common
 #' ancestor exists**, plus `coalesced`, the fraction of the genome where it does. This is the

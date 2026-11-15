@@ -9,14 +9,12 @@ classify_cases(events, exclude_masked = FALSE)
 \arguments{
 \item{events}{an events table from \code{\link[=load_events]{load_events()}}, or a run (a \code{vivax_run} or its directory).}
 
-\item{exclude_masked}{if \code{TRUE}, leave out the masked relapses. It needs the flag on every
-relapse, which runs made before it was recorded lack.}
+\item{exclude_masked}{if \code{TRUE}, leave out the masked relapses.}
 }
 \value{
 a data.table, one row per clone onset: \code{tick} (the day it became patent), \code{human_id},
 \code{episode_id}, \code{lineage_id}, \code{oocyst_id}, \code{pedigree_id}, \code{origin}, \code{imported}, \code{detected} (1
-or 0) and \code{into_patent_lineage} (\code{TRUE} for a masked relapse, \code{FALSE} for every other row,
-\code{NA} for a relapse whose run does not record the flag).
+or 0) and \code{into_patent_lineage} (\code{TRUE} for a masked relapse, \code{FALSE} for every other row).
 }
 \description{
 One row per clone that became patent in a host, in the order of the event log: a bite or an
