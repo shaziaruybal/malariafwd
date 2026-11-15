@@ -33,7 +33,7 @@ test_that("the classes do not depend on what a run holds", {
 
 test_that("a file without a column gets it, empty, and an extra column follows", {
   r <- fake_run(ev_head = c(ev_cols[-21], "extra"), ev_rows = paste(c(rep("1", 20), "x"), collapse = "\t"),
-                st_head = sub("lineage_ids", "brood_ids", st_cols[-c(6, 12)]),
+                st_head = st_cols[-c(6, 12)],
                 st_rows = "1\thuman\t0\t1\t1\t0\t0\t7|9\tNA\tNA")
   ev <- load_events(r); st <- load_state(r)
   expect_identical(names(ev), c(ev_cols, "extra"))
@@ -128,29 +128,16 @@ test_that("a params.tsv of another version warns once, naming what it lacks and 
   expect_no_warning(malariafwd:::.params_of(r2))
   run <- suppressWarnings(load_run(r2))
   expect_no_warning(load_params(run))
-  ## the N_FOUNDERS row of an older file: ignored beside N_FOUNDER_HOSTS, and its value otherwise,
-  ## with N_FOUNDER_LINEAGES following; neither warns
-  expect_no_warning(p <- load_params(fake_run(params = list(N_FOUNDER_HOSTS = 30, N_HOSTS = 40),
-                                              extra = "N_FOUNDERS\t40")))
-  expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(30L, 30L))
-  expect_no_warning(p <- load_params(fake_run(drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"),
-                                              extra = "N_FOUNDERS\t7")))
-  expect_identical(c(p$N_FOUNDER_HOSTS, p$N_FOUNDER_LINEAGES), c(7L, 7L))
-  expect_null(p$N_FOUNDERS)
-  ## but a file that records N_FOUNDER_HOSTS and lacks N_FOUNDER_LINEAGES says so
+  ## a file that records N_FOUNDER_HOSTS and lacks N_FOUNDER_LINEAGES says so, and the lineages
+  ## follow the hosts, as in vivax_params()
   expect_warning(p <- load_params(fake_run(params = list(N_FOUNDER_HOSTS = 9), drop = "N_FOUNDER_LINEAGES")),
                  "lacks N_FOUNDER_LINEAGES", class = "malariafwd_params_mismatch")
   expect_identical(p$N_FOUNDER_LINEAGES, 9L)
-  expect_error(load_params(fake_run(drop = c("N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES"), extra = "N_FOUNDERS\tabc")),
-               "N_FOUNDERS is \"abc\", not a number")
-  ## a run object saved by an earlier version, whose set held N_FOUNDERS, is read again from its directory
+  ## a run object whose set does not have this version's names is read again from its directory
   r <- fake_run(params = list(N_HOSTS = 30))
   run <- load_run(r)
-  run$params <- structure(c(unclass(run$params), list(N_FOUNDERS = 12L)), class = "vivax_params")
+  run$params <- structure(c(unclass(run$params), list(FOO = 12L)), class = "vivax_params")
   expect_identical(load_params(run), vivax_params(N_HOSTS = 30))
-  ## and the row of N_OOCYSTS_PER_BITE is left out, also without a warning
-  expect_no_warning(p <- load_params(fake_run(extra = "N_OOCYSTS_PER_BITE\t1")))
-  expect_null(p$N_OOCYSTS_PER_BITE)
 })
 
 test_that("load_run() carries the record rows, typed, and refuses a directory that is not a run", {

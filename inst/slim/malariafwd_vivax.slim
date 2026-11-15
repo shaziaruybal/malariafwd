@@ -278,12 +278,6 @@ initialize() {
 	// bypasses R, so the same checks are made here. A number may be written either way, 7 or 7.0,
 	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
 	// must also be a whole number.
-	if (exists("N_FOUNDERS"))
-		stop("N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS, the hosts infected at the start, and " +
-			"N_FOUNDER_LINEAGES, the distinct founding genomes among them (it defaults to N_FOUNDER_HOSTS).");
-	if (exists("N_OOCYSTS_PER_BITE"))
-		stop("N_OOCYSTS_PER_BITE is not a parameter: the products a bite delivers are set by " +
-			"LAMBDA_SPOROZOITES, the mean of their zero-truncated count (0 gives exactly one).");
 	whole_params = c("SIM_DAYS", "N_HOSTS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES",
 		"N_MOSQ", "EIP_DAYS", "MAX_MOI", "MAX_BROODS_PER_MOSQ",
 		"GAMETOCYTE_DELAY", "K_LATENCY", "INTERVENTION_START", "INTERVENTION_END", "TREATMENT_START",

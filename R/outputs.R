@@ -15,16 +15,13 @@
   hyp_reservoir_size = "integer", lineage_ids = "character", n_transmissible = "integer",
   mosq_age_days = "integer", infectious_bites = "integer")
 
-## older runs wrote lineage_ids under the name brood_ids
-.OUTPUT_RENAMES <- list(events = character(), state = c(brood_ids = "lineage_ids"))
-
 .na_of <- function(cls) switch(cls, integer = NA_integer_, double = NA_real_, character = NA_character_)
 
 ## One of a run's tables with the schema's columns, in its order and classes, whatever the run
 ## holds: fread() guesses a class from the values, so an empty file, or a column that happens to
 ## hold only NA, would otherwise come back logical. A column the file lacks is added as NA; one the
 ## schema lacks is kept after the schema's.
-.read_output <- function(run, file, schema, renames = character()) {
+.read_output <- function(run, file, schema) {
   dir <- .run_dir(run)
   path <- file.path(dir, file)
   if (!file.exists(path))
@@ -33,18 +30,14 @@
   if (file.size(path) == 0)
     stop(file, " in ", dir, " is empty: the run did not finish writing it.", call. = FALSE)
   hdr <- names(data.table::fread(path, sep = "\t", nrows = 0, showProgress = FALSE))
-  now <- hdr
-  for (old in names(renames))
-    if (old %in% hdr && !renames[[old]] %in% hdr) now[hdr == old] <- renames[[old]]
-  want <- schema[intersect(now, names(schema))]
+  want <- schema[intersect(hdr, names(schema))]
   cls <- stats::setNames(c(integer = "integer", double = "numeric", character = "character")[want],
-                         hdr[match(names(want), now)])
+                         names(want))
   w <- character()
   d <- withCallingHandlers(
     data.table::fread(path, sep = "\t", header = TRUE, quote = "", na.strings = "NA",
                       colClasses = split(names(cls), unname(cls)), showProgress = FALSE),
     warning = function(x) { w <<- c(w, conditionMessage(x)); invokeRestart("muffleWarning") })
-  data.table::setnames(d, hdr, now)
   for (nm in names(want)) {
     got <- class(d[[nm]])[1]
     ok <- switch(want[[nm]], integer = got == "integer", double = got == "numeric",
@@ -59,7 +52,7 @@
            else if (!is.na(bad)) paste0(" (line ", bad + 1, ": \"", d[[nm]][bad], "\")"), call. = FALSE)
     }
   }
-  for (nm in setdiff(names(schema), now)) data.table::set(d, j = nm, value = .na_of(schema[[nm]]))
+  for (nm in setdiff(names(schema), hdr)) data.table::set(d, j = nm, value = .na_of(schema[[nm]]))
   data.table::setcolorder(d, c(names(schema), setdiff(names(d), names(schema))))
   if (length(w)) warning(file, " in ", dir, ": ", paste(unique(w), collapse = "; "), call. = FALSE)
   d[]
@@ -76,10 +69,7 @@
 ## the defaults' order and types (one the file lacks takes its default, and N_FOUNDER_LINEAGES
 ## follows N_FOUNDER_HOSTS as in vivax_params()); `record`, the record rows it has, typed; and
 ## `missing` and `dropped`, the parameters it lacks and the rows that are neither. Each line is
-## split at its first tab, so a value keeps any tab or space it holds. The rows of retired
-## parameters, in files made before they were retired, are left out without a warning. A file made
-## before the founders were split records N_FOUNDERS alone: it gives N_FOUNDER_HOSTS its value, and
-## N_FOUNDER_LINEAGES follows, as that model had a genome per founder host, so neither is missing.
+## split at its first tab, so a value keeps any tab or space it holds.
 .read_params_tsv <- function(path) {
   dir <- dirname(path)
   where <- paste("params.tsv in", dir)
@@ -98,12 +88,6 @@
   nm <- substr(l, 1, tab - 1)
   txt <- stats::setNames(substring(l, tab + 1), nm)
   if (anyDuplicated(nm)) stop(where, ": ", nm[duplicated(nm)][1], " is given twice.", call. = FALSE)
-  stand_in <- "N_FOUNDERS" %in% nm && !"N_FOUNDER_HOSTS" %in% nm
-  if (stand_in) {
-    if (is.na(suppressWarnings(as.numeric(txt[["N_FOUNDERS"]]))))
-      stop(where, ": N_FOUNDERS is \"", txt[["N_FOUNDERS"]], "\", not a number.", call. = FALSE)
-    txt[["N_FOUNDER_HOSTS"]] <- txt[["N_FOUNDERS"]]
-  }
   d <- .malariafwd_defaults
   p <- utils::modifyList(d, .type_params(txt, where))
   if (!"N_FOUNDER_LINEAGES" %in% nm) p$N_FOUNDER_LINEAGES <- p$N_FOUNDER_HOSTS
@@ -116,8 +100,8 @@
       as.integer(v) else v
   }
   list(params = structure(p, class = "vivax_params"), record = rec,
-       missing = setdiff(names(d), c(names(txt), if (stand_in) "N_FOUNDER_LINEAGES")),
-       dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS), names(.RETIRED_PARAMS))))
+       missing = setdiff(names(d), names(txt)),
+       dropped = setdiff(nm, c(names(d), names(.RECORD_ROWS))))
 }
 
 ## ---- the column dictionary (?malariafwd-outputs; MODEL_DESCRIPTION 16.1 and 16.2) ----

@@ -187,7 +187,7 @@ run_grid <- function(param_sets, seeds = 1L, outdir_base, model = slim_model(),
   refused <- character()
   sets <- lapply(names(param_sets), function(nm) tryCatch(suppressWarnings({
     p <- param_sets[[nm]]
-    if (inherits(p, "vivax_params")) .refuse_unknown(names(p), built = TRUE)
+    if (inherits(p, "vivax_params")) .refuse_unknown(names(p))
     do.call(vivax_params, as.list(unclass(p)), quote = TRUE)
   }), error = function(e) { refused[[nm]] <<- conditionMessage(e); NULL }))
   names(sets) <- names(param_sets)

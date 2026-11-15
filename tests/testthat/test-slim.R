@@ -84,8 +84,6 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
            "BITING_RATE=INF" = "BITING_RATE must be > 0 and finite",
            "EIP_DAYS=-1" = "EIP_DAYS must be >= 0",
            "N_FOUNDER_HOSTS=21" = "N_FOUNDER_HOSTS \\(21\\) must be at most N_HOSTS \\(20\\)",
-           "N_FOUNDERS=12" = "N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS",
-           "N_OOCYSTS_PER_BITE=1" = "N_OOCYSTS_PER_BITE is not a parameter",
            "N_HOSTS=20.5" = "N_HOSTS must be a whole number",
            "MOSQ_LIFESPAN=0.5" = "MOSQ_LIFESPAN must be >= 1",
            "MEAN_BLOOD_STAGE_DURATION=0.5" = "MEAN_BLOOD_STAGE_DURATION must be >= 1",

@@ -211,7 +211,7 @@ load_run <- function(outdir) {
 #' ev <- load_events(example_run())
 #' ev[, .N, by = event_type]
 #' @export
-load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OUTPUT_RENAMES$events)
+load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA)
 
 #' Load the per-tick state table of a run
 #'
@@ -231,7 +231,7 @@ load_events <- function(run) .read_output(run, "events.tsv", .EVENTS_SCHEMA, .OU
 #' @export
 load_state <- function(run, entity = c("human", "mosquito", "all")) {
   entity <- match.arg(entity)
-  d <- .read_output(run, "state.tsv", .STATE_SCHEMA, .OUTPUT_RENAMES$state)
+  d <- .read_output(run, "state.tsv", .STATE_SCHEMA)
   if (entity != "all") d <- d[entity_type == entity]
   d[]
 }

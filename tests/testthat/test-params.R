@@ -38,29 +38,16 @@ test_that("validation catches bad input", {
   expect_error(vivax_params(SIM_DAYS = -1))
 })
 
-test_that("N_FOUNDERS is refused, naming the founder parameters to set instead", {
-  expect_error(vivax_params(N_FOUNDERS = 12), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
-  e <- tryCatch(vivax_params(N_FOUNDERS = 12, FOO = 1), error = conditionMessage)
-  expect_match(e, "N_FOUNDERS is not a parameter")
-  expect_match(e, "unknown parameter\\(s\\): FOO")
-  expect_false("N_FOUNDERS" %in% names(vivax_params()))
+test_that("N_FOUNDER_LINEAGES follows N_FOUNDER_HOSTS when not given, and an edited set keeps it", {
   expect_identical(vivax_params(N_FOUNDER_HOSTS = 5)$N_FOUNDER_LINEAGES, 5L)
-  ## the message says an edited set keeps its N_FOUNDER_LINEAGES, which it does
-  expect_match(e, "editing N_FOUNDER_HOSTS in a set already built leaves N_FOUNDER_LINEAGES as it was")
   p <- vivax_params(); p$N_FOUNDER_HOSTS <- 30L
   expect_identical(p$N_FOUNDER_LINEAGES, 12L)
-  ## a set edited to hold it, or built by an earlier version, is refused by run_sim(), which says how
-  ## to drop it
-  p <- vivax_params(); p$N_FOUNDERS <- 5
-  expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "^N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS")
-  old <- structure(c(unclass(vivax_params()), list(N_FOUNDERS = 12L)), class = "vivax_params")
-  expect_error(run_sim(old, outdir = tempfile("mfwd_nf_")),
-               "This set holds N_FOUNDERS: remove it with p\\$N_FOUNDERS <- NULL")
 })
 
-test_that("N_OOCYSTS_PER_BITE is refused, naming LAMBDA_SPOROZOITES", {
-  expect_error(vivax_params(N_OOCYSTS_PER_BITE = 1), "^N_OOCYSTS_PER_BITE is not a parameter.*LAMBDA_SPOROZOITES")
-  expect_false("N_OOCYSTS_PER_BITE" %in% names(vivax_params()))
+test_that("a name that is not a parameter is refused, in a call and in an edited set", {
+  expect_error(vivax_params(FOO = 1), "unknown parameter\\(s\\): FOO")
+  p <- vivax_params(); p$FOO <- 5
+  expect_error(run_sim(p, outdir = tempfile("mfwd_nf_")), "unknown parameter\\(s\\): FOO")
 })
 
 test_that("every argument is named, given once, and not NULL", {

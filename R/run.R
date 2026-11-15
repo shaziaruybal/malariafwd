@@ -58,7 +58,7 @@ run_sim <- function(params = vivax_params(), seed = 1L, outdir, model = slim_mod
   ## Rebuilt every time, so that a set edited after vivax_params() (with $<- or modifyList(),
   ## which keep the class) is checked as well: a misspelt name or an impossible value is refused
   ## here rather than run.
-  if (inherits(params, "vivax_params")) .refuse_unknown(names(params), built = TRUE)
+  if (inherits(params, "vivax_params")) .refuse_unknown(names(params))
   params <- do.call(vivax_params, as.list(unclass(params)), quote = TRUE)
   if (missing(outdir)) stop("`outdir` is required.", call. = FALSE)
   if (!is.character(outdir) || length(outdir) != 1L || is.na(outdir) || !nzchar(outdir))

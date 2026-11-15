@@ -127,35 +127,14 @@ vivax_params <- function(...) {
   structure(p, class = "vivax_params")
 }
 
-## Names that were parameters once, each with what to set instead.
-.RETIRED_PARAMS <- list(
-  N_FOUNDERS = paste("N_FOUNDERS is not a parameter: set N_FOUNDER_HOSTS, the hosts infected at the",
-                     "start, and N_FOUNDER_LINEAGES, the distinct founding genomes among them.",
-                     "vivax_params() makes N_FOUNDER_LINEAGES equal to N_FOUNDER_HOSTS when it is not",
-                     "given, but editing N_FOUNDER_HOSTS in a set already built leaves",
-                     "N_FOUNDER_LINEAGES as it was, so set both there."),
-  N_OOCYSTS_PER_BITE = paste("N_OOCYSTS_PER_BITE is not a parameter: the products a bite delivers are set",
-                             "by LAMBDA_SPOROZOITES, the mean of their zero-truncated count (0 gives",
-                             "exactly one)."))
-
-## Refuses names that are not parameters: a retired one with what to set instead, any other listed.
-## A set already built (`built`) that holds a retired name is told how to drop it.
-.refuse_unknown <- function(nms, built = FALSE) {
+## Refuses names that are not parameters, listing them.
+.refuse_unknown <- function(nms) {
   unknown <- setdiff(nms, names(.malariafwd_defaults))
   if (!length(unknown)) return(invisible())
-  retired <- intersect(unknown, names(.RETIRED_PARAMS))
-  other <- setdiff(unknown, retired)
-  stop(paste(c(unlist(.RETIRED_PARAMS[retired]),
-               if (built && length(retired))
-                 paste0("This set holds ", paste(retired, collapse = " and "), ": remove ",
-                        if (length(retired) == 1L) "it" else "them", " with ",
-                        paste0("p$", retired, " <- NULL", collapse = " and "), "."),
-               if (length(other))
-                 paste0("unknown parameter(s): ", paste(other, collapse = ", "),
-                        if (any(c("SEED", "OUTDIR") %in% other))
-                          "\nSEED and OUTDIR are set by run_sim(seed =, outdir =), not in the parameter set.",
-                        "\nsee names(vivax_params()) for valid names.")), collapse = "\n"),
-       call. = FALSE)
+  stop("unknown parameter(s): ", paste(unknown, collapse = ", "),
+       if (any(c("SEED", "OUTDIR") %in% unknown))
+         "\nSEED and OUTDIR are set by run_sim(seed =, outdir =), not in the parameter set.",
+       "\nsee names(vivax_params()) for valid names.", call. = FALSE)
 }
 
 ## A number as as_slim_args() writes it: 15 significant digits, never in scientific notation.

@@ -447,7 +447,6 @@ test_that("load_run() carries the run's record, typed", {
   expect_output(print(r), "60 days, 30 hosts, 60 mosquitoes")
   expect_output(print(r), "SLiM [0-9.]+, malariafwd")
   ## the test helper writes params.tsv as the model does
-  expect_false(any(startsWith(readLines(file.path(r$outdir, "params.tsv")), "N_FOUNDERS\t")))
   rec <- malariafwd:::.read_params_tsv(file.path(r$outdir, "params.tsv"))$record
   expect_setequal(params_tsv_lines(load_params(r), rec), readLines(file.path(r$outdir, "params.tsv"), encoding = "UTF-8"))
 })
