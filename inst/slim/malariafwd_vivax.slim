@@ -983,7 +983,7 @@ reproduction()
 		{
 			if (human_MOI == 0)
 			{
-				vcat("note: Sv-Ih: human 👤" + h.id + " tagged infected I but MOI=0; skipping)");
+				vcat("note: Sv-Ih: human 👤" + h.id + " tagged infected but has no transmissible clone; skipping");
 			}
 			else if (runif(1) < P_TRANS_HV)
 			{
@@ -1059,7 +1059,7 @@ reproduction()
 			// infected; it cannot yet infect the mosquito (D51).
 			if (mosq_MOI == 0)
 			{
-				vcat("note: Iv-Ih: mosquito tagged I but has no broods; skipping");
+				vcat("note: Iv-Ih: 🦟 mosquito " + m.id + " tagged infected but has no broods; skipping");
 			}
 			else
 			{
@@ -1633,7 +1633,7 @@ early() {
 	//   NEVER STARTED  - no parasite has existed at any point, and none can still come: the run is
 	//                    past its last import day and at LIVENESS_TICK or later, or on its last
 	//                    day. Only a founder-free run can get here: validate_params() and the
-	//                    initialize() fence refuse one with no import path inside it, so its
+	//                    checks in initialize() refuse one with no import path inside it, so its
 	//                    imports were all there but none established a parasite, by chance (a
 	//                    Poisson rate that drew none, imports that took in neither compartment)
 	//                    or because its settings let none take (P_PRIMARY = 0 with a hypnozoite
@@ -2061,7 +2061,7 @@ function (void) decideTreatment(o<Subpopulation>$ h)
 	// delay is geometric with mean TREATMENT_DELAY and at least one day (D24, D32). A course
 	// can never be given on the tick the case arises: the parasite became patent that tick, so
 	// it cannot yet have caused symptoms or prompted care-seeking. If it could, the same-tick
-	// fence in applyTreatment() would CONSUME the course (tx_pending is cleared whether or not
+	// check in applyTreatment() would CONSUME the course (tx_pending is cleared whether or not
 	// anything was treated) and the patient would silently go untreated. TREATMENT_DELAY = 1,
 	// the minimum, means the next day.
 	h.setValue("tx_tick", sim.cycle + 1 + rgeom(1, 1.0 / TREATMENT_DELAY)[0]);
