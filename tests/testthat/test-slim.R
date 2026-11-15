@@ -108,6 +108,8 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
   }
   r <- slim("BLOODCURE_COVERAGE=0.5", "TREATMENT_START=10", "TREATMENT_END=5")
   expect_match(paste(r$stdout, r$stderr), "case-management window is closed")
+  r <- slim("BLOODCURE_COVERAGE=0.5", "TREATMENT_END=1")
+  expect_match(paste(r$stdout, r$stderr), "case-management window is closed")
   r <- slim("LAMBDA_OOCYSTS=1000.0", "K_OOCYSTS=0.001")
   expect_match(paste(r$stdout, r$stderr), "gives a mean of 72883.5597.* the mean must be at most 1000")
   ## ...worked out as uptake_moments() does, so a tiny lambda or a huge K, which R accepts, runs

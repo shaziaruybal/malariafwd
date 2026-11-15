@@ -976,8 +976,9 @@ helper, `caseManagementOn()`, gates every case-based course; it is asked in `dec
 which every case goes through. `INTERVENTION_*` is vector control and scales biting only (D37): it
 does not touch treatment, and the treatment window does not touch biting. The window gates the
 decision, not the delivery, so a case detected on the programme's last day completes its course
-after the window closes. A coverage set against a window that is closed, or that opens after the run
-ends, is refused, by `validate_params()` and by the model itself (D43).
+after the window closes. A coverage set against a window that holds no day of the run, one that is
+closed, ends by day 1 or opens after the run ends, is refused, by `validate_params()` and by the
+model itself (D43).
 
 **Why.** Case management is drugs given to diagnosed patients and vector control is bed nets and
 spraying; nothing should make one imply the other, and a scenario can treat cases without changing

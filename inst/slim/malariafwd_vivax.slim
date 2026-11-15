@@ -469,9 +469,10 @@ initialize() {
 		stop("MDA_TICK must not be 1 when a founder host carries a copy of another founder's genome " +
 			"(N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS): the copies are seeded on day 2, so a round comes " +
 			"on day 2 or later.");
-	// a coverage set against a closed case-management window would give no treatment at all (D30)
+	// a coverage set against a case-management window that holds no day of the run, which starts on
+	// day 1, would give no treatment at all (D30)
 	if ((RADCURE_COVERAGE > 0 | BLOODCURE_COVERAGE > 0) &
-		(TREATMENT_END <= TREATMENT_START | TREATMENT_START > SIM_DAYS))
+		(TREATMENT_END <= TREATMENT_START | TREATMENT_END <= 1 | TREATMENT_START > SIM_DAYS))
 		stop("a treatment coverage is set but the case-management window is closed (TREATMENT_START = " +
 			TREATMENT_START + ", TREATMENT_END = " + TREATMENT_END + ", SIM_DAYS = " + SIM_DAYS +
 			"): no case would ever be treated.");

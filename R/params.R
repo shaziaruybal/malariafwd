@@ -368,10 +368,10 @@ validate_params <- function(p) {
          "  SIM_DAYS (IMPORT_TICK + N_IMPORTS, or IMPORT_START/IMPORT_END with N_IMPORTS_PER_TICK\n",
          "  or IMPORT_RATE_PER_TICK).", call. = FALSE)
 
-  ## A coverage set against a closed case-management window would silently give no treatment
-  ## (see D30), so it is refused.
+  ## A coverage set against a case-management window that holds no day of the run, which starts
+  ## on day 1, would silently give no treatment (see D30), so it is refused.
   if ((p$RADCURE_COVERAGE > 0 || p$BLOODCURE_COVERAGE > 0) &&
-      (p$TREATMENT_END <= p$TREATMENT_START || p$TREATMENT_START > p$SIM_DAYS))
+      (p$TREATMENT_END <= p$TREATMENT_START || p$TREATMENT_END <= 1 || p$TREATMENT_START > p$SIM_DAYS))
     stop("a treatment coverage is set but the case-management window is closed:\n",
          "  TREATMENT_START = ", p$TREATMENT_START, ", TREATMENT_END = ", p$TREATMENT_END,
          ", SIM_DAYS = ", p$SIM_DAYS, "\n",

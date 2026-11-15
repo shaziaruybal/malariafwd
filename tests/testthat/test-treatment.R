@@ -107,6 +107,9 @@ test_that("a coverage against a closed treatment window is refused", {
   ## A coverage that can never act would give a quietly empty result, so it is an error.
   expect_error(vivax_params(BLOODCURE_COVERAGE = 1, TREATMENT_START = 50L, TREATMENT_END = 50L),
                "case-management window is closed")
+  ## a window that ends on day 1 holds no day of the run, which starts on day 1
+  expect_error(vivax_params(BLOODCURE_COVERAGE = 1, TREATMENT_END = 1L), "case-management window is closed")
+  expect_no_error(vivax_params(BLOODCURE_COVERAGE = 1, TREATMENT_END = 2L))
   ## suppressWarnings: this also trips the nested-radical-cure warning, which is correct
   ## but not what this expectation is about
   suppressWarnings(
