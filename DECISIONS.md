@@ -425,11 +425,11 @@ shipped `GAMETOCYTE_DELAY = 0` and `P_GAMETOCYTE = 1` it passes every clone and 
 number, so a default run is identical to one without the gate.
 
 **Why.** Vivax gametocytes appear early, at or near the onset of symptoms rather than after the 10
-to 12 days falciparum gametocytes take to mature, so infectiousness runs close to the blood stage,
-and a realistic setting, a delay of 2 to 3 days with carriage of about 0.9, lies near the identity.
-The parameters are there for the sensitivity analysis that section 14 of the model description calls
-for. The delay is one value for every clone: at a few days against a 60-day mean blood stage (D9),
-its variance can do little to the dynamics.
+to 12 days falciparum gametocytes take to mature (Bousema & Drakeley 2011), so infectiousness runs
+close to the blood stage, and a realistic setting, a delay of 2 to 3 days with carriage of about
+0.9, lies near the identity. The parameters are there for the sensitivity analysis that section 14
+of the model description calls for. The delay is one value for every clone: at a few days against a
+60-day mean blood stage (D9), its variance can do little to the dynamics.
 
 **Alternatives considered.** Removing the two parameters: they are the knob a sensitivity analysis
 of gametocyte timing and carriage needs. Shipping the realistic setting as the default: it would

@@ -473,8 +473,8 @@ optimisation that keeps object count from scaling with clonal output, corrected 
 **Gametocyte gating.** A blood-stage infection is transmissible only from
 `gametocyte_ready_tick = start + GAMETOCYTE_DELAY` and only if it carries gametocytes (per-infection
 Bernoulli, `P_GAMETOCYTE`). Defaults are the identity (0 and 1.0). Vivax gametocytes appear early —
-at or near symptom onset, unlike ~10–12 d in falciparum — so a realistic preset is a short delay
-plus high carriage (≈3 and ≈0.9).
+at or near symptom onset, unlike ~10–12 d in falciparum (Bousema & Drakeley 2011) — so a
+realistic preset is a short delay plus high carriage (≈3 and ≈0.9).
 
 **Inoculation.** A bite draws `n ~ ZT(LAMBDA_SPOROZOITES)` products from everything past the EIP,
 **weighted by `spz_weight`**, then collapses repeat draws to one object per distinct lineage.
@@ -1723,6 +1723,9 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
   *Plasmodium vivax* cases to different generations of wild-caught and laboratory-adapted *Anopheles
   arabiensis* using a membrane feeding assay, Ethiopia. *Current Research in Parasitology &
   Vector-Borne Diseases* 4:100137. <https://doi.org/10.1016/j.crpvbd.2023.100137>
+- Bousema T, Drakeley C (2011). Epidemiology and infectivity of *Plasmodium falciparum* and
+  *Plasmodium vivax* gametocytes in relation to malaria control and elimination. *Clinical
+  Microbiology Reviews* 24(2):377–410. <https://doi.org/10.1128/CMR.00051-10>
 - Champagne C, Gerhards M, Lana J, García Espinosa B, Bradley C, González O, et al. (2022). Using
   observed incidence to calibrate the transmission level of a mathematical model for *Plasmodium
   vivax* dynamics including case management and importation. *Mathematical Biosciences*

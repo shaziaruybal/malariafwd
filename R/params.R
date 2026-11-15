@@ -428,7 +428,8 @@ validate_params <- function(p) {
   if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0 && !mda_on)
     warning("RADCURE_COVERAGE > 0 has no effect while BLOODCURE_COVERAGE is 0 and no MDA round\n",
             "  is scheduled: case-based radical cure is given only to treated cases (it is never\n",
-            "  given without a schizonticide). Set BLOODCURE_COVERAGE, or schedule MDA_TICK.",
+            "  given without a schizonticide). Set BLOODCURE_COVERAGE for case-based radical cure; an\n",
+            "  MDA round gives radical cure to every host it reaches, whatever RADCURE_COVERAGE is.",
             call. = FALSE)
   invisible(TRUE)
 }
