@@ -29,9 +29,10 @@ al. 2013). A recrudescence, a new episode but not a new clone, appears in the in
 only. The subtitle gives \code{\link[=summarise_run]{summarise_run()}}'s numbers for the days after the burn-in.
 }
 \details{
-The panels run to \code{SIM_DAYS}: a run that goes extinct shows lines that drop to zero and stay
-there to the end of the run, and the subtitle says on which day it went extinct. A window with no
-case is drawn as zero.
+The panels run to the end of the run's last whole window of \code{bin} days: a part-window after it,
+which the panels that count per window would draw as a dip, is left out. A run that goes extinct
+shows lines that drop to zero and stay there, and the subtitle says on which day it went extinct.
+A window with no case is drawn as zero.
 }
 \examples{
 \dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("patchwork", quietly = TRUE)) withAutoprint(\{ # examplesIf}

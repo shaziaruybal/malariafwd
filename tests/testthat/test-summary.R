@@ -243,3 +243,11 @@ test_that("the dashboard's force panel is force_of_infection()'s rate, its short
   expect_true(any(fo$win == 0L & fo$days < 30L & fo$rate > 0))
   expect_equal(d[fo, on = .(w = win, origin), y], fo$rate)
 })
+
+test_that("the dashboard draws the run's last whole window and leaves out a part-window after it", {
+  skip_if_not_installed("ggplot2"); skip_if_not_installed("patchwork")
+  r <- extinct_fixture_run()   # 20 days
+  last_window <- function(bin) max(plot_diagnostics(r, bin = bin)[[1]]$data$w)
+  expect_equal(last_window(7), 14)   # days 14 to 20 are a whole window
+  expect_equal(last_window(5), 15)   # days 15 to 19; day 20 alone is left out
+})

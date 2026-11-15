@@ -137,9 +137,10 @@ plot_host_trajectory <- function(run, host_id,
 #' al. 2013). A recrudescence, a new episode but not a new clone, appears in the incidence panel
 #' only. The subtitle gives [summarise_run()]'s numbers for the days after the burn-in.
 #'
-#' The panels run to `SIM_DAYS`: a run that goes extinct shows lines that drop to zero and stay
-#' there to the end of the run, and the subtitle says on which day it went extinct. A window with no
-#' case is drawn as zero.
+#' The panels run to the end of the run's last whole window of `bin` days: a part-window after it,
+#' which the panels that count per window would draw as a dip, is left out. A run that goes extinct
+#' shows lines that drop to zero and stay there, and the subtitle says on which day it went extinct.
+#' A window with no case is drawn as zero.
 #' @inheritParams load_events
 #' @param bin window width in days.
 #' @param burn_frac the share of the run's `SIM_DAYS` days marked as burn-in; the subtitle gives
@@ -162,7 +163,9 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
   ## every window of the run, to SIM_DAYS, with the days it covers; state.tsv stops at an extinction
   grid <- data.table::data.table(w = seq(0, (endt %/% bin) * bin, by = bin))
   grid[, days := pmin(w + bin - 1, endt) - pmax(w, 1) + 1]
-  keep <- function(d) d[w <= endt - bin]
+  ## the panels draw the windows that end by SIM_DAYS; a part-window after the last of them would
+  ## dip in the panels that count per window
+  keep <- function(d) d[w + bin - 1 <= endt]
   h[, w := (tick %/% bin) * bin]
   ## prevalence and the reservoir over every host-day of a window, so that the days after an
   ## extinction count as days with no infected host; COI is NA where no host is infected
