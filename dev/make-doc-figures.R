@@ -93,7 +93,9 @@ counts <- peak[, .N, by = peak_coi]
 pC <- ggplot(peak, aes(factor(peak_coi), relapses)) +
   geom_boxplot(data = peak[peak_coi %in% counts[N >= 5, peak_coi]], outlier.shape = NA,
                fill = "grey88", colour = "grey30", width = 0.55) +
-  geom_jitter(width = 0.15, height = 0, size = 0.8, alpha = 0.45) +
+  ## seeded, so that a redraw puts every point where it was
+  geom_point(position = position_jitter(width = 0.15, height = 0, seed = 1),
+             size = 0.8, alpha = 0.45) +
   geom_text(data = counts, aes(factor(peak_coi), Inf, label = paste("n =", N)), vjust = 1.4,
             size = 3, colour = "grey30", inherit.aes = FALSE) +
   scale_y_continuous(expand = expansion(mult = c(0.02, 0.12))) +
