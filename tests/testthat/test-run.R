@@ -180,7 +180,7 @@ test_that("no blood-stage infection is forced to clear at a fixed age", {
   ev <- load_events(run)
   d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
              ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
-  expect_lt(sum(d$t1 - d$t0 == 181), 5)   # a 180-day cap cleared about 83% of founders on day 181
+  expect_lt(sum(d$t1 - d$t0 == 181), 5)   # a 180-day cap would clear about 83% of founders on day 181
 })
 
 test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapses less", {

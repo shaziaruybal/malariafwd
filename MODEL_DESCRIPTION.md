@@ -232,7 +232,7 @@ transmission-blocking immunity, and no age structure. This is a deliberate scope
 would confound the genetic signals the model exists to measure, and vivax immunity parameters are
 poorly identified. It is the single largest simplification in the model (§11, §14).
 
-**Blood-stage duration** is geometric: each active lineage clears independently each day with
+**Blood-stage duration** is geometric: each patent clone clears independently each day with
 probability
 
 ```
@@ -241,9 +241,10 @@ P_BLOOD_CLEAR = 1 / MEAN_BLOOD_STAGE_DURATION     # = 0.01667 at 60 days: mean d
 
 This is White et al. (2014)'s clearance rate r = 1/60 per day, used as a daily probability.
 
-There is no age ceiling: every infection ends by this daily draw. Clearance is
-**per-lineage**, so a polyclonal host loses lineages independently and MOI decays rather than
-collapsing at once.
+There is no age ceiling: an untreated clone ends only by this daily draw. Clearance is
+**per clone**, so a polyclonal host loses its clones independently and MOI decays rather than
+collapsing at once. A clone cannot clear on the day its blood stage began, and a subpatent clone
+makes no draw (§9a).
 
 **Superinfection** is allowed and gated by `MAX_MOI` = 20, which is at least 1 (1 means no
 superinfection). The gate is the same for every new inoculation, a local bite or an import: a host
@@ -331,7 +332,7 @@ Follows the **White et al. 2014** batch model.
   only once a bite or an import gives it a batch.
 - **Activation:** each hypnozoite activates at `ALPHA_ACTIVATE` = 1/170 per day, an average carriage
   of about 170 days (Mehra et al. 2024b, as Mehra & Taylor 2026 use it; White et al. 2014 estimate
-  1/332). An activation produces **one blood-stage episode** representing however many
+  1/332). An activation produces **one blood-stage clone** representing however many
   clonal hypnozoites activated that tick.
 - **Death:** `MU_HYPNOZOITE` = 1/442 per day (as in Mehra et al. 2024a, who credit White et al. 2014,
   whose table gives 1/425), competing with activation.
@@ -402,11 +403,11 @@ At the shipped `ALPHA_ACTIVATE` = 1/170 and `MU_HYPNOZOITE` = 1/442:
 | …at ν = 5 | 3.61 |
 | …at ν = 8 | 5.78 |
 
-**Note the episode/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating
-on the same tick collapse into **one** blood-stage episode (they are clonal, so they are
-genetically one thing). The expected number of relapse *episodes* is therefore lower than the 2.17
+**Note the relapse/hypnozoite distinction.** Multiple hypnozoites in the *same* batch activating
+on the same tick collapse into **one** relapse, a single blood-stage clone (they are clonal, so they
+are genetically one thing). The expected number of relapses is therefore lower than the 2.17
 relapsing hypnozoites per bite at the default ν = 3, and depends on batch size — a larger batch
-yields more simultaneous activations and so proportionally fewer episodes per hypnozoite. This is
+yields more simultaneous activations and so proportionally fewer relapses per hypnozoite. This is
 why relapse *rate* is not linear in ν.
 
 **Temperate latency.** With `K_LATENCY = k > 0`, a new batch must pass `k` latency stages before
@@ -644,9 +645,9 @@ a founder host that carries a copy of another founder's genome
 empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries both (D40). A naive population
 seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run.
 
-**v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
-source population, so imports are maximally distinguishable from local parasites (measured founder
-overlap 0.03). A structured source pool is planned (§15).
+**Limitation:** imported genotypes are drawn as unrelated founders — there is no structured source
+population, so imports are maximally distinguishable from local parasites. A structured source pool
+is planned (§15).
 
 ---
 
@@ -958,7 +959,7 @@ One round, through the same course as case management.
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `MDA_TICK` | 99999 (never) | day | whole number; not 1 when a founder host carries a copy of another founder's genome | Day of one MDA round, through the same course as case management: blood-stage drugs, and radical cure as RADCURE_COVERAGE gives it, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. |
+| `MDA_TICK` | 99999 (never) | day | whole number; not 1 when a founder host carries a copy of another founder's genome | Day of one MDA round, through the same course as case management: blood-stage drugs and radical cure, whatever RADCURE_COVERAGE is, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. |
 | `MDA_COVERAGE` | 1 | probability | number in [0, 1] | The round reaches a host, drawn for each host. |
 
 ### Recrudescence
@@ -1351,9 +1352,9 @@ In R, `?events.tsv` gives this table.
 bites of the lineage on the same day do not see one another, so two batches of one lineage that
 wake together, with no earlier clone of it in the host, are both 0 (§5).
 
-**Event vocabulary.** `event_types()` is the authority and returns them as a data frame with
+**Event vocabulary.** `event_types()` is the authority and returns them as a data.table with
 `event_type`, `stage`, `ends_episode`, `is_onset` and `description`. Rather than reproduce the
-table here (it would go stale, and has), generate it:
+table here, where it would go stale, generate it:
 
 ```r
 event_types()                                  # all of them

@@ -259,8 +259,8 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 #'
 #'   Read a pair's value with [ibd_lookup()], or the table with `as.matrix()` or `as.data.frame()`.
 #' @section Ids that are not in the tree sequence:
-#' A run written with `RETAIN_FULL_HISTORY = FALSE` keeps only a fraction of genomes in the tree
-#' sequence. A requested id it does not hold is listed in `missing`, gives one warning, and looks
+#' In a run written with `RETAIN_FULL_HISTORY = FALSE`, most genomes not alive at its end leave the
+#' tree sequence. A requested id it does not hold is listed in `missing`, gives one warning, and looks
 #' up as `NA`, not as 0; asking only for such ids is an error.
 #' @section Segment ages:
 #' `mrca_time` is a tskit node time, ticks before the end of the run, not an age. A segment's

@@ -292,7 +292,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
 #' [plot_relatedness_ladder()] to check the genealogy against the textbook values.
 #'
 #' @inheritParams load_events
-#' @param max_per_class cap on pairs sampled per relationship class.
+#' @param max_per_class the most pairs per relationship class, the first the event log gives.
 #' @return a data.table of `cls` (a factor of the six classes), `a` and `b` (integer pedigree ids)
 #'   and `ibd` (double), one row per pair. A class with no pair in the run has no rows, and a run
 #'   with none, such as one that never started, gives a table with no rows.

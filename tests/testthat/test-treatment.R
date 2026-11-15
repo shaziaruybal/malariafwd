@@ -15,7 +15,7 @@ run_counts <- function(p, tag) {
 test_that("treatment is driven by coverage alone, not by the vector-control window", {
   skip_if_no_slim()
   ## D30. Case-based treatment is not gated on INTERVENTION_START/END, the window that scales
-  ## biting and importation: a coverage treats cases without that window being opened.
+  ## biting: a coverage treats cases without that window being opened.
   expect_equal(run_counts(shared(), "none")$bloodcure, 0)
 
   blood <- run_counts(shared(BLOODCURE_COVERAGE = 1), "blood")

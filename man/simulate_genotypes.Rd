@@ -94,8 +94,8 @@ sampled later.
 \section{Which genomes can be genotyped}{
 
 Any genome in the tree sequence: case clones, hypnozoite batches and mosquito products alike. A
-run with \code{RETAIN_FULL_HISTORY = FALSE} records only the genomes alive at its end; a run that never
-started holds none.
+run with \code{RETAIN_FULL_HISTORY = FALSE} keeps few genomes beyond those alive at its end; a run that
+never started holds none.
 }
 
 \section{Python}{

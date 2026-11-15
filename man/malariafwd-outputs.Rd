@@ -28,7 +28,7 @@ digits with \code{.0} on a whole one, flags as \code{T} or \code{F}, and text as
 
 \code{plasmo.trees} holds one node per genome, keyed by its pedigree id, with node times in ticks before
 the end of the run; SLiM's second, vacant node of each genome is not a genome. A run with
-\code{RETAIN_FULL_HISTORY = FALSE} keeps only the genomes alive at its end.
+\code{RETAIN_FULL_HISTORY = FALSE} keeps the genomes alive at its end, and most earlier ones leave it.
 }
 \seealso{
 \code{\link[=load_run]{load_run()}}, \code{\link[=load_events]{load_events()}}, \code{\link[=load_state]{load_state()}}, \code{\link[=load_params]{load_params()}}, \code{\link[=trees_path]{trees_path()}},

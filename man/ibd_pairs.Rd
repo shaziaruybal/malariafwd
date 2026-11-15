@@ -66,8 +66,8 @@ between them. A pair gets the same segments whatever other genomes are passed, t
 
 \section{Ids that are not in the tree sequence}{
 
-A run written with \code{RETAIN_FULL_HISTORY = FALSE} keeps only a fraction of genomes in the tree
-sequence. A requested id it does not hold is listed in \code{missing}, gives one warning, and looks
+In a run written with \code{RETAIN_FULL_HISTORY = FALSE}, most genomes not alive at its end leave the
+tree sequence. A requested id it does not hold is listed in \code{missing}, gives one warning, and looks
 up as \code{NA}, not as 0; asking only for such ids is an error.
 }
 

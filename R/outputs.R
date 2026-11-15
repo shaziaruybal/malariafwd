@@ -196,7 +196,7 @@
 #'
 #' `plasmo.trees` holds one node per genome, keyed by its pedigree id, with node times in ticks before
 #' the end of the run; SLiM's second, vacant node of each genome is not a genome. A run with
-#' `RETAIN_FULL_HISTORY = FALSE` keeps only the genomes alive at its end.
+#' `RETAIN_FULL_HISTORY = FALSE` keeps the genomes alive at its end, and most earlier ones leave it.
 #' @evalRd .outputs_rd()
 #' @name malariafwd-outputs
 #' @aliases events.tsv state.tsv params.tsv plasmo.trees

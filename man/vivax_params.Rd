@@ -205,7 +205,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 
 \subsection{Mass drug administration}{One round, through the same course as case management.
 \describe{
-\item{\code{MDA_TICK}}{Day of one MDA round, through the same course as case management: blood-stage drugs, and radical cure as RADCURE_COVERAGE gives it, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. Unit: day. Default 99999 (never); whole number; not 1 when a founder host carries a copy of another founder's genome.}
+\item{\code{MDA_TICK}}{Day of one MDA round, through the same course as case management: blood-stage drugs and radical cure, whatever RADCURE_COVERAGE is, for each host it reaches. It also reaches subpatent clones and clones that became patent that day, and it is not gated by the treatment window. Unit: day. Default 99999 (never); whole number; not 1 when a founder host carries a copy of another founder's genome.}
 \item{\code{MDA_COVERAGE}}{The round reaches a host, drawn for each host. Unit: probability. Default 1; number in [0, 1].}
 }}
 

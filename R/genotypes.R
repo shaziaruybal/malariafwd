@@ -188,8 +188,8 @@ def gt_roots(path, ids, positions):
 #' sampled later.
 #' @section Which genomes can be genotyped:
 #' Any genome in the tree sequence: case clones, hypnozoite batches and mosquito products alike. A
-#' run with `RETAIN_FULL_HISTORY = FALSE` records only the genomes alive at its end; a run that never
-#' started holds none.
+#' run with `RETAIN_FULL_HISTORY = FALSE` keeps few genomes beyond those alive at its end; a run that
+#' never started holds none.
 #'
 #' @inheritParams load_events
 #' @param ids the pedigree ids of the genomes to genotype.
@@ -264,7 +264,7 @@ simulate_genotypes <- function(run, ids, loci, sample_id = NULL, error = 0, miss
   absent <- as.integer(res$missing)
   if (length(absent)) {
     hint <- c(if (isFALSE(r$params$RETAIN_FULL_HISTORY))
-                "a run with RETAIN_FULL_HISTORY = FALSE records only the genomes alive at its end",
+                "a run with RETAIN_FULL_HISTORY = FALSE keeps few genomes beyond those alive at its end",
               if (!is.na(r$extinct_tick)) paste0("this run went extinct on day ", r$extinct_tick, ", so none"))
     stop("pedigree id(s) ", paste(utils::head(absent, 5), collapse = ", "),
          if (length(absent) > 5) paste0(" and ", length(absent) - 5, " more"),

@@ -9,7 +9,7 @@ ibd_truth_pairs(run, max_per_class = 60)
 \arguments{
 \item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
-\item{max_per_class}{cap on pairs sampled per relationship class.}
+\item{max_per_class}{the most pairs per relationship class, the first the event log gives.}
 }
 \value{
 a data.table of \code{cls} (a factor of the six classes), \code{a} and \code{b} (integer pedigree ids)
