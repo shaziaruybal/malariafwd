@@ -164,9 +164,11 @@ test_that("a batch that empties before relapsing in a run that goes extinct is c
 
 test_that("every liver-stage row that names a genome takes hypnozoites out of its batch", {
   skip_if_no_slim()
+  ## one genotype per bite: at this seed the run then logs every way a hypnozoite leaves its batch
   r <- suppressMessages(run_sim(vivax_params(N_HOSTS = 100, N_MOSQ = 200, BITING_RATE = 0.11, SIM_DAYS = 200,
                                              BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1, RADCURE_MODE = "hypnozoite",
-                                             MDA_TICK = 100, CHROMOSOMES = "1"),
+                                             MDA_TICK = 100, CHROMOSOMES = "1",
+                                             LAMBDA_OOCYSTS = 0, LAMBDA_SPOROZOITES = 0),
                                 seed = 1, outdir = tempfile("mfwd_ttr_liver_")))
   ev <- load_events(r)
   liver <- event_types()$event_type[event_types()$stage == "liver"]

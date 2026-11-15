@@ -316,8 +316,10 @@ test_that("a pulse of imports on the first day keeps the founders", {
 
 test_that("into_patent_lineage marks a relapse into a patent clone of its own lineage", {
   skip_if_not(slim_available(), "SLiM not on PATH")
-  ## treatment failures and an MDA round, so clones are also cleared, suppressed and recrudesce
+  ## treatment failures and an MDA round, so clones are also cleared, suppressed and recrudesce; one
+  ## genotype per bite, with which this seed gives every kind of row the checks below need
   run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 150, SIM_DAYS = 400, CHROMOSOMES = "1",
+                              LAMBDA_OOCYSTS = 0, LAMBDA_SPOROZOITES = 0,
                               BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
                               P_RECRUD_GIVEN_FAIL = 0.5, MDA_TICK = 200, MDA_COVERAGE = 0.5),
                  seed = 3, outdir = tempfile("mfwd_masked_"))

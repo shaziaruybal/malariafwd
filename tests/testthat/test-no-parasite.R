@@ -79,7 +79,8 @@ test_that("on a run whose tree sequence holds none of its cases, the readers giv
   ## w_run()'s set with RETAIN_FULL_HISTORY = FALSE, extinct on day 227 (`dur` 20) or 43 (`dur` 10)
   nr <- function(dur) suppressMessages(run_sim(vivax_params(
     N_HOSTS = 60, N_MOSQ = 240, BITING_RATE = 0.12, SIM_DAYS = 400, N_FOUNDER_HOSTS = 12, NU_HYPNOZOITE_BATCH = 0,
-    MEAN_BLOOD_STAGE_DURATION = dur, CHROMOSOMES = "1", RETAIN_FULL_HISTORY = FALSE), seed = 1,
+    MEAN_BLOOD_STAGE_DURATION = dur, CHROMOSOMES = "1", LAMBDA_OOCYSTS = 0, LAMBDA_SPOROZOITES = 0,
+    RETAIN_FULL_HISTORY = FALSE), seed = 1,
     outdir = tempfile("mfwd_np_noretain_")))
   r <- nr(20)
   quiet(d <- new_infection_diversity(r, burn_frac = 0.1))

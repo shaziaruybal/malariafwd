@@ -157,11 +157,11 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 \item{\code{GAMETOCYTE_DELAY}}{Days from blood-stage onset until a clone can infect mosquitoes (fixed). 0 acts as 1: a clone is first taken up the day after it appears. Vivax: about 2 to 3 days. Unit: days. Default 0; whole number >= 0.}
 }}
 
-\subsection{Mosquito uptake and co-transmission}{How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates, and 0 for both gives one oocyst per uptake and one genotype per bite.
+\subsection{Mosquito uptake and co-transmission}{How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates; 0 for both gives one oocyst per uptake and one genotype per bite, and the defaults let a bite co-transmit several.
 \describe{
-\item{\code{LAMBDA_OOCYSTS}}{Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Unit: oocysts. Default 0; number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000. Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023).}
+\item{\code{LAMBDA_OOCYSTS}}{Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one, and the default a mean of 2.31. See uptake_moments() and uptake_calibrate(). Unit: oocysts. Default 2; number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000. Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023).}
 \item{\code{K_OOCYSTS}}{Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. Default 0; number >= 0; 0, or at least 0.001.}
-\item{\code{LAMBDA_SPOROZOITES}}{Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. Unit: products per bite. Default 0; number in [0, 1000].}
+\item{\code{LAMBDA_SPOROZOITES}}{Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once, so a bite can deliver several genotypes; 0 gives one genotype per bite. No study has measured the genotypes a natural bite delivers, so the default is an assumption to sweep. Unit: products per bite. Default 2; number in [0, 1000].}
 }}
 
 \subsection{Hypnozoite reservoir}{The liver-stage batches a bite seeds, and their activation and death.

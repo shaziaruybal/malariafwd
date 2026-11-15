@@ -253,10 +253,10 @@ audit_run <- function(tag, params, seed = 1) {
   invisible(NULL)
 }
 
-## biting at 0.12 with every other setting at its default, and the multi-oocyst, negative-binomial
-## path with imports
-audit_run("default", vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.12,
-                                  SIM_DAYS = 400, N_FOUNDER_LINEAGES = 8))
+## biting at 0.12 with one oocyst an uptake and one genotype a bite, every other setting at its
+## default, and the multi-oocyst, negative-binomial path with imports
+audit_run("one_genotype", vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.12, SIM_DAYS = 400,
+                                       N_FOUNDER_LINEAGES = 8, LAMBDA_OOCYSTS = 0, LAMBDA_SPOROZOITES = 0))
 audit_run("wsf_nb_imports",
           vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.12, SIM_DAYS = 400,
                        N_FOUNDER_LINEAGES = 8,

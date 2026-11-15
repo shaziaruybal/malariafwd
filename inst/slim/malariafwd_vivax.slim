@@ -72,8 +72,8 @@ initialize() {
 	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
 	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob;
 	// K_OOCYSTS below makes the count negative binomial.
-	defineDefault("LAMBDA_OOCYSTS",          0.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
-	defineDefault("LAMBDA_SPOROZOITES",      0.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
+	defineDefault("LAMBDA_OOCYSTS",          2.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
+	defineDefault("LAMBDA_SPOROZOITES",      2.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
 	// Oocyst-count OVERDISPERSION. K_OOCYSTS <= 0 (default) = Poisson; K_OOCYSTS > 0 = negative
 	// binomial with var = lambda + lambda^2/K (Gamma-Poisson mixture), so Poisson is the
 	// K -> infinity limit and this is a strict superset of the Poisson case. NOTE we deliberately

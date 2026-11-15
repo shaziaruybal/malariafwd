@@ -453,12 +453,13 @@ happens on, and how relatedness is read back out of the recorded genealogy.
 oocysts, each its own meiosis (D14), negative binomial with variance λ + λ²/K when `K_OOCYSTS > 0`.
 An infectious bite samples a zero-truncated `LAMBDA_SPOROZOITES` number of a mosquito's post-EIP
 products, with replacement and weighted by `spz_weight`, and repeat draws of one lineage collapse to
-a single genotype. A lambda of 0 gives exactly one, so at the shipped defaults one oocyst forms per
-uptake and one genotype is delivered per bite. Both lambdas are pre-truncation rates, not mean
-counts: `uptake_moments(lambda, k)` gives the moments a setting produces and
-`uptake_calibrate(mean, var)` converts a target mean, and optionally a variance, into the lambda and
-`K` to set. An uptake whose 10,000 gamma-Poisson tries all give 0 draws its count exactly, by
-inversion of the zero-truncated negative binomial.
+a single genotype. A lambda of 0 gives exactly one. Both default to 2, so an uptake forms 2.31
+oocysts and a bite samples 2.31 products on average, and a bite delivers several genotypes,
+co-transmitted, whenever it draws more than one lineage the mosquito carries. Both lambdas are
+pre-truncation rates, not mean counts: `uptake_moments(lambda, k)` gives the moments a setting
+produces and `uptake_calibrate(mean, var)` converts a target mean, and optionally a variance, into
+the lambda and `K` to set. An uptake whose 10,000 gamma-Poisson tries all give 0 draws its count
+exactly, by inversion of the zero-truncated negative binomial.
 
 **Why.** Truncation, not inflation, is the right family: `P_TRANS_HV` and `P_TRANS_VH` already
 decide whether the event happens, so the zeros of a feeding dataset are represented upstream and
@@ -470,17 +471,24 @@ the zeros pulls the realised mean up — λ = 1 gives 1.58, λ = 2 gives 2.31, a
 gives 3.0 — so a lambda cannot be read off a reported mean oocyst count, and the two helpers make
 that conversion explicit instead of leaving it to the reader. The exact draw is reached by 37% of
 uptakes where a positive count is one draw in 10,000 (`LAMBDA_OOCYSTS` about 1e-4, at any K) and by
-fewer than one in a million above about 0.003.
+fewer than one in a million above about 0.003. No study has measured how many genotypes a natural
+bite delivers, so the defaults of 2 are an assumption: they let co-transmission happen in every
+default run, at a modest rate, and section 14 of the model description lists both lambdas for
+sensitivity analysis.
 
 **Alternatives considered.** Settling for a single oocyst when the tries run out; it would make the
 count less dispersed than `uptake_moments()` reports. Drawing the count by inversion wherever a
 positive count is rare; at the smallest `K_OOCYSTS` the model accepts, 0.001, ordinary settings
 already need about 110 tries per positive count, so the exact draw would displace the rejection draw
-where rejection works well.
+where rejection works well. Both lambdas at 0 by default, one oocyst per uptake and one genotype per
+bite: co-transmission, and the sibling genotypes it brings into one host, would be absent from every
+default run.
 
 **How to check.** `tests/testthat/test-model-invariants.R` (the exact draw's mean and variance
 against `uptake_moments()`); `tests/testthat/test-edge-values.R` (edge settings, among them the
-small `K_OOCYSTS` that `uptake_calibrate()` can return, run to the end).
+small `K_OOCYSTS` that `uptake_calibrate()` can return, run to the end);
+`inst/validation/calibrate_nu.R` (the share of bites that deliver more than one genotype, at each
+batch mean it tries).
 
 ### D14 — An outcrossed oocyst gives a full tetrad by per-chromosome four-strand meiosis, with meiosis I pairing at the centromeres
 
@@ -1760,7 +1768,7 @@ chains' first links, and `chain_size`, the chain's genomes, founders included. A
 is in no chain. The components come from a union-find with path halving.
 
 **Why.** A relapse in another host is a transmission delayed by the liver, and relapses are about
-two-thirds of new blood-stage clones in the model description's representative run, so leaving liver
+three in five new blood-stage clones in the model description's representative run, so leaving liver
 links out would undercount onward transmission most for the infections whose batches relapse. A
 recrudescence is the same infection as the clone it came from (D33), so its onward transmission
 belongs to that clone's chain. On the links themselves a chain can be followed and joined, and the

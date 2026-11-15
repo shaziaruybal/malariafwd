@@ -17,9 +17,9 @@ molFOB, FOI, IBD, ARG, Rc and ν, are defined in the glossary (§19).
 
 **A representative run** — 200 hosts, 400 mosquitoes, 3 years, `BITING_RATE` 0.08, 40 founder
 hosts carrying 10 lineages, ν = 3. Over the second half of the run, as means over seeds 1 to 10
-with their range: prevalence **0.30** (0.08–0.46), COI **1.15** (1.03–1.28), **13%** polyclonal
-(3–23%), a reservoir of **1.0** hypnozoites per host (0.2–1.6), relapse fraction **0.65**
-(0.59–0.68) and **2.7** relapses per person-year at risk (1.2–4.1). The means sit inside the four
+with their range: prevalence **0.33** (0.24–0.47), COI **1.26** (1.15–1.36), **21%** polyclonal
+(12–27%), a reservoir of **1.1** hypnozoites per host (0.7–1.7), relapse fraction **0.62**
+(0.59–0.66) and **3.0** relapses per person-year at risk (2.4–3.9). The means sit inside the four
 calibration targets of §13. The figures below draw seed 1; `dev/make-doc-figures.R`, in the package's
 source repository, makes them and writes these numbers to `man/figures/representative-run.tsv`.
 
@@ -39,8 +39,8 @@ the relapse contribution. (A recrudescence is a new episode but not a new clone,
 neither series; see §9a.) **E** the realised IBD ladder, as the composition of each relationship
 class across relatedness bands.
 
-Panel D carries the central vivax quantity: **molFOB 3.2 vs FOI 1.1 new clones per person-year**
-(means over the ten seeds; 0.6–5.4 and 0.3–1.8), **so about two-thirds of new blood-stage clones
+Panel D carries the central vivax quantity: **molFOB 3.7 vs FOI 1.4 new clones per person-year**
+(means over the ten seeds; 2.6–5.6 and 0.9–2.1), **so about three in five new blood-stage clones
 are relapses**, and the gap widens through the run as the reservoir accumulates. Any method that
 reads new episodes as new transmission is reading the whole gap between the two lines as
 something it is not. (Panel E is deliberately a composition plot rather than a box: most
@@ -65,15 +65,16 @@ surveillance system sees them less often than primaries.
 
 **A** true blood-stage episodes against detected ones, in seed 1. **B** the composition of each,
 over the second half of the run. The effect is not a uniform thinning but a **reweighting**: the
-true burden is **66% relapse / 34% reinfection** (63–69% relapse over the ten seeds), while the
-detected line list reads **33% relapse / 67% reinfection** (27–35%). Detection
+true burden is **62% relapse / 38% reinfection** (58–67% relapse over the ten seeds), while the
+detected line list reads **28% relapse / 72% reinfection** (25–35%). Detection
 *inverts* the apparent mix, which is why any method that infers transmission from the observed
 origin split — Rc from case counts included — inherits a bias it cannot see.
 
-> At this transmission level outcrossing is rare — over the second half of the run **6.6% of
-> uptakes are recombinant** (1.2–11.6% over the ten seeds; 213 of 3,469 in seed 1) — so mosaics
-> like the second panel are genuinely uncommon and most pairs sit at 0 or 1. That is a model output, not a plotting limitation, and it is the same effect that makes
-> relapse hard to distinguish genetically in low-transmission settings.
+> At this transmission level outcrossing is uncommon — over the second half of the run **10.8% of
+> uptakes are recombinant** (6.4–14.2% over the ten seeds; 983 of 7,228 in seed 1) — so mosaics
+> like the second panel are the exception and most pairs sit at 0 or 1. That is a model output,
+> not a plotting limitation, and it is the same effect that makes relapse hard to distinguish
+> genetically in low-transmission settings.
 
 ---
 
@@ -361,9 +362,8 @@ so two batches of one lineage that wake together, with no earlier clone of it in
 
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
-> blood-stage genotypes**; at the default (one genotype per bite) both are the same single
-> genotype. Heterologous relapse can therefore only arise across separate bites. This is a known
-> limitation; see assumption 5 in §11 and the first entry in §15.
+> blood-stage genotypes**. Heterologous relapse can therefore only arise across separate bites.
+> This is a known limitation; see assumption 5 in §11 and the first entry in §15.
 
 ### 5.1 Formal specification
 
@@ -479,11 +479,12 @@ plus high carriage (≈3 and ≈0.9).
 **Inoculation.** A bite draws `n ~ ZT(LAMBDA_SPOROZOITES)` products from everything past the EIP,
 **weighted by `spz_weight`**, then collapses repeat draws to one object per distinct lineage.
 
-> **`LAMBDA_SPOROZOITES` defaults to 0, which `drawZTCount` maps to exactly 1.** So at the shipped
-> default **every bite delivers exactly one genotype, regardless of what the mosquito carries** —
-> co-transmission is structurally impossible. Measured: mosquitoes carry a mean of 4.5 distinct
-> lineages while 1.00 is inoculated. Raising `LAMBDA_SPOROZOITES` enables co-transmission; it is
-> off by default, and changing that default is the first planned extension (§15).
+> **`LAMBDA_SPOROZOITES` defaults to 2**, so a bite samples 2.31 products on average and delivers
+> several genotypes, co-transmitted, whenever it draws more than one lineage the mosquito carries;
+> the table in §13 gives the share of bites that do at each ν of the calibration. At 0, which
+> `drawZTCount` maps to exactly 1, every bite delivers exactly one genotype, whatever the mosquito
+> carries. No study has measured the genotypes a natural bite delivers, so the default is an
+> assumption to sweep (§14).
 
 ### 6.1 The zero-truncated count distributions
 
@@ -894,13 +895,13 @@ A clone's duration and its infectiousness to mosquitoes.
 
 ### Mosquito uptake and co-transmission
 
-How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates, and 0 for both gives one oocyst per uptake and one genotype per bite.
+How many oocysts an uptake forms, and how many genotypes a bite delivers. Both lambdas are pre-truncation rates; 0 for both gives one oocyst per uptake and one genotype per bite, and the defaults let a bite co-transmit several.
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `LAMBDA_OOCYSTS` | 0 | oocysts | number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000 | Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one. See uptake_moments() and uptake_calibrate(). Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023). |
+| `LAMBDA_OOCYSTS` | 2 | oocysts | number in [0, 1000]; with K_OOCYSTS, the mean count per uptake is at most 1000 | Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its own meiosis; 0 gives exactly one, and the default a mean of 2.31. See uptake_moments() and uptake_calibrate(). Source: membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023). |
 | `K_OOCYSTS` | 0 | - | number >= 0; 0, or at least 0.001 | Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed. |
-| `LAMBDA_SPOROZOITES` | 0 | products per bite | number in [0, 1000] | Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once. 0 gives one genotype per bite, so co-transmission is impossible at the default. |
+| `LAMBDA_SPOROZOITES` | 2 | products per bite | number in [0, 1000] | Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite samples, repeats of a lineage counted once, so a bite can deliver several genotypes; 0 gives one genotype per bite. No study has measured the genotypes a natural bite delivers, so the default is an assumption to sweep. |
 
 ### Hypnozoite reservoir
 
@@ -1013,7 +1014,7 @@ Stated plainly, because several matter for interpretation.
 | 2 | **No liver-stage delay** | blood stage starts at inoculation; recurrence-interval distributions are shifted ~9 d early |
 | 3 | **Neutral genome, zero mutation** | no selection, no drug resistance, no sequence divergence; IBD is exact |
 | 4 | **Fixed vector population, fixed EIP** | no larval ecology, no temperature dependence, no vector fitness cost of burden |
-| 5 | **One genotype per bite at the default** | co-transmission structurally impossible; reservoir ⊆ blood-stage genotypes |
+| 5 | **A bite's hypnozoites are clones of the genotypes it brings to the blood** | reservoir ⊆ blood-stage genotypes, so heterologous relapse arises only across separate bites |
 | 6 | **Equal oocyst productivity** | every oocyst contributes weight 4; real oocysts vary (~1,500–5,000 sporozoites) |
 | 7 | **Gametocyte pool = infection counts** | outcrossing draws uniformly over *Individuals*; real outcrossing depends on each clone's gametocyte **density**, governed by replication and immunity |
 | 8 | **Within-host densities not modelled** | no competition between clones, no density-dependent detectability |
@@ -1099,7 +1100,8 @@ with its date, commit, versions and what each script found.
 #### Event-log integrity
 
 `audit_events_and_ibd.R` runs three configurations of 80 hosts and 160 mosquitoes for 400 days,
-with 8 founder lineages: biting at 0.12, every other setting at its default; the same with several
+with 8 founder lineages: biting at 0.12 with one oocyst an uptake and one genotype a bite, every
+other setting at its default; the same with several
 oocysts an uptake, negative-binomial counts, several products a bite and imports; and biting at
 0.16 with several oocysts, blood-stage treatment whose failures recrudesce and radical cure. The
 observed column gives the three in that order.
@@ -1258,7 +1260,7 @@ Ordered by how much the answer is likely to move.
 |---|---|---|---|
 | S1 | **`LAMBDA_SPOROZOITES`** (genotypes per bite) | no measurement of genotypes per *natural* bite exists; *Saimiri* monkeys given 13,000 sporozoites intravenously, from the glands of 20 mosquitoes, carried 2 and 4 genotypes (Hazzard et al. 2024), a far larger inoculum than a bite's | **priority** — sweep, don't trust a point value |
 | S2 | **`NU_HYPNOZOITE_BATCH`** | fitted at 3 for one setting; drives relapse rate, reservoir size and COI | sweep per setting |
-| S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax membrane-feeding counts are overdispersed (Miura et al. 2020), with a median of 7.2 oocysts a midgut in wild *An. arabiensis* (Ayele et al. 2023), against our effective 1 | sweep; NB option exists |
+| S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax membrane-feeding counts are overdispersed (Miura et al. 2020), with a median of 7.2 oocysts a midgut in wild *An. arabiensis* (Ayele et al. 2023), against the default's mean of 2.31 an uptake | sweep; NB option exists |
 | S4 | **Per-oocyst sporozoite productivity** | we assume equal (weight 4); Childs & Prosper (2017) draw ~3,000 sporozoites an oocyst, Poisson, 20% of which reach the glands, so an early or productive oocyst would dominate | not implemented; test as sensitivity |
 | S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax gametocytes appear early, so sweep a short delay and a high carriage (3 d and 0.9, say) | knobs exist for exactly this |
 | S6 | **`P_DETECT_RELAPSE`** | relapses are often sub-patent; everything observational depends on it | sweep 0.15–1.0 |
@@ -1276,7 +1278,7 @@ The extensions planned for later versions, each with the reason for it.
 
 | extension | motivation |
 |---|---|
-| **Co-transmission on by default**, and genotyping each hypnozoite independently of the inoculated primaries | at present a bite delivers one genotype and the reservoir is a subset of the blood-stage infection, so heterologous relapse can only arise across separate bites. Both changes make it emergent. **The highest-priority change to the model.** |
+| **Genotyping each hypnozoite independently of the inoculated primaries** | at present a bite's hypnozoites are clones of the genotypes it brings to the blood, so the reservoir is a subset of the blood-stage infection and heterologous relapse can only arise across separate bites; this change makes it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
 | Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (§11); planned, with protection that wanes after each course |
 | Calibration of the treatment and recurrence machinery | including a chloroquine-resistant setting, in which recrudescence is material rather than negligible |

@@ -7,11 +7,11 @@
 <!-- badges: end -->
 
 > **Pre-release (0.1.0).** The package is under active development and both the interface and
-> the model may change before 1.0.0. Work in progress includes co-transmission on by default
-> (several genotypes per bite, which will change every default run), a structured source
-> population for imported infections (imports currently enter as unrelated founders, which makes
-> them maximally distinguishable), post-treatment prophylaxis, and more extensive calibration of
-> the treatment and recurrence machinery.
+> the model may change before 1.0.0. Work in progress includes hypnozoites genotyped
+> independently of the bite's primary infections, a structured source population for imported
+> infections (imports currently enter as unrelated founders, which makes them maximally
+> distinguishable), post-treatment prophylaxis, and more extensive calibration of the treatment
+> and recurrence machinery.
 >
 > If you are interested in using malariafwd or in contributing, please get in touch by opening
 > an [issue](https://github.com/shaziaruybal/malariafwd/issues) or contacting
@@ -203,8 +203,9 @@ each, is in the [model description](https://shaziaruybal.github.io/malariafwd/MO
 
 * **Imported parasites are unrelated to local ones.** Imports are drawn as fresh founders, so
   they are maximally distinguishable — any import-detection result is an **upper bound**.
-* **Co-transmission is impossible at the defaults.** `LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES`
-  are 0, giving exactly one genotype per bite. Raise them if you need several co-transmitted.
+* **Genotypes per bite is an assumption.** No study has measured how many genotypes a natural
+  bite delivers. At the defaults (`LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES` of 2) a bite can
+  co-transmit several; set both to 0 for one genotype per bite, and sweep them.
 * **No within-host parasite densities.** Clones do not compete, detectability does not depend
   on parasitaemia, and infectiousness is a per-clone property.
 * **The genome is neutral** (mutation rate 0): no selection, no drug resistance, no sequence

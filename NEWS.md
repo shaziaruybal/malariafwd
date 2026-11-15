@@ -37,8 +37,8 @@ two parasite genomes are. It is a pre-release: the interface and the model may c
   *P. vivax* studies, at moderate transmission (`inst/validation/calibrate_nu.R` repeats the fit). The
   other defaults are an illustrative preview, 40 hosts for a year, not a calibrated setting.
 * Imported parasites are unrelated to local ones, so an import-detection result is an upper bound.
-* At the defaults a bite delivers one genotype: raise `LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES`
-  for co-transmission.
+* No study has measured how many genotypes a natural bite delivers. At the defaults
+  (`LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES` of 2) a bite can co-transmit several: sweep them.
 * There are no within-host densities, no post-treatment prophylaxis and no spatial structure.
 
 The README lists these limitations with the others. The
@@ -49,9 +49,8 @@ for each modelling choice.
 
 ## In development
 
-* **Co-transmission on by default**: several genotypes per bite, and each hypnozoite genotyped
-  independently of the bite's primary infections, so that a relapse can differ from the primary
-  of its own bite. This will change every default run.
+* **Each hypnozoite genotyped independently of the bite's primary infections**, so that a relapse
+  can differ from the primary of its own bite. This will change every default run.
 * **A structured source population for imports**, so that imported parasites carry real ancestry
   and can be related to one another.
 * **Post-treatment prophylaxis**: protection that wanes after each course.
