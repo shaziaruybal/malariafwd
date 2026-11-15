@@ -36,9 +36,9 @@ recurrences alone.
 
 Masked relapses, into a patent clone of their own lineage (see \code{\link[=classify_cases]{classify_cases()}}), are counted
 unless \code{exclude_masked = TRUE} leaves them out of the numerator and both denominators, as a study
-that sees only the relapses that bring a new clone would. Neither is the band's own reading:
-\code{NU_HYPNOZOITE_BATCH} was fitted with every relapse counted (0.66 at its shipped value of 3,
-inside the band), and leaving the masked relapses out gives 0.39, below it (section 13 of the
+that sees only the relapses that bring a new clone would. \code{NU_HYPNOZOITE_BATCH} was fitted with
+every relapse counted (0.66 at its shipped value of 3, inside the calibration target), and leaving
+the masked relapses out gives 0.39, below it (section 13 of the
 \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}).
 }
 \examples{

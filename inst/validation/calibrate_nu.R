@@ -1,6 +1,7 @@
 ## calibrate_nu.R -- fit NU_HYPNOZOITE_BATCH, the mean hypnozoite batch a bite seeds, against four
-## target bands based on published P. vivax studies, at moderate transmission. Section 13 of the
-## model description gives the bands, the studies and the table this script makes.
+## calibration targets, ranges taken from published P. vivax studies, at moderate transmission.
+## Section 13 of the model description gives the targets, their sources and the table this script
+## makes.
 ##   Rscript -e 'source(system.file("validation", "calibrate_nu.R", package = "malariafwd"))'
 ## Each value of nu runs 400 hosts and 800 mosquitoes for 5 years at BITING_RATE 0.08, with 20
 ## founder hosts carrying 10 lineages, for seeds 1 to 3: 15 runs, about 6 minutes on one core, or
@@ -21,16 +22,17 @@ ok <- function(lbl, cond, detail = "") {
 NU <- c(2, 3, 5, 8, 12)
 SEEDS <- 1:3
 BURN_FRAC <- 730 / 1825
-## the bands, as section 13 of the model description gives them with their sources
-BANDS <- data.table(metric = c("relapses_per_py", "molfob_per_py", "moi_median", "relapse_frac"),
-                    lo = c(0.5, 0.7, 1, 0.55), hi = c(5, 15, 3, 0.85))
+## the calibration targets, as section 13 of the model description gives them with their sources
+TARGETS <- data.table(metric = c("relapses_per_py", "molfob_per_py", "moi_median", "relapse_frac"),
+                      label = c("relapses per person-year", "molFOB", "median MOI", "relapse fraction"),
+                      lo = c(0.4, 1, 1, 0.45), hi = c(4.5, 15, 2, 0.9))
 
 sets <- lapply(NU, function(nu)
   vivax_params(N_HOSTS = 400L, N_MOSQ = 800L, SIM_DAYS = 1825L, BITING_RATE = 0.08,
                N_FOUNDER_HOSTS = 20L, N_FOUNDER_LINEAGES = 10L, NU_HYPNOZOITE_BATCH = nu))
 names(sets) <- paste0("nu", NU)
 workers <- suppressWarnings(as.integer(Sys.getenv("MALARIAFWD_WORKERS", "1")))
-cat(sprintf("\n================ NU_HYPNOZOITE_BATCH against the bands (%d runs) ================\n",
+cat(sprintf("\n================ NU_HYPNOZOITE_BATCH against the targets (%d runs) ================\n",
             length(NU) * length(SEEDS)))
 t0 <- Sys.time()
 g <- run_grid(sets, seeds = SEEDS, outdir_base = OUT,
@@ -56,7 +58,7 @@ per_run <- rbindlist(lapply(seq_len(nrow(g)), function(i) {
 fwrite(per_run, file.path(OUT, "calibrate_nu_runs.tsv"), sep = "\t")
 
 m <- per_run[, lapply(.SD, mean), by = nu, .SDcols = !c("seed")]
-inside <- function(x, band) x >= BANDS[metric == band, lo] & x <= BANDS[metric == band, hi]
+inside <- function(x, target) x >= TARGETS[metric == target, lo] & x <= TARGETS[metric == target, hi]
 m[, in_all := inside(relapses_per_py, "relapses_per_py") & inside(molfob_per_py, "molfob_per_py") &
               inside(moi_median, "moi_median") & inside(relapse_frac, "relapse_frac")]
 m[, in_all_unmasked := inside(relapses_per_py_unmasked, "relapses_per_py") &
@@ -64,8 +66,8 @@ m[, in_all_unmasked := inside(relapses_per_py_unmasked, "relapses_per_py") &
                        inside(relapse_frac_unmasked, "relapse_frac")]
 fwrite(m, file.path(OUT, "calibrate_nu.tsv"), sep = "\t")
 
-cat("\n  means over seeds", paste(SEEDS, collapse = ", "), "(bands: relapses per person-year 0.5-5,",
-    "molFOB 0.7-15, median MOI 1-3, relapse fraction 0.55-0.85)\n\n")
+cat("\n  means over seeds", paste(SEEDS, collapse = ", "), "(targets:",
+    paste(sprintf("%s %g-%g", TARGETS$label, TARGETS$lo, TARGETS$hi), collapse = ", "), ")\n\n")
 show <- m[, .(nu, prevalence = round(prevalence, 2),
               `relapses/py` = round(relapses_per_py, 2), `relapses/py unmasked` = round(relapses_per_py_unmasked, 2),
               molFOB = round(molfob_per_py, 2), `molFOB unmasked` = round(molfob_per_py_unmasked, 2),
@@ -83,7 +85,7 @@ print(rng, row.names = FALSE)
 
 shipped <- vivax_params()$NU_HYPNOZOITE_BATCH
 cat("\n")
-ok(sprintf("the shipped value, %g, sits inside all four bands", shipped),
+ok(sprintf("the shipped value, %g, sits inside all four targets", shipped),
    isTRUE(m[nu == shipped, in_all]),
    sprintf("(counting every relapse; inside all four: nu = %s)", paste(m[in_all == TRUE, nu], collapse = ", ")))
 cat(sprintf("\n  Tables: %s\n\n================ %d passed, %d failed ================\n", OUT, PASS, FAIL))

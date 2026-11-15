@@ -92,9 +92,9 @@ coi_distribution <- function(state, from = 0, to = NULL) {
 #'
 #' Masked relapses, into a patent clone of their own lineage (see [classify_cases()]), are counted
 #' unless `exclude_masked = TRUE` leaves them out of the numerator and both denominators, as a study
-#' that sees only the relapses that bring a new clone would. Neither is the band's own reading:
-#' `NU_HYPNOZOITE_BATCH` was fitted with every relapse counted (0.66 at its shipped value of 3,
-#' inside the band), and leaving the masked relapses out gives 0.39, below it (section 13 of the
+#' that sees only the relapses that bring a new clone would. `NU_HYPNOZOITE_BATCH` was fitted with
+#' every relapse counted (0.66 at its shipped value of 3, inside the calibration target), and leaving
+#' the masked relapses out gives 0.39, below it (section 13 of the
 #' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)).
 #'
 #' @param events an events table from [load_events()], or a run (a `vivax_run` or its directory).

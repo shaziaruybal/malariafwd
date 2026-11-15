@@ -111,7 +111,7 @@ initialize() {
 	// NU_HYPNOZOITE_BATCH per bite, split among the genotypes the bite delivers) - both,
 	// either, or neither can occur for the same transmitted genotype.
 	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four target bands at moderate transmission (D48; inst/validation/calibrate_nu.R), to re-fit per setting
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four calibration targets at moderate transmission (D48; inst/validation/calibrate_nu.R), to re-fit per setting
 	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
