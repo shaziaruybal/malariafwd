@@ -31,8 +31,8 @@ SLiM; run them yourself after checking your setup.
 
 ## Setup
 
-The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess. The IBD and ARG
-functions also need Python with `tskit` (≥ 1.0) and `numpy`, through `reticulate`:
+The model runs the external `slim` binary (SLiM ≥ 5.2) as a subprocess. The functions for
+identity by descent (IBD) and the ancestral recombination graph (ARG) also need Python with `tskit` (≥ 1.0) and `numpy`, through `reticulate`:
 with no Python chosen, reticulate sets up its own environment with them the first time one of
 these functions runs (this needs internet once), or set `RETICULATE_PYTHON` to a Python that has
 them. Without SLiM you can still read `example_run()`; without Python only the IBD and ARG
@@ -57,7 +57,11 @@ run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))   # a few sec
 
 Every parameter, with its unit and the values it may take, is in `?vivax_params` and
 `param_info()`. Here the run is the bundled one, 60 hosts and 150 mosquitoes for 400 days with
-imports, case management and recrudescence switched on:
+imports, case management, recrudescence and co-transmission (several genotypes in a bite) switched
+on. `summarise_run()` gives its epidemiology: prevalence, the complexity of infection (COI, the
+distinct lineages in an infected host), the entomological inoculation rate (EIR, infectious bites
+per person-year), the force of infection (FOI, new clones from bites and imports) and the molecular
+force of blood-stage infection (molFOB, new clones from bites, imports and relapses):
 
 ```{r}
 library(malariafwd)
@@ -67,7 +71,7 @@ run
 
 ev <- load_events(run)      # one row per event; ?events.tsv describes the columns
 st <- load_state(run)       # per-tick host state
-summarise_run(run)          # over the second half of the run: prevalence, COI, EIR, FOI, molFOB, relapses
+summarise_run(run)          # over the second half of the run
 ```
 
 ## Sense-check the run
