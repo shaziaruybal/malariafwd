@@ -181,8 +181,8 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
   the terms they share (`?malariafwd`).
 - [Model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html): the
   model in full, with its parameters, assumptions and validation.
-- [Decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html): why each modelling
-  choice was made.
+- [Design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html): why each
+  modelling choice was made.
 - The validation scripts are installed with the package, with the results of their last run in
   `RESULTS.md`: list them with `dir(system.file("validation", package = "malariafwd"))` and run
   one with `source()`, for example

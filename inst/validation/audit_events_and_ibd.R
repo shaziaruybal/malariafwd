@@ -44,7 +44,7 @@ audit_run <- function(tag, params, seed = 1) {
   ## inoculation_id groups co-inoculated genotypes of ONE bite, and is unique across the run
   inoc <- ev[inoculation_id > 0]
   if (nrow(inoc)) {
-    ## One bite or import, one host (D17). A local bite's two compartments share a tick; an
+    ## One bite or import, one host (D38). A local bite's two compartments share a tick; an
     ## import's hypnozoite batch lands the tick after its blood-stage genome, from which it is
     ## cloned once that genome is visible.
     per <- inoc[, .(ticks = uniqueN(tick), span = max(tick) - min(tick),
@@ -263,7 +263,7 @@ audit_run("wsf_nb_imports",
                        LAMBDA_OOCYSTS = 2.0, K_OOCYSTS = 1.0, LAMBDA_SPOROZOITES = 2.0,
                        IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.1))
 
-## ...and the three-state recurrence path (D25). Without a configuration that actually
+## ...and the three-state recurrence path (D33). Without a configuration that actually
 ## produces recrudescences, every assertion about recrudescence passes vacuously.
 ## Partial coverage and a multi-oocyst path on purpose: full coverage suppresses transmission
 ## so hard that no oocyst ever outcrosses, and the "ARG recombines" assertion then has nothing

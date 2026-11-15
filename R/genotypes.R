@@ -1,5 +1,5 @@
 ## genotypes.R -- marker genotypes painted on the root genomes of a run's tree sequence, and their
-## VCF (D75).
+## VCF (D20).
 
 ## Every root genome of the tree sequence (a node no edge has as its child: a day-1 founder template
 ## or an import), and the root genome each of the genomes `ids` descends from at each position.

@@ -14,7 +14,7 @@ navbar:
       menu:
       - text: Model description
         href: MODEL_DESCRIPTION.html
-      - text: Decision log
+      - text: Design decisions
         href: DECISIONS.html
       - text: Validation scripts and their results
         href: https://github.com/shaziaruybal/malariafwd/tree/main/inst/validation
@@ -23,7 +23,7 @@ home:
   links:
   - text: Model description
     href: MODEL_DESCRIPTION.html
-  - text: Decision log
+  - text: Design decisions
     href: DECISIONS.html
 
 reference:

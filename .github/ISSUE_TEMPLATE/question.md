@@ -12,6 +12,6 @@ labels: question
 
 For example the function's help page, `vignette("malariafwd")`, `vignette("anatomy")`, the
 [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html) or the
-[decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
+[design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html).
 
 **If it is about a run:** the code that made it, or its `params.tsv`.

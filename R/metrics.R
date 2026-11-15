@@ -26,7 +26,7 @@
 
 ## metrics.R -- epidemiological + genetic summaries of a run's event log / state table.
 ## Inputs are the data.tables from load_events()/load_state() (or pass a vivax_run to the
-## run-level helpers). See DECISIONS.md for the identity model (pedigree/lineage/oocyst).
+## run-level helpers). ?events.tsv gives the ids (pedigree, lineage, oocyst, inoculation).
 
 #' Distribution of complexity of infection over the infected host-days
 #'
@@ -118,7 +118,7 @@ relapse_fraction <- function(events, exclude_masked = FALSE) {
 }
 
 ## Relapses per person-year among the hosts ever infected, on days `from` to `to` (`NULL`: SIM_DAYS),
-## which summarise_run() gives as relapses_per_py_at_risk (D66): every hypnozoite_activation row over
+## which summarise_run() gives as relapses_per_py_at_risk (D28): every hypnozoite_activation row over
 ## the person-time from the day after each host's first establishment, a blood-stage primary or a
 ## hypnozoite batch from a bite or an import, to `to`, also after an extinction; founder seeding does
 ## not start it, and masked relapses are counted. One row: n_relapse, n_hosts (with person-time in
@@ -133,7 +133,7 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
   .relapses_per_person_year(load_events(run), sim_days, from, to)
 }
 
-## The core of relapses_per_person_year() (D66), for callers that hold the events. A host counts
+## The core of relapses_per_person_year() (D28), for callers that hold the events. A host counts
 ## the days max(t0 + 1, from) to `to`, t0 its first establishment; masked relapses leave the
 ## numerator only.
 .relapses_per_person_year <- function(events, sim_days, from = 0L, to = sim_days, exclude_masked = FALSE) {
@@ -226,7 +226,7 @@ classify_cases <- function(events, exclude_masked = FALSE) {
     event_type == "vh_inoculation_import" | is_imported == 1, "imported",
     default = "local reinfection")]
   cases[, imported := is_imported == 1 | event_type == "vh_inoculation_import"]
-  ## a relapse into a patent clone of its own lineage (D40); NA where the run does not record it
+  ## a relapse into a patent clone of its own lineage (D26); NA where the run does not record it
   flag <- if ("into_patent_lineage" %in% names(cases)) cases$into_patent_lineage else rep(NA_integer_, nrow(cases))
   cases[, into_patent_lineage := fifelse(event_type == "hypnozoite_activation", flag == 1L, FALSE)]
   if (exclude_masked) {
@@ -384,7 +384,7 @@ classify_travel <- function(events, window = 60) {
   ## nothing and is not one. A traveller who returns carrying only hypnozoites has travelled too:
   ## a surveillance system records the journey, not which compartment the parasite ended in.
   ## one trip per import, on its arrival day: an import that also lays down hypnozoites logs the
-  ## batch the next day under the same inoculation_id (D17). A row without an id is a trip of its own.
+  ## batch the next day under the same inoculation_id (D38). A row without an id is a trip of its own.
   imports <- ev[event_type == "vh_inoculation_import", .(human_id, inoculation_id, imp_tick = tick)]
   if (nrow(imports) == 0)
     return(cases[, `:=`(recent_travel = FALSE, surveillance = "local (no recent travel)")][])
@@ -567,7 +567,7 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
   .summary_row(run, load_events(run), load_state(run), w, exclude_masked)
 }
 
-## The days a summary covers (D69), both included: from day round(SIM_DAYS * burn_frac) + 1, or
+## The days a summary covers (D50), both included: from day round(SIM_DAYS * burn_frac) + 1, or
 ## `from` (0 is day 1), to `to`, SIM_DAYS by default.
 .run_window <- function(sim_days, burn_frac = 0.5, from = NULL, to = NULL, both = FALSE) {
   if (both) stop("give `burn_frac` or `from`, not both.", call. = FALSE)
@@ -697,7 +697,7 @@ new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL
     .sample_fixed(cs[win == grid$win[k], unique(pedigree_id)], cap, seed + k - 1L))
   ## one read of the tree sequence for every window's genomes, comparing only the pairs within a
   ## window, and none when no window can reach min_pairs; a pair's IBD does not depend on the other
-  ## genomes asked for (D63). The pairs of the union would grow with the square of the windows.
+  ## genomes asked for (D19). The pairs of the union would grow with the square of the windows.
   x <- NULL
   if (any(vapply(drawn, function(p) choose(length(p), 2) >= min_pairs, logical(1)))) {
     .require_python("new_infection_diversity()", c("tskit", "numpy"))

@@ -238,7 +238,7 @@ vivax_params <- function(...) {
 ## The largest daily value of a rate over days first..last, worked out the way the model applies
 ## its factors to the biting and import rates: seasonality only when SEASONAL_AMP > 0 (floored at
 ## 0), the vector-control factor inside [INTERVENTION_START, INTERVENTION_END) for biting only
-## (`control`; D46), the boost from RESURGENCE_TRIGGER_TICK. The factors change only on those days
+## (`control`; D37), the boost from RESURGENCE_TRIGGER_TICK. The factors change only on those days
 ## and the seasonal one repeats every 365 days, so a year from each change covers every value the
 ## rate can take.
 .peak_rate <- function(p, rate, boost, first, last, control = TRUE) {
@@ -294,7 +294,7 @@ validate_params <- function(p) {
                "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
                "GAMETOCYTE_DELAY", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
-  ## at 0 the gate would refuse every inoculation, an empty host's included (D38)
+  ## at 0 the gate would refuse every inoculation, an empty host's included (D10)
   if (p$MAX_MOI < 1)
     stop("MAX_MOI must be at least 1, got ", .slim_num(p$MAX_MOI), ": a host takes a new inoculation ",
          "only while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.",
@@ -344,8 +344,8 @@ validate_params <- function(p) {
   if (!p$RECRUD_DELAY_DIST %in% c("geometric", "poisson", "fixed"))
     stop("RECRUD_DELAY_DIST must be 'geometric', 'poisson' or 'fixed', got '",
          p$RECRUD_DELAY_DIST, "'", call. = FALSE)
-  ## a founder host carrying a copy of another founder's genome receives it on day 2 (D39), so a
-  ## day-1 round would clear its template first (D44)
+  ## a founder host carrying a copy of another founder's genome receives it on day 2 (D40), so a
+  ## day-1 round would clear its template first (D35)
   if (p$MDA_TICK == 1 && p$N_FOUNDER_LINEAGES < p$N_FOUNDER_HOSTS)
     stop("MDA_TICK must not be 1 when a founder host carries a copy of another founder's genome ",
          "(N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS): the copies are seeded on day 2, so a round comes on ",
@@ -360,7 +360,7 @@ validate_params <- function(p) {
   if (p$N_FOUNDER_HOSTS > 0 && p$N_FOUNDER_LINEAGES < 1)
     stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: ", p$N_FOUNDER_HOSTS,
          " founder host(s) cannot share 0 distinct genomes.", call. = FALSE)
-  ## A population without founders is legitimate when an import path is open (D17: importation
+  ## A population without founders is legitimate when an import path is open (D38: importation
   ## can seed it); with no founders and no imports, a run can never contain a parasite.
   if (p$N_FOUNDER_HOSTS < 1 && !has_import_path(p))
     stop("nothing can start this run: N_FOUNDER_HOSTS is 0 and no importation is configured\n",
@@ -369,7 +369,7 @@ validate_params <- function(p) {
          "  or IMPORT_RATE_PER_TICK).", call. = FALSE)
 
   ## A coverage set against a closed case-management window would silently give no treatment
-  ## (see D19), so it is refused.
+  ## (see D30), so it is refused.
   if ((p$RADCURE_COVERAGE > 0 || p$BLOODCURE_COVERAGE > 0) &&
       (p$TREATMENT_END <= p$TREATMENT_START || p$TREATMENT_START > p$SIM_DAYS))
     stop("a treatment coverage is set but the case-management window is closed:\n",
@@ -389,7 +389,7 @@ validate_params <- function(p) {
             signif(peak[["rate"]], 3), " on day ", peak[["day"]], ", but a mosquito bites at most ",
             "once a day, so the realised biting rate is capped below what the parameters imply.",
             call. = FALSE)
-  ## Each host takes at most one import a day (D38), so a day's imports beyond N_HOSTS never
+  ## Each host takes at most one import a day (D40), so a day's imports beyond N_HOSTS never
   ## arrive. The fixed counts of the run's days are checked: the pulse day (with the window's count
   ## when it falls in the window) and the window's other days, each named when it is over. A
   ## Poisson rate draws above N_HOSTS by chance, rarely while it is well below N_HOSTS but most days
@@ -422,7 +422,7 @@ validate_params <- function(p) {
     warning("P_RECRUD_GIVEN_FAIL > 0 has no effect while P_BLOODCURE_SURVIVAL is 0: ",
             "no course ever fails, so no clone is ever suppressed.", call. = FALSE)
   ## Radical cure is nested inside blood-stage treatment, so a coverage without one silently does
-  ## nothing (see D19). MDA gives radical cure to everyone it reaches whatever BLOODCURE_COVERAGE
+  ## nothing (see D31). MDA gives radical cure to everyone it reaches whatever BLOODCURE_COVERAGE
   ## is, so a scenario with MDA alone is not warned about.
   mda_on <- p$MDA_TICK <= p$SIM_DAYS && p$MDA_COVERAGE > 0
   if (p$RADCURE_COVERAGE > 0 && p$BLOODCURE_COVERAGE == 0 && !mda_on)

@@ -111,10 +111,10 @@ A run ends at `SIM_DAYS`, or earlier if it goes extinct or never starts. It goes
 first tick on which no parasite is left in any host or mosquito, hypnozoites included, and no
 importation is still to come; every further tick would then be empty, so the run ends there. It
 writes the tree sequence; its `events.tsv` and `state.tsv` stop on that tick; and its `params.tsv`
-ends with the tick as `EXTINCT_TICK` (D37), also when the tick is `SIM_DAYS` itself. `run_sim()`
+ends with the tick as `EXTINCT_TICK` (D5), also when the tick is `SIM_DAYS` itself. `run_sim()`
 then gives a message, and the run's `extinct_tick` holds the tick; it is `NA` for a run that did not
 go extinct. The functions that summarise a window of a run take its length from `SIM_DAYS`, so the
-days after an extinction count as days with no parasite (D61). An importation is still to come until
+days after an extinction count as days with no parasite (D49). An importation is still to come until
 the run has passed the last day on which one can arrive, the pulse day or the import window's last
 day inside the run (§8); a pulse or window that falls outside the run brings nothing. A window
 inside the run counts to its last day even while its rate is 0, as under a border closed by
@@ -129,7 +129,7 @@ starts**. It ends on the first tick after its last import day, but not before ti
 last day if that comes first, and writes its outputs as an extinct run does. Unlike extinction,
 this is decided on the last day whatever the import schedule, so every run that never had a
 parasite is marked: its `params.tsv` ends with a `NEVER_STARTED` row, `run_sim()` says so, and the
-run's `never_started` is `TRUE` (D43). Such a run holds no parasite: its tree sequence has no
+run's `never_started` is `TRUE` (D5). Such a run holds no parasite: its tree sequence has no
 nodes, and its events are at most imports that did not take. Every function that reads a run
 takes it, with empty tables, zero counts or NA. A founder-free run with no import path inside it at all is refused
 before SLiM starts.
@@ -304,7 +304,7 @@ biting_rate_eff(t) = BITING_RATE * (1 + SEASONAL_AMP * cos(2*pi*(t - SEASONAL_PH
 ```
 
 clamped at ≥ 0, with `SEASONAL_PHASE` the day-of-year of the **peak** (the curve is a `cos`; a
-`sin` would put the peak ~91 d later, D10). `SEASONAL_AMP` is non-negative and 0 means no
+`sin` would put the peak ~91 d later, D36). `SEASONAL_AMP` is non-negative and 0 means no
 seasonality; ≈ 0.85 gives strong annual peaks swinging biting between roughly 0.15× and 1.85× the
 mean.
 
@@ -410,7 +410,7 @@ yields more simultaneous activations and so proportionally fewer episodes per hy
 why relapse *rate* is not linear in ν.
 
 **Temperate latency.** With `K_LATENCY = k > 0`, a new batch must pass `k` latency stages before
-its hypnozoites can activate, producing the long-latency phenotype (D35). Each day every latent
+its hypnozoites can activate, producing the long-latency phenotype (D25). Each day every latent
 hypnozoite dies with probability μ, as in White et al. (2014), and then the batch moves on to the
 next stage with probability δ = `DELTA_LATENCY`. The batch moves through latency as one unit, as
 White et al. also track latency per infection. A hypnozoite therefore survives each stage with
@@ -458,7 +458,7 @@ distinct lineages would give the marginal but not the pairing.
 > column, and drives nothing.
 
 **Meiosis.** An outcrossed oocyst yields a full **tetrad** by per-chromosome four-strand meiosis
-(D34, D41): the zygote's two genomes replicate into four chromatids per chromosome, and each chiasma
+(D14): the zygote's two genomes replicate into four chromatids per chromosome, and each chiasma
 joins a chromatid carrying one parent's sequence with one carrying the other's, both chosen at
 random. Meiosis I sends the two chromatids that carry the same parent at a chromosome's centromere
 to the same pole, drawn independently for each chromosome, and meiosis II gives one to each product
@@ -556,7 +556,7 @@ against the 3D7 centromere annotation, its products form two pairs that carry th
 all 13 centromeres that can be read, and its sisters share 0.67 of the genome and the other pairs
 0.17. In the paper's other sibling groups (its Data S3), six more pairs of cells carry the same
 parent at every centromere that can be read. These readings are ours, from the published figures
-(D79). The same tetrad also shows two tracts of gene conversion, 872 bp at the right end of
+(D14). The same tetrad also shows two tracts of gene conversion, 872 bp at the right end of
 chromosome 2 and 181 kb at the left end of chromosome 4, which the model leaves out (assumption
 19).
 
@@ -574,7 +574,7 @@ This is genetically equivalent to explicit multi-chromosome simulation for every
 package reports, and keeps a single `.trees` file — explicit SLiM multi-chromosome writes a
 *directory* of per-chromosome tree sequences, which would require rewriting the entire IBD pipeline.
 In the tree sequence a shared stretch can continue across a junction, when both genomes carry the
-same parent on both sides of it; the IBD functions cut every segment at the junctions (D74), and
+same parent on both sides of it; the IBD functions cut every segment at the junctions (D18), and
 code that reads tskit's segments directly must do the same, with `chrom_map()`.
 
 ---
@@ -622,13 +622,13 @@ Three mechanisms, additive:
 The rate follows the season because travel, or transmission where the travellers were infected,
 can follow the same season. Local vector control (`INTERVENTION_*`) does not scale imports, which
 are infections acquired elsewhere; a border measure is `IMPORT_RATE_BOOST` or the import window
-itself (D46). The fixed count and the pulse are values the user sets directly, so nothing scales
+itself (D37). The fixed count and the pulse are values the user sets directly, so nothing scales
 them.
 
 Imports use the **same bite outcomes** as local transmission (primary and/or batch) and are
 labelled `is_imported`, which is **carried through to relapses** so an imported relapse is a
 distinct truth category. They go to hosts chosen uniformly at random, as bites do, so an import
-can land in a host that already carries a clone (D38). A host already carrying `MAX_MOI`
+can land in a host that already carries a clone (D40). A host already carrying `MAX_MOI`
 blood-stage lineages, patent or subpatent, takes none, as for a local bite (§3), and the refusal is
 logged as `vh_inoculation_import_no_take`. Each host takes at most one import a day, so a day's
 imports beyond `N_HOSTS` are dropped. `vivax_params()` warns when a day's fixed imports inside the
@@ -641,7 +641,7 @@ from `max(1, IMPORT_START)` to `min(IMPORT_END − 1, SIM_DAYS)`; a pulse or win
 brings nothing. A day-1 pulse lands alongside the founders, with one difference from other days:
 a founder host that carries a copy of another founder's genome
 (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`) receives its copy on day 2, so on day 1 it is still
-empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries both (D39). A naive population
+empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries both (D40). A naive population
 seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run.
 
 **v0.1.0 limitation:** imported genotypes are drawn as unrelated founders — there is no structured
@@ -658,27 +658,27 @@ overlap 0.03). A structured source pool is planned (§15).
   `BITING_RATE × (1 + SEASONAL_AMP·cos(2π(t − SEASONAL_PHASE)/365))`, with `SEASONAL_PHASE` the
   day-of-year of the **peak**.
 - **Case management** has its own window, `TREATMENT_START` / `TREATMENT_END` (default: the whole
-  run). `INTERVENTION_*` is vector control only: it scales biting, not importation (§8, D46), and
-  does not touch treatment (D19). The window gates the **decision**, not delivery: a case detected
+  run). `INTERVENTION_*` is vector control only: it scales biting, not importation (§8, D37), and
+  does not touch treatment (D30). The window gates the **decision**, not delivery: a case detected
   on the programme's last day still completes its course afterwards.
 - **Case-based blood-stage treatment** (`BLOODCURE_COVERAGE`) is decided where a case arises and
   applied to the **host** later: each day after the case the course arrives with probability
   1/`TREATMENT_DELAY`, so the delay is at least one day with mean `TREATMENT_DELAY` (7 by
   default). It clears **every patent blood-stage clone the patient carries**, not one lineage
-  (D20). One course at a time per host; a treated case stays infectious until the drugs land. A
+  (D31). One course at a time per host; a treated case stays infectious until the drugs land. A
   course can never land on the tick the case arises — the minimum, `TREATMENT_DELAY = 1`, means
   the next day — because a clone that became patent this tick cannot yet have caused symptoms
-  (D24, D32).
+  (D32).
 - **Case-based radical cure** is **nested inside** a blood-stage course: `RADCURE_COVERAGE` is
   P(radical cure | treated), so it is inert unless `BLOODCURE_COVERAGE > 0` — primaquine is never
-  given without a schizonticide (D20). Liver-stage only; it deliberately does not clear the
+  given without a schizonticide (D31). Liver-stage only; it deliberately does not clear the
   current blood-stage infection. Efficacy is per **person** by default (`RADCURE_MODE = "person"`,
   one all-or-nothing draw at `P_RAD_SURVIVAL = 0.29`, ~71% cure, near the 70% effectiveness White et
   al. (2018) assume for a 14-day primaquine course, given poor adherence).
   `RADCURE_MODE = "hypnozoite"` thins each hypnozoite independently — the only mode that can
   **partially** clear a reservoir, and so the only one that reshapes post-treatment relapse
   diversity.
-- **Treatment failure has consequences** (D25). A clone that survives a course either persists at
+- **Treatment failure has consequences** (D33). A clone that survives a course either persists at
   full density (`bloodcure_persist`) or, with probability `P_RECRUD_GIVEN_FAIL`, is suppressed
   **below patency** (`bloodcure_subpatent`) and later re-expands as a **recrudescence**, unless an
   MDA round clears it first. See §9a.
@@ -693,16 +693,16 @@ overlap 0.03). A structured source pool is planned (§15).
   planned for the next release.
 - **MDA** (`MDA_TICK`) is one round of the case-management course — blood-stage drugs plus radical
   cure — given through the same `applyTreatment()`, so it honours `RADCURE_MODE` and can suppress
-  clones subpatent. The round reaches each host with probability `MDA_COVERAGE` (D28). The draw is
+  clones subpatent. The round reaches each host with probability `MDA_COVERAGE` (D35). The draw is
   made only for hosts not empty at the round, but does not depend on infection, so the coverage is
   that of the whole population; `mda_bloodcure_given` and `mda_radcure_given` count the courses to
   those hosts. Because MDA waits for no symptoms, it reaches two kinds of clone a case course does
   not: a clone that became patent earlier that day (the day's imports arrive after the round,
   §2.1), and a **subpatent** clone, which it clears with probability 1 − `P_BLOODCURE_SURVIVAL`,
   cancelling its recrudescence (`mda_subpatent_clear`); a subpatent clone that survives keeps its
-  schedule (D44). When a founder host carries a copy of another founder's genome
+  schedule (D35). When a founder host carries a copy of another founder's genome
   (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`), the round comes on day 2 or later, since the copy is
-  seeded on day 2 (D39). Unlike case-based treatment it is **not** gated on `TREATMENT_START` /
+  seeded on day 2 (D40). Unlike case-based treatment it is **not** gated on `TREATMENT_START` /
   `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
@@ -713,12 +713,12 @@ overlap 0.03). A structured source pool is planned (§15).
 probability `P_DETECT_PRIMARY` / `P_DETECT_RELAPSE` / `P_DETECT_RECRUD`, drawn **once per bite**
 (for all the genotypes it delivers), **per import, per activation or per recrudescence** — not per
 co-inoculated genotype, so one bite cannot be "detected and treated" for one of its genotypes and
-not the other (D20). Relapses are often sub-patent, so a realistic
+not the other (D29). Relapses are often sub-patent, so a realistic
 setting is much lower for them (e.g. 0.15); Ross et al. (2025) put recurrence detectability at
 0.13–0.49 of a primary, so `P_DETECT_RECRUD` should usually sit well below `P_DETECT_PRIMARY`.
 Detected cases form the observed line list and can trigger case-based treatment. A bite that seeds
 only hypnozoites (possible when `P_PRIMARY < 1`) makes no blood stage, so it is no case and gets no
-course (D36), as for an import.
+course (D29), as for an import.
 
 > **Known gap:** detection is not origin-dependent beyond the primary/relapse split, so
 > *active vs passive* surveillance modes cannot be distinguished.
@@ -759,13 +759,13 @@ The mean of 10.5 d is a **literature assumption, pending parameterisation**: it 
 of Taylor et al.'s posterior median (0.095 a day), but they fix the rate with a strongly informative
 Gamma(100, 1000) prior (mean 0.1 a day) for identifiability, and the posterior barely moves from it,
 so it is not an estimate from data. Vary it in sensitivity analyses (§14). At 10.5 d the median gap
-is 7 d, and ~94% fall within day 28. See D26, D32 and D42.
+is 7 d, and ~94% fall within day 28. See D32 and D34.
 
 **A recrudescence mints a new genome** (`addCloned` from the holder, which is then retired), as a
 relapse does. That keeps one episode to one `pedigree_id`, gives the recurrence its own ARG node
 dated at the recurrence rather than at the original inoculation, and makes "IBD = 1 to the prior
 episode" a real measurement rather than a self-pair. Because the mint inherits `lineage_id`,
-retire-plus-mint is exactly MOI-neutral. See D25.
+retire-plus-mint is exactly MOI-neutral. See D33.
 
 **A case, but not an acquisition.** This distinction propagates through the metrics, and it is the
 easiest thing to get wrong:
@@ -793,8 +793,7 @@ mosquito-feeding studies compiled by Koepfli et al. 2021, their Fig 5, in which 
 carriers are 5–10× more infective than submicroscopic ones, a *P. vivax* study in Brazil the
 exception). The model
 therefore keeps three lineage counts: patent (`moi_active`, episodes), transmissible (the host's
-infectious state and the bite loop) and present at all (the `MAX_MOI` capacity check); see D25
-item 7.
+infectious state and the bite loop) and present at all (the `MAX_MOI` capacity check); see D11.
 
 **Inert at the shipped default.** `P_RECRUD_GIVEN_FAIL = 0`, and `BLOODCURE_COVERAGE = 0` besides,
 so a default run has no treatment and therefore no recrudescence. That matches the evidence:
@@ -813,7 +812,7 @@ so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays
 (`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a
 mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers
 is capped at 1.
-`vivax_params()` refuses values the model cannot run (D33). Each value is a number, `T`/`F` or a
+`vivax_params()` refuses values the model cannot run (D42). Each value is a number, `T`/`F` or a
 string, as its default is; numbers are finite, and strings are UTF-8 text without control
 characters. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
 `RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays are whole numbers;
@@ -828,20 +827,20 @@ hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger f
 10⁹, SLiM's last tick, and a run that reaches day 99999, which the defaults use for "never", must
 move those days past its end and cannot schedule anything on day 99999 itself. `MDA_TICK` is not 1
 when a founder host carries a copy of another founder's genome
-(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): the copies are seeded on day 2 (D39), so a round comes
-on day 2 or later (D44). A founder-free run whose imports never establish a parasite, by chance or
+(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): the copies are seeded on day 2 (D40), so a round comes
+on day 2 or later (D35). A founder-free run whose imports never establish a parasite, by chance or
 because its settings let none take, is not refused; it ends as never started (§2). A run started
-directly with `slim -d` makes the same value checks, apart from a few that D45 lists.
+directly with `slim -d` makes the same value checks, apart from a few that D43 lists.
 λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
 derived and written to `params.tsv` for provenance.
 
 Every parameter, by group, with its default, unit, the values it may take and what it means,
 generated from the package's parameter dictionary; in R, `param_info()` gives the same as a table,
-and `?vivax_params` lists them too. Vector control scales biting only (D46) and does not gate
-treatment, which has its own window (D19); treatment is decided where a case arises and applied to
-the host, and radical-cure failure is per person (D20); a course lands at least a day after its case
-(D24, D32); an MDA round is drawn per host (D28) and reaches subpatent clones (D44); and the
-recrudescence delay is a literature assumption (D26, D32, D42).
+and `?vivax_params` lists them too. Vector control scales biting only (D37) and does not gate
+treatment, which has its own window (D30); treatment is decided where a case arises and applied to
+the host, and radical-cure failure is per person (D31); a course lands at least a day after its case
+(D32); an MDA round is drawn per host and reaches subpatent clones (D35); and the
+recrudescence delay is a literature assumption (D32, D34).
 
 <!-- BEGIN parameter tables: generated from R/param-dictionary.R by dev/update-doc-tables.R; edit the dictionary, not this block -->
 
@@ -1508,7 +1507,7 @@ never started with a `NEVER_STARTED` row (§2). `load_params()` reads the parame
 `run_sim(load_params(run), seed = run$seed, outdir = ...)` repeats a run started from R exactly when
 each of its non-zero floats lies between 1e-130 and 1e15 in magnitude: the same files, all but the
 tree sequence's provenance row, where SLiM records when the run was made and the time and memory it
-took (D77). The seed, the versions, the derived
+took (D7). The seed, the versions, the derived
 genome and the outcome rows are on the `load_run()` object (`seed`, `slim_version`,
 `malariafwd_version`, `genome_length`, `n_chromosomes`, `recomb_within`, `extinct_tick`,
 `never_started`). `DONE` records when the run finished, how long it took, its seed, a key of its
@@ -1626,7 +1625,7 @@ most recent common ancestor (TMRCA) derived from it can come out older than the 
 **Integer and float spellings.** `-d X=0` makes an Eidos integer and `-d X=0.0` a float, and
 Eidos will not mix the two in some places (`rbinom()`, `seqLen()`, subsetting, a tick range).
 The model converts a parameter to the type it needs where it uses it there (`asInteger()`,
-`asFloat()`), and `initialize()` checks each parameter's type and range (D45), so a run started
+`asFloat()`), and `initialize()` checks each parameter's type and range (D43), so a run started
 with `slim -d` takes either spelling. A new parameter must be converted at each such use (a
 constant given with `-d` cannot be redefined in `initialize()`). R writes every float with a
 decimal point.

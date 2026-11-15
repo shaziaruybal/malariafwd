@@ -111,7 +111,7 @@ test_that("a run with no parasite gives an empty object", {
   expect_output(print(x), "0 genomes, 0 pairs")
 })
 
-## ---- segments (D74) ----
+## ---- segments (D18) ----
 
 test_that("segments are maximal stretches from one ancestor, cut at the junctions, with min_span after the cut", {
   tr <- malariafwd:::.ibd_tracts

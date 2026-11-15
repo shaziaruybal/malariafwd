@@ -25,8 +25,9 @@ on a branch of your fork:
   `devtools::check()`;
 - document exported functions with roxygen, and run `devtools::document()`;
 - add a line to `NEWS.md`;
-- for a change to what the model does, add an entry to `DECISIONS.md`, which records the reasons
-  for the model's choices, and update `MODEL_DESCRIPTION.md`;
+- for a change to what the model does, update `MODEL_DESCRIPTION.md` and give the reason in
+  `DECISIONS.md`: change the entry the choice belongs to, or add one to its topic's section with
+  the next free number (entries keep their numbers, which the code and the docs cite);
 - after a change to the model file or to a default, make the example run again with
   `Rscript data-raw/example_run.R` (it needs SLiM 5.2 on the PATH), run the validation scripts
   with `Rscript dev/validation-results.R`, which rewrites `inst/validation/RESULTS.md`, and remake

@@ -12,7 +12,7 @@
 #' logs. The model is described in full in
 #' [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), the
 #' reasons for its choices are in
-#' [DECISIONS](https://shaziaruybal.github.io/malariafwd/DECISIONS.html), and the scripts that
+#' [design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html), and the scripts that
 #' validate the model are installed in `system.file("validation", package = "malariafwd")`.
 #'
 #' @section Runs and their tables:

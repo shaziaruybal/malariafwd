@@ -233,7 +233,7 @@ plot_diagnostics <- function(run, bin = 30, burn_frac = 0.5) {
 ## Stacked per-lineage blood-stage areas for one host, its dormant hypnozoites on a second axis.
 ## Spans are the host's clones from episodes(), from onset to their first end (every way a patent
 ## episode can end, event_types()$ends_episode); a clone still patent when the run ended runs to
-## the last day of state. An MDA round can end a clone on its first patent day (D44), a one-day
+## the last day of state. An MDA round can end a clone on its first patent day (D35), a one-day
 ## span. The per-tick grid is completed with zeros so the areas drop to zero between episodes
 ## rather than being interpolated across the gap.
 .host_lineage_plot <- function(st, events, host_id, palette) {

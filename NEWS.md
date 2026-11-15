@@ -44,8 +44,8 @@ two parasite genomes are. It is a pre-release: the interface and the model may c
 The README lists these limitations with the others. The
 [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html) gives the
 model in full, with its assumptions and its validation, and the
-[decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html) gives the reasons for
-each modelling choice.
+[design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html) give the reasons
+for each modelling choice.
 
 ## In development
 

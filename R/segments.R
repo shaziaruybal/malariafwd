@@ -1,4 +1,4 @@
-## segments.R -- pairwise IBD SEGMENTS (where along the genome two genomes share ancestry, D74)
+## segments.R -- pairwise IBD SEGMENTS (where along the genome two genomes share ancestry, D18)
 ## and the two diagnostic plots built on them.
 ##
 ## This is the pairwise view: for a given PAIR, which stretches are identical by descent. The
@@ -313,7 +313,7 @@ ibd_truth_pairs <- function(run, max_per_class = 60) {
   cl <- seeds[, .N, by = lineage_id][N > 1, lineage_id]
   for (l in utils::head(cl, max_per_class)) { pp <- seeds[lineage_id == l, pedigree_id]
     if (length(pp) >= 2) add(.LADDER[2], pp[1], pp[2]) }
-  ## != -1, not > 0: -1 is the no-parent sentinel but pedigree 0 is a real genome (D23).
+  ## != -1, not > 0: -1 is the no-parent sentinel but pedigree 0 is a real genome (D45).
   rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   add(.LADDER[3], utils::head(rel$pedigree_id, max_per_class),
                   utils::head(rel$parent1_pedigree_id, max_per_class))

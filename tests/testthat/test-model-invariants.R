@@ -81,7 +81,7 @@ test_that("ARG summaries behave on the forest genealogy", {
     expect_true(all(tf$coalesced < 0.5, na.rm = TRUE))    # distinct founders are independent roots
   }
 
-  ## D22: tmrca is a DEPTH, so one fixed relationship gives one number wherever it was
+  ## D17: tmrca is a DEPTH, so one fixed relationship gives one number wherever it was
   ## sampled. The ancestor's raw node time would instead change with the day the pair was sampled.
   spread <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   if (nrow(spread) >= 8) {
@@ -94,7 +94,7 @@ test_that("ARG summaries behave on the forest genealogy", {
   }
 })
 
-test_that("a new genome's coordinates are 0, also where SLiM reuses a dead genome's memory (D77)", {
+test_that("a new genome's coordinates are 0, also where SLiM reuses a dead genome's memory (D7)", {
   skip_if_no_slim()
   src <- readLines(slim_model(), warn = FALSE)
   fun <- function(name) {
@@ -129,7 +129,7 @@ test_that("a new genome's coordinates are 0, also where SLiM reuses a dead genom
   expect_true(all(read("AFTER") == 0))
 })
 
-test_that("two runs of one seed give the same tree-sequence tables, provenance aside (D77)", {
+test_that("two runs of one seed give the same tree-sequence tables, provenance aside (D7)", {
   skip_if_no_slim(); skip_if_no_tskit()
   ## founders and their clonal copies, bites, mosquito products, relapses, imports and recrudescences
   p <- vivax_params(N_HOSTS = 40, N_MOSQ = 120, BITING_RATE = 0.2, SIM_DAYS = 120, CHROMOSOMES = "1",
@@ -159,7 +159,7 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
   ids <- unique(data.table::as.data.table(classify_cases(ev))$pedigree_id)
   skip_if(length(ids) < 10, "too few cases in this run")
 
-  ## D22: no time cutoff is offered, so a relapse reads 1 against its batch however long it slept
+  ## D17: no time cutoff is offered, so a relapse reads 1 against its batch however long it slept
   rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   if (nrow(rel)) {
     x <- ibd_pairs(run, ids = c(rel$pedigree_id, rel$parent1_pedigree_id))
@@ -174,7 +174,7 @@ test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
 
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
   skip_if_no_slim(); skip_if_no_tskit()
-  ## D17: an import is seeded in early() and its second compartment is cloned one tick later,
+  ## D38: an import is seeded in early() and its second compartment is cloned one tick later,
   ## so an import, like an ordinary bite, must give IBD 1 between its two compartments.
   out <- tempfile("mfw-import-clone")
   unlink(out, recursive = TRUE)
@@ -189,7 +189,7 @@ test_that("an inoculation's primary and its hypnozoite batch are the same genome
   ## hypnozoite batch established alongside it must be clones. Two unrelated genomes under one
   ## lineage_id would not show in the event log alone, which is why this check goes through the
   ## tree sequence.
-  ## grouped on inoculation_id, NOT (tick, human_id): under D17 an import's two compartments
+  ## grouped on inoculation_id, NOT (tick, human_id): under D38 an import's two compartments
   ## land on CONSECUTIVE ticks, because the batch cannot be cloned until the primary is
   ## visible. inoculation_id is the thing that identifies one bite in both paths.
   pairs <- ev[grepl("^vh_inoculation", event_type) & pedigree_id >= 0 & inoculation_id > 0,

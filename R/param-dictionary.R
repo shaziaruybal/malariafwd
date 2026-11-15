@@ -1,5 +1,5 @@
 ## param-dictionary.R -- one record per model parameter, from which the defaults, ?vivax_params,
-## param_info() and the tables of MODEL_DESCRIPTION section 10 are made (D60). The records keep the
+## param_info() and the tables of MODEL_DESCRIPTION section 10 are made (D44). The records keep the
 ## order of the parameters, which is the order of names(vivax_params()) and of SLiM's arguments;
 ## the documentation reads them by group.
 ##

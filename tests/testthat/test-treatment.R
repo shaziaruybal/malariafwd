@@ -14,7 +14,7 @@ run_counts <- function(p, tag) {
 
 test_that("treatment is driven by coverage alone, not by the vector-control window", {
   skip_if_no_slim()
-  ## D19. Case-based treatment is not gated on INTERVENTION_START/END, the window that scales
+  ## D30. Case-based treatment is not gated on INTERVENTION_START/END, the window that scales
   ## biting and importation: a coverage treats cases without that window being opened.
   expect_equal(run_counts(shared(), "none")$bloodcure, 0)
 
@@ -150,7 +150,7 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   expect_identical(hs[cls == "subpatent"]$n, want$n)
   expect_identical(hs[, .(all = sum(n)), by = tick]$all, want$all)
 
-  ## D25: a recrudescence MINTS a new genome whose parent is the holder
+  ## D33: a recrudescence MINTS a new genome whose parent is the holder
   expect_true(all(rec$parent1_pedigree_id %in% sub$pedigree_id))
   expect_true(all(rec$pedigree_id != rec$parent1_pedigree_id))   # a NEW id, not the holder's
   ## a recrudescent clone is patent again, so a later course can fail on it and suppress it

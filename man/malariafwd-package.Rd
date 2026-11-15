@@ -19,7 +19,7 @@ and \code{vignette("anatomy")} walks through what a run records (both are also o
 logs. The model is described in full in
 \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{MODEL_DESCRIPTION}, the
 reasons for its choices are in
-\href{https://shaziaruybal.github.io/malariafwd/DECISIONS.html}{DECISIONS}, and the scripts that
+\href{https://shaziaruybal.github.io/malariafwd/DECISIONS.html}{design decisions}, and the scripts that
 validate the model are installed in \code{system.file("validation", package = "malariafwd")}.
 }
 

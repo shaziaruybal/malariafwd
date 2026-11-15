@@ -34,7 +34,7 @@ run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.14, SIM
 ev <- as.data.table(load_events(run))
 
 ## ---------- identify tetrad products among co-transmitted infections ----------
-## seedTetrad() makes 4 products per outcrossing meiosis by four-strand meiosis (D34): each is a
+## seedTetrad() makes 4 products per outcrossing meiosis by four-strand meiosis (D14): each is a
 ## mosaic of the two parents and a fresh lineage, and two of the four carry each parent's genome
 ## at every locus.
 rec <- ev[event_type == "hv_uptake_recombinant",

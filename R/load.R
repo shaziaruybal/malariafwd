@@ -1,7 +1,7 @@
 ## load.R -- the `vivax_run` object + tidy loaders for a run's outputs.
 
 # Accept either a `vivax_run` object or a bare directory path; a path to a directory holding a run
-# that is not whole warns, once a session (D58).
+# that is not whole warns, once a session (D6).
 .run_dir <- function(x) {
   if (inherits(x, "vivax_run")) return(x$outdir)
   if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) {
@@ -106,7 +106,7 @@
 }
 
 ## A run's length, SIM_DAYS, from which every function that summarises a window of the run takes its
-## end, so that the days after an extinction count as days with no parasite (D61).
+## end, so that the days after an extinction count as days with no parasite (D49).
 .sim_days <- function(run, fun = "this function") {
   if (is.data.frame(run))
     stop(fun, "() needs the run for its length, SIM_DAYS: pass the vivax_run or its directory, got ",

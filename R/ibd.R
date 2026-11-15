@@ -1,5 +1,5 @@
 ## ibd.R -- ground-truth identity-by-descent from the tree sequence (tskit via reticulate), and its
-## segments (D74).
+## segments (D18).
 ## reticulate is a Suggests, and Python with tskit and numpy a system requirement; each function
 ## checks them through .require_python() (R/python.R), which says what is missing.
 
@@ -23,7 +23,7 @@
 ## The IBD module: the tree sequence simplified once to the genomes asked for, then one
 ## ibd_segments() call over every pair among them, or, for listed pairs, one call per genome with
 ## its partners, or, for groups of genomes, one call over the pairs within each group. min_span is 0 throughout: every shared stretch counts in a pair's fraction, and
-## the segments are floored in R once merged and cut (D74). Returns numpy arrays, keyed by
+## the segments are floored in R once merged and cut (D18). Returns numpy arrays, keyed by
 ## pedigree id.
 .ibd_py_src <- '
 def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
@@ -157,7 +157,7 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 }
 
 ## tskit's segment rows, which are pieces of the paths through the trees and so depend on the
-## genomes simplified to, as segments (D74): maximal stretches over which a pair descends from one
+## genomes simplified to, as segments (D18): maximal stretches over which a pair descends from one
 ## common ancestor genome, cut at each chromosome junction, with the pieces shorter than
 ## `min_span` left out after the cut. The ancestor is the node, not its time: two ancestors born on
 ## one tick must not merge.

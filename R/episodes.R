@@ -1,5 +1,5 @@
 ## episodes.R -- blood-stage clones and their spans, and each episode against the earlier ones of
-## its host (D64). An episode is the clones that became patent in one host on one day, named by
+## its host (D46). An episode is the clones that became patent in one host on one day, named by
 ## episode_id "<human_id>:<tick>".
 
 #' Every blood-stage clone of a run, from onset to end

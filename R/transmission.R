@@ -1,8 +1,8 @@
-## transmission.R -- who infected whom, read from the event log (D70): the links from each parent
-## genome of an oocyst to each genome its products infected, the chains they form (D72), the case
-## reproduction number by true origin (D71), and each case's WHO class from its chain (D73).
+## transmission.R -- who infected whom, read from the event log (D52): the links from each parent
+## genome of an oocyst to each genome its products infected, the chains they form (D52), the case
+## reproduction number by true origin (D53), and each case's WHO class from its chain (D41).
 
-## The link table's columns and classes, which every path returns (D23).
+## The link table's columns and classes, which every path returns (D48).
 .links0 <- function() data.table(
   source_pedigree_id = integer(), target_pedigree_id = integer(), kind = character(),
   source_human_id = integer(), target_human_id = integer(), mosq_id = integer(), oocyst_id = integer(),

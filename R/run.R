@@ -1,5 +1,5 @@
 ## run.R -- launching the SLiM subprocess (single runs and parallel sweeps).
-## Design (see DECISIONS.md D15): SLiM runs as a subprocess via processx (NO shell, so
+## Design (DECISIONS.md D2): SLiM runs as a subprocess via processx (NO shell, so
 ## Eidos string quotes survive), the model writes its own output files, and reticulate+
 ## tskit are used only later for IBD. run_grid() parallelises via future.
 
@@ -219,7 +219,7 @@ print.vivax_run <- function(x, ...) {
 
 ## ---- the run directory ---------------------------------------------------------------------
 ## A run is written into a sibling directory and moved into place when it has finished, with DONE
-## written last (D58). These are the files a run holds; the ignored ones are what file managers
+## written last (D6). These are the files a run holds; the ignored ones are what file managers
 ## leave behind.
 .run_files <- c("DONE", "params.tsv", "events.tsv", "state.tsv", "plasmo.trees", "model.slim",
                 "cmdline.txt", "run.log")

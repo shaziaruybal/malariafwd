@@ -148,4 +148,4 @@ plot_relapse_km(time_to_relapse(run))
 
 See `?run_sim`, `?ibd_pairs` and `?malariafwd`, the
 [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), and the
-[decision log](https://shaziaruybal.github.io/malariafwd/DECISIONS.html) for more.
+[design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html) for more.

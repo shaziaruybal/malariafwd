@@ -1,6 +1,6 @@
 ## grid.R -- parameter set x seed sweeps. run_grid() checks every set and every cell's directory
 ## before any cell starts, runs the cells in parallel, resumes from what is on disk, and records
-## the grid in grid.tsv, which load_grid() reads (D59).
+## the grid in grid.tsv, which load_grid() reads (D8).
 
 ## A set's name is its cells' directory names, so it must be safe as one on every file system;
 ## blank names are filled by position.

@@ -55,12 +55,12 @@ test_that("the author's name, ORCID and roles agree across the metadata files", 
     expect_match(read(f), "LCF/BQ/PI25/12100035", fixed = TRUE, label = f)
 })
 
-## the decision log's entries: their numbers, in file order
+## the numbers of the design decisions' entries, in file order
 decision_numbers <- function() {
   f <- test_path("..", "..", "DECISIONS.md")
   skip_if_not(file.exists(f), "DECISIONS.md is in the source tree only")
-  h <- grep("^## D[0-9]+ ", readLines(f, encoding = "UTF-8", warn = FALSE), value = TRUE)
-  as.integer(sub("^## D([0-9]+) .*", "\\1", h))
+  h <- grep("^### D[0-9]+ ", readLines(f, encoding = "UTF-8", warn = FALSE), value = TRUE)
+  as.integer(sub("^### D([0-9]+) .*", "\\1", h))
 }
 
 test_that("every decision from D1 to the newest has one entry", {
@@ -69,9 +69,20 @@ test_that("every decision from D1 to the newest has one entry", {
   expect_false(anyDuplicated(d) > 0)
 })
 
-test_that("the decision log lists its entries newest first", {
+test_that("every decision the code and the docs cite is an entry", {
   d <- decision_numbers()
-  expect_identical(d, sort(d, decreasing = TRUE))
+  root <- test_path("..", "..")
+  src <- c(file.path(root, c("MODEL_DESCRIPTION.md", "README.md", "NEWS.md")),
+           list.files(file.path(root, c("R", "inst/slim", "inst/validation", "tests/testthat", "vignettes")),
+                      "\\.(R|slim|Rmd)$", full.names = TRUE))
+  stray <- character()
+  for (f in src[file.exists(src)]) {
+    txt <- readLines(f, encoding = "UTF-8", warn = FALSE)
+    cited <- unlist(regmatches(txt, gregexpr("(?<![A-Za-z0-9_])D[0-9]{1,2}(?![0-9A-Za-z_])", txt, perl = TRUE)))
+    n <- setdiff(as.integer(substring(cited, 2)), d)
+    if (length(n)) stray <- c(stray, paste0(basename(f), ": D", n))
+  }
+  expect_identical(stray, character())
 })
 
 test_that("the help pages give reasons, not decision codes or private files", {
@@ -117,7 +128,7 @@ test_that("the validation results record a run of every checking script", {
   for (s in scripts) expect_match(txt, paste0("`", s, "`"), fixed = TRUE, label = s)
 })
 
-test_that("the decision log names no file that is not in the repository", {
+test_that("the design decisions name no file that is not in the repository", {
   root <- test_path("..", "..")
   f <- file.path(root, "DECISIONS.md")
   skip_if_not(file.exists(f), "DECISIONS.md is in the source tree only")

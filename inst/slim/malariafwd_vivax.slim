@@ -18,11 +18,11 @@
 //
 // The model description (https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html)
 // describes the model, and its section 21 lists the works cited here by author and year. The
-// decision log (https://shaziaruybal.github.io/malariafwd/DECISIONS.html) gives the reasons for the
-// model's choices; the D numbers in these comments (D17, D25, ...) refer to it.
+// design decisions (https://shaziaruybal.github.io/malariafwd/DECISIONS.html) give the reasons
+// for the model's choices; the D numbers in these comments (D3, D38, ...) refer to them.
 //
 // One tick is one day, in SLiM's nonWF order:
-//   reproduction()  relapses; the hypnozoite batch of an import that arrived the day before (D17);
+//   reproduction()  relapses; the hypnozoite batch of an import that arrived the day before (D38);
 //                   bites, which carry parasites both ways, with meiosis in the mosquito;
 //                   recrudescences. On day 2 a second callback gives each founder host that shares a
 //                   founding genome its copy. Neither runs on a day with no parasite.
@@ -52,7 +52,7 @@ initialize() {
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D38): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value. At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D10): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value. At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
 	defineDefault("MAX_BROODS_PER_MOSQ",     20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); carrying many costs it nothing, as its survival and infectiousness do not depend on them
 	
 	// parasite
@@ -111,20 +111,20 @@ initialize() {
 	// NU_HYPNOZOITE_BATCH per bite, split among the genotypes the bite delivers) - both,
 	// either, or neither can occur for the same transmitted genotype.
 	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four calibration targets at moderate transmission (D48; inst/validation/calibrate_nu.R), to re-fit per setting
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four calibration targets at moderate transmission (D21; inst/validation/calibrate_nu.R), to re-fit per setting
 	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
 	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
 	
 	// VECTOR-CONTROL interventions (off by default). These scale the BITING RATE only: not
-	// importation, whose infections were acquired elsewhere (D46), and never case management,
-	// which is TREATMENT_START/END below (D19).
+	// importation, whose infections were acquired elsewhere (D37), and never case management,
+	// which is TREATMENT_START/END below (D30).
 	defineDefault("INTERVENTION_START",      99999); // these interventions affect transmission (eg biting rates)
 	defineDefault("INTERVENTION_END",        99999);
 	defineDefault("INTERVENTION_EFFICACY",   0.0);
 
-	// CASE MANAGEMENT window (D19), separate from the vector-control window INTERVENTION_*, so
+	// CASE MANAGEMENT window (D30), separate from the vector-control window INTERVENTION_*, so
 	// treatment can run without a change in biting. Defaults are "always on", so a coverage
 	// alone is sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
 	// The window gates when a case is DECIDED (presents and is prescribed), not when the
@@ -144,7 +144,7 @@ initialize() {
 	// detection / observation layer: a true blood-stage episode becomes a DETECTED
 	// (reported, genotyped) case w.p. P_DETECT_[type]. Relapses are mostly sub-patent
 	// (immunity -> lower density), so set their rate lower. Detected cases form the
-	// observed line list + the genotyped sample, and during the case-management window (D19)
+	// observed line list + the genotyped sample, and during the case-management window (D30)
 	// a detected case can be treated: blood-stage (schizonticidal) treatment at coverage
 	// BLOODCURE_COVERAGE (efficacy 1 - P_BLOODCURE_SURVIVAL, clears the active infection), with
 	// radical cure (LIVER-stage, efficacy 1 - P_RAD_SURVIVAL, clears the hypnozoite reservoir)
@@ -157,12 +157,12 @@ initialize() {
 	defineDefault("BLOODCURE_COVERAGE", 0.0); // P(a detected case is treated)
 	defineDefault("RADCURE_COVERAGE", 0.0);   // P(radical cure | treated) - LIVER stage only
 	defineDefault("P_BLOODCURE_SURVIVAL", 0.0); // P(a blood-stage clone survives treatment)
-	// ---- THREE-STATE RECURRENCE: relapse / reinfection / RECRUDESCENCE (D25) ----
+	// ---- THREE-STATE RECURRENCE: relapse / reinfection / RECRUDESCENCE (D33) ----
 	// A clone that SURVIVES a blood-stage course may be suppressed below patency rather than
 	// carrying on at full density. A subpatent clone is undetectable and is not an episode,
 	// but it is still present and still (partly) infectious; after a delay it re-expands to
 	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder, unless an MDA
-	// round clears it first (D44). Natural clearance while subpatent is OFF, so without MDA
+	// round clears it first (D35). Natural clearance while subpatent is OFF, so without MDA
 	// P_RECRUD_GIVEN_FAIL is exactly P(recrudescence | the course failed) and maps onto a WHO
 	// therapeutic-efficacy failure rate. At 0.0, the default, a failed course leaves the
 	// clone fully patent.
@@ -175,9 +175,9 @@ initialize() {
 	// uses. Taylor et al. (2019) model time-to-recrudescence as exponential; the ceiling of an
 	// exponential on a day scale is exactly a geometric (their own simulator rounds instead,
 	// round(rexp(1, 1/10)), which differs only in the mass at 0). Every other duration in the
-	// model is geometric too (D29).
+	// model is geometric too (D3).
 	//
-	// 10.5 d is a literature assumption, pending parameterisation (D42): the reciprocal of the
+	// 10.5 d is a literature assumption, pending parameterisation (D34): the reciprocal of the
 	// posterior median of Taylor et al. (2019), which sits on their strongly informative
 	// Gamma(100, 1000) prior (mean 0.1/day), so it is not an estimate from data. It keeps
 	// recrudescences inside a standard 28-day WHO therapeutic-efficacy window, where a real study
@@ -201,7 +201,7 @@ initialize() {
 	// diagnosis. Drawn once per course: each day after the case the course arrives with
 	// probability 1/TREATMENT_DELAY, so the delay is geometric on 1, 2, ... with this mean
 	// (White et al. 2014 use 7). Must be >= 1; 1 = the next day, the fastest response the model can
-	// represent (D24, D32).
+	// represent (D32).
 	// Treatment is NOT instantaneous: a treated case is infectious until its drugs arrive.
 	defineDefault("TREATMENT_DELAY", 7.0);
 
@@ -273,7 +273,7 @@ initialize() {
 	// infections is NOT needed.
 	defineDefault("RETAIN_FULL_HISTORY", T);
 
-	// ── PARAMETER TYPES, for runs started directly with -d (D45) ────────────
+	// ── PARAMETER TYPES, for runs started directly with -d (D43) ────────────
 	// validate_params() checks every parameter's type before SLiM starts; a run started with -d
 	// bypasses R, so the same checks are made here. A number may be written either way, 7 or 7.0,
 	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
@@ -408,11 +408,11 @@ initialize() {
 	if (!(MEAN_RECRUD_DELAY >= 1 & MEAN_RECRUD_DELAY <= 1e6))
 		stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days, at most 1e6), got " + MEAN_RECRUD_DELAY +
 			": it is the mean delay from suppression to recrudescence, which is at least one day.");
-	// At 0 the gate would refuse every inoculation, an empty host's included (D38).
+	// At 0 the gate would refuse every inoculation, an empty host's included (D10).
 	if (!(MAX_MOI >= 1))
 		stop("MAX_MOI must be at least 1, got " + MAX_MOI + ": a host takes a new inoculation only " +
 			"while it carries fewer than MAX_MOI blood-stage lineages, so 1 means no superinfection.");
-	// The rest of validate_params()'s refusals (D45). Without them a direct run starts and means
+	// The rest of validate_params()'s refusals (D43). Without them a direct run starts and means
 	// something else (RADCURE_MODE = 'Person' would run the per-hypnozoite mode, and a probability
 	// above 1 is always true) or stops part-way.
 	for (nm in c("P_TRANS_VH", "P_TRANS_HV", "P_GAMETOCYTE", "P_PRIMARY", "P_DETECT_PRIMARY",
@@ -463,13 +463,13 @@ initialize() {
 				": a latent batch leaves each latency stage with daily probability DELTA_LATENCY.");
 	if (!(RADCURE_MODE == "person" | RADCURE_MODE == "hypnozoite"))
 		stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '" + RADCURE_MODE + "'");
-	// A founder host carrying a copy of another founder's genome receives it on day 2 (D39), so a
-	// day-1 round would clear its template first and leave the copy nothing to copy (D44).
+	// A founder host carrying a copy of another founder's genome receives it on day 2 (D40), so a
+	// day-1 round would clear its template first and leave the copy nothing to copy (D35).
 	if (MDA_TICK == 1 & N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS)
 		stop("MDA_TICK must not be 1 when a founder host carries a copy of another founder's genome " +
 			"(N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS): the copies are seeded on day 2, so a round comes " +
 			"on day 2 or later.");
-	// a coverage set against a closed case-management window would give no treatment at all (D19)
+	// a coverage set against a closed case-management window would give no treatment at all (D30)
 	if ((RADCURE_COVERAGE > 0 | BLOODCURE_COVERAGE > 0) &
 		(TREATMENT_END <= TREATMENT_START | TREATMENT_START > SIM_DAYS))
 		stop("a treatment coverage is set but the case-management window is closed (TREATMENT_START = " +
@@ -508,7 +508,7 @@ initialize() {
 	if (N_FOUNDER_HOSTS > 0 & N_FOUNDER_LINEAGES < 1)
 		stop("N_FOUNDER_LINEAGES must be >= 1 when N_FOUNDER_HOSTS > 0: " + N_FOUNDER_HOSTS +
 			" founder host(s) cannot share 0 distinct genomes.");
-	// The last day of the run on which an import can arrive, or 0 if none (D37). Imports arrive in
+	// The last day of the run on which an import can arrive, or 0 if none (D5). Imports arrive in
 	// early(), which first runs on day 1: the pulse counts when N_IMPORTS > 0 and IMPORT_TICK is a
 	// day from 1 to SIM_DAYS, and the window when it has a count or a rate and a day from
 	// max(1, IMPORT_START) to min(IMPORT_END - 1, SIM_DAYS), the last of which it contributes. The
@@ -521,7 +521,7 @@ initialize() {
 	window_day = (((N_IMPORTS_PER_TICK > 0) | (IMPORT_RATE_PER_TICK > 0)) & (window_first <= window_last)) ?
 		window_last else 0;
 	defineConstant("LAST_IMPORT_DAY", (pulse_day >= window_day) ? pulse_day else window_day);
-	// A naive population is legitimate (D17: importation can seed an empty population), but
+	// A naive population is legitimate (D38: importation can seed an empty population), but
 	// only if an import path is actually open.
 	defineConstant("HAS_IMPORT_PATH", LAST_IMPORT_DAY > 0);
 	if (N_FOUNDER_HOSTS < 1 & !HAS_IMPORT_PATH)
@@ -557,7 +557,7 @@ initialize() {
 	                               2093556, 3153402));
 	// CORE (subtelomere-masked) lengths. APPROXIMATION = 90% of full length, a proxy
 	// for the MalariaGEN Pv4 core genome (subtelomeric pir/vir-rich content excluded;
-	// ~21.8 Mb core of the 24.2 Mb assembly), not the exact Pv4 core-region coordinates (D5).
+	// ~21.8 Mb core of the 24.2 Mb assembly), not the exact Pv4 core-region coordinates (D16).
 	defineConstant("PVP01_CORE", asInteger(round(PVP01_FULL * 0.90)));
 	// Where each chromosome's centromere sits, as a fraction of its length, chr 1..14: the centres
 	// of the centromere features PVP01_CEN01..PVP01_CEN14 of the PvP01 annotation (Sanger/GeneDB,
@@ -583,7 +583,7 @@ initialize() {
 			// build a range of 1e11 entries, and would stop without naming CHROMOSOMES
 			if (any(asFloat(parts) < 1) | any(asFloat(parts) > 14))
 				stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
-			// Eidos counts down a high-low range; validate_params() refuses one (D45)
+			// Eidos counts down a high-low range; validate_params() refuses one (D43)
 			if (asInteger(parts[0]) > asInteger(parts[1]))
 				stop("CHROMOSOMES has a range that runs high-low: " + CHROMOSOMES);
 			chr_idx = c(chr_idx, asInteger(parts[0]):asInteger(parts[1]));
@@ -657,7 +657,7 @@ initialize() {
 	// = genetic identity (a SLiM pedigreeID, propagated through clonal events).
 	defineGlobal("NEXT_OOCYST_ID", 0);
 	defineGlobal("NEXT_BROOD_ID", 0);
-	// D17: import seeding. NEXT_SCRATCH_SUBPOP is a monotonic id for the disposable
+	// D38: import seeding. NEXT_SCRATCH_SUBPOP is a monotonic id for the disposable
 	// subpopulation each import-tick mints its genomes in - SLiM refuses to reuse a
 	// subpopulation id, so this only ever counts up. It starts just above the host and mosquito
 	// range so the two can never collide, but NOT far above: SLiM materialises a DENSE
@@ -676,7 +676,7 @@ initialize() {
 	defineGlobal("RECRUD_RETIRE", integer(0));
 	// liveness: has a parasite existed at any point? See the guard at the end of early().
 	// A run that never started ends no earlier than LIVENESS_TICK, unless its last day comes
-	// first: a margin of a few days after a first-day import pulse (D43).
+	// first: a margin of a few days after a first-day import pulse (D5).
 	defineGlobal("EVER_LIVE", F);
 	defineConstant("LIVENESS_TICK", 10);
 }
@@ -686,7 +686,7 @@ reproduction()
 	humans = sim.subpopulations[HUMANS];
 	mosq = sim.subpopulations[VECTORS];
 	// the lineages of the blood-stage clones each host gains today, which h.individuals shows only
-	// once reproduction() is over; the MAX_MOI check counts them (D51)
+	// once reproduction() is over; the MAX_MOI check counts them (D10)
 	humans.setValue("new_lineages", integer(0));
 	
 	// VERBOSE narration: the day's infected and susceptible hosts and mosquitoes
@@ -737,7 +737,7 @@ reproduction()
 				next;
 			latency_stage = hyp.getValue("latency_stage"); // 0=non-latent, 1-K = latent
 			
-			// Latency (K_LATENCY > 0, temperate strains, D35). Latent hypnozoites die at
+			// Latency (K_LATENCY > 0, temperate strains, D25). Latent hypnozoites die at
 			// MU_HYPNOZOITE, as in White et al. (2014); then the batch moves to the next stage with
 			// probability DELTA_LATENCY. The whole batch moves together, as White et al. also track
 			// latency per infection.
@@ -792,7 +792,7 @@ reproduction()
 			{
 				// Is a patent clone of the same lineage already in the host? Such a relapse is
 				// counted, and drawn for detection, like any other, but a real observer would see
-				// only the infection already there, not a recurrence, so the row says so (D40).
+				// only the infection already there, not a recurrence, so the row says so (D26).
 				// Only clones born on earlier days are seen (one that ends today still counts): a
 				// clone born this tick, from another batch of the lineage waking, a recrudescence
 				// or a bite, is not visible yet, so a relapse that starts with it is not flagged.
@@ -865,7 +865,7 @@ reproduction()
 	}
 	
 	// ----------------------------
-	// D17: SECOND COMPARTMENT OF AN IMPORT (deferred by one tick)
+	// D38: SECOND COMPARTMENT OF AN IMPORT (deferred by one tick)
 	// ----------------------------
 	// Imports themselves are seeded by seedImports() in early() - see the comment on that
 	// function for why. What is left here is the half that CANNOT be done there: cloning
@@ -949,7 +949,7 @@ reproduction()
 		// what MOI does that human have?
 		// INFECTIOUSNESS, not patency: a host carrying only subpatent clones can still infect a
 		// mosquito, and counting patent clones here would block exactly the transmission
-		// SUBPATENT_INFECTIVITY permits (D25 item 7).
+		// SUBPATENT_INFECTIVITY permits (D11).
 		human_MOI = getTransmissibleLineageCount(h);
 		
 		// is the mosquito infectious?
@@ -1015,7 +1015,7 @@ reproduction()
 			{
 				vcat("note: Iv-Sh: 🦟 mosquito " + m.id + " tagged infected but has no broods; skipping");
 			}
-			// The same capacity check as Event 4, before the P_TRANS_VH draw (D38). A host tagged
+			// The same capacity check as Event 4, before the P_TRANS_VH draw (D10). A host tagged
 			// susceptible can still carry blood-stage clones: at SUBPATENT_INFECTIVITY = 0 its
 			// subpatent clones are not infectious, but they count toward MAX_MOI.
 			else if (getCapacityLineageCount(h) >= MAX_MOI)
@@ -1050,7 +1050,7 @@ reproduction()
 		{
 			// A host tagged infected may show no transmissible clone yet: one it gained earlier in
 			// today's reproduction() is not in h.individuals until that is over. It can still be
-			// infected; it cannot yet infect the mosquito (D51).
+			// infected; it cannot yet infect the mosquito (D10).
 			if (mosq_MOI == 0)
 			{
 				vcat("note: Iv-Ih: 🦟 mosquito " + m.id + " tagged infected but has no broods; skipping");
@@ -1122,7 +1122,7 @@ reproduction()
 	// ----------------------------
 	// RECRUDESCENCE: a suppressed clone re-expands to patency
 	// ----------------------------
-	// Mints a NEW genome clonal to the holder, exactly as a relapse does (D25): a fresh
+	// Mints a NEW genome clonal to the holder, exactly as a relapse does (D33): a fresh
 	// pedigree_id keeps one episode to one id, gives the recurrence its own ARG node dated at
 	// the recurrence rather than at the original inoculation, and keeps "IBD to the prior
 	// episode == 1" a real measurement instead of a self-pair. The holder is then queued for
@@ -1168,7 +1168,7 @@ reproduction()
 // reproduction() never fires (no individuals exist until 1 early() seeds them), so the clonal founder
 // HOSTS recorded during setup are copied here at tick 2 - the first tick individuals exist. Runs once,
 // then self-deactivates. Default N_FOUNDER_LINEAGES == N_FOUNDER_HOSTS => nothing pending => no-op.
-// A day-1 import pulse lands before this (D39): a clone host is still empty then, so MAX_MOI does not
+// A day-1 import pulse lands before this (D40): a clone host is still empty then, so MAX_MOI does not
 // refuse it an import and it holds both from tick 2, and an import can sit beside a template founder.
 // Day 2's bites come before this too (SLiM calls reproduction() callbacks in script order), so the
 // MAX_MOI check does not refuse a clone host a bite that day either.
@@ -1226,7 +1226,7 @@ reproduction()
 		// Establishment (N_FOUNDER_HOSTS infected hosts) is set apart from diversity (N_FOUNDER_LINEAGES distinct
 		// genomes). First N_FOUNDER_LINEAGES founder hosts = new distinct lineages; the rest = GENETIC CLONES of them
 		// (addCloned -> IBD 1 in the tree).
-		// A naive population, seeded only by imports, is N_FOUNDER_HOSTS = 0 with an import path (D39).
+		// A naive population, seeded only by imports, is N_FOUNDER_HOSTS = 0 with an import path (D40).
 		if (s < N_HOSTS & s < N_FOUNDER_LINEAGES)    // a NEW distinct founder lineage (genome root), human host
 		{
 			subpop = sim.addSubpop(s, 1);
@@ -1251,7 +1251,7 @@ reproduction()
 	}
 	
 	// A run with founders has had a parasite from tick 1, even if something cleared them all
-	// before the liveness check at the end of early() (D43).
+	// before the liveness check at the end of early() (D5).
 	if (N_FOUNDER_HOSTS > 0)
 		defineGlobal("EVER_LIVE", T);
 	// hand the pending clonal-founder assignments (integer subpop IDs) to the one-shot 2 reproduction() seeder (tick 2)
@@ -1426,8 +1426,8 @@ early() {
 		{
 			if (lin.getValue("is_dormant") == T)
 				next;  // skip if dormant, hypnozoite clearance is separate
-			// Natural clearance while subpatent is OFF by design (D25): every suppressed
-			// clone eventually recrudesces unless an MDA round clears it (D44), which is what
+			// Natural clearance while subpatent is OFF by design (D33): every suppressed
+			// clone eventually recrudesces unless an MDA round clears it (D35), which is what
 			// makes P_RECRUD_GIVEN_FAIL, without MDA, exactly P(recrudescence | the course
 			// failed) and directly comparable to a WHO therapeutic-efficacy failure rate.
 			if (lin.getValue("is_subpatent") == T)
@@ -1446,7 +1446,7 @@ early() {
 			if (bloodstage_start >= sim.cycle)
 				next;
 
-			// Natural clearance: a Bernoulli trial each day, so the duration is geometric (D29, D30)
+			// Natural clearance: a Bernoulli trial each day, so the duration is geometric (D3, D9)
 			if (runif(1) < P_BLOOD_CLEAR)
 				cleared_natural = c(cleared_natural, lin);
 		}
@@ -1526,7 +1526,7 @@ early() {
 		// rather than to detected cases: blood-stage drugs plus radical cure, through
 		// applyTreatment() so the two paths cannot diverge. Because it waits for no
 		// symptoms, it also reaches subpatent clones and clones that became patent earlier today,
-		// which a case course does not (D44); the day's imports arrive after it. Only hosts not
+		// which a case course does not (D35); the day's imports arrive after it. Only hosts not
 		// empty at the round are drawn, so the mda_*_given counts are courses to those hosts; the
 		// draw does not depend on infection, so the coverage is that of everyone.
 		vcat("💊 MDA administered on tick " + sim.cycle);
@@ -1557,9 +1557,9 @@ early() {
 	//       (Poisson-distributed arrivals, e.g. IMPORT_RATE_PER_TICK=0.25 -> ~1 import every 4 days on average)
 	//
 	// Imports go to hosts chosen uniformly at random, as bites do, at most one per host a tick
-	// (D38); a host already at MAX_MOI takes none. Each import is logged as
+	// (D40); a host already at MAX_MOI takes none. Each import is logged as
 	// "vh_inoculation_import" with inoculation_id.
-	// Each import is an independent founder genome, unrelated to every other (D18).
+	// Each import is an independent founder genome, unrelated to every other (D39).
 	// ----------------------------
 	
 	// determine desired imports this tick
@@ -1588,7 +1588,7 @@ early() {
 			eff_import_rate = eff_import_rate * imp_seasonal;
 		}
 		// Local vector control (INTERVENTION_*) does not scale imports: they are infections
-		// acquired elsewhere (D46). A border measure is IMPORT_RATE_BOOST, or the window itself.
+		// acquired elsewhere (D37). A border measure is IMPORT_RATE_BOOST, or the window itself.
 		// import-driven resurgence: leaky border reopens after the trigger
 		if (sim.cycle >= RESURGENCE_TRIGGER_TICK)
 			eff_import_rate = eff_import_rate * IMPORT_RATE_BOOST;
@@ -1615,7 +1615,7 @@ early() {
 		import_hosts = import_hosts[!full];
 
 		// Seeded HERE, in early(): SLiM calls reproduction() only while a parasite exists, so
-		// seeding there could never reach an empty population (D17).
+		// seeding there could never reach an empty population (D38).
 		if (size(import_hosts) > 0)
 			seedImports(import_hosts);
 	}
@@ -1632,7 +1632,7 @@ early() {
 	//                    Poisson rate that drew none, imports that took in neither compartment)
 	//                    or because its settings let none take (P_PRIMARY = 0 with a hypnozoite
 	//                    batch mean of 0, a window whose rate is 0 throughout). That is a result,
-	//                    as fade-out is, so the run ends cleanly, on its own record (D43). Unlike
+	//                    as fade-out is, so the run ends cleanly, on its own record (D5). Unlike
 	//                    extinction it is also decided on the last day whatever the import
 	//                    schedule, so that every run that never had a parasite is marked.
 	//   DIED OUT       - parasites existed and are now all gone, with no importation still to
@@ -1658,7 +1658,7 @@ early() {
 			catn("🛑 NEVER STARTED on tick " + sim.cycle + ": no import established a parasite, and " +
 				"none is still to come. Ending the run - every further tick is empty.");
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
-			// recorded so that R can tell a run that never started from one that went extinct (D43)
+			// recorded so that R can tell a run that never started from one that went extinct (D5)
 			writeFile(OUTDIR + "/params.tsv", "NEVER_STARTED\t" + sim.cycle, append=T);
 			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
 			sim.simulationFinished();
@@ -1673,7 +1673,7 @@ early() {
 			// lets the current tick finish; writing it here as well would give this tick's rows
 			// twice.
 			sim.treeSeqOutput(OUTDIR + "/plasmo.trees");
-			// recorded so that R can tell a run that went extinct from one that did not (D37), also
+			// recorded so that R can tell a run that went extinct from one that did not (D5), also
 			// when this is the last day
 			writeFile(OUTDIR + "/params.tsv", "EXTINCT_TICK\t" + sim.cycle, append=T);
 			catn("-----------⌛️ SIMULATION FINISHED! ⌛️-----------");
@@ -1762,7 +1762,7 @@ function (void) logEvent(
 	[i$ n_hypnozoites = 1],            // count represented by this event; 1 for non-batch events, actual batch/thinning count for hypnozoite batch establishment/activation/death/MDA events
 	[i$ oocyst_id = -1],               // meiosis id shared by a tetrad's products; -1 for founders/imports (no meiosis)
 	[i$ detected = -1],                // detection layer: 1 = detected/reported case, 0 = true-but-undetected episode, -1 = N/A (non-case event)
-	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage, born on an earlier day, was in the host (D40), 0 if not; -1 elsewhere
+	[i$ into_patent_lineage = -1])     // on hypnozoite_activation rows: 1 if a patent clone of the same lineage, born on an earlier day, was in the host (D26), 0 if not; -1 elsewhere
 {
 	defineGlobal("TICK_EVENT_ID", TICK_EVENT_ID + 1); // defineGlobal(): a plain assignment here would be local to the function
 	event_id = asString(sim.cycle) + "_" + asString(TICK_EVENT_ID);
@@ -1894,7 +1894,7 @@ function (integer$) getActiveLineageCount(o<Subpopulation>$ s)
 	// PATENT blood-stage only. A subpatent clone is present but undetectable, so it is not an
 	// episode and does not belong in moi_active. See getTransmissibleLineageCount() for the
 	// infectiousness question and getBloodStageLineageCount() for the capacity question;
-	// subpatency separates the three (D25 item 7).
+	// subpatency separates the three (D11).
 	active = s.individuals[s.individuals.getValue("is_dormant") == F &
 	                       s.individuals.getValue("is_subpatent") == F];
 	if (size(active) == 0)
@@ -1933,7 +1933,7 @@ function (integer$) getBloodStageLineageCount(o<Subpopulation>$ s)
 }
 
 // CAPACITY on the day: the blood-stage lineages present, and those of the clones the host gained
-// earlier in today's reproduction(), which h.individuals shows only once that is over (D51).
+// earlier in today's reproduction(), which h.individuals shows only once that is over (D10).
 function (integer$) getCapacityLineageCount(o<Subpopulation>$ h)
 {
 	ids = h.getValue("new_lineages");
@@ -2015,7 +2015,7 @@ function (integer$) drawHypnozoiteBatchSize(fi$ mean_batch)
 	return rgeom(1, p)[0];
 }
 
-// D19: is case management running right now? Asked once, in decideTreatment(), which every
+// D30: is case management running right now? Asked once, in decideTreatment(), which every
 // case goes through (a bite, a relapse, a recrudescence or an import), so the window cannot
 // differ between them; and kept apart from the vector-control window: this gate decides who
 // gets drugs, INTERVENTION_* decides biting, and neither may stand in for the other.
@@ -2052,7 +2052,7 @@ function (void) decideTreatment(o<Subpopulation>$ h)
 		return;
 	h.setValue("tx_pending", T);
 	// Each day after the case the course arrives with probability 1/TREATMENT_DELAY, so the
-	// delay is geometric with mean TREATMENT_DELAY and at least one day (D24, D32). A course
+	// delay is geometric with mean TREATMENT_DELAY and at least one day (D32). A course
 	// can never be given on the tick the case arises: the parasite became patent that tick, so
 	// it cannot yet have caused symptoms or prompted care-seeking. If it could, the same-tick
 	// check in applyTreatment() would CONSUME the course (tx_pending is cleared whether or not
@@ -2125,7 +2125,7 @@ function (void) applyRadicalCure(o<Subpopulation>$ h, s$ src)
 }
 
 // The course itself: every patent blood-stage clone in the host, then the reservoir. An MDA
-// course also reaches the host's subpatent clones and the clones that became patent today (D44).
+// course also reaches the host's subpatent clones and the clones that became patent today (D35).
 function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 {
 	logHostEvent((src == "mda") ? "mda_bloodcure_given" else "bloodcure_given", h);
@@ -2149,9 +2149,9 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 		{
 			// A clone that became patent THIS tick cannot yet have caused symptoms, prompted
 			// care-seeking or been diagnosed, so a case course cannot reach it: a course landing
-			// today treats only the clones that were already patent (D24). Natural clearance in
+			// today treats only the clones that were already patent (D32). Natural clearance in
 			// early() follows the same rule (a clone cannot clear on the tick its blood stage began). MDA
-			// waits for no symptoms, so it reaches these clones as well (D44).
+			// waits for no symptoms, so it reaches these clones as well (D35).
 			// Nested ifs, not `&`: Eidos does not short-circuit, and getValue() on a missing
 			// key returns NULL, which cannot be compared.
 			if (!is_mda)
@@ -2161,7 +2161,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 					if (bs >= sim.cycle)
 						next;
 			}
-			// MDA reaching a holder (D44): the drugs clear it as they would a patent clone, and its
+			// MDA reaching a holder (D35): the drugs clear it as they would a patent clone, and its
 			// recrudescence goes with it. A holder that survives keeps its schedule: it is not
 			// suppressed again, and no event is logged for it.
 			if (lin.getValue("is_subpatent"))
@@ -2186,7 +2186,7 @@ function (void) applyTreatment(o<Subpopulation>$ h, l$ give_liver, s$ src)
 					// Suppressed below patency. The re-expansion is scheduled once, here, as a
 					// course is, at least one day away, so a clone cannot re-expand on the tick it
 					// was suppressed (addCloned also refuses a parent minted in the same tick):
-					// geometric with mean MEAN_RECRUD_DELAY by default (D32), 1 + Poisson(mean - 1)
+					// geometric with mean MEAN_RECRUD_DELAY by default (D34), 1 + Poisson(mean - 1)
 					// for "poisson", round(mean) days for "fixed".
 					lin.setValue("is_subpatent", T);
 					if (RECRUD_DELAY_DIST == "geometric")
@@ -2290,7 +2290,7 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 }
 
 // -----------------------------------------------------------
-// D17: IMPORT SEEDING, and the one-tick deferral of the second compartment.
+// D38: IMPORT SEEDING, and the one-tick deferral of the second compartment.
 //
 // Imports are seeded here, in early(), not in reproduction(), which SLiM calls once per
 // EXISTING individual: with zero parasites alive it never runs, so an import seeded there
@@ -2304,7 +2304,7 @@ function (integer$) drawZTCount(fi$ lambda, [fi$ k = 0.0])
 // NEXT_SCRATCH_SUBPOP burns one id per import-tick.
 //
 // One inoculation delivers ONE sporozoite population, so the blood-stage infection and
-// the hypnozoite batch must be the SAME genome, not two unrelated roots (D17). A genome
+// the hypnozoite batch must be the SAME genome, not two unrelated roots (D38). A genome
 // minted this tick cannot be cloned until it is visible ("parent must be visible in a
 // subpopulation"), so when an import takes in both compartments the second is queued and
 // cloned next tick by the drain in reproduction(). The migrated genome takes whichever
@@ -2375,7 +2375,7 @@ function (void) seedImports(o<Subpopulation> import_hosts)
 			asString(g.getValue("lineage_id")), "NA", "NA", 0, 0.0, "human",
 			as_batch ? 1 else 0, 1,
 			g.pedigreeID,
-			-1,                            // D17: logged parent stays -1. The ARG records the
+			-1,                            // D38: logged parent stays -1. The ARG records the
 			-1,                            // primary->batch clone edge, but NOTHING inside the
 			                               // simulation is the parent of an import, and writing
 			                               // the primary here would let anyone reconstructing
@@ -2435,7 +2435,7 @@ function (integer) establishInfectionOutcome(
 	inf_brood  = source.getValue("brood_id");
 
 	has_primary = (runif(1) < P_PRIMARY);
-	// read by inoculateMosquitoToHuman(): only a bite that makes a blood stage is a case (D36)
+	// read by inoculateMosquitoToHuman(): only a bite that makes a blood stage is a case (D29)
 	defineGlobal("LAST_HAS_PRIMARY", has_primary);
 	has_batch   = (batch_size > 0);
 	
@@ -2536,7 +2536,7 @@ function (integer) establishInfectionOutcome(
 // brood_ready_tick, the end of a mosquito product's EIP (tagMosqProduct()), is NULL in a host.
 // x, y and z are 0, as for a mosquito product: SLiM writes them into the tree sequence's individuals
 // table even in a non-spatial model and leaves them undefined until set, so without this that
-// table could differ between two runs of one seed (D77).
+// table could differ between two runs of one seed (D7).
 function (void) setHostGenome(o<Individual>$ g, i$ birth, i$ lineage, i$ oocyst, i$ brood,
 	l$ founder, i$ inoc_tick, i$ inoc_id, l$ imported, Ni$ activation, i$ batch, s$ color)
 {
@@ -2586,7 +2586,7 @@ function (void) setHostClone(o<Individual>$ g, o<Individual>$ parent, Ni$ activa
 }
 
 // set the standard tags on a freshly-created mosquito-stage oocyst product, with x, y and z 0 as in
-// setHostGenome() (D77).
+// setHostGenome() (D7).
 function (void) tagMosqProduct(o<Individual>$ prod, i$ lineage, i$ oocyst, i$ brood, s$ color, [f$ spz_weight = 1.0])
 {
 	prod.x = 0.0;
@@ -2623,7 +2623,7 @@ function (integer$) seedSelfedOocyst(o<Subpopulation>$ m, o<Individual>$ parent,
 }
 
 // OUTCROSSING oocyst - a full meiotic TETRAD of 4 haploid products sharing one oocyst_id, by
-// per-chromosome four-strand meiosis (D34, D41). The zygote's two genomes replicate into four
+// per-chromosome four-strand meiosis (D14). The zygote's two genomes replicate into four
 // chromatids per chromosome (two from each parent). Chiasmata fall at a Poisson(2d) set of points
 // per bivalent, the union of two gamete-rate draws, so that each product keeps the map length d;
 // each chiasma joins a chromatid carrying parent1's sequence there and one carrying parent2's,
@@ -2816,7 +2816,7 @@ function (integer) inoculateMosquitoToHuman(
 	// One bite is ONE episode, so one detection draw and at most one course - even when the
 	// bite delivered several genotypes. Drawing per genotype let a single bite be "detected
 	// and treated" for one of its genotypes and not the other. A bite that seeds only
-	// hypnozoites makes no blood stage, so it is no case and gets no course (D36).
+	// hypnozoites makes no blood stage, so it is no case and gets no course (D29).
 	if (det == 1 & any_primary)
 		decideTreatment(h);
 	if (getTransmissibleLineageCount(h) > 0)
