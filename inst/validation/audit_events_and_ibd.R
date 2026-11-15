@@ -44,11 +44,9 @@ audit_run <- function(tag, params, seed = 1) {
   ## inoculation_id groups co-inoculated genotypes of ONE bite, and is unique across the run
   inoc <- ev[inoculation_id > 0]
   if (nrow(inoc)) {
-    ## D17: this used to assert "1 tick, 1 host". One host still holds everywhere, but an
-    ## IMPORT's two compartments now land on CONSECUTIVE ticks - the hypnozoite batch cannot
-    ## be cloned from the blood-stage genome until that genome is visible, which is the tick
-    ## after it arrives. Local bites are unaffected: their source already exists, so both
-    ## compartments are still created in one callback.
+    ## One bite or import, one host (D17). A local bite's two compartments share a tick; an
+    ## import's hypnozoite batch lands the tick after its blood-stage genome, from which it is
+    ## cloned once that genome is visible.
     per <- inoc[, .(ticks = uniqueN(tick), span = max(tick) - min(tick),
                     hosts = uniqueN(human_id),
                     imported = any(grepl("import", event_type))), by = inoculation_id]
@@ -94,9 +92,8 @@ audit_run <- function(tag, params, seed = 1) {
   ## ---- CONSERVATION: blood-stage episodes ----
   ## every way an episode can end (natural, case treatment, MDA) - from the public dictionary
   .clearers <- event_types()$event_type[event_types()$ends_episode]
-  ## BOTH sides of the vocabulary now come from the dictionary. The clearer side already did;
-  ## the onset side was hard-coded and would have missed `recrudescence`, leaving every
-  ## naturally-cleared recrudescent episode as an orphan clearance.
+  ## Both onsets and clearers come from the dictionary, so every kind of episode, recrudescent
+  ## ones included, is paired with its end.
   onset <- ev[event_type %in% event_types()$event_type[event_types()$is_onset] &
                 is_dormant == 0, pedigree_id]
   clear <- ev[event_type %in% .clearers, pedigree_id]

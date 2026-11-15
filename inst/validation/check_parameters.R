@@ -239,11 +239,9 @@ mu_res <- mean_reservoir("muhigh", MU_HYPNOZOITE = 1/60)
 bl_res <- mean_reservoir("base")
 ok("high hypnozoite death -> smaller reservoir than baseline",
    mu_res < bl_res, sprintf("%.2f vs %.2f (3-seed means)", mu_res, bl_res))
-## 3-seed, for the same reason mean_reservoir() exists: single-seed this comparison was a
-## near coin flip (measured 5 of 6 seeds in the right direction on the pre-fence model), so a
-## shifted RNG stream flipped it with no change in the underlying behaviour. Over 3 seeds the
-## effect is unambiguous - weak 0.50 against strong 0.12, 6 of 6 seeds - and the check now
-## measures radical-cure efficacy rather than which stream it drew.
+## Over 3 seeds, for the same reason mean_reservoir() exists: from one seed this comparison is
+## close to a coin flip. Over 3 seeds the effect is clear, so the check measures radical-cure
+## efficacy rather than which random stream it drew.
 rc_weak   <- mean_reservoir("rcw", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
                             RADCURE_COVERAGE = 0.9, P_RAD_SURVIVAL = 0.8)
 rc_strong <- mean_reservoir("rcs", TREATMENT_START = 100L, BLOODCURE_COVERAGE = 1,
