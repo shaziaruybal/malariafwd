@@ -35,7 +35,7 @@ reference:
   desc: >
     malariafwd runs the external program SLiM, and reads the tree sequence with Python's
     tskit. Check what the package finds before anything else.
-  contents: [check_setup, slim_available, slim_version, slim_model, tskit_available]
+  contents: [check_setup, slim_available, slim_model, tskit_available]
 
 - title: Configure and run
   desc: >

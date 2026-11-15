@@ -25,6 +25,18 @@ refer to paths from the prototype that preceded it.
 
 ---
 
+## D80 — slim_version() is internal · 2026-11-15 · Accepted
+**Context.** `slim_version()` gave the installed SLiM's version. `check_setup()` shows that version
+with SLiM's path, every run records the version it ran on (`load_run()$slim_version`), and the
+package uses it only to refuse a SLiM older than 5.2.
+**Decision.** `slim_version()` is internal, as `slim_path()` is (D76).
+**Rationale.** A user who wants the version has `check_setup()`, and a methods section needs the
+version a run recorded; an export that repeats them is plumbing (D76).
+**Consequences.** Runs are unchanged. The package exports 49 functions.
+**How to verify.** `tests/testthat/test-exports.R` lists the exports exactly.
+
+---
+
 ## D79 — A sequenced tetrad supports meiosis I pairing, and shows the gene conversion the model leaves out · 2026-11-13 · Accepted
 **Context.** D41 chose meiosis I as canonical meiosis, with no Plasmodium evidence for its pairing.
 Nkhoma et al. (2020) sequenced P. falciparum infections cell by cell and captured one complete

@@ -42,11 +42,8 @@ slim_available <- function() nzchar(Sys.which(slim_path()))
   invisible(v)
 }
 
-#' SLiM version string
-#' @return the version (e.g. `"5.2"`) or `NA` if SLiM is not found.
-#' @examples
-#' slim_version()   # NA without SLiM
-#' @export
+## The SLiM binary's version (e.g. "5.2"), or NA if SLiM is not found. check_setup() shows it, and
+## every run records the version it ran on (load_run()$slim_version).
 slim_version <- function() {
   if (!slim_available()) return(NA_character_)
   out <- tryCatch(processx::run(slim_path(), "-v")$stdout, error = function(e) "")
