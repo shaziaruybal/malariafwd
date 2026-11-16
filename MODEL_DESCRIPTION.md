@@ -267,7 +267,7 @@ not those lineages are infectious (at `SUBPATENT_INFECTIVITY = 0` subpatent clon
 check comes before the bite's `P_TRANS_VH` draw, and counts the clones the host gained earlier the
 same day, by a relapse or a bite. **Relapses bypass the gate entirely**, so realised MOI can exceed
 it; so can a bite that delivers several genotypes, which the gate admits whole, and a founder host's
-copy of another founder's genome, which arrives on day 2 after that day's bites (§8). At 20 it is a
+copy of another founder's genome (D40). At 20 it is a
 runaway guard that essentially never binds (COI is typically 1–3); set it low and you are measuring
 the cap, not the biology.
 
@@ -655,10 +655,9 @@ and resurgence multipliers and with `N_IMPORTS_PER_TICK`, draws more than `N_HOS
 day with probability above 0.01. Imports arrive in `early()`, which first runs on
 day 1: a pulse can fall on any day from 1 to `SIM_DAYS`, and a window brings imports on its days
 from `max(1, IMPORT_START)` to `min(IMPORT_END − 1, SIM_DAYS)`; a pulse or window outside the run
-brings nothing. A day-1 pulse lands alongside the founders, with one difference from other days:
-a founder host that carries a copy of another founder's genome
-(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`) receives its copy on day 2, so on day 1 it is still
-empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries both (D40). A naive population
+brings nothing. A day-1 pulse lands alongside the founders, with one difference from other days: a founder host
+that carries a copy of another founder's genome is still empty on day 1, so it takes an import
+even at `MAX_MOI = 1` (D40). A naive population
 seeded only by imports is `N_FOUNDER_HOSTS = 0` with an import path on a day of the run.
 
 **Limitation:** imported genotypes are drawn as unrelated founders — there is no structured source
@@ -717,9 +716,8 @@ is planned (the [roadmap](https://shaziaruybal.github.io/malariafwd/ROADMAP.html
   not: a clone that became patent earlier that day (the day's imports arrive after the round,
   §2.1), and a **subpatent** clone, which it clears with probability 1 − `P_BLOODCURE_SURVIVAL`,
   cancelling its recrudescence (`mda_subpatent_clear`); a subpatent clone that survives keeps its
-  schedule (D35). When a founder host carries a copy of another founder's genome
-  (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`), the round comes on day 2 or later, since the copy is
-  seeded on day 2 (D40). Unlike case-based treatment it is **not** gated on `TREATMENT_START` /
+  schedule (D35). A round comes on day 2 or later when a founder host carries a copy of another
+  founder's genome (D40). Unlike case-based treatment it is **not** gated on `TREATMENT_START` /
   `TREATMENT_END`.
 - **Resurgence triggers** from `RESURGENCE_TRIGGER_TICK`: multiplicative boosts on biting
   (`BITING_RATE_BOOST`), activation (`ALPHA_ACTIVATE_BOOST`), batch size
@@ -842,13 +840,10 @@ and `?vivax_params` lists them too. The conventions behind the columns:
 | **the caps** | several sizes are capped far above anything realistic, so a cap binds only on an absurd value |
 | **derived** | `GENOME_LENGTH`, `N_CHROMOSOMES` and `RECOMB_WITHIN` are computed rather than set, and written to `params.tsv` for provenance |
 
-Three rules span parameters rather than sit in one row:
+Two rules span parameters rather than sit in one row:
 
 - **Day 99999** is what the defaults use for "never". A run that reaches it has to move those days
   past its end, and nothing can be scheduled on day 99999 itself.
-- **`MDA_TICK` is not 1** when a founder host carries a copy of another founder's genome
-  (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): those copies are seeded on day 2 (D40), so a round
-  comes on day 2 or later (D35).
 - **A founder-free run** whose imports never establish a parasite, by chance or because its
   settings let none take, is not refused; it ends as never started (§2).
 

@@ -349,9 +349,7 @@ in `early()`, after the day's bites, so its check finds them among the host's cl
 host whose only clones arrived that day is inoculated like any other: only the mosquito's uptake
 needs a clone the host already shows, and with none it is skipped without a draw. Relapses bypass
 the gate, so realised MOI can exceed `MAX_MOI`; so can a bite that delivers several genotypes, which
-is admitted whole, and a founder host whose genome is a copy of another founder's, since the copy
-arrives on day 2 after that day's bites and so counts against neither a day-1 import (D40) nor a
-day-2 bite. A refused import is logged as `vh_inoculation_import_no_take`; a refused bite leaves no
+is admitted whole, and a founder host whose genome is a copy of another founder's (D40). A refused import is logged as `vh_inoculation_import_no_take`; a refused bite leaves no
 row. `MAX_MOI` is at least 1, in `vivax_params()` and in the model's `initialize()`.
 
 **Why.** `MAX_MOI` is about parasite burden, not about what a microscope or a mosquito can see, so
@@ -1189,8 +1187,8 @@ probability 1 − `P_BLOODCURE_SURVIVAL`, cancelling its recrudescence. A cleare
 `mda_subpatent_clear`, which ends no episode, since its patent span ends at its suppression; a
 holder that survives keeps its schedule and is not suppressed again. A patent clone that survives
 the round persists or is suppressed as under a case course. `MDA_TICK = 1` is refused when a founder
-host carries a copy of another founder's genome, which is seeded on day 2 (D40): a day-1 round could
-clear the template before the copy is made.
+host carries a copy of another founder's genome (D40): a day-1 round could clear the template
+before the copy is made.
 
 **Why.** One course for both paths means the two cannot diverge. Coverage is the whole policy
 question for MDA, what separates a feasible campaign from an idealised one; without it an imperfect
