@@ -247,8 +247,7 @@ simulate_genotypes <- function(run, ids, loci, sample_id = NULL, error = 0, miss
     res <- list(root_id = integer(), root_tick = integer(), roots = matrix(integer(), 0L, nrow(lo)), missing = integer())
   } else {
     .require_python("simulate_genotypes()")
-    tf <- trees_path(r)
-    if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
+    tf <- .trees_file(r)
     m <- .py_module("_malariafwd_genotypes", .genotypes_py)
     res <- reticulate::py_to_r(m$gt_roots(tf, as.list(u), as.list(lo$position)))
   }
