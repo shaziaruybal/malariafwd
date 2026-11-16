@@ -1192,7 +1192,7 @@ works through every file above on a real run.
 | `pedigree_id` | one SLiM individual = one genome; many per lineage |
 | `lineage_id` | genetic identity / clonal group; propagates through clonal and selfed descent (and through an outcrossed product with no switch, a whole copy of its parent); recombinants mint a fresh one. **COI counts distinct `lineage_id`** |
 | `oocyst_id` | one meiosis / tetrad, ≤ 4 lineages |
-| `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst |
+| `brood_id` | one blood meal's co-hatching group, ≥ 1 oocyst; **internal only**, never written to an output |
 | `inoculation_id` | one bite or one import |
 
 ### 14.1 `events.tsv` data dictionary
@@ -1274,7 +1274,9 @@ and both are deliberate:
 
 Consequently **recombinant ancestry is not reconstructable from `events.tsv`**: lineages are
 created only by `vh_inoculation_seed`, `vh_inoculation_import`, and recombination, and the
-third of those does not report its output. Use `pedigree_id`, which is tskit-native and
+third of those does not report its output. The four ids do exist: `seedTetrad()` assigns them, and
+they appear in `state.tsv` as soon as the mosquito carries them, a brood reading `156|157|158|159`.
+For an analysis, use `pedigree_id`, which is tskit-native and
 unique per genome, and take ancestry from the tree sequence — walking each sample's local-tree
 root across the genome gives its exact founder mosaic, the `roots` matrix of
 `simulate_genotypes()` (§14.4). Analyses keyed on `lineage_id` will silently drop every recombinant.
@@ -1322,21 +1324,6 @@ has caught someone out:
 - **Values are unique()d**, so the number of ids is a count of distinct *lineages*, not of
   genomes. A selfed oocyst's four identical products appear as one id. This is consistent with
   `moi_active`, which is also a lineage count.
-
-**The model tracks three different groupings; only two are exported.**
-
-| id | groups | where it appears |
-|---|---|---|
-| `lineage_id` | genomes that are genetically identical (a clonal group) | `events.tsv`; `state.tsv` as `lineage_ids` |
-| `oocyst_id` | the products of one meiosis — a tetrad's four siblings | `events.tsv` |
-| `brood_id` | the oocysts co-hatching from one blood meal | **internal only**, never written to any output |
-
-**Tetrad product lineages are recorded, despite the `NA` in the event row.** §14.1 notes that
-`hv_uptake_recombinant` logs `lineage_id = NA` because one row cannot name four products. Those
-four ids are nonetheless assigned by `seedTetrad()` and show up in `state.tsv` as soon as the
-mosquito carries them: a brood of `156|157|158|159` is four fresh recombinant lineages. So the
-per-product identities are observable — they are simply in `state.tsv` rather than at the moment
-of creation in `events.tsv`.
 
 ### 14.3 Computational cost
 
