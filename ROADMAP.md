@@ -31,7 +31,7 @@ The extensions planned for later versions, each with the reason for it.
 
 | extension | motivation |
 |---|---|
-| **Genotyping each hypnozoite independently of the inoculated primaries** | at present a bite's hypnozoites are clones of the genotypes it brings to the blood, so the reservoir is a subset of the blood-stage infection and heterologous relapse can only arise across separate bites; this change makes it emergent. **The highest-priority change to the model.** |
+| **Genotyping each hypnozoite independently of the inoculated primaries** | at present a bite's hypnozoites are clones of the genotypes it brings to the blood, so the reservoir is a subset of the blood-stage infection; this change makes it emergent. **The highest-priority change to the model.** |
 | Structured import source pool | currently imports are unrelated founders, so import detection is an upper bound |
 | Post-treatment prophylaxis | a course leaves no period of drug protection, so a treated host can be reinfected or relapse the next day, which overstates recurrence after treatment (section 11 of the model description); planned, with protection that wanes after each course |
 | Calibration of the treatment and recurrence machinery | including a chloroquine-resistant setting, in which recrudescence is material rather than negligible |

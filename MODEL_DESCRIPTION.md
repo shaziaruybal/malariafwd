@@ -374,7 +374,10 @@ so two batches of one lineage that wake together, with no earlier clone of it in
 
 > **Structural consequence worth stating explicitly.** Because the batch is divided among the
 > genotypes that establish primaries, and `P_PRIMARY` = 1, **reservoir genotypes are a subset of
-> blood-stage genotypes**. Heterologous relapse can therefore only arise across separate bites.
+> blood-stage genotypes**: no relapse can raise a genotype the host's blood did not carry at that
+> bite. A bite that delivers several genotypes seeds hypnozoites of each of them, so a relapse can
+> differ genetically from the clone it follows without a second bite; at `LAMBDA_SPOROZOITES` = 0,
+> one genotype a bite, that needs separate bites.
 > This is a known limitation; see assumption 5 in §11 and the first entry in the
 > [roadmap](https://shaziaruybal.github.io/malariafwd/ROADMAP.html).
 
@@ -1029,7 +1032,7 @@ Stated plainly, because several matter for interpretation.
 | 2 | **No liver-stage delay** | blood stage starts at inoculation; recurrence-interval distributions are shifted ~9 d early |
 | 3 | **Neutral genome, zero mutation** | no selection, no drug resistance, no sequence divergence; IBD is exact |
 | 4 | **Fixed vector population, fixed EIP** | no larval ecology, no temperature dependence, no vector fitness cost of burden |
-| 5 | **A bite's hypnozoites are clones of the genotypes it brings to the blood** | reservoir ⊆ blood-stage genotypes, so heterologous relapse arises only across separate bites |
+| 5 | **A bite's hypnozoites are clones of the genotypes it brings to the blood** | reservoir ⊆ blood-stage genotypes, so no relapse raises a genotype the host's blood never carried; with co-transmission one bite can still seed several of them |
 | 6 | **Equal oocyst productivity** | every oocyst contributes weight 4; real oocysts vary (~1,500–5,000 sporozoites) |
 | 7 | **Gametocyte pool = infection counts** | outcrossing draws uniformly over *Individuals*; real outcrossing depends on each clone's gametocyte **density**, governed by replication and immunity |
 | 8 | **Within-host densities not modelled** | no competition between clones, no density-dependent detectability |
