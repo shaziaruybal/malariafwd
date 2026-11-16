@@ -1495,11 +1495,11 @@ R accepts is never refused there; its messages give a float to 15 significant di
 string. Not repeated: a misspelt name, which SLiM defines as a constant the model never reads; the
 limits on what text can carry (UTF-8, no control characters) and on numbers below 1e-300; and a
 `SIM_DAYS` outside 2 to 1e9, not finite or not a single value, which SLiM refuses itself while it
-reads the tick ranges, before `initialize()` runs, in a message that does not name `SIM_DAYS`.
-Because `-d X=7` makes an Eidos integer where `-d X=7.0` makes a float, and Eidos will not mix the
-two in `rbinom()`, `min()`, `seqLen()`, `setSeed()`, subsetting or a tick range, the model converts
-each parameter to the type it needs (`asInteger()`, `asFloat()`) at each such use, so either
-spelling gives the same run.
+reads the tick ranges, before `initialize()` runs (so the model's own `SIM_DAYS < 2` check is never
+reached), in a message that does not name `SIM_DAYS`. Because `-d X=7` makes an Eidos integer where
+`-d X=7.0` makes a float, and Eidos will not mix the two in `rbinom()`, `min()`, `seqLen()`,
+`setSeed()`, subsetting or a tick range, the model converts each parameter to the type it needs
+(`asInteger()`, `asFloat()`) at each such use, so either spelling gives the same run.
 
 **Why.** A direct run is the one place where a typo cannot be caught in R, and each of these values
 would otherwise start a run that means something else, as `RADCURE_MODE = 'Person'` would run the
