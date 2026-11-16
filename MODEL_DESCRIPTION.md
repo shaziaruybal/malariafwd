@@ -822,43 +822,37 @@ chloroquine or artesunate. The state is only material in a chloroquine-resistant
 
 ## 10. Parameters
 
-Time is in days (one tick is one day). A duration parameter D is the mean of a geometric
-duration: the event happens each day with probability 1/D. The treatment delay
-(`TREATMENT_DELAY`) and, under the default `RECRUD_DELAY_DIST = "geometric"`, the recrudescence
-delay (`MEAN_RECRUD_DELAY`) follow the same rule from the day after the case or the suppression,
-so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates
-(`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities; a
-mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence multipliers
-is capped at 1.
-`vivax_params()` refuses values the model cannot run (D42). Each value is a number, `T`/`F` or a
-string, as its default is; numbers are finite, and strings are UTF-8 text without control
-characters. Counts, `SIM_DAYS`, the scheduling days (`MDA_TICK`, `IMPORT_TICK`,
-`RESURGENCE_TRIGGER_TICK`, the `*_START`/`*_END` bounds) and the fixed delays are whole numbers;
-mean durations, rates and `SEASONAL_PHASE` need not be. Probabilities and coverages,
-`ALPHA_ACTIVATE` and `INTERVENTION_EFFICACY` lie in [0, 1], `MU_HYPNOZOITE` in (0, 1], and
-`DELTA_LATENCY` in (0, 1] when `K_LATENCY` > 0; `BITING_RATE` is positive (above 1 it only warns);
-boosts, import rates, λ values, `SEASONAL_AMP` and counts are non-negative, and `MAX_MOI` is at
-least 1. A few sizes are capped far above anything realistic: a mean of 1000 oocysts per
-successful uptake, with `K_OOCYSTS` 0 or at least 0.001; `LAMBDA_SPOROZOITES` ≤ 1000; the
-hypnozoite batch mean ν ≤ 10⁶, and ν × boost ≤ 10⁶ once the trigger falls inside the run; at most
-10⁶ imports a day; and `TREATMENT_DELAY` and `MEAN_RECRUD_DELAY` ≤ 10⁶ days. `SIM_DAYS` is at most
-10⁹, SLiM's last tick, and a run that reaches day 99999, which the defaults use for "never", must
-move those days past its end and cannot schedule anything on day 99999 itself. `MDA_TICK` is not 1
-when a founder host carries a copy of another founder's genome
-(`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): the copies are seeded on day 2 (D40), so a round comes
-on day 2 or later (D35). A founder-free run whose imports never establish a parasite, by chance or
-because its settings let none take, is not refused; it ends as never started (§2). A run started
-directly with `slim -d` makes the same value checks, apart from a few that D43 lists.
-λ values are **pre-truncation rates**; `GENOME_LENGTH`, `N_CHROMOSOMES`, `RECOMB_WITHIN` are
-derived and written to `params.tsv` for provenance.
-
 Every parameter, by group, with its default, unit, the values it may take and what it means,
 generated from the package's parameter dictionary; in R, `param_info()` gives the same as a table,
-and `?vivax_params` lists them too. Vector control scales biting only (D37) and does not gate
-treatment, which has its own window (D30); treatment is decided where a case arises and applied to
-the host, and radical-cure failure is per person (D31); a course lands at least a day after its case
-(D32); an MDA round is drawn per host and reaches subpatent clones (D35); and the
-recrudescence delay is a literature assumption (D32, D34).
+and `?vivax_params` lists them too. The conventions behind the columns:
+
+| convention | what it means |
+|---|---|
+| **time** | days throughout; one tick is one day |
+| **a duration** | the mean of a geometric duration: the event happens each day with probability 1/D. `TREATMENT_DELAY` and, under the default `RECRUD_DELAY_DIST = "geometric"`, `MEAN_RECRUD_DELAY` run from the day after the case or the suppression, so each is at least a day |
+| **a fixed delay** | `EIP_DAYS` and `GAMETOCYTE_DELAY` are exact, neither distributed nor temperature-dependent |
+| **a rate** | `BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE` and `DELTA_LATENCY` are daily probabilities |
+| **λ values** | pre-truncation rates, not the mean counts a feeding study reports (§6.1) |
+| **a value's type** | a number, `T`/`F` or a string, as its default is; numbers are finite, and strings are UTF-8 text without control characters |
+| **the `allowed` column** | what `vivax_params()` accepts, which is everything the model can run (D42); a run started directly with `slim -d` makes the same checks, apart from a few that D43 lists |
+| **the caps** | several sizes are capped far above anything realistic, so a cap binds only on an absurd value |
+| **derived** | `GENOME_LENGTH`, `N_CHROMOSOMES` and `RECOMB_WITHIN` are computed rather than set, and written to `params.tsv` for provenance |
+
+Three rules span parameters rather than sit in one row:
+
+- **Day 99999** is what the defaults use for "never". A run that reaches it has to move those days
+  past its end, and nothing can be scheduled on day 99999 itself.
+- **`MDA_TICK` is not 1** when a founder host carries a copy of another founder's genome
+  (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): those copies are seeded on day 2 (D40), so a round
+  comes on day 2 or later (D35).
+- **A founder-free run** whose imports never establish a parasite, by chance or because its
+  settings let none take, is not refused; it ends as never started (§2).
+
+Vector control scales biting only (D37) and does not gate treatment, which has its own window
+(D30); treatment is decided where a case arises and applied to the host, and radical-cure failure
+is per person (D31); a course lands at least a day after its case (D32); an MDA round is drawn per
+host and reaches subpatent clones (D35); and the recrudescence delay is a literature assumption
+(D32, D34).
 
 <!-- BEGIN parameter tables: generated from R/param-dictionary.R by dev/update-doc-tables.R; edit the dictionary, not this block -->
 
