@@ -471,18 +471,16 @@ it is not rolled as a coin flip. This reproduces P(outcross) = 1 − Σpᵢ² as
 the correct pairing P(i,j) ∝ pᵢpⱼ (Wong et al. 2018); rolling outcrossing first and then picking two
 distinct lineages would give the marginal but not the pairing.
 
-> `computeOutcrossingProb()` (Simpson's index of the pool) is **logged only**, as the `p_outcross`
-> column, and drives nothing.
-
 **Meiosis.** An outcrossed oocyst yields a full **tetrad** by per-chromosome four-strand meiosis
 (D14): the zygote's two genomes replicate into four chromatids per chromosome, and each chiasma
 joins a chromatid carrying one parent's sequence with one carrying the other's, both chosen at
 random. Meiosis I sends the two chromatids that carry the same parent at a chromosome's centromere
 to the same pole, drawn independently for each chromosome, and meiosis II gives one to each product
 of that pole; so the four products form two pairs of meiosis II sisters, the same pairs on every
-chromosome. Every product carries the full map of crossovers. On the full 14-chromosome map none
-is a copy of a parent; with a `CHROMOSOMES` subset or a small `RECOMB_RATE`, a product with no
-switch is a copy of its parent and keeps that parent's lineage. A selfed oocyst
+chromosome — consistent with the tetrad recombination described in single-cell sequencing work
+(Nkhoma et al. 2020; §6.2). Every product carries the full map of crossovers. On the full
+14-chromosome map none is a copy of a parent; with a `CHROMOSOMES` subset or a small `RECOMB_RATE`,
+a product with no switch is a copy of its parent and keeps that parent's lineage. A selfed oocyst
 yields four identical products, stored as **one** object with `spz_weight = 4` — a storage
 optimisation that keeps object count from scaling with clonal output, corrected for at sampling.
 
