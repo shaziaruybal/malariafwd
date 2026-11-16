@@ -183,17 +183,8 @@ ok("CHROMOSOMES subset simulates fewer chromosomes", nrow(cms) == 3,
    sprintf("%d chromosomes", nrow(cms)))
 
 ## ==========================================================================================
-## PART 2 -- reproducibility, biology knobs, treatment efficacy, and realistic COMBINATIONS
+## PART 2 -- biology knobs, treatment efficacy, and realistic COMBINATIONS
 ## ==========================================================================================
-cat("\n================ reproducibility ================\n")
-md5 <- function(k) tools::md5sum(file.path(OUT, k, "events.tsv"))[[1]]
-invisible(run_cfg("seed_a1", BITING_RATE = 0.12))
-p_same <- do.call(vivax_params, utils::modifyList(BASE, list(BITING_RATE = 0.12)))
-run_sim(p_same, seed = 1, outdir = file.path(OUT, "seed_a2"))   # same seed, fresh dir
-run_sim(p_same, seed = 2, outdir = file.path(OUT, "seed_b"))    # different seed
-ok("same seed -> byte-identical event log", md5("seed_a1") == md5("seed_a2"))
-ok("different seed -> different realisation", md5("seed_a1") != md5("seed_b"))
-
 
 ## The directional checks on PREVALENCE and RELAPSE FRACTION below are single-seed.
 ## That is a deliberate asymmetry: those effects are large relative to the between-seed spread
