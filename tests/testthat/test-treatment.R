@@ -28,8 +28,8 @@ test_that("treatment is driven by coverage alone, not by the vector-control wind
 
 test_that("the vector-control window does not switch treatment on", {
   skip_if_no_slim()
-  ## ...and conversely: opening the intervention window must change transmission without
-  ## producing a single treatment, or the two are still entangled.
+  ## ...and conversely: the intervention window scales biting only, so opening it changes
+  ## transmission without producing a single treatment.
   vc <- run_counts(shared(INTERVENTION_START = 1L, INTERVENTION_END = 120L,
                           INTERVENTION_EFFICACY = 0.9), "vc")
   expect_equal(vc$bloodcure, 0)
@@ -38,8 +38,8 @@ test_that("the vector-control window does not switch treatment on", {
 
 test_that("the case-management window bounds WHEN treatment happens", {
   skip_if_no_slim()
-  ## Deliberately an assertion about TIMING, not about counts. Since treatment became
-  ## host-level it suppresses transmission hard enough that an always-open window can
+  ## Deliberately an assertion about TIMING, not about counts. A course clears every patent clone
+  ## its host carries, which suppresses transmission hard enough that an always-open window can
   ## produce FEWER courses than a late one - it prevents the cases it would have treated.
   out <- tempfile("mfw-tx-window")
   unlink(out, recursive = TRUE)

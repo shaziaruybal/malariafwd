@@ -327,8 +327,9 @@ does not already refuse.
 
 **How to check.** `tests/testthat/test-run.R` checks, with founders only, that clones last a
 geometric time with the parameter's mean and that none is forced to clear at a set age.
-`tests/testthat/test-params.R` refuses a mean below 1 or an infinite one, and
-`tests/testthat/test-slim.R` a mean below 1 in a run started directly with `slim -d`.
+`tests/testthat/test-params.R` and `tests/testthat/test-param-dictionary.R` refuse a mean below 1 or
+an infinite one, and `tests/testthat/test-slim.R` a mean below 1 in a run started directly with
+`slim -d`.
 
 ### D10 — One superinfection gate for every new inoculation, counting the clones a host gained that day
 
@@ -825,8 +826,8 @@ binds it bends exactly that tail, and `MU_HYPNOZOITE > 0` already ends every bat
 **How to check.** `tests/testthat/test-model-invariants.R`, `inst/validation/audit_events_and_ibd.R`
 and `inst/validation/check_parameters.R` check that no batch draws more hypnozoites than it held,
 which a batch left in place after running out would do; the audit also checks that the hypnozoites
-left unresolved equal the final reservoir in `state.tsv`; `tests/testthat/test-params.R` and
-`tests/testthat/test-slim.R` refuse `MU_HYPNOZOITE = 0`.
+left unresolved equal the final reservoir in `state.tsv`; `tests/testthat/test-param-dictionary.R`
+and `tests/testthat/test-slim.R` refuse `MU_HYPNOZOITE = 0`.
 
 ### D25 — Latent hypnozoites die, and a batch moves through latency as one unit
 
@@ -847,9 +848,9 @@ compartment and track latency per infection, which is why the batch moves as one
 **How to check.** `tests/testthat/test-run.R` imports 300 infections at `K_LATENCY = 2`, with no
 onward transmission, runs until every batch has resolved, and checks the share of hypnozoites that
 activated against the formula above; it also checks that latent deaths in imported batches carry
-`is_imported = 1`. `tests/testthat/test-params.R` refuses `DELTA_LATENCY = 0` at `K_LATENCY = 2`,
-and `inst/validation/check_parameters.R` checks that temperate latency delays each batch's first
-relapse.
+`is_imported = 1`. `tests/testthat/test-param-dictionary.R` refuses `DELTA_LATENCY = 0` at
+`K_LATENCY = 1`, and `inst/validation/check_parameters.R` checks that temperate latency delays each
+batch's first relapse.
 
 ### D26 — A relapse into a patent clone of its own lineage is counted like any other, and flagged
 
@@ -1230,12 +1231,12 @@ transmission-season day would be a quarter of a year out. The import rate follow
 travel, or transmission where the travellers pick up their infections, can follow the same season as
 local biting.
 
-**How to check.** `tests/testthat/test-params.R`: `vivax_params()`, which works the factor out as
-the model does, puts the import-rate and biting peaks on `SEASONAL_PHASE` (day 100 at
-`SEASONAL_PHASE = 100`, and day 3020, eight years on, once a boost starts on day 3000), and refuses
-a negative `SEASONAL_AMP`, as the model does in a run started directly
-(`tests/testthat/test-slim.R`); `tests/testthat/test-edge-values.R`: an amplitude of 1.5 runs to its
-last day.
+**How to check.** `tests/testthat/test-params.R` and `tests/testthat/test-param-dictionary.R`:
+`vivax_params()`, which works the factor out as the model does, puts the import-rate and biting
+peaks on `SEASONAL_PHASE` (day 100 at `SEASONAL_PHASE = 100`, and day 3020, eight years on, once a
+boost starts on day 3000), and refuses a negative `SEASONAL_AMP`, as the model does in a run started
+directly (`tests/testthat/test-slim.R`); `tests/testthat/test-edge-values.R`: an amplitude of 1.5
+runs to its last day.
 
 ### D37 — Vector control scales biting only
 
@@ -1473,13 +1474,13 @@ mean that value, and refusing them would cost sweep cells for nothing. Capping t
 rate is capped where its draw would fail, and a day likely to bring more than `N_HOSTS` imports
 warns.
 
-**How to check.** `tests/testthat/test-params.R` refuses each impossible value with a message that
-names the parameter, and stores the other spellings in SLiM's form;
-`tests/testthat/test-edge-values.R` runs each legitimate edge to the end and checks that the run
-reached the state its guard handles, with the minimum delays in `tests/testthat/test-treatment.R`;
-`tests/testthat/test-model-invariants.R` checks the exact draw's mean and variance against
-`uptake_moments()`; `tests/testthat/test-run.R` runs a set at the edge of the rounding allowance on
-the caps.
+**How to check.** `tests/testthat/test-params.R` (with `tests/testthat/test-param-dictionary.R` for
+the documented bounds) refuses each impossible value with a message that names the parameter, and
+stores the other spellings in SLiM's form; `tests/testthat/test-edge-values.R` runs each legitimate
+edge to the end and checks that the run reached the state its guard handles, with the minimum delays
+in `tests/testthat/test-treatment.R`; `tests/testthat/test-model-invariants.R` checks the exact
+draw's mean and variance against `uptake_moments()`; `tests/testthat/test-run.R` runs a set at the
+edge of the rounding allowance on the caps.
 
 ### D43 — A run started with slim -d makes the same checks and takes either spelling of a number
 

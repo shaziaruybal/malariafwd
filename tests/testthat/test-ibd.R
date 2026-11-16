@@ -325,8 +325,7 @@ test_that("plot_relatedness_ladder(style = \"bars\") keys every band's colour, u
 test_that("plot_ibd_pair() refuses labels that are not one per pair", {
   skip_if_not_installed("ggplot2")
   expect_error(plot_ibd_pair(NULL, 1:3, 4:6, labels = c("x", "y")),
-               "`labels` must give one label per pair, with no NA: there are 3 pairs, and it has 2 values.",
-               fixed = TRUE)
+               "`labels` must give one label per pair.*there are 3 pairs, and it has 2 values")
   expect_error(plot_ibd_pair(NULL, 1:2, 3:4, labels = c("x", NA)), "some NA", fixed = TRUE)
 })
 

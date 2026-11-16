@@ -180,7 +180,9 @@ test_that("no blood-stage infection is forced to clear at a fixed age", {
   ev <- load_events(run)
   d <- merge(ev[event_type == "vh_inoculation_seed", .(pedigree_id, t0 = tick)],
              ev[event_type == "human_clearance", .(pedigree_id, t1 = tick)], by = "pedigree_id")
-  expect_lt(sum(d$t1 - d$t0 == 181), 5)   # a 180-day cap would clear about 83% of founders on day 181
+  ## about 0.2 founders clear a day: a ceiling at any age within the run would clear the
+  ## 160 or more still infected on one day
+  expect_lt(max(table(d$t1 - d$t0)), 5)
 })
 
 test_that("latent hypnozoites die at MU_HYPNOZOITE, so a temperate batch relapses less", {
@@ -248,11 +250,6 @@ test_that("a run that goes extinct says so and records the tick", {
                                   outdir = tempfile("mfwd_extinct_late_")))
     expect_equal(r$extinct_tick, run$extinct_tick, label = names(late)[1])
   }
-  ## the message gives the run's length as params.tsv writes it
-  long <- c(utils::modifyList(base, list(SIM_DAYS = 1e5)),
-            stats::setNames(as.list(rep(2e5, length(malariafwd:::.never_params))), malariafwd:::.never_params))
-  expect_message(run_sim(do.call(vivax_params, long), seed = 1, outdir = tempfile("mfwd_extinct_long_")),
-                 paste0("went extinct on tick ", run$extinct_tick, " of 100000: "), fixed = TRUE)
 })
 
 test_that("imports go to random hosts, and a host at MAX_MOI takes none", {

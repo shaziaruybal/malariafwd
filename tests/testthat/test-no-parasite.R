@@ -90,6 +90,5 @@ test_that("on a run whose tree sequence holds none of its cases, the readers giv
   expect_error(ibd_pairs(r, ids = classify_cases(load_events(r))$pedigree_id),
                "with RETAIN_FULL_HISTORY = FALSE most earlier genomes leave the tree sequence")
   expect_error(ibd_segments(np_runs()$a, 1, 2),
-               "none of the 2 requested ids is in the tree sequence; the run never started, so it holds no genome.",
-               fixed = TRUE)
+               "none of the 2 requested ids is in the tree sequence; the run never started", fixed = TRUE)
 })

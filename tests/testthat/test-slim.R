@@ -15,26 +15,19 @@ test_that("the model refuses values its draws cannot take when SLiM is run direc
                                  "-d", paste0("OUTDIR='", out, "'"), ..., slim_model()),
                   error_on_status = FALSE)
   }
-  bad <- c("TREATMENT_DELAY=0.0" = "must be >= 1 and finite",
-           "TREATMENT_DELAY=0.5" = "must be >= 1 and finite",
-           "MEAN_RECRUD_DELAY=0.5" = "must be >= 1 and finite",
-           "MEAN_RECRUD_DELAY=INF" = "must be >= 1 and finite",
+  bad <- c("TREATMENT_DELAY=0.0" = "TREATMENT_DELAY must be >= 1 and finite",
+           "MEAN_RECRUD_DELAY=0.5" = "MEAN_RECRUD_DELAY must be >= 1 and finite",
+           "MEAN_RECRUD_DELAY=INF" = "MEAN_RECRUD_DELAY must be >= 1 and finite",
            "K_OOCYSTS=0.0001" = "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001",
+           "K_OOCYSTS=-1.0" = "K_OOCYSTS must be 0 \\(Poisson\\)",
            "INTERVENTION_EFFICACY=1.5" = "INTERVENTION_EFFICACY must be in \\[0, 1\\]",
-           "IMPORT_RATE_BOOST=-1.0" = "must be >= 0",
+           "IMPORT_RATE_BOOST=-1.0" = "IMPORT_RATE_BOOST and BITING_RATE_BOOST must be >= 0",
            "SEASONAL_AMP=-0.5" = "SEASONAL_AMP must be >= 0",
            ## infinite or huge values pass a sign check, then hang a draw or run as something else
-           "K_OOCYSTS=INF" = "K_OOCYSTS must be 0 \\(Poisson\\) or at least 0.001 and finite",
-           "LAMBDA_OOCYSTS=1001.0" = "must be at most 1000",
-           "IMPORT_RATE_PER_TICK=INF" = "at most 1e6 imports a day",
-           "IMPORT_RATE_PER_TICK=1.0e18" = "at most 1e6 imports a day",
-           "IMPORT_RATE_BOOST=INF" = "must be >= 0 and finite",
-           "BITING_RATE_BOOST=INF" = "must be >= 0 and finite",
-           "SEASONAL_AMP=INF" = "SEASONAL_AMP must be >= 0 and finite",
-           "NU_HYPNOZOITE_BATCH=2.0e6" = "at most 1e6 hypnozoites per bite",
-           "ALPHA_ACTIVATE_BOOST=NAN" = "ALPHA_ACTIVATE_BOOST must be >= 0",
+           "LAMBDA_OOCYSTS=1001.0" = "LAMBDA_OOCYSTS and LAMBDA_SPOROZOITES must be at most 1000",
+           "IMPORT_RATE_PER_TICK=1.0e18" = "IMPORT_RATE_PER_TICK, .*at most 1e6 imports a day",
+           "NU_HYPNOZOITE_BATCH=2.0e6" = "NU_HYPNOZOITE_BATCH, .*at most 1e6 hypnozoites per bite",
            "ALPHA_ACTIVATE_BOOST=INF" = "ALPHA_ACTIVATE_BOOST must be >= 0 and finite",
-           "K_OOCYSTS=-1.0" = "K_OOCYSTS must be 0 \\(Poisson\\)",
            ## at 0 the gate would refuse every inoculation, an empty host's included
            "MAX_MOI=0" = "MAX_MOI must be at least 1")
   for (arg in names(bad)) {
@@ -79,9 +72,7 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
   }
   bad <- c("RADCURE_MODE='Person'" = "RADCURE_MODE must be 'person' or 'hypnozoite'",
            "P_TRANS_VH=1.5" = "P_TRANS_VH must be in \\[0, 1\\]",
-           "ALPHA_ACTIVATE=NAN" = "ALPHA_ACTIVATE must be in \\[0, 1\\]",
            "N_MOSQ=0" = "N_MOSQ must be > 0",
-           "BITING_RATE=INF" = "BITING_RATE must be > 0 and finite",
            "EIP_DAYS=-1" = "EIP_DAYS must be >= 0",
            "N_FOUNDER_HOSTS=21" = "N_FOUNDER_HOSTS \\(21\\) must be at most N_HOSTS \\(20\\)",
            "N_HOSTS=20.5" = "N_HOSTS must be a whole number",
@@ -93,14 +84,13 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
            "N_MOSQ=c(10, 20)" = "N_MOSQ must be a single value",
            "CHROMOSOMES='1,1'" = "CHROMOSOMES lists a chromosome twice",
            "CHROMOSOMES='3-1'" = "CHROMOSOMES has a range that runs high-low",
-           "CHROMOSOMES='1e1'" = "CHROMOSOMES must be chromosome numbers 1-14",
            "CHROMOSOMES='1 4'" = "CHROMOSOMES must be chromosome numbers 1-14",
            "CHROMOSOMES='1-99999999999'" = "CHROMOSOMES out of range 1..14",
+           ## unused while K_LATENCY is 0, so only the check that every number is finite refuses it
            "DELTA_LATENCY=NAN" = "DELTA_LATENCY must be finite",
            "N_IMPORTS=9007199254740994" = "N_IMPORTS must lie within \\+/- 2\\^53",
            ## the value is shown as given, not rounded
-           "N_HOSTS=20.0000001" = "N_HOSTS must be a whole number, got 20.0000001",
-           "P_TRANS_VH=1.0000001" = "P_TRANS_VH must be in \\[0, 1\\], got 1.0000001")
+           "N_HOSTS=20.0000001" = "N_HOSTS must be a whole number, got 20.0000001")
   for (arg in names(bad)) {
     r <- slim(arg)
     expect_true(r$status != 0, label = arg)

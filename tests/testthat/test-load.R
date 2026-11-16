@@ -109,16 +109,16 @@ test_that("a params.tsv that cannot be read stops, naming the line or the parame
 })
 
 test_that("a params.tsv of another version warns once, naming what it lacks and what it leaves out", {
-  r <- fake_run(drop = "MDA_COVERAGE", extra = "MAX_BROOD_AGE\t180")
+  r <- fake_run(drop = "MDA_COVERAGE", extra = "FOO\t1")
   w <- list()
   p <- withCallingHandlers(load_params(r),
                            warning = function(x) { w[[length(w) + 1]] <<- x; invokeRestart("muffleWarning") })
   expect_length(w, 1L)
   expect_s3_class(w[[1]], "malariafwd_params_mismatch")
   expect_match(conditionMessage(w[[1]]), "lacks MDA_COVERAGE \\(its default is used\\)")
-  expect_match(conditionMessage(w[[1]]), "MAX_BROOD_AGE is not a parameter \\(left out\\)")
+  expect_match(conditionMessage(w[[1]]), "FOO is not a parameter \\(left out\\)")
   expect_identical(p$MDA_COVERAGE, vivax_params()$MDA_COVERAGE)
-  expect_null(p$MAX_BROOD_AGE)
+  expect_null(p$FOO)
   ## once per directory per session, whichever reader asks
   expect_no_warning(load_params(r))
   expect_no_warning(load_run(r))

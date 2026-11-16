@@ -140,8 +140,7 @@ test_that("plot_force_of_infection() leaves out the trend of a series too short 
 test_that("plot_force_of_infection() draws no trend that loess cannot fit without a warning, at any span", {
   skip_if_not_installed("ggplot2")
   run <- example_run()
-  ## 27 windows at span 0.2 pass a "5 windows within the span" rule, and loess still warns there;
-  ## 3 windows at span 2 pass it too
+  ## loess warns over 27 windows at span 0.2, and over 3 windows at span 2
   for (a in list(list(bin = 15, smooth = 0.2), list(bin = 150, smooth = 2)))
     expect_no_warning(ggplot2::ggplot_build(plot_force_of_infection(force_of_infection(run, bin = a$bin),
                                                                     smooth = a$smooth)))

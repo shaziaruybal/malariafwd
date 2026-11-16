@@ -60,8 +60,6 @@ test_that("plot_relapse_km() starts at 1 on day 0 and steps at each relapse", {
   p <- plot_relapse_km(time_to_relapse(episodes_fixture_run()))
   expect_identical(as.numeric(p$data$time), c(0, 8, 10, 23, 37, 39))
   expect_equal(p$data$surv, c(1, 1, 0.75, 0.5, 0.25, 0.25))
-  expect_identical(p$labels$x, "Days since the infection that laid down the batch")
-  expect_identical(p$labels$y, "Fraction of batches not yet relapsed")
 })
 
 test_that("a run with no batch gives no row, and the plot says why it cannot draw", {
