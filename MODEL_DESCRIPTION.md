@@ -616,13 +616,11 @@ code that reads tskit's segments directly must do the same, with `chrom_map()`.
 > pairs never coalesce. Consequently **tskit branch-mode divergence is not a relatedness measure
 > here** — use the IBD functions, not `diversity()`/`divergence()` until model updates are released.
 
-**Gotcha for anyone writing new tskit code:** SLiM haploid individuals get **two** tskit nodes — the
-real haplosome (`is_vacant = [0]`) and a null placeholder (`is_vacant = [1]`, isolated, IBD 0 with
-everything). About half of `ts.samples()` are vacant and **must be filtered**. The package's IBD
-and ARG functions do this. Second, tskit's `ibd_segments()` rows are pieces of the paths through
-the trees, so how a pair's shared ancestry is split into rows depends on the samples the tree was
-simplified to; merge abutting rows with the same ancestor, then cut at the junctions (§6.3), as
-`ibd_pairs()` and `ibd_segments()` do.
+**Reading the tree sequence yourself** has two traps: about half of `ts.samples()` are SLiM's
+vacant placeholder nodes and must be filtered out, and tskit's `ibd_segments()` rows are pieces of
+paths through the trees, to be merged by ancestor and cut at the junctions (§6.3). The package's IBD
+and ARG functions do both; the [implementation notes](https://shaziaruybal.github.io/malariafwd/IMPLEMENTATION_NOTES.html) give each trap
+in full.
 
 ---
 
