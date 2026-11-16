@@ -31,8 +31,9 @@ on a branch of your fork:
   the next free number (entries keep their numbers, which the code and the docs cite);
 - after a change to the model file or to a default, make the example run again with
   `Rscript data-raw/example_run.R` (it needs SLiM 5.2 on the PATH), run the validation scripts
-  with `Rscript dev/validation-results.R`, which rewrites `inst/validation/RESULTS.md`, and remake
-  the documents' figures and the numbers they quote with `Rscript dev/make-doc-figures.R`;
+  with `Rscript dev/validation-results.R`, which rewrites `inst/validation/RESULTS.md` and section
+  13's calibration table, and remake the documents' figures and the numbers they quote with
+  `Rscript dev/make-doc-figures.R`;
 - after a change to the parameter dictionary (`R/param-dictionary.R`) or the dictionary of the
   output columns (`R/outputs.R`), update the documentation's tables with
   `Rscript dev/update-doc-tables.R`.

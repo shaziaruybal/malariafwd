@@ -15,7 +15,10 @@ suppressMessages({
   library(malariafwd)
   library(data.table)
 })
-OUT <- file.path(tempdir(), "mfw_calibrate_nu"); unlink(OUT, recursive = TRUE)
+## MALARIAFWD_CALIBRATE_OUT puts the tables somewhere they outlive the run, for
+## dev/calibration-table.R to generate section 13's table from.
+OUT <- Sys.getenv("MALARIAFWD_CALIBRATE_OUT", unset = file.path(tempdir(), "mfw_calibrate_nu"))
+unlink(OUT, recursive = TRUE)
 PASS <- 0; FAIL <- 0
 ok <- function(lbl, cond, detail = "") {
   if (isTRUE(cond)) { PASS <<- PASS + 1; cat(sprintf("  PASS  %-52s %s\n", lbl, detail)) }
@@ -78,6 +81,7 @@ m[, in_all_unmasked := inside(relapses_per_py_unmasked, "relapses_per_py") &
                        inside(molfob_per_py_unmasked, "molfob_per_py") & inside(moi_median, "moi_median") &
                        inside(relapse_frac_unmasked, "relapse_frac")]
 fwrite(m, file.path(OUT, "calibrate_nu.tsv"), sep = "\t")
+fwrite(TARGETS, file.path(OUT, "calibrate_nu_targets.tsv"), sep = "\t")
 
 cat("\n  means over seeds", paste(SEEDS, collapse = ", "), "(targets:",
     paste(sprintf("%s %g-%g", TARGETS$label, TARGETS$lo, TARGETS$hi), collapse = ", "), ")\n\n")

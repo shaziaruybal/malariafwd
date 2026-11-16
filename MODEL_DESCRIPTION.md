@@ -1134,7 +1134,7 @@ lineage. The relapse fraction's upper sources are shares of recurrences after tr
 above a population-wide share, and its lower one rests on a time rule.
 
 **ν against the calibration targets**, as `inst/validation/calibrate_nu.R` measures it at this
-version: 400 hosts, 800 mosquitoes, 5 years, `BITING_RATE` 0.08, 20 founder hosts carrying 10
+version and `dev/calibration-table.R` generates the table below from: 400 hosts, 800 mosquitoes, 5 years, `BITING_RATE` 0.08, 20 founder hosts carrying 10
 lineages, the first 2 years as burn-in, means over seeds 1 to 3. Relapses are per person-year at
 risk (each host from the day after its first infection,
 [derived metrics](https://shaziaruybal.github.io/malariafwd/METRICS.html)); molFOB is the new
@@ -1142,20 +1142,25 @@ blood-stage clones, relapses included, per person-year of all hosts; the median 
 host-days; the EIR is over the 3 years after burn-in. A *masked* relapse is one into a patent clone
 of its own lineage (`into_patent_lineage = 1`, §5), which an observer could not see as a recurrence.
 
-| ν | prevalence | relapses per person-year (0.4–4.5): all / masked left out | molFOB (1–15) | median MOI (1–2) | relapse fraction (0.45–0.9): all / masked left out | EIR |
-|---|---|---|---|---|---|---|
-| 2 | 0.11 | 0.90 / 0.37 | 0.92 | 1 | 0.56 / 0.34 | 0.80 |
-| **3** | 0.33 | 2.72 / 0.89 | 3.44 | 1 | 0.66 / 0.39 | 2.35 |
-| 5 | 0.53 | 6.46 / 1.56 | 7.58 | 1 | 0.76 / 0.44 | 3.58 |
-| 8 | 0.62 | 11.28 / 1.76 | 12.19 | 1 | 0.83 / 0.44 | 4.00 |
-| 12 | 0.78 | 20.74 / 2.48 | 22.43 | 2 | 0.89 / 0.48 | 5.06 |
+<!-- BEGIN calibration table: generated from inst/validation/calibrate_nu.R by dev/calibration-table.R; run that, do not edit this block -->
 
-Counting every relapse, only ν = 3 sits inside all four targets: at ν = 2 molFOB is just below its
-target (0.92), and from ν = 5 relapses per person-year are above theirs, as molFOB is at ν = 12.
-Two-thirds of the relapses at ν = 3 are masked. With the masked relapses left out of both,
-relapses per person-year are inside their target from ν = 3 to ν = 12, but the relapse fraction
-reaches its target only at ν = 12 (0.48; 0.39 at ν = 3). Read that way, as a genotyping study sees
-relapses, the model's relapse fraction sits at or below the lowest population estimate found (40%
+| ν | prevalence | relapses per person-year (0.4-4.5): all / masked left out | molFOB (1-15): all / masked left out | median MOI (1-2) | relapse fraction (0.45-0.9): all / masked left out | EIR | bites with more than one genotype |
+|---|---|---|---|---|---|---|---|
+| 2 | 0.05 | 0.44 / 0.17 | 0.35 / 0.24 | 1.00 | 0.57 / 0.34 | 0.31 | 0.001 |
+| **3** | 0.24 | 2.41 / 0.82 | 2.57 / 1.50 | 1.00 | 0.63 / 0.37 | 1.73 | 0.079 |
+| 5 | 0.37 | 5.57 / 1.27 | 5.42 / 2.45 | 1.00 | 0.72 / 0.36 | 2.56 | 0.132 |
+| 8 | 0.61 | 11.85 / 2.17 | 12.96 / 4.63 | 1.33 | 0.79 / 0.40 | 3.98 | 0.242 |
+| 12 | 0.76 | 20.37 / 2.52 | 22.52 / 5.76 | 1.67 | 0.85 / 0.40 | 4.81 | 0.264 |
+
+Inside all four targets, counting every relapse: ν = 3. With the masked relapses left out of both readings: none of the values tried.
+
+<!-- END calibration table -->
+
+At ν = 2 molFOB falls below its target (0.35), and from ν = 5 relapses per person-year are above
+theirs, as molFOB is at ν = 12. Two-thirds of the relapses at ν = 3 are masked. With the masked
+relapses left out of both, relapses per person-year are inside their target from ν = 3 to ν = 12,
+but the relapse fraction stays under its floor of 0.45 at every ν tried, peaking at 0.40 (0.37 at
+ν = 3). Read that way, as a genotyping study sees relapses, the model's relapse fraction sits at or below the lowest population estimate found (40%
 in the main season in Ethiopia, Golassa & White 2017), and below the 77–80% of Papua New Guinean
 children (Robinson et al. 2015; Ross et al. 2016). That is a property of the model at this
 setting, not of ν.

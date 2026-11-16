@@ -1,5 +1,7 @@
 ## Runs the validation scripts of inst/validation on this source tree and writes
 ## inst/validation/RESULTS.md: when, on which commit and versions, and what each script found.
+## It also fills section 13's calibration table in MODEL_DESCRIPTION.md from calibrate_nu.R's
+## numbers, so a release cannot ship a stale one.
 ## Run it from the package's root before a release, with SLiM and Python with tskit available:
 ##
 ##   Rscript dev/validation-results.R
@@ -11,7 +13,10 @@ lib <- file.path(tempdir(), "lib"); dir.create(lib, showWarnings = FALSE)
 if (system2(rbin("R"), c("CMD", "INSTALL", "--no-test-load", "-l", shQuote(lib), "."), stdout = FALSE, stderr = FALSE) != 0L)
   stop("R CMD INSTALL failed", call. = FALSE)
 env <- paste0("R_LIBS=", lib)
-rscript <- function(code, log) system2(rbin("Rscript"), c("-e", shQuote(code)), stdout = log, stderr = log, env = env)
+rscript <- function(code, log, extra = character()) system2(rbin("Rscript"), c("-e", shQuote(code)),
+                                                            stdout = log, stderr = log, env = c(env, extra))
+## where calibrate_nu.R leaves its tables, for the calibration table of section 13
+calib <- file.path(tempdir(), "calibrate_out"); dir.create(calib, showWarnings = FALSE)
 
 ## the versions, as the installed package sees them (no paths)
 vf <- tempfile()
@@ -24,7 +29,8 @@ scripts <- c("audit_events_and_ibd.R", "check_parameters.R", "calibrate_nu.R", "
              "audit_arg_junctions.R")
 res <- do.call(rbind, lapply(scripts, function(s) {
   log <- tempfile(fileext = ".log"); t0 <- Sys.time()
-  status <- rscript(sprintf("source(system.file('validation', '%s', package = 'malariafwd'))", s), log)
+  status <- rscript(sprintf("source(system.file('validation', '%s', package = 'malariafwd'))", s), log,
+                    extra = if (s == "calibrate_nu.R") paste0("MALARIAFWD_CALIBRATE_OUT=", calib))
   out <- readLines(log, warn = FALSE)
   line <- utils::tail(grep("[0-9]+ passed, [0-9]+ failed", out, value = TRUE), 1)
   data.frame(script = s,
@@ -58,4 +64,11 @@ md <- c(
   "`dev/validation-results.R`, in the package's source repository, writes this file.")
 writeLines(md, file.path("inst", "validation", "RESULTS.md"))
 cat(md, sep = "\n")
+
+## section 13's calibration table, from the run just made
+if (file.exists(file.path(calib, "calibrate_nu.tsv"))) {
+  system2(rbin("Rscript"), c("dev/calibration-table.R", shQuote(calib)))
+} else {
+  cat("\ncalibrate_nu.R left no tables; section 13's calibration table is unchanged\n")
+}
 if (!all(res$ok)) quit(status = 1)
