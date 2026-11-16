@@ -1084,9 +1084,10 @@ recombination machinery (§13.1), and which parameters are calibrated to data an
 
 ### Validation suite
 
-`inst/validation/` ships six scripts: 165 assertion checks, the calibration of
-`NU_HYPNOZOITE_BATCH`, two numeric audits of the recombination machinery and an explainer. `inst/validation/RESULTS.md` records the last full run,
-with its date, commit, versions and what each script found.
+`inst/validation/` ships five scripts: 165 assertion checks, the calibration of
+`NU_HYPNOZOITE_BATCH` and two numeric audits of the recombination machinery.
+`inst/validation/RESULTS.md` records the last full run, with its date, commit, versions and what
+each script found.
 
 | script | checks | result |
 |---|---|---|
@@ -1095,7 +1096,6 @@ with its date, commit, versions and what each script found.
 | `calibrate_nu.R` | 2, and the table of ν against the calibration targets below | all pass |
 | `audit_arg_recombination.R` | numeric audit | see §13.1 |
 | `audit_arg_junctions.R` | numeric audit | see §13.1 |
-| `explain_ibd.R` | worked explainer | — |
 
 #### Event-log integrity
 

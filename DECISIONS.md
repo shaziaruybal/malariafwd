@@ -1838,6 +1838,5 @@ a default or the model changes, until it is made again.
 
 **How to check.** `tests/testthat/test-exports.R` lists the exports exactly;
 `tests/testthat/test-inputs.R` gives every reader a run and every plot a run or its table, and each
-the wrong kind of table; `tests/testthat/test-docs.R` holds every help page to one description of a
-run; `tests/testthat/test-example-run.R` checks that the shipped run is this model's run of its
-settings and holds every kind of case, recurrence and link.
+the wrong kind of table; `tests/testthat/test-example-run.R` checks that the shipped run is this
+model's run of its settings and holds every kind of case, recurrence and link.

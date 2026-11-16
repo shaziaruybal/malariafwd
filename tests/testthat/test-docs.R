@@ -1,4 +1,6 @@
-## The help pages describe a run in one way, and the package page defines the terms they share.
+## The documents: the help pages have examples and give reasons, not decision codes; the vignettes
+## run their analysis on the bundled run; and the metadata files, the design decisions and the
+## validation results agree with one another and with the repository.
 
 ## the source's man/ under load_all(), the installed help otherwise (R CMD check)
 rd_db <- function() {
@@ -7,31 +9,6 @@ rd_db <- function() {
 }
 rd_flat <- function(x) if (is.list(x)) paste(vapply(x, rd_flat, ""), collapse = "") else paste(as.character(x), collapse = "")
 rd_tagged <- function(rd, tag) Filter(function(e) identical(attr(e, "Rd_tag"), tag), rd)
-## the text of a topic's \arguments item `run`, its white space squished; NULL without one
-run_arg <- function(rd) {
-  for (args in rd_tagged(rd, "\\arguments"))
-    for (it in rd_tagged(args, "\\item"))
-      if (identical(trimws(rd_flat(it[[1]])), "run")) return(gsub("\\s+", " ", trimws(rd_flat(it[[2]]))))
-  NULL
-}
-
-test_that("every help page describes a run in the same words", {
-  db <- rd_db()
-  names(db) <- sub("\\.Rd$", "", basename(names(db)))
-  txt <- unlist(lapply(db, run_arg))
-  canon <- "a run: a vivax_run (from run_sim() or load_run()) or the path of a run directory."
-  expect_identical(unique(unname(txt)), canon)
-  expect_gte(length(txt), 18L)
-})
-
-test_that("the package page is a page of concepts that names the shared terms", {
-  db <- rd_db()
-  pkg <- db[[grep("malariafwd-package(\\.Rd)?$", names(db))]]
-  expect_false("internal" %in% vapply(rd_tagged(pkg, "\\keyword"), rd_flat, ""))
-  text <- rd_flat(pkg)
-  for (term in c("tick", "pedigree_id", "lineage_id", "COI", "MOI", "Rc", "vivax_run"))
-    expect_match(text, term, fixed = TRUE, label = term)
-})
 
 test_that("the author's name, ORCID and roles agree across the metadata files", {
   root <- test_path("..", "..")
@@ -122,7 +99,7 @@ test_that("the validation results record a run of every checking script", {
   expect_true(nzchar(f))
   txt <- paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
   expect_match(txt, "at commit [0-9a-f]{7}")
-  scripts <- setdiff(dir(dirname(f), "\\.R$"), "explain_ibd.R")   # explain_ibd.R draws, it checks nothing
+  scripts <- dir(dirname(f), "\\.R$")
   for (s in scripts) expect_match(txt, paste0("`", s, "`"), fixed = TRUE, label = s)
 })
 

@@ -198,21 +198,23 @@ jobs:
             exit 1
           fi
 
+      # The bundled example run, made again from its settings and seed. test-example-run.R fails
+      # unless that run is this model's run of its settings, so a difference here is one between
+      # platforms. Its tables are compared line by line, whatever their line endings.
       - name: Same seed, same output (informational, across platforms)
         shell: Rscript {0}
         run: |
           library(malariafwd)
-          od <- file.path(tempdir(), "golden")
-          run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 200,
-                               LAMBDA_OOCYSTS = 2, LAMBDA_SPOROZOITES = 2),
-                  seed = 42, outdir = od)
-          got  <- unname(tools::md5sum(file.path(od, c("events.tsv", "state.tsv"))))
-          want <- c("4a7fab76d115350ddcf76fde739955f7",   # events.tsv: macOS arm64, SLiM 5.2,
-                    "dbbcd295c5b9897df5f5320488d6d2ff")   # state.tsv   malariafwd 0.1.0
-          print(data.frame(file = c("events.tsv", "state.tsv"), got = got, want = want))
-          if (!identical(got, want))
-            cat("::warning::seed 42 gives other output than the macOS / SLiM 5.2 reference.",
-                "Expected after a change to the model; otherwise a difference between platforms.\n")
+          spec <- malariafwd:::.example_run_spec
+          od <- file.path(tempdir(), "same-seed")
+          run_sim(do.call(vivax_params, spec$params), seed = spec$seed, outdir = od)
+          ref <- example_run()$outdir
+          same <- vapply(c("events.tsv", "state.tsv"), function(f)
+            identical(readLines(file.path(od, f)), readLines(file.path(ref, f))), NA)
+          print(same)
+          if (!all(same))
+            cat("::warning::the example run's settings and seed give other output here than the",
+                "bundled run, which the tests hold to this model: a difference between platforms.\n")
 
       - name: Validation smoke test (inst/validation/audit_events_and_ibd.R)
         shell: Rscript {0}
@@ -225,7 +227,7 @@ jobs:
           MALARIAFWD_WORKERS: 2   # calibrate_nu.R's 15 runs, two at a time
         run: |
           # bash -e: the loop stops at the first script that exits non-zero
-          for s in check_parameters.R audit_arg_recombination.R audit_arg_junctions.R explain_ibd.R \
+          for s in check_parameters.R audit_arg_recombination.R audit_arg_junctions.R \
                    calibrate_nu.R; do
             echo "::group::$s"
             Rscript -e "source(system.file('validation', '$s', package = 'malariafwd'))"
