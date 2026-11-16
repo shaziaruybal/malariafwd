@@ -1,5 +1,18 @@
 ## Episodes and relapses: the masked relapses, into a patent clone of their own lineage.
 
+## A run with treatment failures, recrudescence and an MDA round, made once for this file.
+episodes_run <- local({
+  r <- NULL
+  function() {
+    if (is.null(r))
+      r <<- suppressMessages(run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 150, SIM_DAYS = 400, CHROMOSOMES = "1",
+                                                  BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
+                                                  P_RECRUD_GIVEN_FAIL = 0.5, MDA_TICK = 200, MDA_COVERAGE = 0.5),
+                                     seed = 3, outdir = tempfile("mfwd_masked_")))
+    r
+  }
+})
+
 test_that("classify_cases() marks the masked relapse, and leaves it out when asked", {
   fx <- episodes_fixture()
   cs <- classify_cases(fx)
@@ -41,11 +54,7 @@ test_that("a run without the flag gives NA on its relapses, and cannot leave the
 
 test_that("on a run, exclude_masked removes exactly the flagged activations", {
   skip_if_no_slim()
-  r <- suppressMessages(run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 150, SIM_DAYS = 400, CHROMOSOMES = "1",
-                                             BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
-                                             P_RECRUD_GIVEN_FAIL = 0.5, MDA_TICK = 200, MDA_COVERAGE = 0.5),
-                                seed = 3, outdir = tempfile("mfwd_masked_")))
-  ev <- load_events(r)
+  ev <- load_events(episodes_run())
   flagged <- ev[event_type == "hypnozoite_activation" & into_patent_lineage == 1L, .N]
   expect_gt(flagged, 0L)
   expect_identical(nrow(classify_cases(ev)) - nrow(classify_cases(ev, exclude_masked = TRUE)), flagged)
@@ -176,10 +185,7 @@ test_that("with co-transmission, an episode holds several clones and is never pa
 
 test_that("a clone's span covers the days it counts in moi_active", {
   skip_if_no_slim()
-  r <- suppressMessages(run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 150, SIM_DAYS = 400, CHROMOSOMES = "1",
-                                             BLOODCURE_COVERAGE = 0.5, P_BLOODCURE_SURVIVAL = 0.3,
-                                             P_RECRUD_GIVEN_FAIL = 0.5, MDA_TICK = 200, MDA_COVERAGE = 0.5),
-                                seed = 3, outdir = tempfile("mfwd_spans_")))
+  r <- episodes_run()
   ep <- episodes(r)
   st <- load_state(r)
   last <- max(st$tick)

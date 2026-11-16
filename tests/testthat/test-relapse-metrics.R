@@ -77,11 +77,11 @@ test_that("a run with no batch gives no row, and the plot says why it cannot dra
 
 test_that("on an import cohort every batch is timed from its establishment, and radical cure empties batches", {
   skip_if_no_slim()
-  cohort <- function(rc) suppressMessages(run_sim(vivax_params(
-    N_HOSTS = 1000, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 400, N_FOUNDER_HOSTS = 0, IMPORT_TICK = 5,
-    N_IMPORTS = 800, BLOODCURE_COVERAGE = 1, P_DETECT_RELAPSE = 0, RADCURE_COVERAGE = rc, CHROMOSOMES = "1"),
+  r <- suppressMessages(run_sim(vivax_params(
+    N_HOSTS = 500, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 400, N_FOUNDER_HOSTS = 0, IMPORT_TICK = 5,
+    N_IMPORTS = 400, BLOODCURE_COVERAGE = 1, P_DETECT_RELAPSE = 0, RADCURE_COVERAGE = 1, CHROMOSOMES = "1"),
     seed = 1, outdir = tempfile("mfwd_ttr_")))
-  r <- cohort(1); ev <- load_events(r); tt <- time_to_relapse(r)
+  ev <- load_events(r); tt <- time_to_relapse(r)
   est <- ev[event_type == "vh_inoculation_import" & is_dormant == 1,
             .(batch_pedigree_id = as.integer(pedigree_id), tick = as.integer(tick))]
   expect_gt(nrow(est), 100)
@@ -95,8 +95,6 @@ test_that("on an import cohort every batch is timed from its establishment, and 
   got <- tt[pre, on = "batch_pedigree_id"]
   expect_true(all(got$end_reason == "emptied"))
   expect_identical(got$time, as.integer(got$t_rad - got$batch_tick))
-  ev0 <- load_events(cohort(0))
-  expect_false("radcure_hypnozoite_clear" %in% ev0$event_type)
 })
 
 test_that("a batch that empties before relapsing in a run that goes extinct is censored where it emptied", {

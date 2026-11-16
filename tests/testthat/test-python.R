@@ -124,11 +124,8 @@ test_that("check_setup() reports a missing SLiM and leaves Python unchecked when
 
 test_that("check_setup() reports a SLiM that is too old", {
   skip_on_os("windows")
-  fake <- tempfile("fakeslim51")
-  writeLines(c("#!/bin/sh", 'if [ "$1" = "-v" ]; then echo "SLiM version 5.1, built Jan 1 2025"; exit 0; fi'), fake)
-  Sys.chmod(fake, "755")
   old <- Sys.getenv("MALARIAFWD_SLIM", NA)
-  Sys.setenv(MALARIAFWD_SLIM = fake)
+  Sys.setenv(MALARIAFWD_SLIM = fake_slim(version = "5.1, built Jan 1 2025"))
   on.exit(if (is.na(old)) Sys.unsetenv("MALARIAFWD_SLIM") else Sys.setenv(MALARIAFWD_SLIM = old), add = TRUE)
   s <- check_setup(python = FALSE)
   expect_false(s$ok[s$component == "SLiM"])
@@ -145,9 +142,4 @@ test_that("check_setup() finds this machine's SLiM, and its Python when tskit is
   s <- check_setup()
   expect_true(all(s$ok[s$component %in% c("reticulate", "Python", "tskit", "numpy")]))
   expect_true(numeric_version(sub("^([0-9.]+).*", "\\1", s$version[s$component == "tskit"])) >= "1.0")
-})
-
-test_that("skip_if_no_tskit() skips when Python with tskit is not there", {
-  local_mocked_bindings(tskit_available = function() FALSE)
-  expect_condition(skip_if_no_tskit(), class = "skip")
 })

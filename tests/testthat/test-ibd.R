@@ -57,13 +57,15 @@ test_that("ibd_pairs() returns a pedigree-keyed vivax_ibd", {
 test_that("ibd_lookup() gives the IBD a genome pair has", {
   skip_if_no_slim(); skip_if_no_tskit()
   r <- ibd_fixture(); ev <- load_events(r)
-  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][seq_len(min(.N, 30))]
+  ## every relapse against the batch it woke from
+  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
   skip_if(nrow(rel) < 5, "too few relapses")
-  x <- ibd_pairs(r, ids = c(rel$pedigree_id, rel$parent1_pedigree_id))
-  expect_true(all(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id) > 0.999))
+  x <- ibd_pairs(r, pairs = data.frame(a = rel$pedigree_id, b = rel$parent1_pedigree_id))
+  v <- ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id)
+  expect_false(anyNA(v))
+  expect_true(all(v > 0.999))
   m <- as.matrix(x)
-  expect_identical(m[cbind(as.character(rel$pedigree_id), as.character(rel$parent1_pedigree_id))],
-                   ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id))
+  expect_identical(m[cbind(as.character(rel$pedigree_id), as.character(rel$parent1_pedigree_id))], v)
 })
 
 test_that("segments carry their common ancestor and its age", {

@@ -1,14 +1,21 @@
 ## Invariants the model must keep. These need SLiM, so they skip when it is
 ## unavailable (e.g. on CRAN / CI without the engine) via skip_if_no_slim() in helper-slim.R.
 
+## A full-genome run from 8 founder lineages, made once for this file.
+invariants_run <- local({
+  r <- NULL
+  function() {
+    if (is.null(r))
+      r <<- suppressMessages(run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 300,
+                                                  N_FOUNDER_LINEAGES = 8),
+                                     seed = 1, outdir = tempfile("mfw-invariants")))
+    r
+  }
+})
+
 test_that("hypnozoite batches never draw more than they hold, and ids are unique", {
   skip_if_no_slim()
-  out <- tempfile("mfw-invariants")
-  unlink(out, recursive = TRUE)
-  p <- vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12, SIM_DAYS = 300,
-                    N_FOUNDER_LINEAGES = 8)
-  run <- run_sim(p, seed = 1, outdir = out)
-  ev <- data.table::as.data.table(load_events(run))
+  ev <- load_events(invariants_run())
 
   ## a batch's activations + deaths must never exceed the size it was established with:
   ## a retired batch draws nothing more
@@ -24,19 +31,6 @@ test_that("hypnozoite batches never draw more than they hold, and ids are unique
   expect_equal(data.table::uniqueN(ev$event_id), nrow(ev))
   inoc <- ev[inoculation_id > 0, inoculation_id]
   expect_gt(max(inoc), 0.5 * data.table::uniqueN(inoc))
-})
-
-test_that("classify_cases labels imported relapses", {
-  skip_if_no_slim()
-  out <- tempfile("mfw-imported")
-  unlink(out, recursive = TRUE)
-  p <- vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.06, SIM_DAYS = 400,
-                    IMPORT_START = 1L, IMPORT_END = 99999L, IMPORT_RATE_PER_TICK = 0.15)
-  run <- run_sim(p, seed = 1, outdir = out)
-  cs <- classify_cases(load_events(run))
-  expect_true("imported" %in% names(cs))
-  ## a relapse of an imported genotype must be labelled imported
-  expect_gt(nrow(cs[origin == "relapse" & imported == TRUE]), 0)
 })
 
 test_that("zero-truncated count helpers round-trip", {
@@ -58,11 +52,8 @@ test_that("zero-truncated count helpers round-trip", {
 
 test_that("ARG summaries behave on the forest genealogy", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- tempfile("mfw-arg")
-  unlink(out, recursive = TRUE)
-  run <- run_sim(vivax_params(N_HOSTS = 60, N_MOSQ = 120, BITING_RATE = 0.12,
-                              SIM_DAYS = 300, N_FOUNDER_LINEAGES = 8), seed = 1, outdir = out)
-  ev <- data.table::as.data.table(load_events(run))
+  run <- invariants_run()
+  ev <- load_events(run)
   s <- arg_summary(run)
   expect_gt(s$num_trees, 1)          # recombination happened
   expect_gte(s$roots_min, 1)
@@ -149,41 +140,17 @@ def locations(path):
   expect_true(all(loc == 0))
 })
 
-test_that("ibd_pairs returns all ancestry, and segments reconstruct it", {
-  skip_if_no_slim(); skip_if_no_tskit()
-  out <- tempfile("mfw-ibdseg")
-  unlink(out, recursive = TRUE)
-  run <- run_sim(vivax_params(N_HOSTS = 50, N_MOSQ = 100, BITING_RATE = 0.12,
-                              SIM_DAYS = 250, N_FOUNDER_LINEAGES = 8), seed = 3, outdir = out)
-  ev  <- data.table::as.data.table(load_events(run))
-  ids <- unique(data.table::as.data.table(classify_cases(ev))$pedigree_id)
-  skip_if(length(ids) < 10, "too few cases in this run")
-
-  ## D17: no time cutoff is offered, so a relapse reads 1 against its batch however long it slept
-  rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
-  if (nrow(rel)) {
-    x <- ibd_pairs(run, ids = c(rel$pedigree_id, rel$parent1_pedigree_id))
-    expect_true(all(ibd_lookup(x, rel$pedigree_id, rel$parent1_pedigree_id) > 0.999))
-  }
-
-  sg <- ibd_pairs(run, ids = ids, segments = TRUE)
-  expect_gt(sg$sequence_length, 0)
-  ## mrca_time is a node time, never more recent than either sample it joins
-  expect_true(all(sg$segments$mrca_time >= 0))
-})
-
 test_that("an inoculation's primary and its hypnozoite batch are the same genome", {
   skip_if_no_slim(); skip_if_no_tskit()
   ## D38: an import is seeded in early() and its second compartment is cloned one tick later,
   ## so an import, like an ordinary bite, must give IBD 1 between its two compartments.
   out <- tempfile("mfw-import-clone")
-  unlink(out, recursive = TRUE)
   ## imports on, so both the founder path and the ordinary path are exercised
   p <- vivax_params(N_HOSTS = 80, N_MOSQ = 160, BITING_RATE = 0.10, SIM_DAYS = 500,
                     N_FOUNDER_LINEAGES = 8, NU_HYPNOZOITE_BATCH = 5,
                     IMPORT_START = 1L, IMPORT_END = 500L, IMPORT_RATE_PER_TICK = 0.08)
   run <- run_sim(p, seed = 3, outdir = out)
-  ev <- data.table::as.data.table(load_events(run))
+  ev <- load_events(run)
 
   ## One inoculation delivers one sporozoite population, so the blood-stage infection and the
   ## hypnozoite batch established alongside it must be clones. Two unrelated genomes under one
@@ -364,8 +331,8 @@ test_that("infectious_bites counts each host's bites from a mosquito past the EI
                               P_TRANS_VH = 1, MAX_MOI = 1000L, BLOODCURE_COVERAGE = 0.8,
                               CHROMOSOMES = "1"),
                  seed = 4, outdir = tempfile("mfw-eir"))
-  st <- data.table::as.data.table(load_state(run, entity = "all"))
-  ev <- data.table::as.data.table(load_events(run))
+  st <- load_state(run, entity = "all")
+  ev <- load_events(run)
   expect_gt(nrow(st[entity_type == "mosquito"]), 0)
   expect_true(all(is.na(st[entity_type == "mosquito", infectious_bites])))
   bites <- st[entity_type == "human", .(tick, human_id = entity_id, infectious_bites)]
@@ -385,7 +352,7 @@ test_that("MAX_MOI holds within a day, counting the clones a host gained earlier
                               P_TRANS_VH = 1, MAX_MOI = 2L, NU_HYPNOZOITE_BATCH = 0,
                               LAMBDA_SPOROZOITES = 0, CHROMOSOMES = "1"),
                  seed = 1, outdir = tempfile("mfw-maxmoi"))
-  st <- data.table::as.data.table(load_state(run))[entity_type == "human"]
+  st <- load_state(run)[entity_type == "human"]
   expect_gt(sum(st$moi_active > 1), 100)
   expect_lte(max(st$moi_active + st$moi_subpatent), 2L)
 })

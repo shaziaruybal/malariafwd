@@ -129,7 +129,6 @@ test_that("probabilities of exactly 0 and 1 run to completion", {
   )
   for (nm in names(cases)) {
     out <- tempfile(paste0("mfw-zero-one-", nm))
-    unlink(out, recursive = TRUE)
     expect_no_error(suppressMessages(run_sim(do.call(vivax_params, cases[[nm]]), seed = 1, outdir = out)))
   }
 })

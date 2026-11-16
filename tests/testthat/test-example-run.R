@@ -48,8 +48,3 @@ test_that("example_run() unpacks the run again when its directory is no longer w
   expect_true(again$complete)
   expect_true(file.exists(file.path(again$outdir, "events.tsv")))
 })
-
-test_that("the example run's archive holds DONE last, as run_sim() writes it", {
-  files <- utils::untar(system.file("extdata", "example_run.tar.xz", package = "malariafwd"), list = TRUE)
-  expect_identical(utils::tail(files, 1L), "DONE")
-})

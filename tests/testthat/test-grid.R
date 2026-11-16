@@ -124,11 +124,8 @@ test_that("run_grid() passes ... on to run_sim()", {
 
 test_that("a cell that fails leaves its directory as it was, and its log in <cell>.failed", {
   skip_on_os("windows")
-  fake <- tempfile("fakeslim")
-  writeLines(c("#!/bin/sh", 'if [ "$1" = "-v" ]; then echo "SLiM version 5.2"; exit 0; fi', "echo boom >&2", "exit 1"), fake)
-  Sys.chmod(fake, "755")
   old <- Sys.getenv("MALARIAFWD_SLIM", NA)
-  Sys.setenv(MALARIAFWD_SLIM = fake)
+  Sys.setenv(MALARIAFWD_SLIM = fake_slim(c("echo boom >&2", "exit 1")))
   on.exit(if (is.na(old)) Sys.unsetenv("MALARIAFWD_SLIM") else Sys.setenv(MALARIAFWD_SLIM = old), add = TRUE)
   base <- tempfile("mfwd_grid_")
   expect_warning(g <- run_grid(vivax_params(), seeds = 1, outdir_base = base),

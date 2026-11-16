@@ -3,49 +3,15 @@
 shared <- function(...) vivax_params(SIM_DAYS = 120L, N_HOSTS = 40L, N_MOSQ = 80L,
                                      BITING_RATE = 0.12, ...)
 
-run_counts <- function(p, tag) {
-  out <- tempfile(paste0("mfw-tx-", tag))
-  unlink(out, recursive = TRUE)
-  r <- run_sim(p, seed = 2, outdir = out)
-  ev <- data.table::as.data.table(load_events(r))
-  list(bloodcure = ev[event_type == "case_bloodstage_clear", .N],
-       radcure   = ev[event_type == "radcure_hypnozoite_clear", .N])
-}
-
-test_that("treatment is driven by coverage alone, not by the vector-control window", {
-  skip_if_no_slim()
-  ## D30. Case-based treatment is not gated on INTERVENTION_START/END, the window that scales
-  ## biting: a coverage treats cases without that window being opened.
-  expect_equal(run_counts(shared(), "none")$bloodcure, 0)
-
-  blood <- run_counts(shared(BLOODCURE_COVERAGE = 1), "blood")
-  expect_gt(blood$bloodcure, 0)
-
-  ## radical cure is NESTED inside blood-stage treatment, so it needs both coverages
-  rad <- run_counts(shared(BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1), "rad")
-  expect_gt(rad$radcure, 0)
-})
-
-test_that("the vector-control window does not switch treatment on", {
-  skip_if_no_slim()
-  ## ...and conversely: the intervention window scales biting only, so opening it changes
-  ## transmission without producing a single treatment.
-  vc <- run_counts(shared(INTERVENTION_START = 1L, INTERVENTION_END = 120L,
-                          INTERVENTION_EFFICACY = 0.9), "vc")
-  expect_equal(vc$bloodcure, 0)
-  expect_equal(vc$radcure, 0)
-})
-
 test_that("the case-management window bounds WHEN treatment happens", {
   skip_if_no_slim()
   ## Deliberately an assertion about TIMING, not about counts. A course clears every patent clone
   ## its host carries, which suppresses transmission hard enough that an always-open window can
   ## produce FEWER courses than a late one - it prevents the cases it would have treated.
   out <- tempfile("mfw-tx-window")
-  unlink(out, recursive = TRUE)
   r <- run_sim(shared(BLOODCURE_COVERAGE = 1, TREATMENT_START = 90L, TREATMENT_END = 120L),
                seed = 2, outdir = out)
-  ev <- data.table::as.data.table(load_events(r))
+  ev <- load_events(r)
   given <- ev[event_type == "bloodcure_given", tick]
   expect_gt(length(given), 0)
   ## Nothing before the window opens: no case can be DECIDED earlier.
@@ -61,10 +27,12 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
   ## that almost never bites, relapses and recrudescences go undetected, and founders are
   ## never treated. No course clears anything: every clone still patent when its course lands
   ## is suppressed, and each recrudescence is paired with its suppression through
-  ## parent1_pedigree_id.
-  delays <- function(d, shape = "geometric") {
-    run <- run_sim(vivax_params(N_HOSTS = 1200, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 45,
-                                IMPORT_TICK = 5, N_IMPORTS = 1000,
+  ## parent1_pedigree_id. `n` imports go into 1.2 n hosts: at D = 1, max(1, rgeom(1/(1 + D)))
+  ## makes a quarter of the delays two days or more, which 100 imports show, and the moments at
+  ## D = 4 need 1000.
+  delays <- function(d, shape = "geometric", n = 100) {
+    run <- run_sim(vivax_params(N_HOSTS = 1.2 * n, N_MOSQ = 1, BITING_RATE = 1e-6, SIM_DAYS = 45,
+                                IMPORT_TICK = 5, N_IMPORTS = n,
                                 P_DETECT_RELAPSE = 0, P_DETECT_RECRUD = 0,
                                 BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 1,
                                 P_RECRUD_GIVEN_FAIL = 1,
@@ -78,8 +46,9 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
     list(course = ev[event_type == "bloodcure_given", tick] - 5L, recrud = gap$t_rec - gap$t_sub)
   }
   one <- delays(1)
-  expect_gt(length(one$course), 900)
-  expect_gt(length(one$recrud), 800)
+  ## the vector-control window stays closed, so these courses come from the coverage alone (D30)
+  expect_gt(length(one$course), 90)
+  expect_gt(length(one$recrud), 80)
   ## D = 1: no delay comes later than the next day. A zero-day draw would also show as one day
   ## here (imports are seeded after the day's courses, and suppressions happen after the day's
   ## recrudescences), so the one-day share at D = 4 is what pins the floor.
@@ -88,10 +57,10 @@ test_that("treatment and recrudescence delays are geometric with mean D days, at
   ## every recrudescence shape is at least one day, so at D = 1 each is exactly one day
   for (shape in c("poisson", "fixed")) {
     gaps <- delays(1, shape)$recrud
-    expect_gt(length(gaps), 800)
+    expect_gt(length(gaps), 80)
     expect_true(all(gaps == 1), label = paste("every", shape, "gap is one day"))
   }
-  four <- delays(4)
+  four <- delays(4, n = 1000)
   for (nm in names(four)) {
     x <- four[[nm]]
     ## Both at about 4 standard errors: the delay has mean 4 and variance 12, the one-day share
@@ -123,30 +92,36 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   skip_if_no_slim()
   base <- list(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,
                P_DETECT_PRIMARY = 0.9, P_DETECT_RELAPSE = 0.6)
-  out <- tempfile("mfw-recrud"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-recrud")
 
   ## OFF is a strict no-op: no suppression, no recrudescence, no subpatent compartment
   off <- run_sim(do.call(vivax_params, c(base, list(BLOODCURE_COVERAGE = 1,
                  P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 0))),
                  seed = 11L, outdir = file.path(out, "off"))
-  eo <- data.table::as.data.table(load_events(off))
-  so <- data.table::as.data.table(load_state(off))
+  eo <- load_events(off)
+  so <- load_state(off)
   expect_equal(nrow(eo[event_type == "recrudescence"]), 0L)
   expect_equal(nrow(eo[event_type == "bloodcure_subpatent"]), 0L)
   expect_equal(max(so$moi_subpatent), 0L)
   expect_gt(nrow(eo[event_type == "bloodcure_persist"]), 0)   # failures still happen
+  ## and at RADCURE_COVERAGE = 0 no course clears a hypnozoite
+  expect_equal(nrow(eo[event_type == "radcure_hypnozoite_clear"]), 0L)
 
   ## ON: every failure suppresses, and suppressed clones re-expand
   on <- run_sim(do.call(vivax_params, c(base, list(BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1,
                 P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1))),
                 seed = 11L, outdir = file.path(out, "on"))
-  ev <- data.table::as.data.table(load_events(on))
-  st <- data.table::as.data.table(load_state(on))
+  ev <- load_events(on)
+  st <- load_state(on)
   sub <- ev[event_type == "bloodcure_subpatent"]
   rec <- ev[event_type == "recrudescence"]
   expect_gt(nrow(sub), 0); expect_gt(nrow(rec), 0)
   expect_equal(nrow(ev[event_type == "bloodcure_persist"]), 0L)  # all failures suppress
   expect_gt(max(st$moi_subpatent), 0L)
+  ## a course that works clears its host's clones, and radical cure, nested in the course, clears
+  ## hypnozoites
+  expect_gt(nrow(ev[event_type == "case_bloodstage_clear"]), 0)
+  expect_gt(nrow(ev[event_type == "radcure_hypnozoite_clear"]), 0)
   ## host_state_prevalence() counts each subpatent carrier, every day
   hs <- host_state_prevalence(st)
   want <- st[entity_type == "human", .(n = sum(moi_active == 0 & moi_subpatent > 0), all = .N), by = tick][order(tick)]
@@ -171,12 +146,12 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
   expect_true(all(gap$t_rec > gap$t_sub))
 
   ## it is a CASE, with its own origin
-  cs <- data.table::as.data.table(classify_cases(ev))
+  cs <- classify_cases(ev)
   expect_true("recrudescence" %in% cs$origin)
   expect_equal(nrow(cs[origin == "recrudescence"]), nrow(rec))
 
   ## ...but NOT an acquisition: it must not enter a force-of-infection rate
-  fo <- data.table::as.data.table(force_of_infection(on))
+  fo <- force_of_infection(on)
   expect_true("is_acquisition" %in% names(fo))
   expect_false(any(fo[origin == "recrudescence"]$is_acquisition))
   rf <- relapse_fraction(ev)
@@ -193,12 +168,12 @@ test_that("three-state recurrence: suppression, recrudescence, and a clonal mint
 
 test_that("a recrudescence is clonal to its holder and MOI-neutral", {
   skip_if_no_slim(); skip_if_no_tskit()
-  out <- tempfile("mfw-recrud-ibd"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-recrud-ibd")
   run <- run_sim(vivax_params(SIM_DAYS = 300L, N_HOSTS = 50L, N_MOSQ = 110L,
                               BITING_RATE = 0.14, BLOODCURE_COVERAGE = 1,
                               P_BLOODCURE_SURVIVAL = 0.5, P_RECRUD_GIVEN_FAIL = 1),
                  seed = 11L, outdir = out)
-  ev <- data.table::as.data.table(load_events(run))
+  ev <- load_events(run)
   rec <- ev[event_type == "recrudescence"][1:min(.N, 12)]
   skip_if(nrow(rec) < 2, "too few recrudescences in this run")
 
@@ -206,7 +181,7 @@ test_that("a recrudescence is clonal to its holder and MOI-neutral", {
   ## self-pair, which ibd_lookup() gives as 1
   x <- ibd_pairs(run, pairs = data.frame(a = rec$pedigree_id, b = rec$parent1_pedigree_id))
   expect_true(all(ibd_lookup(x, rec$pedigree_id, rec$parent1_pedigree_id) > 0.999))
-  tm <- data.table::as.data.table(arg_tmrca(run, rec$pedigree_id, rec$parent1_pedigree_id))
+  tm <- arg_tmrca(run, rec$pedigree_id, rec$parent1_pedigree_id)
   expect_true(all(tm$coalesced > 0.99, na.rm = TRUE))
   expect_true(all(abs(tm$tmrca) < 1e-9, na.rm = TRUE))        # depth 0: parent -> child
 
@@ -221,17 +196,17 @@ test_that("a bite that seeds only hypnozoites is no case and gets no course", {
   skip_if_no_slim()
   ## With P_PRIMARY = 0 every bite seeds only a batch. Relapses are undetected, so nothing here
   ## is a case: no course may be given.
-  out <- tempfile("mfw-tx-liver-only"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-tx-liver-only")
   r <- run_sim(shared(P_PRIMARY = 0, BLOODCURE_COVERAGE = 1, RADCURE_COVERAGE = 1, P_DETECT_RELAPSE = 0),
                seed = 2, outdir = out)
-  ev <- data.table::as.data.table(load_events(r))
+  ev <- load_events(r)
   expect_gt(ev[event_type == "vh_inoculation" & is_dormant == 1, .N], 0)
   expect_equal(ev[event_type %in% c("bloodcure_given", "radcure_given"), .N], 0)
 })
 
 test_that("MDA reaches subpatent clones and clones patent that day, as a case course does not", {
   skip_if_no_slim()
-  out <- tempfile("mfw-mda-reach"); unlink(out, recursive = TRUE)
+  out <- tempfile("mfw-mda-reach")
   ## every treated clone that survives its course is suppressed, and waits about 60 days, so
   ## holders are waiting at the round
   run <- run_sim(vivax_params(SIM_DAYS = 160L, N_HOSTS = 50L, N_MOSQ = 110L, BITING_RATE = 0.14,
@@ -239,7 +214,7 @@ test_that("MDA reaches subpatent clones and clones patent that day, as a case co
                               BLOODCURE_COVERAGE = 1, P_BLOODCURE_SURVIVAL = 0.5,
                               P_RECRUD_GIVEN_FAIL = 1, MEAN_RECRUD_DELAY = 60),
                  seed = 11L, outdir = file.path(out, "holders"))
-  ev <- data.table::as.data.table(load_events(run))[, row := .I]
+  ev <- load_events(run)[, row := .I]
   ## a host's rows logged by the round come after its mda_bloodcure_given row
   from <- ev[event_type == "mda_bloodcure_given", .(human_id, from = row)]
   sub <- merge(ev[event_type == "bloodcure_subpatent"], from, by = "human_id", all.x = TRUE)
@@ -265,8 +240,8 @@ test_that("MDA reaches subpatent clones and clones patent that day, as a case co
   run <- run_sim(vivax_params(SIM_DAYS = 10L, N_HOSTS = 50L, N_MOSQ = 110L, CHROMOSOMES = "1",
                               N_FOUNDER_LINEAGES = 4L, MDA_TICK = 2L, P_BLOODCURE_SURVIVAL = 0),
                  seed = 11L, outdir = file.path(out, "same-day"))
-  ev <- data.table::as.data.table(load_events(run))
-  st <- data.table::as.data.table(load_state(run))
+  ev <- load_events(run)
+  st <- load_state(run)
   same_day <- ev[event_type %in% .onset_events() & is_dormant == 0 & tick == 2, pedigree_id]
   expect_gte(length(same_day), 8)
   expect_true(all(same_day %in% ev[event_type == "mda_bloodstage_clear" & tick == 2, pedigree_id]))

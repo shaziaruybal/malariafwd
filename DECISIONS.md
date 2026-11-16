@@ -136,7 +136,7 @@ genome killed without being remembered can be simplified out of the tree, its an
 `FALSE` is for runs that will never ask about earlier infections.
 
 **How to check.** `inst/validation/audit_events_and_ibd.R` (the logged cases are in the tree
-sequence), `tests/testthat/test-run.R` (every relapse is found, at IBD 1, with the batch it woke
+sequence), `tests/testthat/test-ibd.R` (every relapse is found, at IBD 1, with the batch it woke
 from) and `tests/testthat/test-no-parasite.R` (with `RETAIN_FULL_HISTORY = FALSE`, the readers give
 their `NA` rows, and the error names the setting).
 
@@ -625,10 +625,10 @@ relatedness to earlier cases, inverting the comparison the measure exists to mak
 on `ibd_pairs()` itself — it presumes one depth convention.
 
 **How to check.** `tests/testthat/test-model-invariants.R` (`arg_tmrca()` gives one number for one
-fixed relationship whatever the sampling day, and never a negative depth; the segments reconstruct
-each pair's IBD); `tests/testthat/test-ibd.R` and `tests/testthat/test-arg.R`; the ARG and IBD
-checks of `inst/validation/audit_events_and_ibd.R` (the genealogy is a forest, relapse-to-origin IBD
-is exactly 1, distinct founder lineages are unrelated).
+fixed relationship whatever the sampling day, and never a negative depth);
+`tests/testthat/test-ibd.R` (the segments reconstruct each pair's IBD) and
+`tests/testthat/test-arg.R`; the ARG and IBD checks of `inst/validation/audit_events_and_ibd.R` (the
+genealogy is a forest, relapse-to-origin IBD is exactly 1, distinct founder lineages are unrelated).
 
 ### D18 — An IBD segment is a maximal stretch from one common ancestor, cut at the chromosome junctions
 
@@ -715,10 +715,10 @@ for the root genomes behind the genomes asked for — a genome's alleles would d
 were asked for.
 
 **How to check.** `tests/testthat/test-genotypes.R`: every genome carries its root genome's allele,
-by the bookkeeping, by painting the root nodes in tskit and by walking the unsimplified genealogy;
-root genomes are their own roots; the same root genome exactly where `ibd_segments()` finds a common
-ancestor; the root genomes and their days; the seed's invariance; host samples; the VCF; refusals;
-the schema. `inst/validation/audit_events_and_ibd.R` repeats four of those checks on each audit run.
+by the bookkeeping and by walking the unsimplified genealogy; root genomes are their own roots; the
+same root genome exactly where `ibd_segments()` finds a common ancestor; the root genomes and their
+days; the seed's invariance; host samples; the VCF; refusals; the schema.
+`inst/validation/audit_events_and_ibd.R` repeats four of those checks on each audit run.
 
 ## Hypnozoites, relapse and the reservoir
 
@@ -799,7 +799,7 @@ over-count relapses, keep the lineage in the blood until every copy cleared, dra
 radical cure once per hypnozoite, and weight that lineage by its count in the gametocyte pool a
 mosquito draws from.
 
-**How to check.** `tests/testthat/test-run.R` and `inst/validation/audit_events_and_ibd.R` check
+**How to check.** `tests/testthat/test-ibd.R` and `inst/validation/audit_events_and_ibd.R` check
 that every relapse has IBD 1 with its batch; the audit also checks that every activation names an
 established batch and that a relapse shares every root genome with it;
 `tests/testthat/test-model-invariants.R` checks that a batch's activations and deaths, counted in
@@ -1000,12 +1000,13 @@ without it: it keeps a coupling that has no modelling reason, and forces a chang
 anyone who wants treatment. A treatment efficacy of its own within the shared window: the timing of
 the two programmes would stay tied.
 
-**How to check.** `tests/testthat/test-treatment.R`: a coverage alone gives courses; opening the
-vector-control window alone gives none; a bounded window gives courses only from its first day, with
-a short tail after it closes; and a coverage against a closed window is refused. The window test
-asserts when courses come rather than how many, because a window open throughout a run can give
-fewer courses than a late one, by preventing the cases it would treat. `tests/testthat/test-slim.R`:
-a run started directly with SLiM refuses a coverage against a closed window too.
+**How to check.** `tests/testthat/test-treatment.R`: a coverage alone gives courses; a bounded
+window gives courses only from its first day, with a short tail after it closes; and a coverage
+against a closed window is refused. The window test asserts when courses come rather than how many,
+because a window open throughout a run can give fewer courses than a late one, by preventing the
+cases it would treat. `tests/testthat/test-edge-values.R`: opening the vector-control window alone
+gives none. `tests/testthat/test-slim.R`: a run started directly with SLiM refuses a coverage
+against a closed window too.
 
 ### D31 — Treatment is decided where the case arises and applied to the host later; radical cure is nested inside it
 
@@ -1042,10 +1043,10 @@ treats one clone rather than the patient, and cannot reach the batch the same bi
 keeps out of sight until `reproduction()` ends. Per-person efficacy alone: it cannot clear part of a
 reservoir, so the per-hypnozoite mode is offered beside it.
 
-**How to check.** `tests/testthat/test-treatment.R`: a blood-stage coverage alone gives courses, and
-radical cure nested in them clears hypnozoites. `tests/testthat/test-relapse-metrics.R`: on a cohort
-of imports, a case's radical cure empties the batch its own import seeded before any of it
-activates, and with `RADCURE_COVERAGE = 0` none is emptied; in the per-hypnozoite mode, case and MDA
+**How to check.** `tests/testthat/test-treatment.R`: a blood-stage coverage alone gives courses,
+radical cure nested in them clears hypnozoites, and with `RADCURE_COVERAGE = 0` none is cleared.
+`tests/testthat/test-relapse-metrics.R`: on a cohort of imports, a case's radical cure empties the
+batch its own import seeded before any of it activates; in the per-hypnozoite mode, case and MDA
 radical cure take hypnozoites out of the batches they name. `inst/validation/check_parameters.R`:
 radical cure shrinks the reservoir, a weaker one leaves a bigger reservoir, and blood-stage
 treatment lowers prevalence.
@@ -1258,11 +1259,10 @@ be expressed at all. Scaling the pulse and the daily count by the season or the 
 are values the user sets directly, and a user who wants them to vary can vary them.
 
 **How to check.** `tests/testthat/test-edge-values.R`: under full vector control from day 10 no bite
-or uptake happens from day 10 while imports keep arriving, and `IMPORT_RATE_BOOST = 0` from the
-trigger stops the imports; `tests/testthat/test-params.R`: an import rate of 40 a day into 30 hosts
-warns at its full value under 90% vector control; `tests/testthat/test-treatment.R`: opening the
-vector-control window gives no course; `inst/validation/check_parameters.R`: vector control lowers
-prevalence.
+or uptake happens from day 10 while imports keep arriving, opening the window gives no course, and
+`IMPORT_RATE_BOOST = 0` from the trigger stops the imports; `tests/testthat/test-params.R`: an
+import rate of 40 a day into 30 hosts warns at its full value under 90% vector control;
+`inst/validation/check_parameters.R`: vector control lowers prevalence.
 
 ### D38 — An import is minted in a scratch subpopulation in early(), and its second compartment is cloned the next day
 
@@ -1697,7 +1697,7 @@ ran.
 
 **How to check.** `tests/testthat/test-windows.R`: every window and origin, the days of the first
 and last windows, a run with no case and its plot, an extinct run's zeros after its extinction, and
-the window statistics of runs that went extinct before day 200 of 400.
+the window statistics of a run that went extinct before day 200 of 400.
 
 ### D50 — summarise_run() is the one summary of a run, over one window of days
 

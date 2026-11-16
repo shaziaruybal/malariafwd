@@ -3,15 +3,6 @@
 
 md5s <- function(d) tools::md5sum(file.path(d, sort(list.files(d))))
 
-## A stand-in for SLiM that reports version 5.2 and then runs `body` (sh), for the paths that need
-## SLiM to fail in a given way.
-fake_slim <- function(body) {
-  fake <- tempfile("fakeslim")
-  writeLines(c("#!/bin/sh", 'if [ "$1" = "-v" ]; then echo "SLiM version 5.2"; exit 0; fi', body), fake)
-  Sys.chmod(fake, "755")
-  fake
-}
-
 test_that("a run stopped part-way leaves its outdir as it was, and its files in <outdir>.failed", {
   skip_if_no_slim()
   od <- file.path(tempfile("mfwd_dir_"), "run")
@@ -88,6 +79,8 @@ test_that("DONE is written last, keys the run, and lists every file with its siz
                                     "slim_version"))
   files <- sub("^file:", "", names(d)[-(1:7)])
   expect_setequal(files, setdiff(list.files(r$outdir), "DONE"))
+  ## a run writes the files run_sim() counts as a run's, and no other
+  expect_setequal(list.files(r$outdir), malariafwd:::.run_files)
   expect_identical(as.numeric(d[-(1:7)]), as.numeric(file.size(file.path(r$outdir, files))))
   expect_identical(d[["seed"]], "3")
   expect_identical(d[["run_key"]], malariafwd:::.run_key(p, 3))

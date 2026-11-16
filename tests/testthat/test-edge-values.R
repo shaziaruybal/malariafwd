@@ -43,7 +43,7 @@ test_that("an import rate that reaches zero means no imports, not an error", {
   expect_equal(max(load_state(run)$tick), 140)
 })
 
-test_that("local vector control scales biting, not imports", {
+test_that("local vector control scales biting, not imports, and gives no course", {
   skip_if_no_slim()
   ## full vector control from day 10: no mosquito bites from then on, while imports, infections
   ## acquired elsewhere, keep arriving
@@ -55,6 +55,8 @@ test_that("local vector control scales biting, not imports", {
   expect_gt(nrow(ev[event_type %in% bites & tick < 10]), 0L)
   expect_equal(nrow(ev[event_type %in% bites & tick >= 10]), 0L)
   expect_gt(nrow(ev[event_type == "vh_inoculation_import" & tick > 10]), 40L)
+  ## the imports are detected cases, but treatment comes from a coverage, and there is none (D30)
+  expect_equal(nrow(ev[event_type %in% c("bloodcure_given", "radcure_given")]), 0L)
 })
 
 test_that("a small K_OOCYSTS runs, although its gamma draws can underflow to zero", {

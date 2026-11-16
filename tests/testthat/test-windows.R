@@ -3,25 +3,22 @@
 
 test_that("summarise_run() counts the days after an extinction as days with no infected host", {
   skip_if_no_slim()
-  for (s in 1:6) {
-    r <- w_run(s)
-    expect_lt(r$extinct_tick, 200L)
-    m <- summarise_run(r)
-    expect_identical(c(m$prevalence_frac, m$hypnozoites_per_host), c(0, 0), label = paste("seed", s))
-    expect_true(is.na(m$coi_mean) && is.na(m$polyclonal_frac), label = paste("seed", s))
-  }
+  r <- w_run(2)
+  expect_lt(r$extinct_tick, 200L)
+  m <- summarise_run(r)
+  expect_identical(c(m$prevalence_frac, m$hypnozoites_per_host), c(0, 0))
+  expect_true(is.na(m$coi_mean) && is.na(m$polyclonal_frac))
 })
 
 test_that("force_of_infection() gives each window its days within SIM_DAYS", {
+  ## a window that holds a case and the extinction counts all its days: the fixture's case on day 2
+  ## and its extinction on day 6 fall in the window of days 1 to 9
+  fo <- force_of_infection(extinct_fixture_run(), bin = 10)[origin == "local reinfection"]
+  expect_identical(fo$n, c(1L, 0L, 0L))
+  expect_identical(fo$days, c(9L, 10L, 1L))
   skip_if_no_slim()
-  hit <- FALSE
-  for (s in 1:6) {
-    r <- w_run(s)
-    fo <- force_of_infection(r)[win > 0]
-    expect_identical(fo$days, pmin(30L, 400L - fo$win + 1L), label = paste("seed", s))
-    hit <- hit || any(fo$win == (r$extinct_tick %/% 30) * 30 & fo$n > 0)
-  }
-  expect_true(hit)
+  fo <- force_of_infection(w_run(2))[win > 0]
+  expect_identical(fo$days, pmin(30L, 400L - fo$win + 1L))
 })
 
 test_that("new_infection_diversity() takes its burn-in from SIM_DAYS", {

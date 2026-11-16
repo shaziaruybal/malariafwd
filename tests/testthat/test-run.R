@@ -1,16 +1,4 @@
-# These tests actually run SLiM, so they skip when it (or tskit) is unavailable.
-
-test_that("run_sim produces the expected outputs", {
-  skip_if_not(slim_available(), "SLiM not on PATH")
-  od <- tempfile("mfwd_test_run")
-  run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
-                              LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
-                 seed = 1, outdir = od)
-  expect_s3_class(run, "vivax_run")
-  expect_true(all(file.exists(file.path(od,
-    c("events.tsv", "state.tsv", "plasmo.trees", "params.tsv", "model.slim", "run.log")))))
-  expect_gt(nrow(load_events(run)), 0)
-})
+# These tests actually run SLiM, so they skip when it is unavailable.
 
 test_that("state.tsv has one row per host and per mosquito on every tick it covers", {
   skip_if_not(slim_available(), "SLiM not on PATH")
@@ -34,20 +22,6 @@ test_that("hypnozoite dynamics match alpha/(alpha+mu) [transmission-invariant]",
   died <- ev[event_type == "hypnozoite_clearance",  sum(n_hypnozoites)]
   skip_if(act + died < 200, "too few resolved hypnozoites to test")
   expect_equal(act / (act + died), (1/170) / (1/170 + 1/442), tolerance = 0.06)
-})
-
-test_that("relapse-to-origin IBD is clonal (= 1)", {
-  skip_if_no_slim(); skip_if_no_tskit()
-  run <- run_sim(vivax_params(N_HOSTS = 120, N_MOSQ = 240, BITING_RATE = 0.12,
-                              LAMBDA_SPOROZOITES = 2.0, SIM_DAYS = 365),
-                 seed = 3, outdir = tempfile("mfwd_test_ibd"))
-  ## every relapse against the batch it woke from
-  rel <- load_events(run)[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1]
-  skip_if(nrow(rel) < 10, "too few relapses")
-  v <- ibd_lookup(ibd_pairs(run, pairs = data.frame(a = rel$pedigree_id, b = rel$parent1_pedigree_id)),
-                  rel$pedigree_id, rel$parent1_pedigree_id)
-  expect_false(anyNA(v))
-  expect_gt(min(v), 0.999)
 })
 
 test_that("run_sim() works with an apostrophe and a space in the output path and SIM_ID", {
@@ -348,11 +322,8 @@ test_that("into_patent_lineage marks a relapse into a patent clone of its own li
 test_that("run_sim() says when it stops a run at its timeout", {
   skip_on_os("windows")
   ## a stand-in for SLiM that reports its version and then hangs
-  fake <- tempfile("fakeslim")
-  writeLines(c("#!/bin/sh", 'if [ "$1" = "-v" ]; then echo "SLiM version 5.2"; exit 0; fi', "exec sleep 30"), fake)
-  Sys.chmod(fake, "755")
   old <- Sys.getenv("MALARIAFWD_SLIM", NA)
-  Sys.setenv(MALARIAFWD_SLIM = fake)
+  Sys.setenv(MALARIAFWD_SLIM = fake_slim("exec sleep 30"))
   on.exit(if (is.na(old)) Sys.unsetenv("MALARIAFWD_SLIM") else Sys.setenv(MALARIAFWD_SLIM = old), add = TRUE)
   expect_error(run_sim(vivax_params(), outdir = tempfile("mfwd_timeout_"), timeout = 1),
                "SLiM run timed out after 1 s and was stopped")
@@ -412,17 +383,25 @@ test_that("a founder-free run is marked never started whatever its import schedu
 })
 
 ## A set whose floats need all 15 digits, a probability R stores as SLiM is given it, whole numbers
-## beyond the integer range, and a UTF-8 SIM_ID with an apostrophe.
+## beyond the integer range, and a UTF-8 SIM_ID with an apostrophe; and its run at seed 7, made once
+## for this file.
 record_set <- function() vivax_params(N_HOSTS = 30, N_MOSQ = 60, SIM_DAYS = 60, ALPHA_ACTIVATE = 1/170,
   BITING_RATE = 0.1 + 0.02, SEASONAL_AMP = 1/3, SEASONAL_PHASE = 100/7, P_TRANS_VH = 1 + 2e-16,
-  LAMBDA_SPOROZOITES = 2/3, LAMBDA_OOCYSTS = exp(1), K_OOCYSTS = 0.003, RECOMB_RATE = 1e-7/3,
+  LAMBDA_SPOROZOITES = 2/3, LAMBDA_OOCYSTS = exp(1), K_OOCYSTS = 1/3, RECOMB_RATE = 1e-7/3,
   INTERVENTION_START = 3e9, INTERVENTION_END = 3e9, MDA_TICK = 30, MDA_COVERAGE = 0.123456789012345678,
   SIM_ID = intToUtf8(c(0x43, 0xf4, 0x74, 0x65, 0x27, 0x73)), GENOME_MODE = "core")
+record_run <- local({
+  r <- NULL
+  function() {
+    if (is.null(r)) r <<- suppressMessages(run_sim(record_set(), seed = 7, outdir = tempfile("mfwd_rec1_")))
+    r
+  }
+})
 
 test_that("load_params() gives the set a run was made from, and run_sim() of it repeats the run", {
   skip_if_no_slim()
   p <- record_set()
-  r1 <- suppressMessages(run_sim(p, seed = 7, outdir = tempfile("mfwd_rec1_")))
+  r1 <- record_run()
   expect_identical(load_params(r1), p)
   expect_identical(load_params(r1$outdir), p)
   r2 <- suppressMessages(run_sim(load_params(r1), seed = r1$seed, outdir = tempfile("mfwd_rec2_")))
@@ -433,7 +412,7 @@ test_that("load_params() gives the set a run was made from, and run_sim() of it 
 
 test_that("load_run() carries the run's record, typed", {
   skip_if_no_slim()
-  r <- suppressMessages(run_sim(record_set(), seed = 7, outdir = tempfile("mfwd_rec3_")))
+  r <- record_run()
   expect_identical(r$seed, 7L)
   expect_identical(r$slim_version, slim_version())
   expect_identical(r$malariafwd_version, as.character(utils::packageVersion("malariafwd")))

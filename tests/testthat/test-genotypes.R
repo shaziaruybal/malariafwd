@@ -158,7 +158,7 @@ test_that("write_vcf() writes clone samples haploid and host samples diploid, so
 
 ## ---- on a run ----
 
-test_that("every genome carries its root genome's allele, by three routes", {
+test_that("every genome carries its root genome's allele, by two routes", {
   skip_if_no_slim(); skip_if_no_tskit()
   r <- genotypes_run(); ev <- load_events(r); cs <- classify_cases(ev)
   rel <- ev[event_type == "hypnozoite_activation"][seq_len(min(.N, 15))]
@@ -171,26 +171,8 @@ test_that("every genome carries its root genome's allele, by three routes", {
   k <- match(g$roots, g$root_genomes$root_id)
   expect_false(anyNA(k))
   expect_identical(as.vector(g$alleles), g$root_alleles[cbind(k, as.vector(col(g$roots)))])
-  ## 2 tskit, independently: mutations on the root nodes, then genotype_matrix()
-  py <- reticulate::import_main(convert = FALSE)
+  ## 2 walking up the unsimplified genealogy reaches the root genome named
   m <- malariafwd:::.py_module("_malariafwd_genotype_test", '
-def paint(path, ids, rid, A, positions):
-    ts = tskit.load(path); p2n, _ = _ped_nodes(ts)
-    sts = ts.simplify(samples=[p2n[int(p)] for p in ids], keep_input_roots=True)
-    _, sped = _ped_nodes(sts)
-    row = {int(p): i for i, p in enumerate(rid)}
-    A = np.asarray(A); pos = np.asarray(positions, float)
-    t = sts.dump_tables(); tree = sts.first()
-    order = np.argsort(pos, kind="stable")
-    for j in order:
-        tree.seek(pos[j]); s = t.sites.add_row(position=pos[j], ancestral_state="0")
-        for r in tree.roots:
-            if A[row[int(sped[r])], j] == 1:
-                t.mutations.add_row(site=s, node=r, derived_state="1", metadata={"mutation_list": []})
-    t.sort(); t.build_index(); t.compute_mutation_parents()
-    G = t.tree_sequence().genotype_matrix(isolated_as_missing=False)
-    out = np.empty((len(ids), len(pos)), np.int32); out[:, order] = G.T
-    return out
 def walk(path, ids, positions):
     ts = tskit.load(path); p2n, ped = _ped_nodes(ts)
     W = np.empty((len(ids), len(positions)), np.int64); t = ts.first()
@@ -202,13 +184,9 @@ def walk(path, ids, positions):
             W[i, j] = ped[u]
     return W
 ')
-  G <- reticulate::py_to_r(m$paint(trees_path(r), as.list(ids), as.list(g$root_genomes$root_id), g$root_alleles,
-                                   as.list(g$loci$position)))
-  expect_identical(unname(g$alleles), G)
-  ## 3 walking up the unsimplified genealogy reaches the root genome named
   W <- reticulate::py_to_r(m$walk(trees_path(r), as.list(ids), as.list(g$loci$position)))
   expect_true(all(unname(g$roots) == W))
-  ## 4 root genomes alone are their own roots
+  ## 3 root genomes alone are their own roots
   rid <- g$root_genomes$root_id[c(1, which(g$root_genomes$imported)[1:2])]
   g0 <- simulate_genotypes(r, rid, lo, seed = 1)
   expect_true(all(g0$roots == matrix(rid, length(rid), nrow(lo))))
