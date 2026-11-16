@@ -22,7 +22,8 @@ Please open an issue first, so that we can agree on the change before you spend 
 on a branch of your fork:
 
 - add tests for what you change in `tests/testthat/`, and run `devtools::test()` and
-  `devtools::check()`;
+  `devtools::check(cran = FALSE)`: with SLiM installed, the `--as-cran` check stops at the first
+  example that runs it, on two FIFOs that processx keeps open so that SLiM stops if R dies;
 - document exported functions with roxygen, and run `devtools::document()`;
 - add a line to `NEWS.md`;
 - for a change to what the model does, update `MODEL_DESCRIPTION.md` and give the reason in

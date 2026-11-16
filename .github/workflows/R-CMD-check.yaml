@@ -175,10 +175,14 @@ jobs:
           print(check_setup())   # on the macOS leg this builds reticulate's environment
           stopifnot(slim_available(), numeric_version(slim_version()) >= "5.2", tskit_available())
 
+      # Not --as-cran: run_sim() has processx supervise SLiM, so that SLiM stops if R dies, and
+      # processx keeps the supervisor's two FIFOs open for the rest of the session, which --as-cran
+      # counts as connections an example left open. The R-CMD-check jobs run --as-cran, without
+      # SLiM, so no example runs it there.
       - name: R CMD check with SLiM and tskit present (every test runs)
         uses: r-lib/actions/check-r-package@v2
         with:
-          args: 'c("--no-manual", "--as-cran")'
+          args: 'c("--no-manual")'
           build_args: 'c("--no-manual")'
           upload-snapshots: true
           artifact-name: integration-${{ runner.os }}-check-results
