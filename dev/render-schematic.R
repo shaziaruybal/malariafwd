@@ -12,8 +12,8 @@ svg <- "man/figures/model-structure.svg"
 png <- "man/figures/model-structure.png"
 tmp <- file.path(tempdir(), "square.svg")
 s <- readLines(svg, warn = FALSE)
-s <- sub('viewBox="0 0 1600 1010" width="1600" height="1010"',
-         'viewBox="0 -295 1600 1600" width="1600" height="1600"', s, fixed = TRUE)
+s <- sub('viewBox="0 0 1600 1040" width="1600" height="1040"',
+         'viewBox="0 -280 1600 1600" width="1600" height="1600"', s, fixed = TRUE)
 writeLines(s, tmp)
 out <- file.path(tempdir(), "render"); unlink(out, recursive = TRUE); dir.create(out)
 system2("qlmanage", c("-t", "-s", "3000", "-o", shQuote(out), shQuote(tmp)),
@@ -33,9 +33,9 @@ if (requireNamespace("png", quietly = TRUE)) {
   rows <- which(apply(ink, 1, any)); cols <- which(apply(ink, 2, any))
   im <- im[min(rows):max(rows), min(cols):max(cols), ]
   png::writePNG(im, png)
-  cat(sprintf("wrote %s (%d x %d, aspect %.2f; the SVG is 1.58)\n",
+  cat(sprintf("wrote %s (%d x %d, aspect %.2f; the SVG is 1.54)\n",
               png, dim(im)[2], dim(im)[1], dim(im)[2] / dim(im)[1]))
-  if (abs(dim(im)[2] / dim(im)[1] - 1.58) > 0.2)
+  if (abs(dim(im)[2] / dim(im)[1] - 1.54) > 0.2)
     warning("aspect is wrong - qlmanage probably cropped the width; check the render")
 } else {
   stop("needs the 'png' package to trim the render: install.packages('png')")

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1010" width="1600" height="1010" font-family="Quicksand, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1040" width="1600" height="1040" font-family="Quicksand, 'Helvetica Neue', Helvetica, Arial, sans-serif">
   <style>
     .t   { fill:#444; font-size:13px; }
     .ts  { fill:#555; font-size:12px; }
@@ -20,7 +20,7 @@
     <marker id="aX" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#999"/></marker>
   </defs>
 
-  <rect width="1600" height="1010" fill="#ffffff"/>
+  <rect width="1600" height="1040" fill="#ffffff"/>
   <line x1="815" y1="30" x2="815" y2="900" stroke="#bbb" stroke-dasharray="3 5"/>
 
   <!-- ===================== PANEL A ===================== -->
@@ -28,10 +28,8 @@
   <text x="340" y="78" class="sub">individual-based; each state summarises a host's lineages</text>
 
   <rect x="40" y="26" width="260" height="92" rx="16" fill="#e8eefc" stroke="#5b7bd6" stroke-width="1.5"/>
-  <text x="58" y="52" fill="#3d5fc4" font-size="17px" font-weight="600">Importation (rate &#953;)</text>
-  <text x="58" y="74" class="ts">Poisson rate, fixed count or single event</text>
-  <text x="58" y="92" class="ti">imported genotypes are unrelated to</text>
-  <text x="58" y="108" class="ti">local parasites</text>
+  <text x="58" y="62" fill="#3d5fc4" font-size="17px" font-weight="600">Importation (rate &#953;)</text>
+  <text x="58" y="88" class="ts">Poisson rate, fixed count or single event</text>
 
   <rect x="30" y="140" width="770" height="400" rx="28" fill="#f7eaf2" stroke="#c9606e" stroke-width="1.5" stroke-dasharray="8 6"/>
   <text x="52" y="170" class="pl" fill="#b04d5c">Humans</text>
@@ -101,7 +99,7 @@
 
   <line x1="232" y1="730" x2="341" y2="730" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="287" y="752" class="t" text-anchor="middle">uptake</text>
-  <text x="287" y="768" class="nt" text-anchor="middle">cap MAX_BROODS_PER_MOSQ</text>
+  <text x="287" y="788" class="nt" text-anchor="middle">cap MAX_BROODS_PER_MOSQ</text>
   <line x1="487" y1="730" x2="596" y2="730" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="541" y="722" class="t" text-anchor="middle">EIP</text>
   <text x="541" y="750" class="ts" text-anchor="middle">fixed 10 d</text>
@@ -135,25 +133,26 @@
   <line x1="1314" y1="183" x2="1114" y2="183" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="1214" y="176" class="ts" text-anchor="middle">primary (P_PRIMARY = 1)</text>
 
-  <rect x="1316" y="296" width="226" height="104" rx="10" fill="#fff" stroke="#c9606e" stroke-width="2"/>
-  <text x="1429" y="318" class="bx" text-anchor="middle">Hypnozoite batch</text>
-  <rect x="1352" y="328" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
-  <rect x="1352" y="339" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
-  <rect x="1352" y="350" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
-  <text x="1412" y="348" class="ts">&#215; n clonal</text>
-  <text x="1429" y="376" class="ts" text-anchor="middle">n ~ Geom(mean &#957;); one batch per bite,</text>
-  <text x="1429" y="392" class="nt" text-anchor="middle">split uniformly across the k genotypes</text>
+  <rect x="1316" y="284" width="226" height="120" rx="10" fill="#fff" stroke="#c9606e" stroke-width="2"/>
+  <text x="1429" y="306" class="bx" text-anchor="middle">Hypnozoite batch</text>
+  <rect x="1352" y="316" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
+  <rect x="1352" y="327" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
+  <rect x="1352" y="338" width="50" height="8" rx="2" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.6"/>
+  <text x="1412" y="336" class="ts">&#215; n clonal</text>
+  <text x="1429" y="364" class="ts" text-anchor="middle">n ~ Geom(mean &#957;); one batch per bite,</text>
+  <text x="1429" y="380" class="nt" text-anchor="middle">split uniformly across the k genotypes</text>
+  <text x="1429" y="396" class="nt" text-anchor="middle">K_LATENCY &gt; 0: latent stages first</text>
 
-  <line x1="1429" y1="222" x2="1429" y2="292" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
+  <line x1="1429" y1="222" x2="1429" y2="280" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="1439" y="250" class="ts">and / or</text>
   <text x="1439" y="265" class="ts">batch (if n &gt; 0)</text>
 
   <path d="M1314,335 C1230,330 1160,290 1112,215" fill="none" stroke="#c9606e" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#aP)"/>
-  <text x="1262" y="262" class="t" text-anchor="middle" font-weight="600" style="fill:#b04d5c">relapse</text>
-  <text x="1262" y="278" class="ts" text-anchor="middle" style="fill:#b04d5c">&#945; per hypnozoite;</text>
-  <text x="1262" y="292" class="ts" text-anchor="middle" style="fill:#b04d5c">clone of batch (IBD = 1)</text>
+  <text x="1250" y="248" class="t" text-anchor="middle" font-weight="600" style="fill:#b04d5c">relapse</text>
+  <text x="1250" y="263" class="ts" text-anchor="middle" style="fill:#b04d5c">&#945; per hypnozoite;</text>
+  <text x="1250" y="277" class="ts" text-anchor="middle" style="fill:#b04d5c">clone of batch (IBD = 1)</text>
 
-  <line x1="1429" y1="402" x2="1429" y2="448" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
+  <line x1="1429" y1="406" x2="1429" y2="448" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
   <text x="1429" y="470" font-size="20px" fill="#b8912a" text-anchor="middle" font-weight="700">&#10005;</text>
   <text x="1440" y="420" class="ts" style="fill:#8a6a14">death &#956;,</text>
   <text x="1440" y="434" class="ts" style="fill:#8a6a14">radical cure, MDA;</text>
@@ -177,6 +176,7 @@
   <text x="874" y="421" class="nt" style="fill:#8a6a14">cleared: MDA</text>
 
   <path d="M956,235 L956,312" fill="none" stroke="#b8912a" stroke-width="2" marker-end="url(#aY)"/>
+  <path d="M1012,406 L1012,426" fill="none" stroke="#c9606e" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#aP)"/>
   <text x="964" y="262" class="nt" style="fill:#8a6a14">course fails,</text>
   <text x="964" y="274" class="nt" style="fill:#8a6a14">suppressed</text>
 
@@ -195,25 +195,27 @@
   <text x="1050" y="470" class="ts" text-anchor="middle">active lineages, gametocytaemic</text>
   <text x="1050" y="488" class="nt" text-anchor="middle">Simpson P_out is logged, not imposed</text>
 
-  <rect x="1216" y="410" width="190" height="104" rx="10" fill="#f3f3f3" stroke="#999" stroke-width="1.3" stroke-dasharray="4 3"/>
-  <text x="1311" y="432" class="bx" text-anchor="middle" style="fill:#555">Observation layer</text>
-  <text x="1311" y="452" class="ts" text-anchor="middle">each episode detected</text>
-  <text x="1311" y="467" class="ts" text-anchor="middle">w.p. P_DETECT (primary /</text>
-  <text x="1311" y="482" class="ts" text-anchor="middle">relapse) &#8594; genotyped;</text>
-  <text x="1311" y="497" class="ts" text-anchor="middle">can trigger treatment</text>
-  <path d="M1112,237 C1150,320 1180,380 1212,430" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#aX)"/>
+  <rect x="1206" y="410" width="200" height="124" rx="10" fill="#f3f3f3" stroke="#999" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <text x="1306" y="431" class="bx" text-anchor="middle" style="fill:#555">Observation layer</text>
+  <text x="1306" y="449" class="ts" text-anchor="middle">each episode detected w.p.</text>
+  <text x="1306" y="463" class="ts" text-anchor="middle">P_DETECT_PRIMARY (also</text>
+  <text x="1306" y="477" class="ts" text-anchor="middle">imports), _RELAPSE or</text>
+  <text x="1306" y="491" class="ts" text-anchor="middle">_RECRUD &#8594; genotyped;</text>
+  <text x="1306" y="505" class="ts" text-anchor="middle">may be treated; drugs land</text>
+  <text x="1306" y="519" class="ts" text-anchor="middle">after a delay (mean 7 d)</text>
+  <path d="M1112,237 C1150,320 1185,375 1222,407" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#aX)"/>
 
   <rect x="830" y="600" width="750" height="300" rx="28" fill="#edf4eb" stroke="#4f7a5e" stroke-width="1.5" stroke-dasharray="8 6"/>
   <text x="852" y="630" class="pl" fill="#4f7a5e">in a mosquito</text>
 
   <line x1="1050" y1="506" x2="1050" y2="592" stroke="#c9606e" stroke-width="2.5" marker-end="url(#aP)"/>
   <text x="1062" y="556" class="t" style="fill:#b04d5c">uptake &#8594; n oocysts</text>
-  <text x="1062" y="571" class="nt">n ~ ZT Poisson(&#955;_ooc), NB if K &gt; 0</text>
+  <text x="1062" y="571" class="nt">n ~ ZT Poisson(&#955;_ooc = 2), NB if K &gt; 0</text>
   <text x="1062" y="586" class="nt">each oocyst = its own meiosis</text>
 
   <rect x="860" y="646" width="470" height="134" rx="10" fill="#fff" stroke="#4f7a5e" stroke-width="2"/>
   <text x="1095" y="670" class="bx" text-anchor="middle">Per oocyst: 2 gametes drawn independently &amp; uniformly from the pool</text>
-  <text x="1095" y="688" class="nt" text-anchor="middle">selfing vs outcrossing emerges from the draw; P(i,j) &#8733; p&#7522;p&#11388;</text>
+  <text x="1095" y="688" class="nt" text-anchor="middle">selfing vs outcrossing emerges from the draw; P(i,j) &#8733; p<tspan font-size="8px" dy="2">i</tspan><tspan dy="-2">p</tspan><tspan font-size="8px" dy="2">j</tspan></text>
 
   <text x="952" y="712" class="ts" text-anchor="middle">same lineage &#8594; selfed</text>
   <rect x="912" y="722" width="80" height="11" rx="3" fill="#d9a0d6" stroke="#8d6a8b" stroke-width="0.8"/>
@@ -257,7 +259,7 @@
   <rect x="1360" y="646" width="200" height="134" rx="10" fill="#fff" stroke="#4f7a5e" stroke-width="2"/>
   <text x="1460" y="670" class="bx" text-anchor="middle">Transmissible pool</text>
   <text x="1460" y="690" class="ts" text-anchor="middle">all products past the EIP</text>
-  <text x="1460" y="710" class="ts" text-anchor="middle">bite draws n ~ ZT(&#955;_spz),</text>
+  <text x="1460" y="710" class="ts" text-anchor="middle">bite draws n ~ ZT(&#955;_spz = 2),</text>
   <text x="1460" y="726" class="ts" text-anchor="middle">weighted by spz_weight,</text>
   <text x="1460" y="742" class="ts" text-anchor="middle">repeats collapsed to</text>
   <text x="1460" y="758" class="ts" text-anchor="middle">distinct lineages</text>
@@ -271,7 +273,9 @@
   <text x="1560" y="580" class="t" text-anchor="end" style="fill:#4f7a5e">inoculation</text>
 
   <!-- ===================== FOOTER ===================== -->
-  <text x="40" y="930" font-size="13px" fill="#8a6a14"><tspan font-weight="700">Interventions:</tspan> vector control &amp; seasonality scale biting (&#955;<tspan font-size="10px" dy="3">h</tspan><tspan dy="-3">, &#955;</tspan><tspan font-size="10px" dy="3">v</tspan><tspan dy="-3">, and &#953;); case-based blood-stage treatment &#8594; recovery; case-based radical cure &amp; MDA &#8594; reservoir cleared (MDA also clears blood stage).</tspan></text>
-  <text x="40" y="952" class="ti">Genome: 14 PvP01 chromosomes as ONE linkage group, r = 0.5 at the 13 junctions (independent assortment), 7.4e-7/bp within chromosomes. Mutation rate is ZERO - the genome is a neutral scaffold and all</text>
-  <text x="40" y="970" class="ti">genetics come from the recorded genealogy; alleles are painted on downstream. Ground-truth IBD is read from the tree sequence, never inferred from markers.</text>
+  <text x="40" y="930" font-size="13px" fill="#8a6a14"><tspan font-weight="700">Interventions:</tspan> seasonality scales biting (&#955;<tspan font-size="10px" dy="3">h</tspan><tspan dy="-3">, &#955;</tspan><tspan font-size="10px" dy="3">v</tspan><tspan dy="-3">) and the Poisson import rate &#953;; vector control scales biting only.</tspan></text>
+  <text x="40" y="949" font-size="13px" fill="#8a6a14"><tspan font-weight="700">Treatment:</tspan> a detected case is treated w.p. BLOODCURE_COVERAGE inside its window, the drugs landing after a geometric delay (mean 7 d), with nested radical cure (RADCURE_COVERAGE).</text>
+  <text x="40" y="968" font-size="13px" fill="#8a6a14"><tspan font-weight="700">MDA:</tspan> one round at MDA_TICK, reaching each host w.p. MDA_COVERAGE, subpatent clones included. Any course can fail: a clone survives w.p. P_BLOODCURE_SURVIVAL, a reservoir w.p. P_RAD_SURVIVAL.</text>
+  <text x="40" y="990" class="ti">Genome: 14 PvP01 chromosomes in one linkage group (one tree sequence); crossovers at 7.4e-7/bp within chromosomes; the chromosomes assort independently at meiosis I (r = 0.5 across each junction).</text>
+  <text x="40" y="1008" class="ti">Mutation rate is ZERO - the genome is a neutral scaffold and all genetics come from the recorded genealogy; alleles are painted on downstream. Ground-truth IBD is read from the tree sequence, never inferred from markers.</text>
 </svg>
