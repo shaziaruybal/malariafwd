@@ -7,18 +7,19 @@ model does, and its section 13 gives which parameters are calibrated to data and
 
 ## Validation suite
 
-`inst/validation/` ships five scripts: 165 assertion checks, the calibration of
-`NU_HYPNOZOITE_BATCH` and two numeric audits of the recombination machinery.
-`inst/validation/RESULTS.md` records the last full run, with its date, commit, versions and what
-each script found.
+`inst/validation/` ships five scripts: assertion checks on a run's event log and genealogy, the
+calibration of `NU_HYPNOZOITE_BATCH`, and two numeric audits of the recombination machinery.
+`inst/validation/RESULTS.md` records the last full run — its date, commit and versions, and how
+many checks each script passed. The counts are there rather than here, so that they come from a
+run rather than from editing by hand.
 
-| script | checks | result |
-|---|---|---|
-| `audit_events_and_ibd.R` | 123 (20 event-log, 4 transmission-link, 13 ARG/IBD and 4 genotype checks on each of three configurations) | all pass |
-| `check_parameters.R` | 40 | all pass |
-| `calibrate_nu.R` | 2, and the table of ν against the calibration targets below | all pass |
-| `audit_arg_recombination.R` | numeric audit | see the audit below |
-| `audit_arg_junctions.R` | numeric audit | see the audit below |
+| script | what it checks |
+|---|---|
+| `audit_events_and_ibd.R` | event-log integrity, transmission links, the ARG and IBD, and genotype painting, on each of three configurations |
+| `check_parameters.R` | that the structural invariants hold across 34 configurations, and that each parameter moves the model the way it should |
+| `calibrate_nu.R` | that every run completes, that the shipped ν does not die out, and that it sits inside all four targets; it makes the table below |
+| `audit_arg_recombination.R` | a numeric audit; see below |
+| `audit_arg_junctions.R` | a numeric audit; see below |
 
 ### Event-log integrity
 
