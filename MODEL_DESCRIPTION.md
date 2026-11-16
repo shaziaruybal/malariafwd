@@ -229,10 +229,10 @@ structure figure at the top of this page):
 
 | state | meaning |
 |---|---|
-| S₀ | uninfected, no reservoir |
-| I₀ | blood-stage infection, no reservoir |
-| S_L | hypnozoites only — **invisible to blood surveys** |
-| I_L | blood stage **and** hypnozoites |
+| S<sub>0</sub> | uninfected, no reservoir |
+| I<sub>0</sub> | blood-stage infection, no reservoir |
+| S<sub>L</sub> | hypnozoites only — **invisible to blood surveys** |
+| I<sub>L</sub> | blood stage **and** hypnozoites |
 
 **No intrinsic incubation.** Blood stage begins at inoculation, so hosts are *not* SEI. Liver-stage
 development time (~9 days in reality) is not represented in the current model, but will be implemented in future.
@@ -275,7 +275,7 @@ the cap, not the biology.
 
 ## 4. Mosquitoes
 
-Standard S_v → E_v → I_v, with:
+Standard S<sub>v</sub> → E<sub>v</sub> → I<sub>v</sub>, with:
 
 - **Biting:** `BITING_RATE` = 0.1 is the per-*mosquito* daily biting probability. The
   Ross–Macdonald per-human rate is `ma = BITING_RATE × N_MOSQ / N_HOSTS`, **not** this value
