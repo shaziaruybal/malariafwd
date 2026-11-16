@@ -473,8 +473,8 @@ optimisation that keeps object count from scaling with clonal output, corrected 
 **Gametocyte gating.** A blood-stage infection is transmissible only from
 `gametocyte_ready_tick = start + GAMETOCYTE_DELAY` and only if it carries gametocytes (per-infection
 Bernoulli, `P_GAMETOCYTE`). Defaults are the identity (0 and 1.0). Vivax gametocytes appear early —
-at or near symptom onset, unlike ~10–12 d in falciparum (Bousema & Drakeley 2011) — so a
-realistic preset is a short delay plus high carriage (≈3 and ≈0.9).
+at or near symptom onset, unlike ~10–12 d in falciparum (Bousema & Drakeley 2011;
+Koepfli et al. 2021) — so a realistic preset is a short delay plus high carriage (≈3 and ≈0.9).
 
 **Inoculation.** A bite draws `n ~ ZT(LAMBDA_SPOROZOITES)` products from everything past the EIP,
 **weighted by `spz_weight`**, then collapses repeat draws to one object per distinct lineage.
@@ -1262,7 +1262,7 @@ Ordered by how much the answer is likely to move.
 | S2 | **`NU_HYPNOZOITE_BATCH`** | fitted at 3 for one setting; drives relapse rate, reservoir size and COI | sweep per setting |
 | S3 | **`LAMBDA_OOCYSTS` / `K_OOCYSTS`** | vivax membrane-feeding counts are overdispersed (Miura et al. 2020), with a median of 7.2 oocysts a midgut in wild *An. arabiensis* (Ayele et al. 2023), against the default's mean of 2.31 an uptake | sweep; NB option exists |
 | S4 | **Per-oocyst sporozoite productivity** | we assume equal (weight 4); Childs & Prosper (2017) draw ~3,000 sporozoites an oocyst, Poisson, 20% of which reach the glands, so an early or productive oocyst would dominate | not implemented; test as sensitivity |
-| S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax gametocytes appear early, so sweep a short delay and a high carriage (3 d and 0.9, say) | knobs exist for exactly this |
+| S5 | **`GAMETOCYTE_DELAY` / `P_GAMETOCYTE`** | shipped at identity; vivax gametocytes appear early (Bousema & Drakeley 2011; Koepfli et al. 2021), so sweep a short delay and a high carriage (3 d and 0.9, say) | knobs exist for exactly this |
 | S6 | **`P_DETECT_RELAPSE`** | relapses are often sub-patent; everything observational depends on it | sweep 0.15–1.0 |
 | S7 | **`ALPHA_ACTIVATE` / `K_LATENCY`** | tropical vs temperate strongly changes relapse periodicity and identifiability | sweep; report tropical and temperate settings separately |
 | S8 | **`MAX_MOI`** | a runaway guard that becomes the measured quantity if set low | confirm it never binds in published runs |
