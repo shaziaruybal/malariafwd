@@ -3,19 +3,9 @@
 ## reticulate is a Suggests, and Python with tskit and numpy a system requirement; each function
 ## checks them through .require_python() (R/python.R), which says what is missing.
 
-.trees_of <- function(run) {
-  if (inherits(run, "vivax_run")) return(trees_path(run))
-  if (is.character(run) && length(run) == 1) {
-    if (dir.exists(run)) return(trees_path(run))
-    return(run)  # assume a .trees path
-  }
-  stop("`run` must be a vivax_run, a run directory, or a .trees path, got ", .what_table(run), ".",
-       call. = FALSE)
-}
-
 ## The tree sequence of `run`, which must exist.
 .trees_file <- function(run) {
-  tf <- .trees_of(run)
+  tf <- trees_path(run)
   if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
   tf
 }
@@ -113,8 +103,7 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 .ibd_compute <- function(run, ids = NULL, pa = NULL, pb = NULL, min_span = 0, segments = FALSE,
                          absent = "they are listed in `missing` and look up as NA.", none_ok = FALSE,
                          groups = NULL) {
-  tf <- .trees_of(run)
-  if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
+  tf <- .trees_file(run)
   m <- .py_module("_malariafwd_ibd", .ibd_py_src)
   arg <- function(x) if (is.null(x)) NULL else as.list(x)
   r <- reticulate::py_to_r(m$mfw_ibd(tf, arg(ids), arg(pa), arg(pb), segments,
@@ -188,9 +177,9 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 }
 
 ## The chromosome layout of the run behind tree sequence `tf`, of `L` bp: chrom_map() of its run
-## directory, or of the directory a .trees file sits in.
+## directory.
 .ibd_layout <- function(run, tf, L) {
-  dir <- if (inherits(run, "vivax_run")) run$outdir else if (dir.exists(run)) run else dirname(tf)
+  dir <- .run_dir(run)
   if (!file.exists(file.path(dir, "params.tsv")))
     stop("IBD segments are cut at the chromosome junctions, which need the run's params.tsv; there is ",
          "none beside ", tf, ".", call. = FALSE)
@@ -230,9 +219,7 @@ def mfw_ibd(trees, ids, pa, pb, want_segments, groups=None):
 #' between them. A pair gets the same segments whatever other genomes are passed, the same as
 #' [ibd_segments()] gives, and at `min_span = 0` they add up to its `ibd`.
 #'
-#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
-#'   or of a `.trees` file in its run directory, whose `params.tsv` gives the chromosome layout the
-#'   segments need.
+#' @inheritParams load_events
 #' @param ids the pedigree ids of the genomes to compare, every pair among them; `NULL` for every
 #'   genome the tree sequence records, which warns when that is more than 1e6 pairs.
 #' @param pairs instead of `ids`, a data frame of pairs to compare, with the pedigree ids in columns
@@ -295,7 +282,7 @@ ibd_pairs <- function(run, ids = NULL, pairs = NULL, min_span = 1000, segments =
   }
   .ibd_check_min_span(min_span)
   .check_flag(segments, "segments")
-  .require_python("ibd_pairs()", c("tskit", "numpy"))
+  .require_python("ibd_pairs()")
   if (is.null(pairs)) {
     x <- .ibd_compute(run, ids = ids, min_span = min_span, segments = segments, none_ok = none_ok)
     p <- x$samples$pedigree_id; n <- length(p)

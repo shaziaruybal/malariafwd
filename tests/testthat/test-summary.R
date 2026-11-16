@@ -34,6 +34,8 @@ test_that("summarise_run() over the whole run", {
   expect_equal(c(m$relapse_frac_episodes, m$relapse_frac_acquisitions, m$imported_frac), c(4 / 12, 4 / 11, 1 / 7))
   expect_identical(c(m$n_imported, m$n_local_reinfection, m$n_relapse, m$n_relapse_masked, m$n_recrudescence,
                      m$n_bloodstage_courses), c(1L, 6L, 4L, 1L, 1L, 2L))
+  ## at risk: host 5 from its batch-only bite on day 7, host 2 from its bite on day 25 (not its
+  ## seeding), every host to day 100, not the last event's day 80
   expect_equal(c(m$person_years, m$person_years_at_risk), c(600, 445) / 365)
 })
 
@@ -62,6 +64,10 @@ test_that("the default window is the second half, and every column follows the w
   expect_equal(m$relapses_per_py_at_risk, 2 / (95 / 365))
   expect_identical(m$n_bloodstage_courses, 1L)
   expect_identical(summarise_run(r, from = 0), summarise_run(r, from = 1))
+  ## the run's last day alone: each of the five hosts at risk counts it once
+  m <- summarise_run(r, from = 100, to = 100)
+  expect_identical(c(m$n_days, m$n_relapse), c(1L, 0L))
+  expect_equal(m$person_years_at_risk, 5 / 365)
 })
 
 test_that("exclude_masked leaves the masked relapse out of every relapse column, and only those", {
@@ -146,6 +152,8 @@ test_that("summarise_run() takes a run or its directory", {
 test_that("on a run, every column is its definition over the window", {
   skip_if_no_slim()
   r <- treated_run(); ev <- load_events(r); st <- load_state(r); nh <- 60
+  ## each host's first bite or import, after which it is at risk
+  t0 <- ev[event_type %in% c("vh_inoculation", "vh_inoculation_import"), .(t0 = min(tick)), by = human_id]$t0
   for (b in c(0, 0.5)) {
     m <- summarise_run(r, burn_frac = b)
     f <- m$from_tick; t <- m$to_tick
@@ -163,8 +171,9 @@ test_that("on a run, every column is its definition over the window", {
     rf <- relapse_fraction(evw)
     expect_identical(c(m$relapse_frac_episodes, m$relapse_frac_acquisitions),
                      c(rf$relapse_frac_episodes, rf$relapse_frac_acquisitions))
-    rp <- relapses_per_person_year(r, from = f, to = t)
-    expect_identical(c(m$relapses_per_py_at_risk, m$person_years_at_risk), c(rp$relapses_per_py, rp$person_years))
+    expect_identical(m$n_relapse, evw[event_type == "hypnozoite_activation", .N])   # every activation
+    expect_equal(m$person_years_at_risk, sum(pmax(0, t - pmax(t0 + 1, f) + 1)) / 365)
+    expect_equal(m$relapses_per_py_at_risk, m$n_relapse / m$person_years_at_risk)
   }
   a <- summarise_run(r, burn_frac = 0); b <- summarise_run(r)
   for (col in c("relapse_frac_acquisitions", "relapses_per_py_at_risk", "imported_frac", "n_bloodstage_courses"))
@@ -186,7 +195,7 @@ test_that("FOI and molFOB are force_of_infection()'s counts over the whole run",
   expect_gt(m$n_recrudescence, 0L)
 })
 
-test_that("runs that went extinct or never started give the same typed row", {
+test_that("runs that went extinct or never started give the same typed row, and time at risk runs to SIM_DAYS", {
   skip_if_no_slim()
   w <- w_run(2)
   m <- summarise_run(w, from = w$extinct_tick + 1)
@@ -195,6 +204,10 @@ test_that("runs that went extinct or never started give the same typed row", {
   a <- summarise_run(w, burn_frac = 0)
   expect_equal(a$prevalence_frac, sum(load_state(w)$moi_active > 0) / (60 * 400))
   expect_identical(a$extinct_tick, w$extinct_tick)
+  ## each host's time at risk runs past the state table's last day, to day 400
+  expect_lt(max(load_state(w)$tick), 400L)
+  t0 <- load_events(w)[event_type %in% c("vh_inoculation", "vh_inoculation_import"), .(t0 = min(tick)), by = human_id]$t0
+  expect_equal(a$person_years_at_risk, sum(400 - t0) / 365)
   expect_no_warning(n <- summarise_run(never_run()))
   expect_true(n$never_started)
   expect_identical(classes(a), classes(n))

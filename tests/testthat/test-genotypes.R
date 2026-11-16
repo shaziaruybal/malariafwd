@@ -79,7 +79,7 @@ test_that("errors replace a call and missingness blanks one, at their rates", {
 
 test_that("arguments are refused before Python, naming them", {
   d <- tempfile("mfwd_no_run_")
-  expect_error(simulate_genotypes(file.path(d, "plasmo.trees"), 1, data.frame()), "not a .trees file", fixed = TRUE)
+  expect_error(simulate_genotypes(file.path(d, "plasmo.trees"), 1, data.frame()), "no such run directory", fixed = TRUE)
   r <- fake_run()
   lo <- data.frame(chrom = 1, pos = 1, plaf = 0.1)
   for (v in list(-0.1, 1.1, NA, c(0.1, 0.2))) {

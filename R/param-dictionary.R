@@ -4,14 +4,14 @@
 ## the documentation reads them by group.
 ##
 ## A record: the typed default; its unit and meaning (ASCII); the single-value bounds, which
-## validate_params() enforces and a test holds it to (min/max, open or closed; `values`, the
+## validate_params() enforces and a test holds it to (min, open or closed, and max; `values`, the
 ## allowed strings); `rule`, a joint or conditional rule in words; `shown`, the default as
 ## documented when it is not the plain value; and `source`, in prose.
 
-.param <- function(default, unit, meaning, min = NA, max = NA, min_open = FALSE, max_open = FALSE,
+.param <- function(default, unit, meaning, min = NA, max = NA, min_open = FALSE,
                    values = NULL, rule = NA_character_, shown = NA_character_, source = NA_character_)
   list(default = default, unit = unit, meaning = meaning, min = min, max = max, min_open = min_open,
-       max_open = max_open, values = values, rule = rule, shown = shown, source = source)
+       values = values, rule = rule, shown = shown, source = source)
 
 .param_dict <- list(
   SIM_ID = .param("default", "-", "A label for the run, written into params.tsv.",
@@ -269,8 +269,7 @@
                "IMPORT_RATE_PER_TICK", "IMPORT_RATE_BOOST")))
 
 ## ---- the documentation, generated ----------------------------------------------------------
-.param_num <- function(x) format(x, scientific = FALSE, trim = TRUE, digits = 15)
-.param_cap <- function(x) if (x >= 1e6) sub("e\\+0?", "e", format(x, scientific = TRUE)) else .param_num(x)
+.param_cap <- function(x) if (x >= 1e6) sub("e\\+0?", "e", format(x, scientific = TRUE)) else .slim_num(x)
 
 .param_group_of <- function(name)
   names(.param_groups)[vapply(.param_groups, function(g) name %in% g$params, logical(1))]
@@ -284,7 +283,7 @@
 .param_default_text <- function(r) {
   if (!is.na(r$shown)) return(r$shown)
   d <- r$default
-  if (is.character(d)) paste0("\"", d, "\"") else if (is.logical(d)) as.character(d) else .param_num(d)
+  if (is.character(d)) paste0("\"", d, "\"") else if (is.logical(d)) as.character(d) else .slim_num(d)
 }
 
 ## What a value may be, in words: the type and the single-value bounds, then the rule.
@@ -294,9 +293,9 @@
   else {
     lo <- r$min; hi <- r$max
     rng <- if (!is.na(lo) && !is.na(hi))
-      paste0("in ", if (r$min_open) "(" else "[", .param_cap(lo), ", ", .param_cap(hi), if (r$max_open) ")" else "]")
+      paste0("in ", if (r$min_open) "(" else "[", .param_cap(lo), ", ", .param_cap(hi), "]")
     else if (!is.na(lo)) paste(if (r$min_open) ">" else ">=", .param_cap(lo))
-    else if (!is.na(hi)) paste(if (r$max_open) "<" else "<=", .param_cap(hi))
+    else if (!is.na(hi)) paste("<=", .param_cap(hi))
     else ""
     trimws(paste(.param_type(r), rng))
   }

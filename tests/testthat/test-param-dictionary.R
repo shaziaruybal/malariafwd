@@ -66,7 +66,7 @@ test_that("the documented bounds are the ones vivax_params() enforces, and refus
       check(r$min - step(r$min), FALSE)
     }
     if (!is.na(r$max)) {
-      check(r$max, !r$max_open)
+      check(r$max, TRUE)
       check(r$max + step(r$max), FALSE)
     }
   }

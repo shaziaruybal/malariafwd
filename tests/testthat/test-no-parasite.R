@@ -35,7 +35,6 @@ test_that("every reader takes a run with no parasite", {
       classify_cases = function() classify_cases(ev), classify_travel = function() classify_travel(r),
       classify_chain = function() classify_chain(r), episodes = function() episodes(r),
       recurrences = function() recurrences(r), relapse_fraction = function() relapse_fraction(r),
-      relapses_per_person_year = function() relapses_per_person_year(r),
       dormancy_durations = function() dormancy_durations(ev),
       coi_distribution = function() coi_distribution(st), host_state_prevalence = function() host_state_prevalence(st),
       force_of_infection = function() force_of_infection(r),

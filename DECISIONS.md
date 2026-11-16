@@ -933,10 +933,10 @@ hosts never at risk, so the rate falls with the share never bitten. Counting eve
 host over the window's whole length was considered too: it counts a host's days before its first
 infection.
 
-**How to check.** `tests/testthat/test-relapse-metrics.R`: a fixture's relapses and person-time,
-with and without a window; a run with no infection, and one with no case; on a run, every activation
-counted and person-time to `SIM_DAYS` after an extinction; both fractions, with and without the
-masked relapse. `tests/testthat/test-summary.R`: `summarise_run()`'s columns against
+**How to check.** `tests/testthat/test-relapse-metrics.R`: both fractions, with and without the
+masked relapse, and a run with no case. `tests/testthat/test-summary.R`: a fixture's relapses and
+person-time, with and without a window, and a run with no infection; on a run, every activation
+counted and person-time to `SIM_DAYS` after an extinction; `summarise_run()`'s columns against
 `relapse_fraction()` and the person-time over several windows, and `exclude_masked` in every relapse
 column. `tests/testthat/test-treatment.R`: on a run with recrudescence, each reading equals the
 share of relapses among its cases, and the acquisitions reading is the larger.

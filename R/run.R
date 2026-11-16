@@ -30,7 +30,8 @@
 #'   so the outputs and the tree-sequence provenance both record it.
 #' @param outdir the run's directory, created when the run has finished (its parent is created if
 #'   needed). A directory that already holds a run is not replaced unless `overwrite = TRUE`, and a
-#'   directory holding other files is never used.
+#'   directory holding other files is never used; these refusals are errors of class
+#'   `malariafwd_outdir_in_use`.
 #' @param model path to the SLiM model (defaults to the bundled template).
 #' @param verbose if `TRUE`, run the model in VERBOSE mode (full per-event narration).
 #'   `NULL` (default) leaves the param as set (quiet).

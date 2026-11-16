@@ -79,8 +79,7 @@ def arg_tmrca(trees, ids_a, ids_b):
 #' genealogy has one root; this model seeds independent founder lineages, so the expected
 #' result is a forest with roughly one root per surviving founder lineage.
 #'
-#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
-#'   or of a `.trees` file.
+#' @inheritParams load_events
 #' @param ids optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
 #'   genomes in the tree sequence are left out, and none being one is an error.
 #' @return a one-row data.table: `num_trees`, `num_nodes`, `num_edges`, `num_samples`,
@@ -94,7 +93,7 @@ def arg_tmrca(trees, ids_a, ids_b):
 #' @export
 arg_summary <- function(run, ids = NULL) {
   if (!is.null(ids)) ids <- .ibd_ids(ids, "ids")
-  .require_python("arg_summary()", c("tskit", "numpy"))
+  .require_python("arg_summary()")
   m <- .py_module("_malariafwd_arg", .arg_py_src)
   r <- reticulate::py_to_r(m$arg_summary(.trees_file(run), if (is.null(ids)) NULL else as.list(unique(ids))))
   .arg_none_found(r, ids, "arg_summary()")
@@ -121,8 +120,7 @@ arg_summary <- function(run, ids = NULL) {
 #' Clonal pairs give `coalesced` = 1 with a very recent TMRCA; unrelated genomes give
 #' `coalesced` = 0 and `tmrca` = `NA`.
 #'
-#' @param run a run: a `vivax_run` (from [run_sim()] or [load_run()]) or the path of a run directory,
-#'   or of a `.trees` file.
+#' @inheritParams load_events
 #' @param ids_a,ids_b equal-length vectors of pedigree ids, compared pairwise.
 #' @return a data.table, one row per pair: `a`, `b`, `coalesced` (0-1), `tmrca` and
 #'   `tmrca_node_time` (both ticks; `NA` if the pair never coalesces or a genome is not in the tree
@@ -146,7 +144,7 @@ arg_tmrca <- function(run, ids_a, ids_b) {
   if (length(ids_a) != length(ids_b))
     stop("`ids_a` and `ids_b` must have the same length, one pair per position; they have ", length(ids_a),
          " and ", length(ids_b), ".", call. = FALSE)
-  .require_python("arg_tmrca()", c("tskit", "numpy"))
+  .require_python("arg_tmrca()")
   n <- length(ids_a)
   out <- data.table::data.table(a = ids_a, b = ids_b, coalesced = rep(NA_real_, n), tmrca = rep(NA_real_, n),
                                 tmrca_node_time = rep(NA_real_, n))

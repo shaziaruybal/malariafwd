@@ -7,8 +7,7 @@
 arg_summary(run, ids = NULL)
 }
 \arguments{
-\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory,
-or of a \code{.trees} file.}
+\item{run}{a run: a \code{vivax_run} (from \code{\link[=run_sim]{run_sim()}} or \code{\link[=load_run]{load_run()}}) or the path of a run directory.}
 
 \item{ids}{optional pedigree ids to restrict to (default: all recorded genomes); ids that are not
 genomes in the tree sequence are left out, and none being one is an error.}

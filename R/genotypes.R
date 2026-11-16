@@ -53,15 +53,6 @@ def gt_roots(path, ids, positions):
     return out
 '
 
-## The run a genotype call reads: a vivax_run or its directory, whose params.tsv gives the
-## chromosome layout and whose events.tsv the root genomes' origin.
-.genotype_run <- function(run) {
-  if (is.character(run) && length(run) == 1L && !dir.exists(run) && grepl("\\.trees$", run))
-    stop("`run` must be a vivax_run or a run directory, not a .trees file: the genotypes need the run's ",
-         "chromosome layout (params.tsv) and its events (events.tsv).", call. = FALSE)
-  load_run(run)
-}
-
 ## The loci table, checked against the run's chromosomes `cm`, with each locus's 0-based position on
 ## the concatenated genome added.
 .genotype_loci <- function(cm, loci) {
@@ -228,7 +219,7 @@ def gt_roots(path, ids, positions):
 #' @inheritSection tskit_available Python
 #' @export
 simulate_genotypes <- function(run, ids, loci, sample_id = NULL, error = 0, missing = 0, seed = NULL) {
-  r <- .genotype_run(run)
+  r <- load_run(run)
   ids <- .ibd_ids(ids, "ids")
   type <- if (is.null(sample_id)) "clone" else "host"
   if (type == "host") {
@@ -255,7 +246,7 @@ simulate_genotypes <- function(run, ids, loci, sample_id = NULL, error = 0, miss
   if (isTRUE(r$never_started)) {
     res <- list(root_id = integer(), root_tick = integer(), roots = matrix(integer(), 0L, nrow(lo)), missing = integer())
   } else {
-    .require_python("simulate_genotypes()", c("tskit", "numpy"))
+    .require_python("simulate_genotypes()")
     tf <- trees_path(r)
     if (!file.exists(tf)) stop("tree sequence not found: ", tf, call. = FALSE)
     m <- .py_module("_malariafwd_genotypes", .genotypes_py)

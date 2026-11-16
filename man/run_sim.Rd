@@ -25,7 +25,8 @@ so the outputs and the tree-sequence provenance both record it.}
 
 \item{outdir}{the run's directory, created when the run has finished (its parent is created if
 needed). A directory that already holds a run is not replaced unless \code{overwrite = TRUE}, and a
-directory holding other files is never used.}
+directory holding other files is never used; these refusals are errors of class
+\code{malariafwd_outdir_in_use}.}
 
 \item{model}{path to the SLiM model (defaults to the bundled template).}
 

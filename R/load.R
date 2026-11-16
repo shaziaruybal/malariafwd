@@ -19,17 +19,14 @@
   paste("an object of class", class(x)[1])
 }
 
-## Warnings given once per directory per session, keyed by class and path. Each also has the
-## class malariafwd_run_warning, so that suppressWarnings(classes = "malariafwd_run_warning")
-## silences them all.
+## Warnings given once per directory per session, keyed by class and path.
 .warned <- new.env(parent = emptyenv())
 
 .warn_once <- function(dir, class, msg) {
   key <- paste(class, normalizePath(dir, winslash = "/", mustWork = FALSE))
   if (!is.null(.warned[[key]])) return(invisible(FALSE))
   .warned[[key]] <- TRUE
-  warning(structure(class = c(class, "malariafwd_run_warning", "warning", "condition"),
-                    list(message = msg, call = NULL)))
+  warning(structure(class = c(class, "warning", "condition"), list(message = msg, call = NULL)))
   invisible(TRUE)
 }
 

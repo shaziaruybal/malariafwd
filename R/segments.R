@@ -70,7 +70,7 @@ ibd_segments <- function(run, ids_a, ids_b, min_span = 1000) {
     stop("`ids_a` and `ids_b` must have the same length, one pair per position; they have ",
          length(ids_a), " and ", length(ids_b), ".", call. = FALSE)
   .ibd_check_min_span(min_span)
-  .require_python("ibd_segments()", c("tskit", "numpy"))
+  .require_python("ibd_segments()")
   x <- .ibd_compute(run, pa = ids_a, pb = ids_b, min_span = min_span, segments = TRUE,
                     absent = "their pairs have no rows.")
   key <- data.table::data.table(pair = seq_along(ids_a), a = ids_a, b = ids_b,
@@ -154,7 +154,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
     group <- if (is.factor(group)) droplevels(group) else factor(group, unique(group))
     cols <- .ibd_group_fill(fill, levels(group), missing(fill))
   }
-  .require_python("plot_ibd_pair()", c("tskit", "numpy"))
+  .require_python("plot_ibd_pair()")
   seg <- ibd_segments(run, ids_a, ids_b, min_span = min_span)
   ## a pair with a genome the tree sequence lacks has no IBD to show, rather than none shared
   absent <- ids_a %in% attr(seg, "missing") | ids_b %in% attr(seg, "missing")
@@ -302,7 +302,7 @@ plot_ibd_pair <- function(run, ids_a, ids_b, labels = NULL, group = NULL, min_sp
 #' @inheritSection tskit_available Python
 #' @export
 ibd_truth_pairs <- function(run, max_per_class = 60) {
-  .require_python("ibd_truth_pairs()", c("tskit", "numpy"))
+  .require_python("ibd_truth_pairs()")
   ev <- data.table::as.data.table(load_events(run))
   cs <- classify_cases(ev)
   seeds <- ev[event_type == "vh_inoculation_seed"]

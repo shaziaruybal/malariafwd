@@ -117,26 +117,14 @@ relapse_fraction <- function(events, exclude_masked = FALSE) {
              relapse_frac_acquisitions = frac(n_rel, n_rel + n_new))
 }
 
-## Relapses per person-year among the hosts ever infected, on days `from` to `to` (`NULL`: SIM_DAYS),
-## which summarise_run() gives as relapses_per_py_at_risk (D28): every hypnozoite_activation row over
-## the person-time from the day after each host's first establishment, a blood-stage primary or a
+## Relapses per person-year among the hosts ever infected, on days `from` to `to`, which
+## summarise_run() gives as relapses_per_py_at_risk (D28): every hypnozoite_activation row over the
+## person-time from the day after each host's first establishment, a blood-stage primary or a
 ## hypnozoite batch from a bite or an import, to `to`, also after an extinction; founder seeding does
-## not start it, and masked relapses are counted. One row: n_relapse, n_hosts (with person-time in
-## the window), person_years and relapses_per_py (NA with no person-time).
-relapses_per_person_year <- function(run, from = 0, to = NULL) {
-  sim_days <- .sim_days(run, "relapses_per_person_year")
-  from <- .check_day(from, "from")
-  to <- if (is.null(to)) sim_days else .check_day(to, "to")
-  if (to > sim_days)
-    stop("`to` = ", to, " is after the run's last day, SIM_DAYS = ", sim_days, ".", call. = FALSE)
-  if (from > to) stop("`from` = ", from, " is after `to` = ", to, ".", call. = FALSE)
-  .relapses_per_person_year(load_events(run), sim_days, from, to)
-}
-
-## The core of relapses_per_person_year() (D28), for callers that hold the events. A host counts
-## the days max(t0 + 1, from) to `to`, t0 its first establishment; masked relapses leave the
-## numerator only.
-.relapses_per_person_year <- function(events, sim_days, from = 0L, to = sim_days, exclude_masked = FALSE) {
+## not start it. A host counts the days max(t0 + 1, from) to `to`, t0 its first establishment; masked
+## relapses are counted unless `exclude_masked`, which leaves them out of the numerator only. One
+## row: person_years and relapses_per_py (NA with no person-time).
+.relapses_per_person_year <- function(events, from, to, exclude_masked) {
   ev <- .as_events(events)
   est <- ev[event_type %in% setdiff(.inoculation_events(), "vh_inoculation_seed") & is_dormant %in% 0:1,
             .(human_id = as.integer(human_id), t0 = as.integer(tick))]
@@ -144,8 +132,7 @@ relapses_per_person_year <- function(run, from = 0, to = NULL) {
   days <- pmax(0, to - pmax(est$t0 + 1, from) + 1)
   n_rel <- classify_cases(ev, exclude_masked)[origin == "relapse" & tick >= from & tick <= to, .N]
   py <- sum(days) / 365
-  data.table(n_relapse = n_rel, n_hosts = sum(days > 0), person_years = py,
-             relapses_per_py = if (py > 0) n_rel / py else NA_real_)
+  data.table(person_years = py, relapses_per_py = if (py > 0) n_rel / py else NA_real_)
 }
 
 #' Hypnozoite dormancy durations, from a batch to each of its relapses
@@ -614,7 +601,7 @@ summarise_run <- function(run, burn_frac = 0.5, from = NULL, to = NULL, exclude_
   n_rel <- n_of("relapse"); n_rec <- n_of("recrudescence")
   flag <- cs_all[origin == "relapse"]$into_patent_lineage
   ## the whole log: a host's first establishment can lie in the burn-in
-  risk <- .relapses_per_person_year(events, sim_days, w$from, w$to, exclude_masked)
+  risk <- .relapses_per_person_year(events, w$from, w$to, exclude_masked)
   frac <- function(a, b) if (b > 0) a / b else NA_real_
   data.table(
     from_tick = w$from, to_tick = w$to, n_days = w$n_days, exclude_masked = exclude_masked,
@@ -700,7 +687,7 @@ new_infection_diversity <- function(run, burn_frac = 0.5, from = NULL, to = NULL
   ## genomes asked for (D19). The pairs of the union would grow with the square of the windows.
   x <- NULL
   if (any(vapply(drawn, function(p) choose(length(p), 2) >= min_pairs, logical(1)))) {
-    .require_python("new_infection_diversity()", c("tskit", "numpy"))
+    .require_python("new_infection_diversity()")
     x <- suppressWarnings(.ibd_compute(run, groups = drawn, none_ok = TRUE))
   }
   rows <- lapply(drawn, function(p) {

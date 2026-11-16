@@ -115,7 +115,6 @@ test_that("a params.tsv of another version warns once, naming what it lacks and 
                            warning = function(x) { w[[length(w) + 1]] <<- x; invokeRestart("muffleWarning") })
   expect_length(w, 1L)
   expect_s3_class(w[[1]], "malariafwd_params_mismatch")
-  expect_s3_class(w[[1]], "malariafwd_run_warning")
   expect_match(conditionMessage(w[[1]]), "lacks MDA_COVERAGE \\(its default is used\\)")
   expect_match(conditionMessage(w[[1]]), "MAX_BROOD_AGE is not a parameter \\(left out\\)")
   expect_identical(p$MDA_COVERAGE, vivax_params()$MDA_COVERAGE)

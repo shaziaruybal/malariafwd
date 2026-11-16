@@ -112,11 +112,11 @@
   paste0(need, ". ", using, paste(what, collapse = ", and "), ". ", fix, " check_setup() shows what is found.")
 }
 
-## Stops, naming `what`, unless Python and `modules` can be used; called by every function that
-## runs Python, after its own argument checks and before it reads a file.
-.require_python <- function(what, modules = names(.py_floors)) {
+## Stops, naming `what`, unless Python with tskit and numpy can be used; called by every function
+## that runs Python, after its own argument checks and before it reads a file.
+.require_python <- function(what) {
   st <- .python_status()
-  p <- .py_problem(st, modules)
+  p <- .py_problem(st)
   if (!is.null(p))
     stop(structure(class = c("malariafwd_no_python", "error", "condition"),
                    list(message = paste(what, "needs", p), call = NULL)))

@@ -78,13 +78,12 @@ test_that("reticulate's warnings while starting do not escape when every module 
   expect_null(malariafwd:::.py_problem(st))
 })
 
-test_that("with every module present the check passes, and a function asks only for what it uses", {
+test_that("with every module present the check passes, and a missing one is named", {
   mock_py()
   expect_true(tskit_available())
   expect_silent(malariafwd:::.require_python("ibd_pairs()"))
   mock_py(modules = c(tskit = "1.0.4", numpy = NA))
   expect_false(tskit_available())
-  expect_silent(malariafwd:::.require_python("a_tskit_only()", "tskit"))
   expect_error(malariafwd:::.require_python("ibd_pairs()"), "^ibd_pairs\\(\\) needs Python with tskit \\(>= 1.0\\) and numpy\\. .*cannot import numpy")
 })
 

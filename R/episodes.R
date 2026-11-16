@@ -37,16 +37,6 @@ episodes <- function(events) {
   out[order(human_id, onset_tick, pedigree_id)]
 }
 
-## IBD of genome pairs from the run's vivax_ibd object, NA where either genome is not in it.
-.ibd_values <- function(ibd, a, b) {
-  if (!inherits(ibd, "vivax_ibd"))
-    stop("`ibd` must be the run's IBD object, from ibd_pairs().", call. = FALSE)
-  have <- ibd$samples$pedigree_id
-  v <- rep(NA_real_, length(a)); k <- a %in% have & b %in% have
-  if (any(k)) v[k] <- ibd_lookup(ibd, a[k], b[k])
-  v
-}
-
 #' Each recurrence, against the earlier episodes of its host
 #'
 #' A recurrence is every episode of a host after its first: a relapse, a reinfection, an import
@@ -105,7 +95,7 @@ recurrences <- function(events, prior = c("all", "previous"), from = 0, ibd = NU
                  into_patent_lineage, prior_episode_id, prior_tick, prior_pedigree_id, prior_lineage_id,
                  prior_origin, prior_imported, prior_detected, days_since = as.integer(tick - prior_tick))]
   data.table::setorder(out, human_id, tick, pedigree_id, prior_tick, prior_pedigree_id)
-  if (!is.null(ibd)) out[, ibd := .ibd_values(ibd, pedigree_id, prior_pedigree_id)]
+  if (!is.null(ibd)) out[, ibd := ibd_lookup(ibd, pedigree_id, prior_pedigree_id)]
   out[]
 }
 

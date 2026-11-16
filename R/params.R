@@ -286,7 +286,7 @@ validate_params <- function(p) {
                "P_RECRUD_GIVEN_FAIL", "P_DETECT_RECRUD", "SUBPATENT_INFECTIVITY",
                "MDA_COVERAGE", "ALPHA_ACTIVATE", "INTERVENTION_EFFICACY"))
     if (p[[pr]] < 0 || p[[pr]] > 1) stop(pr, " must be in [0, 1]", call. = FALSE)
-  for (pr in c("SIM_DAYS", "N_HOSTS", "N_MOSQ", "BITING_RATE"))
+  for (pr in c("N_HOSTS", "N_MOSQ", "BITING_RATE"))
     if (p[[pr]] <= 0) stop(pr, " must be > 0", call. = FALSE)
   for (pr in c("LAMBDA_OOCYSTS", "LAMBDA_SPOROZOITES", "K_OOCYSTS", "NU_HYPNOZOITE_BATCH",
                "ALPHA_ACTIVATE_BOOST", "NU_HYPNOZOITE_BATCH_BOOST", "BITING_RATE_BOOST",
@@ -317,7 +317,7 @@ validate_params <- function(p) {
          "'never', and ", paste(never, collapse = ", "), if (length(never) > 1) " are" else " is",
          " still 99999: set each to a day after SIM_DAYS, or to the day you mean (in a run this ",
          "long, day 99999 itself cannot be used).", call. = FALSE)
-  if (!is.finite(p$MOSQ_LIFESPAN) || p$MOSQ_LIFESPAN < 1)
+  if (p$MOSQ_LIFESPAN < 1)
     stop("MOSQ_LIFESPAN must be >= 1 and finite (days): a mosquito dies each day with probability ",
          "1/MOSQ_LIFESPAN.", call. = FALSE)
   .check_sizes(p)
@@ -329,16 +329,16 @@ validate_params <- function(p) {
   if (p$K_LATENCY > 0 && (p$DELTA_LATENCY <= 0 || p$DELTA_LATENCY > 1))
     stop("DELTA_LATENCY must be in (0, 1] when K_LATENCY > 0: a latent batch leaves each latency ",
          "stage with daily probability DELTA_LATENCY.", call. = FALSE)
-  if (!is.finite(p$MEAN_BLOOD_STAGE_DURATION) || p$MEAN_BLOOD_STAGE_DURATION < 1)
+  if (p$MEAN_BLOOD_STAGE_DURATION < 1)
     stop("MEAN_BLOOD_STAGE_DURATION must be >= 1 and finite (days): blood-stage infections clear each day ",
          "with probability 1/MEAN_BLOOD_STAGE_DURATION.", call. = FALSE)
   if (!p$RADCURE_MODE %in% c("person", "hypnozoite"))
     stop("RADCURE_MODE must be 'person' or 'hypnozoite', got '", p$RADCURE_MODE, "'",
          call. = FALSE)
-  if (!is.finite(p$TREATMENT_DELAY) || p$TREATMENT_DELAY < 1 || p$TREATMENT_DELAY > 1e6)
+  if (p$TREATMENT_DELAY < 1 || p$TREATMENT_DELAY > 1e6)
     stop("TREATMENT_DELAY must be >= 1 and finite (days, at most 1e6): a course arrives each day ",
          "after the case with probability 1/TREATMENT_DELAY, so 1 means the next day.", call. = FALSE)
-  if (!is.finite(p$MEAN_RECRUD_DELAY) || p$MEAN_RECRUD_DELAY < 1 || p$MEAN_RECRUD_DELAY > 1e6)
+  if (p$MEAN_RECRUD_DELAY < 1 || p$MEAN_RECRUD_DELAY > 1e6)
     stop("MEAN_RECRUD_DELAY must be >= 1 and finite (days, at most 1e6): it is the mean delay from ",
          "suppression to recrudescence, which is at least one day.", call. = FALSE)
   if (!p$RECRUD_DELAY_DIST %in% c("geometric", "poisson", "fixed"))

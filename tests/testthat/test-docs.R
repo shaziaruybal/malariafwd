@@ -20,10 +20,8 @@ test_that("every help page describes a run in the same words", {
   names(db) <- sub("\\.Rd$", "", basename(names(db)))
   txt <- unlist(lapply(db, run_arg))
   canon <- "a run: a vivax_run (from run_sim() or load_run()) or the path of a run directory."
-  trees <- c("ibd_pairs", "arg_summary", "arg_tmrca")   # these also take a .trees file
-  expect_identical(unique(unname(txt[!names(txt) %in% trees])), canon)
-  expect_gte(sum(!names(txt) %in% trees), 15L)
-  expect_true(all(startsWith(txt[trees], sub("\\.$", ",", canon))))
+  expect_identical(unique(unname(txt)), canon)
+  expect_gte(length(txt), 18L)
 })
 
 test_that("the package page is a page of concepts that names the shared terms", {
