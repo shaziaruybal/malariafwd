@@ -742,7 +742,7 @@ course (D29), as for an import.
 
 ---
 
-## 9a. Three-state recurrence: relapse, reinfection, recrudescence
+## 9a. Recurrence and persistence: relapse, reinfection, recrudescence
 
 A recurrence in *P. vivax* has several possible causes, and the model represents all of them.
 
@@ -751,7 +751,11 @@ A recurrence in *P. vivax* has several possible causes, and the model represents
 | **reinfection** | a new mosquito bite, or an importation | a new genome, unrelated or related only through the local population |
 | **relapse** | a hypnozoite activates from the liver | a **new** genome, clonal to the inoculation that seeded the batch |
 | **recrudescence** | a clone that survived a treatment course re-expands to patency | a **new** genome, clonal to the holder it came from |
-| **persistence** | a clone that has not been cleared | a clone that persists over time t, clonal to the holder it came from |
+| **persistence** | a clone that was never cleared: a patent clone clears only by its daily draw (§3), and a subpatent one makes no draw at all | no new genome — the clone already in the host |
+
+Only the first three are recurrences, and only they begin a clone, so `classify_cases()` labels
+those three and imports; persistence has no `origin` of its own, because nothing is acquired. It is
+in the table because a later blood sample cannot tell it from a recurrence.
 
 A relapse that starts while a patent clone of its own lineage is still in the host is a relapse
 too, and the observation layer can report it, but a real observer could not see it as a recurrence
