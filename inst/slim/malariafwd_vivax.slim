@@ -67,10 +67,10 @@ initialize() {
 	// variance) from the literature into the lambda / K to set here.
 	// Zero-truncation is correct because P_TRANS_HV / P_TRANS_VH already decide whether the
 	// event succeeds - allowing 0 would count a failure twice.
-	// DEFAULT lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite).
+	// lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite).
 	// NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
 	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
-	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS > 0 as a sensitivity knob;
+	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS as a sensitivity knob;
 	// K_OOCYSTS below makes the count negative binomial.
 	defineDefault("LAMBDA_OOCYSTS",          2.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
 	defineDefault("LAMBDA_SPOROZOITES",      2.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
@@ -2240,7 +2240,7 @@ function (float$) effectiveNuBatch(void)
 //   k >  0 -> negative binomial, var = lambda + lambda^2/k, drawn as a Gamma-Poisson
 //             mixture and zero-truncated by rejection.
 // lambda <= 0 returns 1 (the degenerate limit) = the single-oocyst / single-product
-// behaviour, which is the shipped default.
+// behaviour.
 // Zero-TRUNCATION (not inflation) is the right family here: P_TRANS_HV / P_TRANS_VH already
 // decide whether the event happens, so the zeros are modelled upstream.
 // NOTE on the "fi$" (float-or-integer) parameter types: values arriving via -d from R may be
@@ -2795,8 +2795,8 @@ function (integer) inoculateMosquitoToHuman(
 
 	// ONE hypnozoite batch per infectious BITE (White et al. 2014 parameterise nu per
 	// bite, not per genotype), split uniformly among the k co-inoculated genotypes - so
-	// co-transmission does not inflate the reservoir. With one genotype (k == 1, as at the
-	// default LAMBDA_SPOROZOITES = 0) the whole batch goes to it.
+	// co-transmission does not inflate the reservoir. With one genotype (k == 1, as at
+	// LAMBDA_SPOROZOITES = 0) the whole batch goes to it.
 	k = size(broods);
 	det = asInteger(runif(1) < P_DETECT_PRIMARY);   // one draw for the BITE, not per genotype
 	bite_batch = drawHypnozoiteBatchSize(effectiveNuBatch());
