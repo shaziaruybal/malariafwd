@@ -89,6 +89,7 @@ initialize() {
 	// set; these knobs exist for sensitivity analysis. P. vivax gametocytes appear
 	// early (at/near symptom onset, unlike ~10-12 d in P. falciparum), so a realistic
 	// preset is a SHORT delay + high carriage, e.g. GAMETOCYTE_DELAY=3, P_GAMETOCYTE=0.9.
+	// (Early vivax gametocytes: Bousema & Drakeley 2011; Koepfli et al. 2021.)
 	defineDefault("GAMETOCYTE_DELAY",        0);   // days blood-stage -> transmissible (0 = immediate; vivax realistic ~2-3)
 	defineDefault("P_GAMETOCYTE",            1.0); // P(an active infection is gametocytemic/transmissible); 1.0 = all
 
