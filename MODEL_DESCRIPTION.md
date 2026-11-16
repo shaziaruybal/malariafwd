@@ -1073,17 +1073,19 @@ we do. Without genotypes the two are observationally identical, so there was not
 | Wong et al. 2018 | oocyst count **and infected hepatocyte count** drawn; sporozoites sampled abundance-weighted into hepatocytes; hepatocyte count = 1 excluded as degenerate | no (Pf) |
 | Childs & Prosper 2017 (within-vector) | ~3,000 spz/oocyst (Poisson), 20% reach glands, **10 sporozoites per bite drawn from the pool, duplicates retained** | no (Pf) |
 | EMOD genetics module | genotype-resolved Pf: chromosome structure, 25 loci, trackable recombination | vivax module unverified |
-| MAGENTA | genotype-resolved Pf:  | no |
-| fwd-dream | genotype-resolved Pf:  | no |
-| PlasmoEpiGen | genotype-resolved Pf:  | no |
+| `magenta` (Watson et al. 2021) | genotype-resolved Pf, a 24-SNP barcode: oocysts explicit (zero-truncated negative binomial, mean 2.5), each holding a parental barcode pair and four sporozoite slots; **sporozoites per bite zero-truncated geometric (mean 10), of which a fitted 20% found a blood-stage strain, duplicates retained**; recombinants made as sporozoites are drawn, two per oocyst from independent per-locus masks, so not a tetrad | no (Pf) |
+| forward-dream (Hendry et al. 2021) | genotype-resolved Pf, an 8,000-SNP binary genome: no oocyst or sporozoite count at the human step. A vector holds n_v genome slots; a bite transmits max(1, Bin(n_v, p_v)) of them without replacement, and the host's n_h slots are refilled from those **with replacement, duplicates kept**, so the genotypes a bite delivers are whatever the drawn slots hold. Meiosis sits on the human → vector side, all four products of each oocyst kept † | no (Pf) |
+| PlasmoEpiGen (Suarez-Salazar et al. 2026, preprint) | genotype-resolved Pf, a 75-position haplotype: per bite k ~ Uniform{1..n} draws with replacement, abundance-weighted, n being the donor mosquito's distinct mature haplotypes, **then duplicates collapsed**, so each distinct haplotype arrives once and matures after 11 d. Poisson(2) oocysts on the human → vector side, one child per heterologous pair rather than a tetrad † | no (Pf) |
 | SIMPLEGEN / PlasmoSim | genetic-model, in development | no |
-| PlasmoSim | genetic-model, in development | no |
 | krsim | in development | no |
 | recombuddy | no mosquito stage; block-mosaic painting of genotypes, which `simulate_genotypes()` does on the recorded genealogy instead (its PLAF is the REF frequency: pass `1 - PLAF`) | — |
 
-**To our best knowledge (literature and software search as of November 2026), *malariafwd* is the only
-model with **both** genotype resolution and a hypnozoite reservoir. This is the key gap filled by *malariafwd* and it also means several
-inoculation-step decisions have no precedent to defer to.
+† the inoculation step is read from the released code, which neither paper states.
+
+To our best knowledge (literature and software search as of November 2026), *malariafwd* is the
+only model with **both** genotype resolution and a hypnozoite reservoir. This is the key gap
+filled by *malariafwd*, and it also means several inoculation-step decisions have no precedent to
+defer to.
 
 ### Conventions we follow
 
@@ -1489,6 +1491,10 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 - Hazzard B, Sá JM, Bogale HN, Pascini TV, Ellis AC, Amin S, et al. (2024). Single-cell analyses of
   polyclonal *Plasmodium vivax* infections and their consequences on parasite transmission. *Nature
   Communications* 15:7625. <https://doi.org/10.1038/s41467-024-51949-8>
+- Hendry JA, Kwiatkowski D, McVean G (2021). Elucidating relationships between *P. falciparum*
+  prevalence and measures of genetic diversity with a combined genetic-epidemiological model of
+  malaria. *PLOS Computational Biology* 17(8):e1009287.
+  <https://doi.org/10.1371/journal.pcbi.1009287>. Code: <https://github.com/JasonAHendry/fwd-dream>
 - Jiang H, Li N, Gopalan V, Zilversmit MM, Varma S, Nagarajan V, et al. (2011). High recombination
   rates and hotspots in a *Plasmodium falciparum* genetic cross. *Genome Biology* 12(4):R33.
   <https://doi.org/10.1186/gb-2011-12-4-r33>
@@ -1547,6 +1553,10 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 - Ross A, Koepfli C, Timinao L, Hardy D, Thüring T, Loeffel M, et al. (2025). The probability of
   *Plasmodium vivax* acute illness following primary infection and relapse in Papua New Guinea.
   *PLOS Neglected Tropical Diseases* 19(10):e0013567. <https://doi.org/10.1371/journal.pntd.0013567>
+- Suarez-Salazar D, Corredor V, Santos-Vega M (2026). From low to high transmission:
+  diversity-dependent responses of *Plasmodium falciparum* population structure to transmission
+  intensity. *bioRxiv* preprint, not peer reviewed.
+  <https://doi.org/10.64898/2026.04.07.717068>. Code: <https://github.com/dsuarez-s/PlasmoEpiGen>
 - Taylor AR, Watson JA, Chu CS, Puaprasert K, Duanguppama J, Day NPJ, et al. (2019). Resolving the
   cause of recurrent *Plasmodium vivax* malaria probabilistically. *Nature Communications*
   10:5595. <https://doi.org/10.1038/s41467-019-13412-x>
@@ -1554,6 +1564,10 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
   determination in *Plasmodium vivax* parasites: characterization of schizont growth and hypnozoite
   fating from patient isolates. *Frontiers in Microbiology* 13:976606.
   <https://doi.org/10.3389/fmicb.2022.976606>
+- Watson OJ, Okell LC, Hellewell J, Slater HC, Unwin HJT, Omedo I, et al. (2021). Evaluating the
+  performance of malaria genetics for inferring changes in transmission intensity using
+  transmission modeling. *Molecular Biology and Evolution* 38(1):274-289.
+  <https://doi.org/10.1093/molbev/msaa225>. Code: <https://github.com/OJWatson/magenta>
 - White MT, Karl S, Battle KE, Hay SI, Mueller I, Ghani AC (2014). Modelling the contribution of
   the hypnozoite reservoir to *Plasmodium vivax* transmission. *eLife* 3:e04692.
   <https://doi.org/10.7554/eLife.04692>
@@ -1572,5 +1586,5 @@ both files list these papers. `DECISIONS.md` gives the reasons for the model's c
 
 Software named in this document, without a paper cited here: EMOD
 (<https://github.com/EMOD-Hub/EMOD>), PlasmoSim (<https://github.com/mrc-ide/PlasmoSim>),
-recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>) and SIMPLEGEN
-(<https://github.com/mrc-ide/SIMPLEGEN>). tskit's documentation is at <https://tskit.dev>.
+recombuddy (<https://github.com/PlasmoGenEpi/recombuddy>), SIMPLEGEN
+(<https://github.com/mrc-ide/SIMPLEGEN>) and krsim, which has neither yet. tskit's documentation is at <https://tskit.dev>.
