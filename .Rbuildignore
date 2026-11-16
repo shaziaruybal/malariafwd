@@ -7,6 +7,10 @@
 ^LICENSE\.md$
 ^DECISIONS\.md$
 ^MODEL_DESCRIPTION\.md$
+^VALIDATION\.md$
+^ROADMAP\.md$
+^METRICS\.md$
+^IMPLEMENTATION_NOTES\.md$
 ^CITATION\.cff$
 ^\.zenodo\.json$
 ^scratch$

@@ -57,4 +57,4 @@ for each modelling choice.
 * **More extensive calibration of the treatment and recurrence machinery**, including a
   chloroquine-resistant setting, in which recrudescence is material rather than negligible.
 
-Section 15 of the model description lists every planned extension with its motivation.
+The roadmap lists every planned extension with its motivation.

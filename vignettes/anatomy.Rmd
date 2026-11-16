@@ -212,5 +212,32 @@ uptake_moments(2, k = 1)               # overdispersed    -> realised mean 3.00
 uptake_calibrate(mean = 2.5, var = 6)  # a target -> the lambda / K to set
 ```
 
+## Repeating a run exactly
+
+`SEED` is recorded as `ACTUAL_SEED` in `params.tsv`, alongside every resolved parameter, the derived
+`GENOME_LENGTH` / `N_CHROMOSOMES` / `RECOMB_WITHIN`, and the SLiM and package versions
+(`SLIM_VERSION`, `MALARIAFWD_VERSION`). Floats are recorded to 15 significant digits, the precision
+`run_sim()` passes to SLiM. An extinct run's file ends with an `EXTINCT_TICK` row, and a run that
+never started with a `NEVER_STARTED` row. `load_params()` reads the parameters back into the
+`vivax_params()` set the run was made from, each of its type, so `run_sim(load_params(run), seed =
+run$seed, outdir = ...)` repeats a run started from R exactly when each of its non-zero floats lies
+between 1e-130 and 1e15 in magnitude: the same files, all but the tree sequence's provenance row,
+where SLiM records when the run was made and the time and memory it took. The seed, the versions,
+the derived genome and the outcome rows are on the `load_run()` object (`seed`, `slim_version`,
+`malariafwd_version`, `genome_length`, `n_chromosomes`, `recomb_within`, `extinct_tick`,
+`never_started`).
+
+`DONE` records when the run finished, how long it took, its seed, a key of its parameters and seed
+(the md5 of the arguments SLiM was given, without `OUTDIR` and `VERBOSE`), the md5 of the model, the
+versions, and the size of every file; `load_run()` reports a directory whose `DONE` is missing or
+whose files have changed since. SLiM runs in the run's directory on its copy of the model, so
+running `slim` with the arguments in `cmdline.txt` from a directory holding `model.slim` repeats the
+run.
+
+Reproducing a run needs SLiM >= 5.2 on `PATH` and, for IBD and the ARG functions, Python with
+`tskit` (>= 1.0) and `numpy` through reticulate; `check_setup()` reports both. `RETAIN_FULL_HISTORY
+= T` is required for IBD to already-cleared infections -- without it, most earlier genomes leave the
+tree, and `ibd_pairs()` warns about the ids it was asked for that are gone and gives them `NA`.
+
 See the *Getting started* vignette for parameter sweeps with `run_grid()`, and
 `?event_types` for the full event-type dictionary.

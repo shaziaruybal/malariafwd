@@ -16,6 +16,14 @@ navbar:
         href: MODEL_DESCRIPTION.html
       - text: Design decisions
         href: DECISIONS.html
+      - text: Validation
+        href: VALIDATION.html
+      - text: Derived metrics
+        href: METRICS.html
+      - text: Implementation notes
+        href: IMPLEMENTATION_NOTES.html
+      - text: Ongoing and future work
+        href: ROADMAP.html
       - text: Validation scripts and their results
         href: https://github.com/shaziaruybal/malariafwd/tree/main/inst/validation
 

@@ -4,6 +4,10 @@ Why the model and the R package are built the way they are. Each entry states a 
 for it, the alternatives considered and set aside, and the tests or validation scripts that check
 it. The [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html) says
 what the model does; this page says why.
+[Validation](https://shaziaruybal.github.io/malariafwd/VALIDATION.html),
+[derived metrics](https://shaziaruybal.github.io/malariafwd/METRICS.html), the
+[implementation notes](https://shaziaruybal.github.io/malariafwd/IMPLEMENTATION_NOTES.html) and the
+[roadmap](https://shaziaruybal.github.io/malariafwd/ROADMAP.html) are documents of their own.
 
 The entries are grouped by topic and numbered D1 to D54. The model file
 (`inst/slim/malariafwd_vivax.slim`), the R code and the model description cite them by number, as in
@@ -357,8 +361,7 @@ counts nor whether the cap holds; SLiM adds a clone made in `reproduction()` to 
 that callback ends, so without the day's list the clones a host gained earlier that day would be
 hidden from its later bites. `MAX_MOI = 0` would refuse every inoculation, an empty host's included,
 where 1 already means no superinfection. At the default of 20 the gate is a guard that seldom binds,
-COI being typically 1 to 3; set low, it becomes the quantity a run measures, as section 14 of the
-model description warns.
+COI being typically 1 to 3; set low, it becomes the quantity a run measures, as the roadmap warns.
 
 **Alternatives considered.** Gating a bite only when the host has an infectious clone: two gates for
 one rule about parasite burden, under which, at `SUBPATENT_INFECTIVITY = 0`, a host whose clones are
@@ -429,7 +432,7 @@ number, so a default run is identical to one without the gate.
 to 12 days falciparum gametocytes take to mature (Bousema & Drakeley 2011; Koepfli et al. 2021),
 so infectiousness runs close to the blood stage, and a realistic setting, a delay of 2 to 3 days
 with carriage of about 0.9, lies near the identity. The parameters are there for the sensitivity
-analysis that section 14 of the model description calls for. The delay is one value for every
+analysis that the roadmap calls for. The delay is one value for every
 clone: at a few days against a 60-day mean blood stage (D9), its variance can do little to the
 dynamics.
 
@@ -475,8 +478,7 @@ that conversion explicit instead of leaving it to the reader. The exact draw is 
 uptakes where a positive count is one draw in 10,000 (`LAMBDA_OOCYSTS` about 1e-4, at any K) and by
 fewer than one in a million above about 0.003. No study has measured how many genotypes a natural
 bite delivers, so the defaults of 2 are an assumption: they let co-transmission happen in every
-default run, at a modest rate, and section 14 of the model description lists both lambdas for
-sensitivity analysis.
+default run, at a modest rate, and the roadmap lists both lambdas for sensitivity analysis.
 
 **Alternatives considered.** Settling for a single oocyst when the tries run out; it would make the
 count less dispersed than `uptake_moments()` reports. Drawing the count by inversion wherever a
@@ -815,7 +817,7 @@ batch that runs out in `reproduction()` has its own count set to 0 and is killed
 the top of the same day's `early()`, since `killIndividuals()` cannot run in `reproduction()`; one
 emptied by radical cure, which runs later in `early()`, goes at the next day's cleanup and is
 skipped until then. The mark sits on the batch itself rather than in a global list, which avoids the
-Eidos scoping trap of section 18 of the model description.
+Eidos scoping trap of the model's implementation notes.
 
 **Why.** White et al. (2014) give hypnozoites an exponential residence with no cap. A finite
 lifespan belongs in the daily death probability, not in a cutoff, which would clear whole batches at
@@ -1144,8 +1146,8 @@ repeats. `tests/testthat/test-run.R`: a holder counts toward `MAX_MOI` even at
 median of 7 days, and about 94% within day 28. `RECRUD_DELAY_DIST` sets the shape: `"geometric"`,
 the default; `"poisson"`, 1 + Poisson(D − 1) with mean D, a tight-window sensitivity arm; or
 `"fixed"`, round(D) days with halves rounded up, 11 at 10.5. Every shape is at least one day. 10.5
-days is a literature assumption, pending parameterisation, which section 14 of the model description
-lists for sensitivity analysis.
+days is a literature assumption, pending parameterisation, which the roadmap lists for
+sensitivity analysis.
 
 **Why.** The only published fit for this quantity models the time to recrudescence as
 exponential (Taylor et al. 2019), and the ceiling of an exponential delay on a day scale is a
@@ -1327,7 +1329,7 @@ limitations and sections 8, 11 and 15 of the model description say so.
 
 **Alternatives considered.** A structured source deme with migration, the population-genetics
 convention for immigration, under which imported genomes carry real ancestry and coalesce with one
-another in the source: a planned extension (section 15 of the model description). Under it an
+another in the source: a planned extension (the roadmap). Under it an
 import's inoculum would be a real genome, so its two compartments would be siblings cloned from it,
 as a local bite's are, in place of the primary-to-batch clone of D38.
 

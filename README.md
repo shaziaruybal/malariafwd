@@ -180,9 +180,15 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
 - [Reference](https://shaziaruybal.github.io/malariafwd/reference/): every function, starting with
   the terms they share (`?malariafwd`).
 - [Model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html): the
-  model in full, with its parameters, assumptions and validation.
+  model in full, with its parameters and assumptions.
 - [Design decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html): why each
   modelling choice was made.
+- [Validation](https://shaziaruybal.github.io/malariafwd/VALIDATION.html): how the model is
+  checked, and what each check found.
+- [Derived metrics](https://shaziaruybal.github.io/malariafwd/METRICS.html): what each number a run
+  yields means, and how it is counted.
+- [Ongoing and future work](https://shaziaruybal.github.io/malariafwd/ROADMAP.html): the sensitivity
+  analyses still needed and the extensions planned.
 - The validation scripts are installed with the package, with the results of their last run in
   `RESULTS.md`: list them with `dir(system.file("validation", package = "malariafwd"))` and run
   one with `source()`, for example
@@ -198,8 +204,8 @@ full per-event narration; the default is quiet.
 
 ## Limitations
 
-Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind
-each, is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
+Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind each,
+is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
 
 * **Imported parasites are unrelated to local ones.** Imports are drawn as fresh founders, so
   they are maximally distinguishable — any import-detection result is an **upper bound**.
@@ -218,14 +224,14 @@ each, is in the [model description](https://shaziaruybal.github.io/malariafwd/MO
 
 ## Citing and getting help
 
-Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bugs and
-questions, and get in touch before building on the package — see the pre-release note above. The
+Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bugs and questions,
+and get in touch before building on the package — see the pre-release note above. The
 [contributing guide](https://shaziaruybal.github.io/malariafwd/CONTRIBUTING.html) says what a bug
 report needs. The project is released with a
 [Contributor Code of Conduct](https://shaziaruybal.github.io/malariafwd/CODE_OF_CONDUCT.html); by
-contributing to it, you agree to abide by its terms.
-Cite malariafwd with `citation("malariafwd")`; it also lists the papers for SLiM and tskit, which
-run the model and record its genealogy. An archived DOI will be added at the first tagged release.
+contributing to it, you agree to abide by its terms. Cite malariafwd with `citation("malariafwd")`;
+it also lists the papers for SLiM and tskit, which run the model and record its genealogy. An
+archived DOI will be added at the first tagged release.
 
 ## Funding
 

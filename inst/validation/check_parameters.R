@@ -18,7 +18,7 @@ ok <- function(lbl, cond, detail = "") {
 .CLEARERS <- event_types()$event_type[event_types()$ends_episode]
 
 ## One oocyst an uptake and one genotype a bite (both lambdas 0): the comparisons below read single
-## runs or three, and section 13 of the model description gives their results in this setting.
+## runs or three, and the validation document gives their results in this setting.
 ## Co-transmission has a configuration (wsf_multi) and a comparison of its own.
 BASE <- list(N_HOSTS = 80L, N_MOSQ = 160L, BITING_RATE = 0.10, SIM_DAYS = 400L,
              N_FOUNDER_HOSTS = 10L, N_FOUNDER_LINEAGES = 10L,

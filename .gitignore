@@ -24,3 +24,6 @@ quickstart-output/
 # agent-local working files and dev scratch: never shipped, never tracked
 .claude/
 ignore/
+
+/.quarto/
+**/*.quarto_ipynb

@@ -47,7 +47,8 @@ test_that("every decision from D1 to the newest has one entry", {
 test_that("every decision the code and the docs cite is an entry", {
   d <- decision_numbers()
   root <- test_path("..", "..")
-  src <- c(file.path(root, c("MODEL_DESCRIPTION.md", "README.md", "NEWS.md")),
+  src <- c(file.path(root, c("MODEL_DESCRIPTION.md", "VALIDATION.md", "METRICS.md",
+                             "IMPLEMENTATION_NOTES.md", "ROADMAP.md", "README.md", "NEWS.md")),
            list.files(file.path(root, c("R", "inst/slim", "inst/validation", "tests/testthat", "vignettes")),
                       "\\.(R|slim|Rmd)$", full.names = TRUE))
   stray <- character()
