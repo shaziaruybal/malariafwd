@@ -1337,11 +1337,9 @@ the imports, and distinct root genomes share no IBD segment.
 ### D40 — Imports land in uniformly random hosts under the bite's gate, at most one a host a day
 
 **Decision.** A day's imports go to distinct hosts drawn uniformly at random, as bites do, so an
-import can land in a host that already carries a clone. Each meets the gate every new inoculation
-meets, bite or import: a host already carrying `MAX_MOI` blood-stage lineages, patent or subpatent,
-counting those it gained earlier that day (D10), takes none, whether or not it is infectious, and a
-refused import is logged as `vh_inoculation_import_no_take`. `MAX_MOI` is at least 1, where 1 means
-no superinfection; relapses bypass the gate. A host takes at most one import a day, so a day's
+import can land in a host that already carries a clone. Each meets the same gate a bite does,
+counting the clones the host gained earlier that day (D10); a refused import is logged as
+`vh_inoculation_import_no_take`. A host takes at most one import a day, so a day's
 imports beyond `N_HOSTS` are dropped, and `vivax_params()` warns when `N_IMPORTS`,
 `N_IMPORTS_PER_TICK` or the two together would bring more than `N_HOSTS` on a day of the run, or
 when the Poisson rate at its seasonal and boosted peak, with the daily count, would draw more than
@@ -1352,9 +1350,8 @@ is still empty, takes an import even at `MAX_MOI = 1`, and from day 2 carries bo
 population is `N_FOUNDER_HOSTS = 0` with an import path inside the run.
 
 **Why.** Random placement makes an import as likely as a bite to share its host with a local clone,
-which is the setting a study detecting or classifying imported cases faces. `MAX_MOI` is a rule
-about parasite burden, not about what a microscope or a mosquito can see, so one gate on every
-blood-stage lineage present serves every new inoculation. One import a host a day keeps the largest
+which is the setting a study detecting or classifying imported cases faces. One import a host a
+day keeps the largest
 import rate the parameters allow, 1e6 a day, cheap to run, and the warning makes the dropped excess
 visible. A day-1 pulse keeps the founders because the parameters ask for them; a naive population is
 expressible directly.
@@ -1362,16 +1359,13 @@ expressible directly.
 **Alternatives considered.** Filling a day's imports from hosts without a blood-stage infection
 first: an import would almost never meet a local clone, which makes imports easier to detect and
 classify than random placement does. Placing every import with replacement: at the cap of 1e6
-imports a day, each of the default 40 hosts would take about 25,000 a day. Gating a bite only on a
-host with an infectious clone: two gates for one rule, since at `SUBPATENT_INFECTIVITY = 0` a host
-whose clones are all subpatent would take bites past the cap while refusing imports. Reading a day-1
+imports a day, each of the default 40 hosts would take about 25,000 a day. Reading a day-1
 pulse as a naive population: it would silently drop the founders the parameters ask for.
 
 **How to check.** `tests/testthat/test-run.R`: 100 imports into 200 hosts, half of them founders,
 put about half into founder hosts; at `MAX_MOI = 1` none lands in a founder host still carrying its
-clone, and the refusals are logged; a pulse of 50 into 30 hosts brings exactly 30, one a host, with
-the warning; a bite never reaches a host at `MAX_MOI` whose clone is subpatent and not infectious; a
-day-1 pulse keeps the founders. `tests/testthat/test-params.R`: `MAX_MOI = 0` is refused, as it is
+clone, and the refusals are logged; a pulse of 50 into 30 hosts brings exactly 30, one a host,
+with the warning; a day-1 pulse keeps the founders. `tests/testthat/test-params.R`: `MAX_MOI = 0` is refused, as it is
 in a run started directly (`tests/testthat/test-slim.R`), and a day's counts above `N_HOSTS`, or a
 rate that often draws more, warn.
 
