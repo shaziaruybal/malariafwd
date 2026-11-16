@@ -47,8 +47,9 @@ under the default \code{RECRUD_DELAY_DIST = "geometric"}, the recrudescence dela
 (\code{MEAN_RECRUD_DELAY}) follow the same rule from the day after the case or the suppression,
 so they are at least one day; \code{EIP_DAYS} and \code{GAMETOCYTE_DELAY} are fixed delays. Rates
 (\code{BITING_RATE}, \code{ALPHA_ACTIVATE}, \code{MU_HYPNOZOITE}, \code{DELTA_LATENCY}) are daily probabilities;
-a mosquito bites at most once a day, so \code{BITING_RATE} times its seasonal and resurgence
-multipliers is capped at 1.
+a mosquito bites at most once a day, so the realised biting rate is capped at 1, and
+\code{vivax_params()} warns when the peak over the run, with its seasonal, intervention and
+resurgence multipliers, passes it.
 
 Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
 \emph{Parameters} section below gives what each may be, and \code{\link[=param_info]{param_info()}} the same as a table. Each
@@ -56,15 +57,8 @@ value is a number, \code{TRUE}/\code{FALSE} or a string, as its default is; numb
 strings are UTF-8 text without control characters. The tables are also in section 10 of the
 \href{https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html}{model description}.
 
-A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
-uptake (see \code{\link[=uptake_moments]{uptake_moments()}}), with \code{K_OOCYSTS} either 0 or at least 0.001;
-\code{LAMBDA_SPOROZOITES} at 1000; the hypnozoite batch mean at 1e6, times its boost once the
-trigger falls inside the run; the import rate at 1e6 a day; and \code{TREATMENT_DELAY} and
-\code{MEAN_RECRUD_DELAY} at 1e6 days. \code{SIM_DAYS} is at most 1e9, SLiM's last tick, and a run that
-reaches day 99999, the day the defaults use for "never", must move those days past its end and
-cannot schedule anything on day 99999 itself. \code{MDA_TICK} is not 1 when a founder host carries a
-copy of another founder's genome (\code{N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS}): the copies are seeded
-on day 2, so a round comes on day 2 or later. A founder-free run whose imports never establish a
+Several sizes are capped far above anything realistic, so a cap binds only on an absurd value;
+each parameter's row below gives its own, \code{\link[=uptake_moments]{uptake_moments()}} the oocyst one. A founder-free run whose imports never establish a
 parasite, by chance or because its settings let none take, is not refused here; it ends as never
 started (see \code{\link[=load_run]{load_run()}}). Imports arrive on days 1 to \code{SIM_DAYS}: a pulse or an import window
 set outside the run brings nothing, without a warning, which is how imports are switched off in
@@ -140,7 +134,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 
 \subsection{Transmission}{Bites, infection and the mosquito's incubation.
 \describe{
-\item{\code{BITING_RATE}}{Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. Unit: per mosquito per day. Default 0.1; number > 0; a mosquito bites at most once a day, so above 1 with its seasonal and resurgence multipliers it warns.}
+\item{\code{BITING_RATE}}{Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. Unit: per mosquito per day. Default 0.1; number > 0; a mosquito bites at most once a day, so it warns when the peak over the run, with its seasonal, intervention and resurgence multipliers, passes 1.}
 \item{\code{P_TRANS_VH}}{b: an infectious bite infects the human. Unit: probability. Default 0.5; number in [0, 1].}
 \item{\code{P_TRANS_HV}}{c: a mosquito that bites an infectious human takes up parasites. Unit: probability. Default 0.5; number in [0, 1].}
 \item{\code{MOSQ_LIFESPAN}}{Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. Unit: days. Default 10; number >= 1.}

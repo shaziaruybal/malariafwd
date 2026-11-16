@@ -43,7 +43,7 @@
     paste("Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ /",
           "N_HOSTS, not this value."),
     min = 0, min_open = TRUE,
-    rule = "a mosquito bites at most once a day, so above 1 with its seasonal and resurgence multipliers it warns"),
+    rule = "a mosquito bites at most once a day, so it warns when the peak over the run, with its seasonal, intervention and resurgence multipliers, passes 1"),
   P_TRANS_VH = .param(0.5, "probability", "b: an infectious bite infects the human.", min = 0, max = 1),
   P_TRANS_HV = .param(0.5, "probability", "c: a mosquito that bites an infectious human takes up parasites.",
     min = 0, max = 1),

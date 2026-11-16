@@ -31,8 +31,9 @@
 #' (`MEAN_RECRUD_DELAY`) follow the same rule from the day after the case or the suppression,
 #' so they are at least one day; `EIP_DAYS` and `GAMETOCYTE_DELAY` are fixed delays. Rates
 #' (`BITING_RATE`, `ALPHA_ACTIVATE`, `MU_HYPNOZOITE`, `DELTA_LATENCY`) are daily probabilities;
-#' a mosquito bites at most once a day, so `BITING_RATE` times its seasonal and resurgence
-#' multipliers is capped at 1.
+#' a mosquito bites at most once a day, so the realised biting rate is capped at 1, and
+#' `vivax_params()` warns when the peak over the run, with its seasonal, intervention and
+#' resurgence multipliers, passes it.
 #'
 #' Values the model cannot run are refused here, before SLiM starts, naming the parameter; the
 #' *Parameters* section below gives what each may be, and [param_info()] the same as a table. Each
@@ -40,15 +41,8 @@
 #' strings are UTF-8 text without control characters. The tables are also in section 10 of the
 #' [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
 #'
-#' A few sizes are capped far above anything realistic: a mean of 1000 oocysts per successful
-#' uptake (see [uptake_moments()]), with `K_OOCYSTS` either 0 or at least 0.001;
-#' `LAMBDA_SPOROZOITES` at 1000; the hypnozoite batch mean at 1e6, times its boost once the
-#' trigger falls inside the run; the import rate at 1e6 a day; and `TREATMENT_DELAY` and
-#' `MEAN_RECRUD_DELAY` at 1e6 days. `SIM_DAYS` is at most 1e9, SLiM's last tick, and a run that
-#' reaches day 99999, the day the defaults use for "never", must move those days past its end and
-#' cannot schedule anything on day 99999 itself. `MDA_TICK` is not 1 when a founder host carries a
-#' copy of another founder's genome (`N_FOUNDER_LINEAGES < N_FOUNDER_HOSTS`): the copies are seeded
-#' on day 2, so a round comes on day 2 or later. A founder-free run whose imports never establish a
+#' Several sizes are capped far above anything realistic, so a cap binds only on an absurd value;
+#' each parameter's row below gives its own, [uptake_moments()] the oocyst one. A founder-free run whose imports never establish a
 #' parasite, by chance or because its settings let none take, is not refused here; it ends as never
 #' started (see [load_run()]). Imports arrive on days 1 to `SIM_DAYS`: a pulse or an import window
 #' set outside the run brings nothing, without a warning, which is how imports are switched off in

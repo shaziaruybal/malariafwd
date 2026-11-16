@@ -1431,12 +1431,10 @@ scheduling day or a fixed delay that is not whole; a value outside the bounds th
 and section 10 of the model description give it, such as a probability outside [0, 1], a mean
 duration below one day or a negative count; a number that is not finite, or not 0 and below 1e-300
 in size; text that is not UTF-8 or holds control characters; a `CHROMOSOMES` that is unreadable,
-names a chromosome outside 1 to 14 or twice, or runs a range high-low; and a few sizes, capped far
-above anything realistic: a mean of 1000 oocysts per successful uptake, with `K_OOCYSTS` 0 or at
-least 0.001, `LAMBDA_SPOROZOITES` at 1000, the hypnozoite batch mean at 1e6 (times its boost once
-the trigger falls inside the run), the import rate at 1e6 a day, `TREATMENT_DELAY` and
-`MEAN_RECRUD_DELAY` at 1e6 days, and `SIM_DAYS` at 1e9, SLiM's last tick. A run that reaches day
-99999, the day the defaults use for never, must move those days past its end. A set in which no
+names a chromosome outside 1 to 14 or twice, or runs a range high-low; and a value above one of the
+sizes capped far above anything realistic, which `?vivax_params` and section 10 of the model
+description give with each parameter. A run that reaches day 99999, the day the defaults use for
+never, must move those days past its end. A set in which no
 parasite can ever arise, such as one with no founder and no import on a day of the run, and a
 coverage set against a closed treatment window (D30) are refused too. The legitimate edges run at
 their natural limit instead: no imports at a rate of 0, a one-day delay at the minimum, a
@@ -1488,11 +1486,8 @@ edge of the rounding allowance on the caps.
 ### D43 — A run started with slim -d makes the same checks and takes either spelling of a number
 
 **Decision.** The model's `initialize()` makes the checks of `validate_params()` (D42) again for a
-run started directly with `slim -d`: each parameter's type and that it is a single value, whole
-numbers within ±2^53 for the counts, days and seed, finite numbers, the probability ranges, the
-founder bounds and the other single-value bounds, `GENOME_MODE`, `RADCURE_MODE`, `RECRUD_DELAY_DIST`
-and `CHROMOSOMES`, a coverage against a closed treatment window, an overflowing biting rate, the
-size caps, the days that mean never, and a set with no founder and no import path. Its caps allow a
+run started directly with `slim -d`, down to the whole numbers within ±2^53 for the counts, days
+and seed. Its caps allow a
 relative rounding of 1e-11 rather than 1e-12, since the values arrive rounded to 15 digits, so a set
 R accepts is never refused there; its messages give a float to 15 significant digits and quote a
 string. Not repeated: a misspelt name, which SLiM defines as a constant the model never reads; the

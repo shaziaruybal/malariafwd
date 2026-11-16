@@ -888,7 +888,7 @@ Bites, infection and the mosquito's incubation.
 
 | parameter | default | unit | allowed | meaning |
 |---|---|---|---|---|
-| `BITING_RATE` | 0.1 | per mosquito per day | number > 0; a mosquito bites at most once a day, so above 1 with its seasonal and resurgence multipliers it warns | Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. |
+| `BITING_RATE` | 0.1 | per mosquito per day | number > 0; a mosquito bites at most once a day, so it warns when the peak over the run, with its seasonal, intervention and resurgence multipliers, passes 1 | Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ / N_HOSTS, not this value. |
 | `P_TRANS_VH` | 0.5 | probability | number in [0, 1] | b: an infectious bite infects the human. |
 | `P_TRANS_HV` | 0.5 | probability | number in [0, 1] | c: a mosquito that bites an infectious human takes up parasites. |
 | `MOSQ_LIFESPAN` | 10 | days | number >= 1 | Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. |
