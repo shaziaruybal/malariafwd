@@ -114,113 +114,66 @@ initialize() {
 	// CASE MANAGEMENT window (D30), separate from the vector-control window INTERVENTION_*, so
 	// treatment can run without a change in biting. Defaults are "always on", so a coverage
 	// alone is sufficient: RADCURE_COVERAGE / BLOODCURE_COVERAGE are the switches.
-	// The window gates when a case is DECIDED (presents and is prescribed), not when the
-	// drugs land. A case detected just before TREATMENT_END still completes its course
-	// TREATMENT_DELAY days later, which may fall outside the window - a patient who presents
-	// on the programme's last day is not refused treatment.
 	defineDefault("TREATMENT_START",         0);
 	defineDefault("TREATMENT_END",           99999);
 
-	// seasonality: effective biting = BITING_RATE * (1 + SEASONAL_AMP*cos(2pi(t-SEASONAL_PHASE)/365)).
-	// SEASONAL_AMP 0 = no seasonality (default); ~0.85 = strong annual peaks
-	// (biting swings ~0.15x..1.85x the mean). Clamped >= 0. SEASONAL_PHASE = day-of-year of the
-	// PEAK (the cosine peaks at t = SEASONAL_PHASE).
+	// seasonality: effective biting = BITING_RATE * (1 + SEASONAL_AMP*cos(2pi(t-SEASONAL_PHASE)/365)), clamped >= 0.
 	defineDefault("SEASONAL_AMP",    0.0);
 	defineDefault("SEASONAL_PHASE",  0.0);
 
 	// detection / observation layer: a true blood-stage episode becomes a DETECTED
-	// (reported, genotyped) case w.p. P_DETECT_[type]. Relapses are mostly sub-patent
-	// (immunity -> lower density), so set their rate lower. Detected cases form the
-	// observed line list + the genotyped sample, and during the case-management window (D30)
-	// a detected case can be treated: blood-stage (schizonticidal) treatment at coverage
-	// BLOODCURE_COVERAGE (efficacy 1 - P_BLOODCURE_SURVIVAL, clears the active infection), with
-	// radical cure (LIVER-stage, efficacy 1 - P_RAD_SURVIVAL, clears the hypnozoite reservoir)
-	// for a fraction RADCURE_COVERAGE of those treated. Defaults: detect everything, treat nothing.
+	// (reported, genotyped) case w.p. P_DETECT_[type]. Detected cases form the observed line list
+	// and the genotyped sample, and during the case-management window (D30) can be treated.
+	// Defaults: detect everything, treat nothing.
 	defineDefault("P_DETECT_PRIMARY", 1.0);   // primaries + imports
 	defineDefault("P_DETECT_RELAPSE", 1.0);   // relapses (set lower, e.g. 0.15)
-	// CASE MANAGEMENT. A detected case is treated w.p. BLOODCURE_COVERAGE; radical cure is
-	// NESTED inside that, so RADCURE_COVERAGE is P(radical cure | blood-stage treatment).
-	// In practice primaquine is never given without a schizonticide.
+	// CASE MANAGEMENT. Radical cure is NESTED in blood-stage treatment, so RADCURE_COVERAGE is
+	// P(radical cure | treated): in practice primaquine is never given without a schizonticide.
 	defineDefault("BLOODCURE_COVERAGE", 0.0); // P(a detected case is treated)
 	defineDefault("RADCURE_COVERAGE", 0.0);   // P(radical cure | treated) - LIVER stage only
 	defineDefault("P_BLOODCURE_SURVIVAL", 0.0); // P(a blood-stage clone survives treatment)
 	// ---- THREE-STATE RECURRENCE: relapse / reinfection / RECRUDESCENCE (D33) ----
 	// A clone that SURVIVES a blood-stage course may be suppressed below patency rather than
-	// carrying on at full density. A subpatent clone is undetectable and is not an episode,
-	// but it is still present and still (partly) infectious; after a delay it re-expands to
-	// patency as a RECRUDESCENCE, which mints a new genome clonal to the holder, unless an MDA
-	// round clears it first (D35). Natural clearance while subpatent is OFF, so without MDA
-	// P_RECRUD_GIVEN_FAIL is exactly P(recrudescence | the course failed) and maps onto a WHO
-	// therapeutic-efficacy failure rate. At 0.0, the default, a failed course leaves the
-	// clone fully patent.
+	// carrying on at full density: undetectable, not an episode, but present and still partly
+	// infectious. After a delay it re-expands as a RECRUDESCENCE, minting a new genome clonal to
+	// the holder, unless an MDA round clears it first (D35). Natural clearance while subpatent is
+	// OFF, so without MDA P_RECRUD_GIVEN_FAIL is exactly P(recrudescence | the course failed).
 	defineDefault("P_RECRUD_GIVEN_FAIL", 0.0);
 	// Mean days suppressed before re-expansion, and the shape of that waiting time.
-	//
 	// GEOMETRIC by default (D32): each day after the suppression the clone re-expands with
-	// probability 1/MEAN_RECRUD_DELAY, so the delay is at least one day with this mean. It is
-	// the discrete analogue of the Exponential that the only published fit for this quantity
-	// uses. Taylor et al. (2019) model time-to-recrudescence as exponential; the ceiling of an
-	// exponential on a day scale is exactly a geometric (their own simulator rounds instead,
-	// round(rexp(1, 1/10)), which differs only in the mass at 0). Every other duration in the
-	// model is geometric too (D3).
-	//
-	// 10.5 d is a literature assumption, pending parameterisation (D34): the reciprocal of the
-	// posterior median of Taylor et al. (2019), which sits on their strongly informative
-	// Gamma(100, 1000) prior (mean 0.1/day), so it is not an estimate from data. It keeps
-	// recrudescences inside a standard 28-day WHO therapeutic-efficacy window, where a real study
-	// can see them: the median gap is 7 d and ~94% land inside day 28.
-	//
-	// "poisson" is 1 + Poisson(mean - 1), a tight-window sensitivity arm; "fixed" is
-	// round(mean) days, halves rounded up (11 at 10.5), for debugging and sensitivity. Every
-	// shape is at least one day.
+	// probability 1/MEAN_RECRUD_DELAY, so the delay is at least one day with this mean, as every
+	// other duration in the model is (D3). 10.5 d is a literature assumption, pending
+	// parameterisation (D34). RECRUD_DELAY_DIST also takes "poisson" and "fixed";
+	// ?vivax_params gives all three shapes and the evidence behind the default.
 	defineDefault("MEAN_RECRUD_DELAY", 10.5);
 	defineDefault("RECRUD_DELAY_DIST", "geometric");
-	// Detection of a recrudescent episode. Ross et al. (2025) put recurrence detectability at
-	// 0.13-0.49 of a primary, so this should usually be set well below P_DETECT_PRIMARY.
 	defineDefault("P_DETECT_RECRUD", 0.5);
-	// Infectiousness of a SUBPATENT clone relative to a patent one. 0.035-0.10 in the
-	// individual-based model of White et al. (2018); 0.10-0.20 from the mosquito-feeding studies
-	// compiled by Koepfli et al. (2021, their Fig 5: microscopy-positive carriers 5-10x more
-	// infective than submicroscopic ones, a P. vivax study in Brazil the exception). NOT 0:
-	// submicroscopic carriage is a real transmission reservoir.
+	// Infectiousness of a SUBPATENT clone relative to a patent one; NOT 0, as submicroscopic
+	// carriage is a real transmission reservoir.
 	defineDefault("SUBPATENT_INFECTIVITY", 0.15);
 	// Days from blood-stage emergence to receiving drugs: symptom onset + care seeking +
-	// diagnosis. Drawn once per course: each day after the case the course arrives with
-	// probability 1/TREATMENT_DELAY, so the delay is geometric on 1, 2, ... with this mean
-	// (White et al. 2014 use 7). Must be >= 1; 1 = the next day, the fastest response the model can
-	// represent (D32).
+	// diagnosis. Drawn once per course, geometric on 1, 2, ... with this mean; must be >= 1,
+	// where 1 is the next day (D32).
 	// Treatment is NOT instantaneous: a treated case is infectious until its drugs arrive.
 	defineDefault("TREATMENT_DELAY", 7.0);
 
-	// Resurgence trigger: applies from RESURGENCE_TRIGGER_TICK onward (never,
-	// by default) as multiplicative boosts on top of whatever value the
-	// parameter already has - lets a single scenario run a quiet baseline
-	// period and then "switch on" one specific mechanism (transmission,
-	// relapse reservoir, or both) without changing anything else about the
-	// baseline. All default to 1.0 (no boost).
+	// Resurgence trigger: from RESURGENCE_TRIGGER_TICK onward, multiplicative boosts on top of
+	// whatever value the parameter already has - so one scenario can run a quiet baseline and then
+	// switch on transmission, the relapse reservoir, or both. All default to 1.0 (no boost).
 	defineDefault("RESURGENCE_TRIGGER_TICK",      99999);
 	defineDefault("BITING_RATE_BOOST",            1.0);  // transmission-driven resurgence
 	defineDefault("ALPHA_ACTIVATE_BOOST",         1.0);  // relapse-driven: faster activation
 	defineDefault("NU_HYPNOZOITE_BATCH_BOOST",    1.0);  // relapse-driven: bigger hypnozoite batches
 	defineDefault("MDA_TICK",        99999);
-	// Fraction of the population a round actually reaches. Coverage is the whole policy question
-	// for MDA - it is what distinguishes a feasible campaign from an idealised one - and without
-	// it a round is all-or-nothing, which is not a scenario anyone runs. At 1.0 the draw is
-	// skipped, so a round that reaches everyone uses no random numbers.
+	// Fraction of the population a round actually reaches. At 1.0 the draw is skipped, so a round
+	// that reaches everyone uses no random numbers.
 	defineDefault("MDA_COVERAGE",    1.0);
-	// RADICAL CURE EFFICACY, per PERSON: P_RAD_SURVIVAL is the probability that the whole
-	// reservoir survives a course. 0.29 (~71% cure) is near the 70% effectiveness White et al.
-	// (2018) assume for a 14-day primaquine course, given poor adherence.
-	//
-	// RADCURE_MODE selects the unit:
-	//   "person"     (default) all-or-nothing - the reservoir is cleared or it is not. This is
-	//                how clinical efficacy is reported (recurrence prevented per patient).
-	//   "hypnozoite" EXPERIMENTAL. Each hypnozoite survives independently w.p. P_RAD_SURVIVAL,
-	//                so efficacy falls as the reservoir grows and treatment can clear PART of
-	//                it. That partial clearance is the only way a subset of genotypes survives
-	//                treatment, which is what reshapes post-treatment relapse diversity - the
-	//                reason this mode is kept. Note P_RAD_SURVIVAL then means something
-	//                different (per hypnozoite), so the same number is NOT the same efficacy.
+	// RADICAL CURE: P_RAD_SURVIVAL is the probability a course fails, and RADCURE_MODE is the unit
+	// it applies to - "person" (default), all-or-nothing on the whole reservoir, or "hypnozoite",
+	// EXPERIMENTAL, each hypnozoite independent so a course can clear PART of the reservoir. That
+	// partial clearance is the only way a subset of genotypes survives treatment, which reshapes
+	// post-treatment relapse diversity: the reason the mode is kept. P_RAD_SURVIVAL then means
+	// something per hypnozoite, so the same number is NOT the same efficacy (?vivax_params has both).
 	defineDefault("P_RAD_SURVIVAL",  0.29);
 	defineDefault("RADCURE_MODE",    "person");
 	
@@ -228,16 +181,10 @@ initialize() {
 	defineDefault("IMPORT_START", 99999);
 	defineDefault("IMPORT_END", 99999);
 	defineDefault("N_IMPORTS_PER_TICK", 0);
-	// Stochastic alternative to N_IMPORTS_PER_TICK: a genuine arrival RATE
-	// (mean imports per tick, e.g. 0.25 = "on average 1 every 4 days"),
-	// realized each tick as a Poisson draw rather than a guaranteed fixed
-	// count - a much more realistic "leaky border" than a deterministic
-	// schedule. Additive with N_IMPORTS_PER_TICK if both are set (the
-	// latter stays available for anyone who wants a hard guaranteed floor).
+	// Stochastic alternative to N_IMPORTS_PER_TICK: an arrival RATE, realised each tick as a
+	// Poisson draw. Additive with N_IMPORTS_PER_TICK if both are set.
 	defineDefault("IMPORT_RATE_PER_TICK", 0.0);
-	// import-driven resurgence: multiplies IMPORT_RATE_PER_TICK from
-	// RESURGENCE_TRIGGER_TICK onward (the "leaky border opens wider"), matching the
-	// BITING_RATE_BOOST / ALPHA_ACTIVATE_BOOST pattern. 1.0 = no boost.
+	// import-driven resurgence: multiplies IMPORT_RATE_PER_TICK from RESURGENCE_TRIGGER_TICK. 1.0 = no boost.
 	defineDefault("IMPORT_RATE_BOOST", 1.0);
 	// single importation event params 
 	defineDefault("IMPORT_TICK", 99999);
@@ -245,19 +192,15 @@ initialize() {
 	
 	// output
 	defineDefault("OUTDIR", "output/default_run"); // the output directory, which must exist
-	// VERBOSE: T = print the full per-event / per-tick narration (~30k lines/run, useful for
-	// debugging a single run); F (default) = quiet, only the GENOME line, WARNINGs, and the
-	// SIMULATION FINISHED banner. Does NOT affect results or the data files (events/state/trees),
-	// only console/log narration. Recommended F for sweeps (cuts log-disk noise).
+	// VERBOSE: T = the full per-event / per-tick narration (~30k lines/run, for debugging one
+	// run); F (default) = only the GENOME line, WARNINGs and the SIMULATION FINISHED banner.
+	// Narration only: the results and the data files are the same either way.
 	defineDefault("VERBOSE", F);
 
 	// tree-sequence recording. T = permanently retain cleared/dead infections (hypnozoite
-	// batches + cleared blood-stage broods) in the tree sequence so IBD can be computed between a
-	// recurrence and an EARLIER, already-cleared infection (relapse-to-prior,
-	// attribution networks, WHO-vs-genetics reclassification all need this).
-	// F = retain them without the permanent flag (permanent=F): cleared infections may be
-	// simplified away, losing their ancestry - only safe when IBD to prior
-	// infections is NOT needed.
+	// batches + cleared blood-stage broods) in the tree sequence, which IBD between a recurrence
+	// and an EARLIER, already-cleared infection needs. F = retain them without the permanent flag
+	// (permanent=F), so they may be simplified away and lose their ancestry.
 	defineDefault("RETAIN_FULL_HISTORY", T);
 
 	// ── PARAMETER TYPES, for runs started directly with -d (D43) ────────────
