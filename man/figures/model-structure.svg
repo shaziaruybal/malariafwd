@@ -99,7 +99,7 @@
 
   <line x1="232" y1="730" x2="341" y2="730" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="287" y="752" class="t" text-anchor="middle">uptake</text>
-  <text x="287" y="788" class="nt" text-anchor="middle">cap MAX_BROODS_PER_MOSQ</text>
+  <text x="287" y="788" class="nt" text-anchor="middle">cap MAX_LINEAGES_PER_MOSQ</text>
   <line x1="487" y1="730" x2="596" y2="730" stroke="#555" stroke-width="2" marker-end="url(#aD)"/>
   <text x="541" y="722" class="t" text-anchor="middle">EIP</text>
   <text x="541" y="750" class="ts" text-anchor="middle">fixed 10 d</text>

@@ -286,7 +286,7 @@ validate_params <- function(p) {
                "ALPHA_ACTIVATE_BOOST", "NU_HYPNOZOITE_BATCH_BOOST", "BITING_RATE_BOOST",
                "IMPORT_RATE_PER_TICK", "IMPORT_RATE_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
                "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS",
-               "GAMETOCYTE_DELAY", "MAX_BROODS_PER_MOSQ", "K_LATENCY"))
+               "GAMETOCYTE_DELAY", "MAX_LINEAGES_PER_MOSQ", "K_LATENCY"))
     if (p[[pr]] < 0) stop(pr, " must be >= 0", call. = FALSE)
   ## at 0 the gate would refuse every inoculation, an empty host's included (D10)
   if (p$MAX_MOI < 1)

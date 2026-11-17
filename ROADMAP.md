@@ -42,4 +42,4 @@ The extensions planned for later versions, each with the reason for it.
 | Fate determination (`P_HYPNOZOITE`) | 0.58–0.63 of liver-stage parasites became hypnozoites in culture, depending on the patient isolate (Vantaux et al. 2022); **deferred** — would make ν emergent but trades one well-identified parameter for two poorly-identified ones |
 | Immunity | explicitly out of scope for now; would require a separate identifiability argument |
 | Spatial structure / heterogeneous biting | currently homogeneous mixing |
-| Vector fitness cost of burden | `MAX_BROODS_PER_MOSQ` is a hard cap with no graded effect |
+| Vector fitness cost of burden | `MAX_LINEAGES_PER_MOSQ` is a hard cap with no graded effect; mosquito bottleneck simulations may be revisited |

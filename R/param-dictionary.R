@@ -58,7 +58,7 @@
           "that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a",
           "guard that seldom binds."),
     min = 1),
-  MAX_BROODS_PER_MOSQ = .param(20L, "lineages",
+  MAX_LINEAGES_PER_MOSQ = .param(20L, "lineages",
     paste("A mosquito carrying this many lineages takes up no more. One uptake can add up to four per",
           "oocyst, so the count can pass it."),
     min = 0),
@@ -231,7 +231,7 @@
     params = c("N_HOSTS", "N_MOSQ", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES")),
   "Transmission" = list(lead = "Bites, infection and the mosquito's incubation.",
     params = c("BITING_RATE", "P_TRANS_VH", "P_TRANS_HV", "MOSQ_LIFESPAN", "EIP_DAYS", "MAX_MOI",
-               "MAX_BROODS_PER_MOSQ")),
+               "MAX_LINEAGES_PER_MOSQ")),
   "Blood stage" = list(lead = "A clone's duration and its infectiousness to mosquitoes.",
     params = c("MEAN_BLOOD_STAGE_DURATION", "P_PRIMARY", "P_GAMETOCYTE", "GAMETOCYTE_DELAY")),
   "Mosquito uptake and co-transmission" = list(

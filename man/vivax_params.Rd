@@ -140,7 +140,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 \item{\code{MOSQ_LIFESPAN}}{Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. Unit: days. Default 10; number >= 1.}
 \item{\code{EIP_DAYS}}{Extrinsic incubation period: days from uptake until a mosquito's products can be transmitted (fixed). Unit: days. Default 10; whole number >= 0.}
 \item{\code{MAX_MOI}}{A host already carrying this many blood-stage lineages, patent or subpatent, takes no new inoculation, counting the clones it gained earlier that day. Relapses bypass it, and a bite that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a guard that seldom binds. Unit: lineages. Default 20; whole number >= 1.}
-\item{\code{MAX_BROODS_PER_MOSQ}}{A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. Unit: lineages. Default 20; whole number >= 0.}
+\item{\code{MAX_LINEAGES_PER_MOSQ}}{A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. Unit: lineages. Default 20; whole number >= 0.}
 }}
 
 \subsection{Blood stage}{A clone's duration and its infectiousness to mosquitoes.

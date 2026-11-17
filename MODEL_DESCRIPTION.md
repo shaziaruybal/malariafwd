@@ -192,7 +192,7 @@ for each tick t:
             if runif(1) < P_TRANS_VH:
                 inoculateMosquitoToHuman(broods, h)          # ONE Geom(nu) batch, split over k
         if h infectious and runif(1) < P_TRANS_HV:            # by a clone it held before today
-            if active_lineages(m) < MAX_BROODS_PER_MOSQ:
+            if active_lineages(m) < MAX_LINEAGES_PER_MOSQ:
                 seedBroodFromHuman(m, h)                     # n ~ ZT(LAMBDA_OOCYSTS) meioses
 
     # --- recrudescence ---
@@ -295,7 +295,7 @@ Standard S<sub>v</sub> → E<sub>v</sub> → I<sub>v</sub>, with:
   `P_TRANS_HV` = 0.5 (`c`, mosquito infected by biting an infected human).
 - **Lifespan:** geometric, mean `MOSQ_LIFESPAN` = 10 days (daily death probability 1/10).
 - **EIP:** **fixed** at `EIP_DAYS` = 10 days — not temperature-dependent, not distributed.
-- **Carrying capacity:** `MAX_BROODS_PER_MOSQ` = 20 lineages; uptake is skipped above it. No
+- **Carrying capacity:** `MAX_LINEAGES_PER_MOSQ` = 20 lineages; uptake is skipped above it. No
   fitness cost of burden (mortality and transmissibility do not decline with parasite load).
 
 Mosquito death removes all of its broods and parasite lineages, so a mosquito is a hard transmission bottleneck. Every
@@ -898,7 +898,7 @@ Bites, infection and the mosquito's incubation.
 | `MOSQ_LIFESPAN` | 10 | days | number >= 1 | Mean mosquito lifespan: a mosquito dies each day with probability 1/MOSQ_LIFESPAN. |
 | `EIP_DAYS` | 10 | days | whole number >= 0 | Extrinsic incubation period: days from uptake until a mosquito's products can be transmitted (fixed). |
 | `MAX_MOI` | 20 | lineages | whole number >= 1 | A host already carrying this many blood-stage lineages, patent or subpatent, takes no new inoculation, counting the clones it gained earlier that day. Relapses bypass it, and a bite that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a guard that seldom binds. |
-| `MAX_BROODS_PER_MOSQ` | 20 | lineages | whole number >= 0 | A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. |
+| `MAX_LINEAGES_PER_MOSQ` | 20 | lineages | whole number >= 0 | A mosquito carrying this many lineages takes up no more. One uptake can add up to four per oocyst, so the count can pass it. |
 
 ### Blood stage
 

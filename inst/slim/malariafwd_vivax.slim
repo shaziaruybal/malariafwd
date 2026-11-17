@@ -53,7 +53,7 @@ initialize() {
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
 	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D10): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value. At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
-	defineDefault("MAX_BROODS_PER_MOSQ",     20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); carrying many costs it nothing, as its survival and infectiousness do not depend on them
+	defineDefault("MAX_LINEAGES_PER_MOSQ",   20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); carrying many costs it nothing, as its survival and infectiousness do not depend on them
 	
 	// parasite
 	defineDefault("MEAN_BLOOD_STAGE_DURATION", 60.0);
@@ -280,7 +280,7 @@ initialize() {
 	// and gives the same run (the model converts it where Eidos needs one type); a count or a day
 	// must also be a whole number.
 	whole_params = c("SIM_DAYS", "N_HOSTS", "N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES",
-		"N_MOSQ", "EIP_DAYS", "MAX_MOI", "MAX_BROODS_PER_MOSQ",
+		"N_MOSQ", "EIP_DAYS", "MAX_MOI", "MAX_LINEAGES_PER_MOSQ",
 		"GAMETOCYTE_DELAY", "K_LATENCY", "INTERVENTION_START", "INTERVENTION_END", "TREATMENT_START",
 		"TREATMENT_END", "MDA_TICK", "RESURGENCE_TRIGGER_TICK", "IMPORT_START", "IMPORT_END",
 		"N_IMPORTS_PER_TICK", "IMPORT_TICK", "N_IMPORTS", "SEED");
@@ -433,7 +433,7 @@ initialize() {
 	}
 	for (nm in c("NU_HYPNOZOITE_BATCH", "NU_HYPNOZOITE_BATCH_BOOST", "N_IMPORTS", "N_IMPORTS_PER_TICK",
 		"N_FOUNDER_HOSTS", "N_FOUNDER_LINEAGES", "EIP_DAYS", "GAMETOCYTE_DELAY",
-		"MAX_BROODS_PER_MOSQ", "K_LATENCY"))
+		"MAX_LINEAGES_PER_MOSQ", "K_LATENCY"))
 	{
 		v = executeLambda(nm + ";");
 		if (!(v >= 0 & v < INF))
@@ -755,14 +755,14 @@ reproduction()
 						-1, -1,
 						n_dying
 						);
-					vcat("💀 " + n_dying + " latent hypnozoite(s) died in 👤 human " + h.id + " (brood " + hyp.getValue("lineage_id") + ")");
+					vcat("💀 " + n_dying + " latent hypnozoite(s) died in 👤 human " + h.id + " (lineage " + hyp.getValue("lineage_id") + ")");
 					batch_count = batch_count - n_dying;
 					hyp.setValue("batch_count", batch_count);   // 0 retires it; killed by the early() HYPNOZOITE CLEANUP
 				}
 				if (batch_count > 0 & runif(1) < DELTA_LATENCY)
 				{
 					hyp.setValue("latency_stage", latency_stage - 1);
-					vcat("💤 Hypnozoite batch (brood " + hyp.getValue("lineage_id") + ") progressed to latency stage " + (latency_stage - 1));
+					vcat("💤 Hypnozoite batch (lineage " + hyp.getValue("lineage_id") + ") progressed to latency stage " + (latency_stage - 1));
 				}
 				next;  // cannot activate while still latent
 			}
@@ -830,7 +830,7 @@ reproduction()
 					decideTreatment(h);
 				
 				vcat("🚨Hypnozoite ACTIVATED in 👤 human " + h.id +
-					" — brood " + new_active.getValue("lineage_id") +
+					" — lineage " + new_active.getValue("lineage_id") +
 					" (from batch " + hyp.pedigreeID + "; " + n_activating + " activating this tick, born tick " + hyp.getValue("brood_birth_tick") + ")");
 			}
 			
@@ -847,7 +847,7 @@ reproduction()
 					n_dying
 					);
 				
-				vcat("💀 " + n_dying + " hypnozoite(s) died without activating in 👤 human " + h.id + " (brood " + hyp.getValue("lineage_id") + ")");
+				vcat("💀 " + n_dying + " hypnozoite(s) died without activating in 👤 human " + h.id + " (lineage " + hyp.getValue("lineage_id") + ")");
 			}
 			
 			// ---- Update or retire the batch: an empty one is retired (batch_count 0) for
@@ -969,9 +969,9 @@ reproduction()
 			}
 			else if (runif(1) < P_TRANS_HV)
 			{
-				if (mosq_MOI >= MAX_BROODS_PER_MOSQ)
+				if (mosq_MOI >= MAX_LINEAGES_PER_MOSQ)
 				{
-					vcat("Sv-Ih event: mosquito " + m.id + " at brood cap; no uptake from human " + h.id);
+					vcat("Sv-Ih event: mosquito " + m.id + " at lineage cap; no uptake from human " + h.id);
 				}
 				else
 				{
@@ -1023,7 +1023,7 @@ reproduction()
 				
 				new_lineage_ids = inoculateMosquitoToHuman(plasmo_mosq, h, m.id, INOCULATION_ID);
 				
-				vcat("Iv-Sh event: 👤 human " + h.id + " acquired brood ( plasmo " + paste(new_lineage_ids, sep="|") + " ) from 🦟" + m.id);
+				vcat("Iv-Sh event: 👤 human " + h.id + " acquired lineages ( plasmo " + paste(new_lineage_ids, sep="|") + " ) from 🦟" + m.id);
 			}
 			else
 			{
@@ -1063,7 +1063,7 @@ reproduction()
 						new_lineage_ids = inoculateMosquitoToHuman(plasmo_mosq, h, m.id, INOCULATION_ID);
 						
 						vcat("Iv-Ih event 🔂: 👤 human " + h.id +
-							" was superinfected by infectious 🦟 mosquito " + m.id + " with new broods plasmo " + paste(new_lineage_ids, sep="|") + " (in addition to plasmo " + h.individuals.pedigreeID + " )");
+							" was superinfected by infectious 🦟 mosquito " + m.id + " with new lineages plasmo " + paste(new_lineage_ids, sep="|") + " (in addition to plasmo " + h.individuals.pedigreeID + " )");
 					}
 				}
 				else
@@ -1079,9 +1079,9 @@ reproduction()
 					takes_up = (runif(1) < P_TRANS_HV);
 				if (takes_up)
 				{
-					if (getActiveLineageCount(m) >= MAX_BROODS_PER_MOSQ)
+					if (getActiveLineageCount(m) >= MAX_LINEAGES_PER_MOSQ)
 					{
-						vcat("Iv-Ih event: mosquito " + m.id + " at brood cap; uptake skipped");
+						vcat("Iv-Ih event: mosquito " + m.id + " at lineage cap; uptake skipped");
 					}
 					else
 					{
@@ -1195,7 +1195,7 @@ reproduction()
 1 early() {
 
 	// --- provenance: dump resolved run parameters to OUTDIR/params.tsv ---
-	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_BROODS_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
+	_pn = c("SIM_ID","SEED","SIM_DAYS","N_HOSTS","N_FOUNDER_HOSTS","N_FOUNDER_LINEAGES","N_MOSQ","BITING_RATE","P_TRANS_VH","P_TRANS_HV","MOSQ_LIFESPAN","EIP_DAYS","MAX_MOI","MAX_LINEAGES_PER_MOSQ","MEAN_BLOOD_STAGE_DURATION","LAMBDA_OOCYSTS","LAMBDA_SPOROZOITES","K_OOCYSTS","GAMETOCYTE_DELAY","P_GAMETOCYTE","P_PRIMARY","NU_HYPNOZOITE_BATCH","ALPHA_ACTIVATE","MU_HYPNOZOITE","K_LATENCY","DELTA_LATENCY","INTERVENTION_START","INTERVENTION_END","INTERVENTION_EFFICACY","TREATMENT_START","TREATMENT_END","SEASONAL_AMP","SEASONAL_PHASE","P_DETECT_PRIMARY","P_DETECT_RELAPSE","RADCURE_COVERAGE","RESURGENCE_TRIGGER_TICK","BITING_RATE_BOOST","ALPHA_ACTIVATE_BOOST","NU_HYPNOZOITE_BATCH_BOOST","MDA_TICK","MDA_COVERAGE","P_RECRUD_GIVEN_FAIL","MEAN_RECRUD_DELAY","RECRUD_DELAY_DIST","P_DETECT_RECRUD","SUBPATENT_INFECTIVITY","P_RAD_SURVIVAL","RADCURE_MODE","BLOODCURE_COVERAGE","P_BLOODCURE_SURVIVAL","TREATMENT_DELAY","IMPORT_START","IMPORT_END","N_IMPORTS_PER_TICK","IMPORT_RATE_PER_TICK","IMPORT_RATE_BOOST","IMPORT_TICK","N_IMPORTS","RETAIN_FULL_HISTORY","GENOME_MODE","CHROMOSOMES","RECOMB_RATE","GENOME_LENGTH","N_CHROMOSOMES","RECOMB_WITHIN","VERBOSE");
 	_plines = "param\tvalue";
 	_plines = c(_plines, "ACTUAL_SEED\t" + getSeed());
 	_plines = c(_plines, "SLIM_VERSION\t" + version(F)[1]);
@@ -1425,7 +1425,7 @@ early() {
 
 			if (isNULL(bloodstage_start))
 			{
-				catn("⚠️ WARNING: active individual missing bloodstage_start_tick — brood " +
+				catn("⚠️ WARNING: active individual missing bloodstage_start_tick — lineage " +
 					lin.getValue("lineage_id") + " in human " + h.id);
 				next;
 			}
