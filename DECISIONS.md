@@ -1479,10 +1479,10 @@ edge of the rounding allowance on the caps.
 
 **Decision.** The model's `initialize()` makes the checks of `validate_params()` (D42) again for a
 run started directly with `slim -d`, down to the whole numbers within ±2^53 for the counts, days
-and seed. Its caps allow a
-relative rounding of 1e-11 rather than 1e-12, since the values arrive rounded to 15 digits, so a set
-R accepts is never refused there; its messages give a float to 15 significant digits and quote a
-string. Not repeated: a misspelt name, which SLiM defines as a constant the model never reads; the
+and seed. Its caps allow a relative rounding of 1e-11 rather than 1e-12, because Eidos has no
+`log1p` or `expm1` and so reaches the mean oocyst count by a different arithmetic route, which can
+differ from R's by about 1e-12 of the cap; the wider band keeps a set R accepts from being refused
+there. Its messages give a float to 15 significant digits and quote a string. Not repeated: a misspelt name, which SLiM defines as a constant the model never reads; the
 limits on what text can carry (UTF-8, no control characters) and on numbers below 1e-300; and a
 `SIM_DAYS` outside 2 to 1e9, not finite or not a single value, which SLiM refuses itself while it
 reads the tick ranges, before `initialize()` runs (so the model's own `SIM_DAYS < 2` check is never
