@@ -10,7 +10,8 @@ test_that("every parameter has a record and is in exactly one group", {
   expect_identical(anyDuplicated(gp), 0L)
   pi <- param_info()
   expect_s3_class(pi, "data.table")
-  expect_identical(names(pi), c("name", "group", "default", "type", "unit", "allowed", "meaning", "source"))
+  expect_identical(names(pi), c("name", "group", "default", "type", "unit", "allowed", "meaning",
+                                "source", "setting"))
   expect_true(all(vapply(pi, is.character, logical(1))))
   expect_identical(pi$name, gp)
   expect_true(all(nzchar(pi$unit) & nzchar(pi$meaning) & nzchar(pi$allowed)))

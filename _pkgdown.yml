@@ -110,4 +110,4 @@ reference:
 articles:
 - title: Guides
   navbar: ~
-  contents: [malariafwd, anatomy]
+  contents: [malariafwd, parameters, anatomy]

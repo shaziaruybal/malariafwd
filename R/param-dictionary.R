@@ -8,10 +8,14 @@
 ## allowed strings); `rule`, a joint or conditional rule in words; `shown`, the default as
 ## documented when it is not the plain value; and `source`, in prose.
 
+## `source` is where a default came from; `setting` is how to choose one, for the parameters a user
+## can get wrong. Keep `setting` to the instruction and cite the roadmap's S-number for the reason,
+## so the justification lives in one place.
 .param <- function(default, unit, meaning, min = NA, max = NA, min_open = FALSE,
-                   values = NULL, rule = NA_character_, shown = NA_character_, source = NA_character_)
+                   values = NULL, rule = NA_character_, shown = NA_character_, source = NA_character_,
+                   setting = NA_character_)
   list(default = default, unit = unit, meaning = meaning, min = min, max = max, min_open = min_open,
-       values = values, rule = rule, shown = shown, source = source)
+       values = values, rule = rule, shown = shown, source = source, setting = setting)
 
 .param_dict <- list(
   SIM_ID = .param("default", "-", "A label for the run, written into params.tsv.",
@@ -26,23 +30,36 @@
           "needs. With FALSE most earlier genomes leave the tree, and ibd_pairs() warns that the ids it",
           "was asked about are absent; they look up as NA.")),
 
-  N_HOSTS = .param(40L, "hosts", "Humans; the number is constant.", min = 1),
+  N_HOSTS = .param(40L, "hosts", "Humans; the number is constant.", min = 1,
+    setting = paste("prevalence and COI are scale-dependent, so a transmission rate fitted at one population size",
+                     "does not transfer: calibrate at the size you will publish (roadmap S10)")),
   N_FOUNDER_HOSTS = .param(12L, "hosts",
     "Hosts infected at the start: establishment, whether the epidemic sustains itself.", min = 0,
-    rule = "at most N_HOSTS; 0 needs an import path inside the run"),
+    rule = "at most N_HOSTS; 0 needs an import path inside the run",
+    setting = paste("hold this fixed and vary N_FOUNDER_LINEAGES to change founding diversity without changing",
+                     "whether the epidemic establishes")),
   N_FOUNDER_LINEAGES = .param(12L, "genomes",
     paste("Distinct founding genomes among the founder hosts; the others carry clonal copies, seeded on",
           "day 2. The genealogical diversity knob: fewer lineages give higher background relatedness at",
           "the same establishment."),
     min = 0, shown = "N_FOUNDER_HOSTS",
-    rule = "at most N_FOUNDER_HOSTS, and at least 1 when there are founder hosts"),
+    rule = "at most N_FOUNDER_HOSTS, and at least 1 when there are founder hosts",
+    setting = paste("the clean genealogical diversity knob: lower it, at fixed N_FOUNDER_HOSTS, to raise background",
+                     "relatedness without changing establishment")),
   N_MOSQ = .param(100L, "mosquitoes", "Mosquitoes; the number is constant, and every one starts uninfected.",
-    min = 1),
+    min = 1,
+    setting = paste("the transmission rate depends only on BITING_RATE x N_MOSQ / N_HOSTS, so the two trade",
+                     "off, but the genetics do not: spreading the same uptakes over more mosquitoes lowers",
+                     "co-transmission. Hold it fixed and vary BITING_RATE where a result turns on",
+                     "co-transmission, and calibrate at publication scale (roadmap S10)")),
 
   BITING_RATE = .param(0.1, "per mosquito per day",
     paste("Daily probability that a mosquito bites. Bites per human per day are BITING_RATE x N_MOSQ /",
           "N_HOSTS, not this value."),
     min = 0, min_open = TRUE,
+    setting = paste("the main transmission knob, but prevalence and complexity of infection are",
+                    "scale-dependent, so a value fitted on a small population does not transfer:",
+                    "calibrate it at the population size you will publish (roadmap S10)"),
     rule = "a mosquito bites at most once a day, so it warns when the peak over the run, with its seasonal, intervention and resurgence multipliers, passes 1"),
   P_TRANS_VH = .param(0.5, "probability", "b: an infectious bite infects the human.", min = 0, max = 1),
   P_TRANS_HV = .param(0.5, "probability", "c: a mosquito that bites an infectious human takes up parasites.",
@@ -57,7 +74,9 @@
           "inoculation, counting the clones it gained earlier that day. Relapses bypass it, and a bite",
           "that delivers several genotypes is admitted whole. 1 means no superinfection; at 20 it is a",
           "guard that seldom binds."),
-    min = 1),
+    min = 1,
+    setting = paste("a runaway guard, not a quantity to vary: at 20 it essentially never binds, and set low it",
+                     "becomes what you are measuring. Confirm it never bound in a published run (roadmap S8)")),
   MAX_LINEAGES_PER_MOSQ = .param(20L, "lineages",
     paste("A mosquito carrying this many lineages takes up no more. One uptake can add up to four per",
           "oocyst, so the count can pass it."),
@@ -65,29 +84,43 @@
 
   MEAN_BLOOD_STAGE_DURATION = .param(60, "days",
     "Mean duration of a blood-stage clone: it clears each day with probability 1/MEAN_BLOOD_STAGE_DURATION.",
-    min = 1, source = "White et al. (2014)"),
+    min = 1, source = "White et al. (2014)",
+    setting = paste("sets how much episodes overlap, and so polyclonality and the outcrossing that follows from it:",
+                     "sweep it when a result depends on COI or on relatedness within a host (roadmap S9)")),
   LAMBDA_OOCYSTS = .param(2, "oocysts",
     paste("Pre-truncation rate of the zero-truncated number of oocysts per successful uptake, each its",
           "own meiosis; 0 gives exactly one, and the default a mean of 2.31. See uptake_moments() and",
           "uptake_calibrate()."),
     min = 0, max = 1000, rule = "with K_OOCYSTS, the mean count per uptake is at most 1000",
-    source = "membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023)"),
+    source = "membrane feeds of wild An. arabiensis in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al. 2023)",
+    setting = paste("a rate before zero-truncation, not the mean oocysts a midgut carries: convert with",
+                     "uptake_calibrate() first. Vivax feeding counts are overdispersed and far higher than the",
+                     "default, so sweep it with K_OOCYSTS (roadmap S3)")),
   LAMBDA_SPOROZOITES = .param(2, "products per bite",
     paste("Pre-truncation rate of the zero-truncated number of a mosquito's products an infectious bite",
           "samples, repeats of a lineage counted once, so a bite can deliver several genotypes; 0 gives",
           "one genotype per bite. No study has measured the genotypes a natural bite delivers, so the",
           "default is an assumption to sweep."),
-    min = 0, max = 1000),
+    min = 0, max = 1000,
+    setting = paste("a rate before zero-truncation, not the mean genotypes a feeding study reports: convert with",
+                     "uptake_calibrate() first. No measurement of genotypes per natural bite exists, so sweep it",
+                     "rather than trust a point value (roadmap S1)")),
   K_OOCYSTS = .param(0, "-",
     paste("Negative-binomial dispersion of the oocyst count (variance lambda + lambda^2 / K); 0 is",
           "Poisson. It applies to oocysts only. Vivax oocyst counts are overdispersed."),
-    min = 0, rule = "0, or at least 0.001"),
+    min = 0, rule = "0, or at least 0.001",
+    setting = paste("leave at 0 for a Poisson count; raise it to match the overdispersion of vivax feeding studies,",
+                     "which the default does not have (roadmap S3)")),
   GAMETOCYTE_DELAY = .param(0L, "days",
     paste("Days from blood-stage onset until a clone can infect mosquitoes (fixed). 0 acts as 1: a clone",
           "is first taken up the day after it appears. Vivax: about 2 to 3 days."),
-    min = 0),
+    min = 0,
+    setting = paste("ships at 0, the identity: every blood-stage clone is transmissible at once. Vivax gametocytes",
+                     "appear early but not instantly, so sweep a short delay of about 3 days (roadmap S5)")),
   P_GAMETOCYTE = .param(1, "probability",
-    "An infection carries gametocytes, drawn once per infection. Vivax: about 0.9.", min = 0, max = 1),
+    "An infection carries gametocytes, drawn once per infection. Vivax: about 0.9.", min = 0, max = 1,
+    setting = paste("ships at 1, the identity: every infection is transmissible. Sweep a high but incomplete",
+                     "carriage of about 0.9 together with GAMETOCYTE_DELAY (roadmap S5)")),
   P_PRIMARY = .param(1, "probability",
     "A transmitted genotype causes a blood-stage primary; its hypnozoite batch is drawn either way.",
     min = 0, max = 1, source = "White et al. (2014), base model"),
@@ -97,16 +130,23 @@
           "delivers. Fitted to four calibration targets at moderate transmission (section 13 of the",
           "model description); re-fit it per setting."),
     min = 0, max = 1e6, rule = "times its boost, at most 1e6 once the trigger falls inside the run",
-    source = "White et al. (2014), section 2"),
+    source = "White et al. (2014), section 2",
+    setting = paste("calibrated to 3 against relapse, molFOB, MOI and relapse-fraction targets for one setting, and",
+                     "it drives relapse rate, reservoir size and COI together: re-fit it per setting rather than",
+                     "carrying 3 over (roadmap S2)")),
   ALPHA_ACTIVATE = .param(1/170, "per hypnozoite per day", "Daily probability that a hypnozoite activates: a relapse.",
     min = 0, max = 1, shown = "1/170",
-    source = "an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332"),
+    source = "an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332",
+    setting = paste("with K_LATENCY, this sets relapse periodicity and so how identifiable a relapse is: report",
+                     "tropical and temperate settings separately rather than averaging them (roadmap S7)")),
   MU_HYPNOZOITE = .param(1/442, "per hypnozoite per day", "Daily probability that a hypnozoite dies, also while latent.",
     min = 0, max = 1, min_open = TRUE, shown = "1/442",
     source = "as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425"),
   K_LATENCY = .param(0L, "stages",
     "Latency stages a batch passes before it can activate: 0 is tropical, 2 temperate.", min = 0,
-    source = "White et al. (2014)"),
+    source = "White et al. (2014)",
+    setting = paste("left at 0 the reservoir is tropical, with no delay before a hypnozoite can activate; 2 with",
+                     "DELTA_LATENCY gives the temperate pattern. Report the two separately (roadmap S7)")),
   DELTA_LATENCY = .param(1/100, "per day", "Daily probability that a latent batch moves on one stage.",
     min = 0, max = 1, min_open = TRUE, shown = "1/100", rule = "checked only when K_LATENCY > 0"),
 
@@ -170,7 +210,10 @@
   MEAN_RECRUD_DELAY = .param(10.5, "days",
     paste("Mean days from suppression to recrudescence, at least one; a literature assumption pending",
           "parameterisation. Geometric at the default: a median of 7 days, about 94% within 28 days."),
-    min = 1, max = 1e6, source = "close to the prior of Taylor et al. (2019)"),
+    min = 1, max = 1e6, source = "close to the prior of Taylor et al. (2019)",
+    setting = paste("a literature assumption rather than an estimate from data, and it sets how many recrudescences",
+                     "a 28-day follow-up sees: sweep it, though it matters only when P_RECRUD_GIVEN_FAIL is above 0",
+                     "(roadmap S11)")),
   RECRUD_DELAY_DIST = .param("geometric", "-",
     paste("Shape of that delay: \"geometric\", the discrete form of an exponential delay; \"poisson\",",
           "1 + Poisson(D - 1) with mean D, a tight-window sensitivity arm; or \"fixed\", round(D) days",
@@ -194,7 +237,10 @@
     min = 0, max = 1),
   P_DETECT_RELAPSE = .param(1, "probability",
     "A relapse is detected, drawn once per activation. Relapses are often subpatent, so a realistic value is lower.",
-    min = 0, max = 1),
+    min = 0, max = 1,
+    setting = paste("relapses are often subpatent, and every observational result depends on this: sweep it over",
+                     "0.15 to 1.0 rather than leaving it at the default of 1, which reports every relapse (roadmap",
+                     "S6)")),
   SEASONAL_AMP = .param(0, "-",
     paste("Amplitude A of the seasonal factor 1 + A cos(2 pi (t - SEASONAL_PHASE) / 365), floored at 0,",
           "on biting and on the Poisson import rate; 0 means no seasonality."),
@@ -305,7 +351,8 @@
 .param_text <- function(name) {
   r <- .param_dict[[name]]
   paste0(r$meaning, if (r$unit != "-") paste0(" Unit: ", r$unit, "."), " Default ", .param_default_text(r),
-         "; ", .param_allowed(r), ".", if (!is.na(r$source)) paste0(" Source: ", r$source, "."))
+         "; ", .param_allowed(r), ".", if (!is.na(r$source)) paste0(" Source: ", r$source, "."),
+         if (!is.na(r$setting)) paste0(" Setting: ", r$setting, "."))
 }
 
 .rd_escape <- function(s) gsub("%", "\\\\%", gsub("([{}\\\\])", "\\\\\\1", s))
@@ -330,6 +377,8 @@
              "| parameter | default | unit | allowed | meaning |", "|---|---|---|---|---|")
     for (nm in .param_groups[[g]]$params) {
       r <- .param_dict[[nm]]
+      ## `setting` is deliberately left out here: this table says what a parameter is, and the
+      ## parameters vignette says how to choose one.
       m <- if (is.na(r$source)) r$meaning else paste0(r$meaning, " Source: ", r$source, ".")
       out <- c(out, sprintf("| `%s` | %s | %s | %s | %s |", nm, .param_default_text(r), r$unit,
                             .param_allowed(r), gsub("|", "\\|", m, fixed = TRUE)))
@@ -344,8 +393,9 @@
 #' The model's parameters as documented on [vivax_params()]: one row per parameter, by group.
 #' @param params `NULL` for every parameter, or the names of the ones to give, in that order.
 #' @return a `data.table` of character columns: `name`, `group`, `default` (as documented), `type`
-#'   (`"whole number"`, `"number"`, `"TRUE or FALSE"` or `"text"`), `unit`, `allowed`, `meaning`
-#'   and `source` (`NA` when none is given).
+#'   (`"whole number"`, `"number"`, `"TRUE or FALSE"` or `"text"`), `unit`, `allowed`, `meaning`,
+#'   `source` (where the default came from) and `setting` (how to choose one, for the parameters
+#'   that are easy to get wrong); `source` and `setting` are `NA` when none is given.
 #' @examples
 #' param_info(c("N_HOSTS", "BITING_RATE"))
 #' @export
@@ -359,6 +409,7 @@ param_info <- function(params = NULL) {
   data.table::rbindlist(lapply(order, function(nm) {
     r <- .param_dict[[nm]]
     list(name = nm, group = .param_group_of(nm), default = .param_default_text(r), type = .param_type(r),
-         unit = r$unit, allowed = .param_allowed(r), meaning = r$meaning, source = as.character(r$source))
+         unit = r$unit, allowed = .param_allowed(r), meaning = r$meaning,
+         source = as.character(r$source), setting = as.character(r$setting))
   }))
 }

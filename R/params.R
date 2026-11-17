@@ -65,6 +65,10 @@
 #' A default taken from another parameter is set only when a set is built, so editing
 #' `N_FOUNDER_HOSTS` leaves `N_FOUNDER_LINEAGES` as it was.
 #'
+#' **Choosing a value.** The parameters below give their bounds and, where a value is easy to get
+#' wrong, a `Setting:` note on how to choose one. `vignette("parameters")` collects those notes
+#' and the cross-parameter advice they depend on, such as the scale dependence of transmission.
+#'
 #' @evalRd .param_rd()
 #' @param ... named parameter overrides, e.g. `N_HOSTS = 300, BITING_RATE = 0.09`; ignored by
 #'   `as.data.frame()`.

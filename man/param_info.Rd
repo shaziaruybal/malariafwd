@@ -11,8 +11,9 @@ param_info(params = NULL)
 }
 \value{
 a \code{data.table} of character columns: \code{name}, \code{group}, \code{default} (as documented), \code{type}
-(\code{"whole number"}, \code{"number"}, \code{"TRUE or FALSE"} or \code{"text"}), \code{unit}, \code{allowed}, \code{meaning}
-and \code{source} (\code{NA} when none is given).
+(\code{"whole number"}, \code{"number"}, \code{"TRUE or FALSE"} or \code{"text"}), \code{unit}, \code{allowed}, \code{meaning},
+\code{source} (where the default came from) and \code{setting} (how to choose one, for the parameters
+that are easy to get wrong); \code{source} and \code{setting} are \code{NA} when none is given.
 }
 \description{
 The model's parameters as documented on \code{\link[=vivax_params]{vivax_params()}}: one row per parameter, by group.

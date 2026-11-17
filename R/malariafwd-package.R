@@ -7,7 +7,8 @@
 #' @section Start here:
 #' [example_run()] returns a small run that ships with the package, so every function that reads a
 #' run can be tried without SLiM. `vignette("malariafwd")` shows how to run a simulation and reads the bundled run,
-#' and `vignette("anatomy")` walks through what a run records (both are also on the
+#' `vignette("parameters")` gives the parameters that are easy to get wrong and how to choose
+#' them, and `vignette("anatomy")` walks through what a run records (all three are also on the
 #' [website](https://shaziaruybal.github.io/malariafwd/)); [event_types()] lists every event a run
 #' logs. The model is described in full in
 #' [MODEL_DESCRIPTION](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html), the

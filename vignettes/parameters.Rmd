@@ -1,0 +1,207 @@
+---
+title: "Choosing parameters"
+description: >
+  Which parameters are easy to get wrong, and how to choose a value for each.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing parameters}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(malariafwd)
+```
+
+A run takes `r length(vivax_params())` parameters, and `vivax_params()` gives every one a
+default, so a first run needs none of them. `?vivax_params` lists them all with their units and
+bounds, and `param_info()` returns the same thing as a table. This page is about the smaller set
+you have to think about: the ones where a plausible-looking value quietly changes what you are
+measuring.
+
+Four things catch people out, and two more are worth knowing before you start. All six come
+before the per-parameter table.
+
+## The defaults are a transparent model, not a realistic one
+
+Five parameters ship at the value that switches their mechanism **off**, so a first run shows the
+model's mechanics with no carriage or observation layer on top of them:
+
+```{r}
+off <- param_info(c("P_PRIMARY", "P_GAMETOCYTE", "GAMETOCYTE_DELAY",
+                    "P_DETECT_PRIMARY", "P_DETECT_RELAPSE"))
+knitr::kable(off[, c("name", "default", "meaning")],
+             col.names = c("Parameter", "Default", "What it does"))
+```
+
+At those defaults every transmitted genotype becomes a blood-stage infection, is infectious to
+mosquitoes from the next day, and is detected. That is deliberate: it means a discrepancy in
+your output is the model's, not that of a layer you did not know was on. It is also not
+*P. vivax*. Gametocytes
+appear early but not instantly, carriage is high but incomplete, and relapses are often
+sub-patent — so a result you intend to publish should move these off their defaults and report
+the sensitivity. The per-parameter table below gives the ranges to sweep.
+
+## Transmission is scale-dependent, and `BITING_RATE` is not a biting rate
+
+`BITING_RATE` is the daily probability that *one mosquito* bites. The bites a human receives per
+day are
+
+```{r}
+p <- vivax_params()
+unname(p$BITING_RATE * p$N_MOSQ / p$N_HOSTS)
+```
+
+so the same `BITING_RATE` means different exposure at a different `N_MOSQ` / `N_HOSTS` ratio.
+
+The *transmission rate* depends only on that product, so `BITING_RATE` and `N_MOSQ` trade off
+against each other — but the genetics do not. Halving `BITING_RATE` and doubling `N_MOSQ` leaves
+exposure unchanged while spreading the same uptakes over twice as many mosquitoes, each of which
+then carries fewer lineages and so co-transmits and outcrosses less. For a transmission-rate
+sweep, vary one of the two; where a result turns on co-transmission or on recombination in the
+midgut, hold `N_MOSQ` fixed and vary `BITING_RATE`.
+
+Prevalence and complexity of infection are scale-dependent in their own right — a small
+population loses diversity to drift faster, and saturates differently — so **a transmission rate
+fitted on 40 hosts does not transfer to 4,000**. Calibrate at the population size you intend to
+publish, not at the size that was quick to fit.
+
+## The uptake lambdas are rates before truncation, not mean counts
+
+`LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES` parameterise *zero-truncated* draws: the model has
+already decided that transmission happened, so the count it needs is conditioned away from zero.
+Conditioning pulls the realised mean up, and the gap is largest exactly where feeding studies
+report their numbers. A lambda of 2 does not give a mean of 2:
+
+```{r}
+uptake_moments(2)          # Poisson
+uptake_moments(2, k = 1)   # negative binomial, same lambda, more spread
+```
+
+So a mean oocyst count read off a paper cannot be set as a lambda. Convert it first. Membrane
+feeds of wild *An. arabiensis* in Ethiopia give a median of 7.2 oocysts per midgut (Ayele et al.
+2023), well above the default's realised 2.31 — to simulate that, ask for it as a target:
+
+```{r}
+uptake_calibrate(7.2)              # a target realised mean
+uptake_calibrate(7.2, var = 60)    # and a target variance, if you have one
+```
+
+`uptake_calibrate()` returns the `lambda` and `k` to set, with the moments they achieve.
+
+## Two parameters are guards, not quantities
+
+`MAX_MOI` and `MAX_LINEAGES_PER_MOSQ` exist to stop a run growing without bound. They are not
+biology, and at their defaults of 20 they should never bind. Set one low and it stops being a
+guard and becomes the thing your run measures — a `MAX_MOI` of 3 does not model an immune
+ceiling at 3, it truncates superinfection and silently stops topping up the hypnozoite
+reservoir of the hosts it refuses.
+
+Check that they did not bind. A mosquito's `moi_active` is exactly the count the cap tests:
+
+```{r}
+mosq <- load_state(example_run(), entity = "mosquito")
+max(mosq$moi_active)                                   # against MAX_LINEAGES_PER_MOSQ
+```
+
+```{r, include = FALSE}
+carried <- mosq[moi_active > 0]
+peak    <- max(carried$moi_active)
+allowed <- vivax_params()$MAX_LINEAGES_PER_MOSQ
+n_at_peak <- length(unique(carried[moi_active == peak]$entity_id))
+n_ever    <- length(unique(carried$entity_id))
+days_peak <- nrow(carried[moi_active == peak])
+```
+
+In this small bundled run just `r n_at_peak` of the `r n_ever` mosquitoes ever infected reached
+`r peak` of the `r allowed` lineages it was allowed, on `r days_peak` of
+`r format(nrow(carried), big.mark = ",")` infected mosquito-days. The guard held, but with only
+`r allowed - peak` lineages to spare — which is why it is worth looking rather than assuming.
+
+For a host, `MAX_MOI` counts the blood-stage lineages it carries whether or not they are patent,
+so sum the two columns (this omits clones gained earlier the same day, making it a close lower
+bound):
+
+```{r}
+host <- load_state(example_run())
+max(host$moi_active + host$moi_subpatent)              # against MAX_MOI
+```
+
+## Changing diversity without changing the epidemic
+
+Founding diversity and establishment are separable, and conflating them is the commonest way to
+confound a relatedness result. `N_FOUNDER_HOSTS` sets how many hosts start infected, and so
+whether the epidemic takes off at all; `N_FOUNDER_LINEAGES` sets how many *distinct* genomes
+those hosts carry, the rest being clonal copies. Hold the first fixed and lower the second to
+raise background relatedness while leaving establishment alone:
+
+```{r, eval = FALSE}
+diverse <- vivax_params(N_FOUNDER_HOSTS = 12, N_FOUNDER_LINEAGES = 12)  # maximal diversity
+related <- vivax_params(N_FOUNDER_HOSTS = 12, N_FOUNDER_LINEAGES = 3)   # same epidemic, more IBD
+```
+
+## Tropical or temperate, reported separately
+
+`ALPHA_ACTIVATE` and `K_LATENCY` together set relapse periodicity, and so how distinguishable a
+relapse is from a reinfection — the quantity much of this package exists to measure. At
+`K_LATENCY = 0` the reservoir is tropical: a hypnozoite can activate immediately. `K_LATENCY = 2`
+with `DELTA_LATENCY` gives the temperate pattern, with a delay first.
+
+These are different epidemiologies, not a range to average over. Report them as separate
+scenarios.
+
+## How to choose each of them
+
+The table below is generated from the package's parameter dictionary, so it cannot drift from
+`?vivax_params`. It covers the parameters that carry explicit guidance; the rest are documented
+in `?vivax_params` and in section 10 of the
+[model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html). The `S`
+numbers point to the sensitivity-analysis table in the
+[roadmap](https://shaziaruybal.github.io/malariafwd/ROADMAP.html), which gives the evidence
+behind each recommendation.
+
+```{r, echo = FALSE, results = "asis"}
+info <- as.data.frame(param_info())
+info <- info[!is.na(info$setting), ]
+capitalise <- function(x) sub("^(.)", "\\U\\1", x, perl = TRUE)
+for (g in unique(info$group)) {
+  rows <- info[info$group == g, ]
+  cat("\n###", g, "\n\n")
+  tbl <- data.frame(
+    Parameter = paste0("`", rows$name, "`"),
+    Default = paste0("`", rows$default, "`"),
+    `How to choose one` = paste0(capitalise(rows$setting), "."),
+    check.names = FALSE)
+  cat(knitr::kable(tbl, row.names = FALSE), sep = "\n")
+  cat("\n")
+}
+```
+
+## Sweeping rather than guessing
+
+Where the table says *sweep*, `run_grid()` takes the parameter sets and the seeds and runs them
+in parallel:
+
+```{r, eval = FALSE}
+grid <- run_grid(
+  params = lapply(c(0.15, 0.4, 0.7, 1.0),
+                  function(d) vivax_params(P_DETECT_RELAPSE = d, SIM_DAYS = 730)),
+  seeds  = 1:20,
+  outdir = file.path(tempdir(), "detect-sweep"))
+```
+
+Two habits make a sweep interpretable. Vary one mechanism at a time, since several of these
+parameters move prevalence, COI and relatedness together and a joint change cannot be attributed
+afterwards. And use enough seeds: at a small `N_HOSTS` the seed-to-seed spread can exceed the
+effect you are testing, so a difference between two single runs is not a result.
+
+## Where the defaults came from
+
+`param_info()$source` gives the origin of each default in one line, and `?vivax_params` shows it
+alongside the parameter. Section 13 of the
+[model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html) records what
+has been calibrated and against which targets, and what remains a literature assumption —
+`NU_HYPNOZOITE_BATCH` was fitted for one setting and should be re-fitted for yours, and
+`MEAN_RECRUD_DELAY` has no estimate from data at all. The roadmap's sensitivity table lists the
+eleven places where a choice most needs testing.
