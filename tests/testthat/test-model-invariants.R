@@ -113,7 +113,7 @@ test_that("a new genome's coordinates are 0, also where SLiM reuses a dead genom
   res <- processx::run(slim_path(), script, error_on_status = FALSE)
   expect_equal(res$status, 0L, info = res$stderr)
   read <- function(w) as.numeric(strsplit(sub(paste0("^", w, " "), "",
-    grep(paste0("^", w, " "), strsplit(res$stdout, "\n")[[1]], value = TRUE)), " ")[[1]])
+    grep(paste0("^", w, " "), strsplit(res$stdout, "\r?\n")[[1]], value = TRUE)), " ")[[1]])
   ## without memory reuse the check below would prove nothing
   skip_if(all(read("BEFORE") == 0), "this SLiM did not reuse the dead genomes' memory")
   expect_length(read("AFTER"), 120L)
@@ -193,7 +193,7 @@ test_that("the oocyst count is drawn exactly where a positive count is rare", {
                  "}", "1 early() { sim.simulationFinished(); }"), script)
     r <- processx::run(slim_path(), script, error_on_status = FALSE)
     expect_equal(r$status, 0L)
-    x <- scan(text = sub("^X ", "", grep("^X ", strsplit(r$stdout, "\n")[[1]], value = TRUE)), quiet = TRUE)
+    x <- scan(text = sub("^X ", "", grep("^X ", strsplit(r$stdout, "\r?\n")[[1]], value = TRUE)), quiet = TRUE)
     want <- uptake_moments(case[1], case[2])
     lab <- sprintf("lambda %g, k %g", case[1], case[2])
     expect_lt(abs(mean(x) - want[["mean"]]), 5 * sd(x) / sqrt(length(x)), label = paste("mean,", lab))
@@ -239,7 +239,7 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
   res <- processx::run(slim_path(), chk, error_on_status = FALSE)
   expect_equal(res$status, 0L, info = res$stderr)
   core <- round(lens[c(3, 5, 6)] * 0.9)
-  got <- as.numeric(strsplit(sub("^CEN ", "", grep("^CEN ", strsplit(res$stdout, "\n")[[1]], value = TRUE)), " ")[[1]])
+  got <- as.numeric(strsplit(sub("^CEN ", "", grep("^CEN ", strsplit(res$stdout, "\r?\n")[[1]], value = TRUE)), " ")[[1]])
   expect_true(all(abs(got - (c(0, cumsum(core)[-3]) + round(frac[c(3, 5, 6)] * core))) <= 1))   # rounding
   script <- tempfile(fileext = ".slim")
   writeLines(c(fun("tagMosqProduct"), fun("seedTetrad"), "initialize() {",
@@ -255,7 +255,9 @@ test_that("an outcrossed oocyst makes four products by four-strand meiosis with 
     "  ind.pedigreeID + ' ' + paste(asInteger(match(PROBES, ind.haplosomes.mutations.position) >= 0), sep = '')); sim.simulationFinished(); }"), script)
   res <- processx::run(slim_path(), script, error_on_status = FALSE)
   expect_equal(res$status, 0L, info = res$stderr)
-  L <- grep("^P ", strsplit(res$stdout, "\n")[[1]], value = TRUE)
+  ## "\r?\n": SLiM's stdout has CRLF line endings on Windows, and the genotype field below is read
+  ## one character at a time, so a trailing \r would add a column and turn it into NA
+  L <- grep("^P ", strsplit(res$stdout, "\r?\n")[[1]], value = TRUE)
   x <- do.call(rbind, strsplit(L, " "))
   x <- x[order(as.numeric(x[, 4])), ]                               # each oocyst's products in the order made
   oocyst <- as.integer(x[, 2]); lineage <- as.integer(x[, 3])
