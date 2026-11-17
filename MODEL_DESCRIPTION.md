@@ -112,9 +112,14 @@ Time advances in **daily ticks**. Each tick runs in this order:
 
 | phase | what happens |
 |---|---|
-| `reproduction()` | hypnozoite activation (relapses) decided and seeded; biting; human→mosquito uptake and meiosis; mosquito→human inoculation; cloning the second compartment of an import that arrived on the previous tick |
-| `early()` | hypnozoite cleanup (cleared batches killed); blood-stage clearance; mosquito death and replacement; interventions; importation |
+| `reproduction()` | hypnozoite activation (relapses) decided and seeded; cloning the second compartment of an import that arrived on the previous tick; biting, with human→mosquito uptake and meiosis and mosquito→human inoculation; recrudescences |
+| `early()` | hypnozoite cleanup (cleared batches killed); the subpatent clones that recrudesced retired; the treatment courses that are due given; blood-stage clearance; mosquito death and replacement; an MDA round on `MDA_TICK`; importation |
 | `late()` | `state.tsv` logging; the tree sequence at the end of the run |
+
+`reproduction()` does not run on a day with no parasite, since SLiM calls it once per existing
+individual; that is why importation is seeded in `early()` (§2.1). Seasonality and vector control
+are not phases of their own: they scale the biting rate inside `reproduction()`'s bite loop, and the
+seasonal factor scales the import rate in `early()` (§9).
 
 A run ends at `SIM_DAYS`, or earlier if it goes extinct or never starts. It goes extinct on the
 first tick on which no parasite is left in any host or mosquito, hypnozoites included, and no
@@ -174,6 +179,10 @@ for each tick t:
         if n_act > 0:  seed ONE blood-stage episode, addCloned(b)   # IBD = 1 to origin
         if batch_count(b) == 0:  retire b
 
+    # --- second compartment of an import that arrived on the PREVIOUS tick ---
+    for each queued import primary still alive:
+        clone its hypnozoite batch from it               # IBD 1; see importation below
+
     # --- biting ---
     for each mosquito m:
         if runif(1) >= biting_rate_eff(t):  continue
@@ -186,16 +195,18 @@ for each tick t:
             if active_lineages(m) < MAX_BROODS_PER_MOSQ:
                 seedBroodFromHuman(m, h)                     # n ~ ZT(LAMBDA_OOCYSTS) meioses
 
-    # --- second compartment of an import that arrived on the PREVIOUS tick ---
-    for each queued import primary still alive:
-        clone its hypnozoite batch from it               # IBD 1; see importation below
+    # --- recrudescence ---
+    for each suppressed clone whose delay has run out:
+        seed ONE blood-stage episode, addCloned(the holder)   # IBD = 1 to the holder, which retires
 
   early():
     kill every dormant batch with batch_count == 0        # cleanup, same tick
+    retire each subpatent clone that recrudesced this tick
+    give each treatment course that is due                # before natural clearance
     for each active blood-stage lineage:
         if runif(1) < P_BLOOD_CLEAR:  clear it
-    apply MDA / case-based treatment if scheduled
     kill mosquitoes w.p. MU_MOSQ; replace each as susceptible
+    if t == MDA_TICK:  give a course to each host w.p. MDA_COVERAGE   # subpatent clones too
 
     # --- importation ---
     n_imp <- (N_IMPORTS if t == IMPORT_TICK)
