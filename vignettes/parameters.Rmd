@@ -20,7 +20,7 @@ bounds, and `param_info()` returns the same thing as a table. This page is about
 you have to think about: the ones where a plausible-looking value quietly changes what you are
 measuring.
 
-Four things catch people out, and two more are worth knowing before you start. All six come
+Five things catch people out, and two more are worth knowing before you start. All seven come
 before the per-parameter table.
 
 ## The defaults are a transparent model, not a realistic one
@@ -38,15 +38,15 @@ knitr::kable(off[, c("name", "default", "meaning")],
 At those defaults every transmitted genotype becomes a blood-stage infection, is infectious to
 mosquitoes from the next day, and is detected. That is deliberate: it means a discrepancy in
 your output is the model's, not that of a layer you did not know was on. It is also not
-*P. vivax*. Gametocytes
-appear early but not instantly, carriage is high but incomplete, and relapses are often
-sub-patent — so a result you intend to publish should move these off their defaults and report
-the sensitivity. The per-parameter table below gives the ranges to sweep.
+*P. vivax*. Gametocytes appear early but not instantly, carriage is high but incomplete, and
+relapses are often sub-patent — so a result you intend to publish should move these off their
+defaults and report the sensitivity. The per-parameter table below gives the ranges to sweep.
 
-## Transmission is scale-dependent, and `BITING_RATE` is not a biting rate
+## `BITING_RATE` is per mosquito, not per human
 
-`BITING_RATE` is the daily probability that *one mosquito* bites. The bites a human receives per
-day are
+`BITING_RATE` is the daily probability that *one mosquito* bites. It is not the human biting rate
+— bites received per person per day, Ross-Macdonald's `ma` — which is what "biting rate" usually
+means in the malaria literature. The two differ by `N_MOSQ` / `N_HOSTS`:
 
 ```{r}
 p <- vivax_params()
@@ -62,10 +62,12 @@ then carries fewer lineages and so co-transmits and outcrosses less. For a trans
 sweep, vary one of the two; where a result turns on co-transmission or on recombination in the
 midgut, hold `N_MOSQ` fixed and vary `BITING_RATE`.
 
-Prevalence and complexity of infection are scale-dependent in their own right — a small
-population loses diversity to drift faster, and saturates differently — so **a transmission rate
-fitted on 40 hosts does not transfer to 4,000**. Calibrate at the population size you intend to
-publish, not at the size that was quick to fit.
+## A rate fitted at one population size does not transfer
+
+Prevalence and complexity of infection are scale-dependent in their own right: a small population
+loses diversity to drift faster, and saturates differently. So **a transmission rate fitted on 40
+hosts does not transfer to 4,000** — calibrate at the population size you intend to publish, not
+at the size that was quick to fit.
 
 ## The uptake lambdas are rates before truncation, not mean counts
 
