@@ -183,8 +183,10 @@ Length, label and what is recorded.
 
 - `SIM_ID`:
 
-  A label for the run, written into params.tsv. Default "default"; text;
-  UTF-8, without control characters.
+  A label for the run, written into params.tsv. Keep it to ASCII on
+  Windows: a non-ASCII label does not survive the way the run's
+  arguments reach SLiM there, and the run fails. Default "default";
+  text; UTF-8, without control characters.
 
 - `VERBOSE`:
 

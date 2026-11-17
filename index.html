@@ -87,27 +87,19 @@
 <!-- badges: start -->
 
 <blockquote>
-<p><strong>Pre-release (0.1.0).</strong> The package is under active development and both the interface and the model may change before 1.0.0. Work in progress includes hypnozoites genotyped independently of the bite’s primary infections, a structured source population for imported infections (imports currently enter as unrelated founders, which makes them maximally distinguishable), post-treatment prophylaxis, and more extensive calibration of the treatment and recurrence machinery.</p>
-<p>If you are interested in using malariafwd or in contributing, please get in touch by opening an <a href="https://github.com/shaziaruybal/malariafwd/issues" class="external-link">issue</a> or contacting Dr Shazia Ruybal-Pesántez (<a href="mailto:shazia.ruybal@isglobal.org" class="email">shazia.ruybal@isglobal.org</a>).</p>
+<p><strong>Pre-release (0.1.0).</strong> The package is under active development and both the interface and the model may change before 1.0.0.</p>
+<p>If you are interested in using <em>malariafwd</em> or in contributing, please get in touch by opening an <a href="https://github.com/shaziaruybal/malariafwd/issues" class="external-link">issue</a> or contacting Dr Shazia Ruybal-Pesántez (<a href="mailto:shazia.ruybal@isglobal.org" class="email">shazia.ruybal@isglobal.org</a>).</p>
 </blockquote>
-<p>Forward simulation of <em>Plasmodium vivax</em> transmission and genetics — an R interface to a <a href="https://messerlab.org/slim/" class="external-link">SLiM</a> (Eidos) + <a href="https://tskit.dev/" class="external-link">tskit</a> individual-based model. The model simulates blood-stage infection, the <strong>hypnozoite reservoir and relapses</strong>, meiotic recombination in the mosquito, and importation/interventions on a neutral copy of the 14 chromosomes of the PvP01 reference genome, recording a tree sequence for <strong>ground-truth identity-by-descent (IBD)</strong>.</p>
-<p>An epidemiological model and a genetic model run together: each infection carries a real genome, so a question about transmission can be answered with genetics against a known truth.</p>
-<p>Recurrence is <strong>three-state</strong> — relapse, reinfection and recrudescence — and every episode carries a ground-truth label, so a method that tries to tell them apart can be scored against the answer. <code><a href="reference/recurrences.html">recurrences()</a></code> pairs each recurrence with the earlier episodes of its host, with their true origins and ground-truth IBD: the table such a method is scored against. Case management is modelled at the level of the <strong>patient</strong>: a course clears every patent clone the host carries, radical cure is nested inside it, and a clone that survives can be suppressed below patency and recrudesce later. All of it is off by default, so a bare run is an untreated closed system.</p>
-<p><strong>How the model fits together.</strong> Host states and the mosquito cycle on the left; what happens to a parasite lineage inside a human and inside a mosquito on the right — the hypnozoite reservoir, the subpatent compartment a failed treatment course can push a clone into, and the recrudescence that follows from it:</p>
-<div class="float">
-<img src="reference/figures/model-structure.png" alt="Model structure: human and vector compartments on the left, and the parasite lineage life cycle within a human and within a mosquito on the right."><div class="figcaption">Model structure: human and vector compartments on the left, and the parasite lineage life cycle within a human and within a mosquito on the right.</div>
-</div>
-<p><strong>Genetics.</strong> The genealogy is recorded, so identity-by-descent is exact rather than inferred from markers. Shared segments for pairs of known relationship:</p>
-<div class="float">
-<img src="reference/figures/README-ibd-karyotype.png" alt="IBD karyotype across the 14 PvP01 chromosomes for pairs of known relationship: a relapse versus its origin, two products of one oocyst, and distinct founders."><div class="figcaption">IBD karyotype across the 14 PvP01 chromosomes for pairs of known relationship: a relapse versus its origin, two products of one oocyst, and distinct founders.</div>
-</div>
+<p><em>malariafwd</em> is an individual-based forward simulator of <em>Plasmodium vivax</em> transmission and genetics that leverages the <a href="https://messerlab.org/slim/" class="external-link">SLiM</a> and <a href="https://tskit.dev/" class="external-link"><em>tskit</em></a> ecosystem. The model couples host and vector dynamics, co-transmission, meiotic recombination in the mosquito, and a hypnozoite reservoir, with whole-genome simulation, so every parasite genome, including latent hypnozoites, has a known origin and genealogy. Full parasite genealogies across the 14 chromosomes of the PvP01 reference genome are recorded as tree sequences for efficient storage. This also enables access to ancestral recombination graphs (ARG) and provides ground-truth identity-by-descent (IBD).</p>
+<p><em>malariafwd</em> is built for questions whose answers are normally unobservable: for instance, is a recurrence a relapse, a reinfection or a recrudescence? How much of a case load comes from the hypnozoite reservoir? How robustly does an IBD or COI estimator recover the ground truth? How identifiable are IBD and other genetic metrics under given transmission and parasite diversity conditions?</p>
+<p>Further details on the model can be found in the <a href="https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html">model documentation</a>.</p>
 <div class="section level2">
 <h2 id="requirements">Requirements<a class="anchor" aria-label="anchor" href="#requirements"></a>
 </h2>
 <ul>
 <li>
 <strong>SLiM ≥ 5.2.</strong> On any system, <code>conda install -c conda-forge slim</code> (builds for Linux, macOS on Intel or Apple silicon, and Windows). On macOS the installer from the <a href="https://messerlab.org/slim/" class="external-link">SLiM page</a> works too; on Linux, conda or a build from source (the SLiM manual, chapter 2). On Debian and Ubuntu, <code>apt install slim</code> installs an unrelated login manager, not this SLiM. Windows is untested. If R cannot find SLiM (RStudio on macOS does not see the shell’s <code>PATH</code>), add <code>MALARIAFWD_SLIM=/full/path/to/slim</code> to <code>~/.Renviron</code> and restart R.</li>
-<li>For the IBD and ancestral recombination graph (ARG) functions and <code><a href="reference/simulate_genotypes.html">simulate_genotypes()</a></code>: <strong>Python with <code>tskit</code> (≥ 1.0) and <code>numpy</code></strong>, through the <code>reticulate</code> package. Either route works. <em>Automatic</em>: with no Python chosen, reticulate sets up its own environment with these modules the first time an IBD function runs; this needs internet once and a few hundred MB in the user cache. <em>Your own Python</em>: set <code>RETICULATE_PYTHON=/path/to/python</code> (in <code>~/.Renviron</code> to keep it) before the first IBD call of a session.</li>
+<li>For the IBD and ARG functions and <code><a href="reference/simulate_genotypes.html">simulate_genotypes()</a></code>: <strong>Python with <code>tskit</code> (≥ 1.0) and <code>numpy</code></strong>, through the <code>reticulate</code> package. Either route works. <em>Automatic</em>: with no Python chosen, reticulate sets up its own environment with these modules the first time an IBD function runs; this needs internet once and a few hundred MB in the user cache. <em>Your own Python</em>: set <code>RETICULATE_PYTHON=/path/to/python</code> (in <code>~/.Renviron</code> to keep it) before the first IBD call of a session.</li>
 <li>On a cluster whose compute nodes have no internet, run <code><a href="reference/check_setup.html">check_setup()</a></code> once on a node that has it; later sessions that share the same user cache may then reuse the environment. If that does not work, use your own Python.</li>
 </ul>
 <p><code><a href="reference/check_setup.html">check_setup()</a></code> reports what is found.</p>
@@ -121,94 +113,54 @@
 <p><code>dependencies = TRUE</code> also installs the suggested packages that the plots and the IBD functions use (ggplot2, patchwork and reticulate); without it you get only what the package needs to load, and the first plot or IBD call fails. <code>remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE)</code> does the same thing. The vignettes are on the <a href="https://shaziaruybal.github.io/malariafwd/">website</a>; to install them as well, use remotes, which can build them:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"shaziaruybal/malariafwd"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>which needs pandoc (RStudio includes it).</p>
-</div>
-<div class="section level2">
-<h2 id="check-it-works">Check it works<a class="anchor" aria-label="anchor" href="#check-it-works"></a>
-</h2>
-<p><a href="https://github.com/shaziaruybal/malariafwd/blob/main/quickstart.R" class="external-link"><code>quickstart.R</code></a> installs the package into your R library, runs one simulation and writes the diagnostic and model-output plots, in under a minute on a laptop:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> quickstart.R                 <span class="co"># from a clone</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-O</span> https://raw.githubusercontent.com/shaziaruybal/malariafwd/main/quickstart.R</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ex">Rscript</span> quickstart.R <span class="at">--github</span>        <span class="co"># or the script alone, installing from GitHub</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/shaziaruybal/malariafwd" class="external-link">malariafwd</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/check_setup.html">check_setup</a></span><span class="op">(</span><span class="op">)</span>                                     <span class="co"># SLiM, the model, and Python with tskit</span></span>
+<span><span class="fu"><a href="reference/check_setup.html">check_setup</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># SLiM, the model, and Python with tskit</span></span>
+<span>                <span class="co"># the first call builds reticulate's Python environment: a few hundred MB, once</span></span>
 <span></span>
-<span><span class="co"># no SLiM yet? every function below also takes the run that ships with the package:</span></span>
+<span><span class="co"># one run: 100 hosts and 250 mosquitoes for 18 months, a few seconds on a modern laptop.</span></span>
+<span><span class="va">p</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/vivax_params.html">vivax_params</a></span><span class="op">(</span>N_HOSTS <span class="op">=</span> <span class="fl">100</span>, N_MOSQ <span class="op">=</span> <span class="fl">250</span>, BITING_RATE <span class="op">=</span> <span class="fl">0.1</span>, SIM_DAYS <span class="op">=</span> <span class="fl">548</span><span class="op">)</span></span>
+<span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_sim.html">run_sim</a></span><span class="op">(</span><span class="va">p</span>, seed <span class="op">=</span> <span class="fl">1</span>, outdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"demo"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># every parameter, its unit and the values it may take: ?vivax_params or param_info()</span></span>
+<span><span class="co"># no SLiM yet? every call below also takes the run that ships with the package:</span></span>
 <span><span class="co"># run &lt;- example_run()</span></span>
 <span></span>
-<span><span class="co"># one run: 100 hosts and 250 mosquitoes for 18 months, a few seconds on a laptop. Transmission</span></span>
-<span><span class="co"># rises with BITING_RATE * N_MOSQ / N_HOSTS, so more hosts alone means less of it.</span></span>
-<span><span class="va">p</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/vivax_params.html">vivax_params</a></span><span class="op">(</span>N_HOSTS <span class="op">=</span> <span class="fl">100</span>, N_MOSQ <span class="op">=</span> <span class="fl">250</span>, BITING_RATE <span class="op">=</span> <span class="fl">0.1</span>, SIM_DAYS <span class="op">=</span> <span class="fl">548</span><span class="op">)</span></span>
-<span><span class="co"># every parameter, its unit and the values it may take: ?vivax_params or param_info()</span></span>
-<span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_sim.html">run_sim</a></span><span class="op">(</span><span class="va">p</span>, seed <span class="op">=</span> <span class="fl">1</span>, outdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"demo"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># the run's directory appears when the run has finished; a second run into it is refused</span></span>
-<span><span class="co"># unless overwrite = TRUE (or skip_existing = TRUE, which returns the same run)</span></span>
+<span><span class="co"># the headline numbers, over the run's second half: prevalence, complexity of infection (COI),</span></span>
+<span><span class="co"># entomological inoculation rate (EIR), force of infection (FOI), molecular force of blood-stage</span></span>
+<span><span class="co"># infection (molFOB), relapses</span></span>
+<span><span class="fu"><a href="reference/summarise_run.html">summarise_run</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># tidy outputs</span></span>
-<span><span class="va">ev</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_events.html">load_events</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>                             <span class="co"># one row per event; ?events.tsv describes the columns</span></span>
-<span><span class="va">st</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_state.html">load_state</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>                              <span class="co"># per-tick host state; ?state.tsv</span></span>
-<span><span class="fu"><a href="reference/summarise_run.html">summarise_run</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>     <span class="co"># over the second half of the run: prevalence, complexity of infection (COI),</span></span>
-<span>                       <span class="co"># entomological inoculation rate (EIR), force of infection (FOI), molecular</span></span>
-<span>                       <span class="co"># force of blood-stage infection (molFOB), relapses</span></span>
+<span><span class="co"># one call, several panels: did the run settle, saturate or go extinct?</span></span>
+<span><span class="fu"><a href="reference/plot_diagnostics.html">plot_diagnostics</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># ground-truth IBD (tskit)</span></span>
-<span><span class="va">cs</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/classify_cases.html">classify_cases</a></span><span class="op">(</span><span class="va">ev</span><span class="op">)</span></span>
-<span><span class="va">x</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/ibd_pairs.html">ibd_pairs</a></span><span class="op">(</span><span class="va">run</span>, ids <span class="op">=</span> <span class="va">cs</span><span class="op">$</span><span class="va">pedigree_id</span><span class="op">)</span>       <span class="co"># keyed by pedigree id; read with ibd_lookup()</span></span>
-<span><span class="fu"><a href="reference/recurrences.html">recurrences</a></span><span class="op">(</span><span class="va">ev</span>, ibd <span class="op">=</span> <span class="va">x</span><span class="op">)</span>                          <span class="co"># each recurrence vs its host's earlier episodes</span></span>
-<span><span class="fu"><a href="reference/new_infection_diversity.html">new_infection_diversity</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>                       <span class="co"># relatedness of the transmitting population</span></span>
+<span><span class="co"># one host: its blood-stage clones coloured by lineage, over the hypnozoites it carries</span></span>
+<span><span class="va">ev</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_events.html">load_events</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>                 <span class="co"># one row per event; ?events.tsv describes the columns</span></span>
+<span><span class="va">host</span> <span class="op">&lt;-</span> <span class="va">ev</span><span class="op">[</span><span class="va">event_type</span> <span class="op">==</span> <span class="st">"hypnozoite_activation"</span>, <span class="va">.N</span>, by <span class="op">=</span> <span class="va">human_id</span><span class="op">]</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">N</span><span class="op">)</span>, <span class="va">human_id</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="reference/plot_host_trajectory.html">plot_host_trajectory</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">host</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># parallel sweep (see ?run_grid; use future::plan() for a cluster). Calling it again resumes:</span></span>
-<span><span class="co"># cells that already hold their run are not run again</span></span>
-<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_grid.html">run_grid</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>low <span class="op">=</span> <span class="fu"><a href="reference/vivax_params.html">vivax_params</a></span><span class="op">(</span>BITING_RATE <span class="op">=</span> <span class="fl">0.06</span><span class="op">)</span>,</span>
-<span>       hi  <span class="op">=</span> <span class="fu"><a href="reference/vivax_params.html">vivax_params</a></span><span class="op">(</span>BITING_RATE <span class="op">=</span> <span class="fl">0.12</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  seeds <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, outdir_base <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"sweep"</span><span class="op">)</span>, workers <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/load_grid.html">load_grid</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"sweep"</span><span class="op">)</span><span class="op">)</span>           <span class="co"># the grid's record, grid.tsv</span></span></code></pre></div>
+<span><span class="co"># the population: who is infected, and who carries only an invisible reservoir</span></span>
+<span><span class="fu"><a href="reference/plot_host_state_prevalence.html">plot_host_state_prevalence</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># clones arriving (molFOB) against infections arriving (FOI)</span></span>
+<span><span class="fu"><a href="reference/plot_force_of_infection.html">plot_force_of_infection</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># ground-truth IBD by known relationship, read from the recorded genealogy</span></span>
+<span><span class="fu"><a href="reference/plot_relatedness_ladder.html">plot_relatedness_ladder</a></span><span class="op">(</span><span class="va">run</span>, style <span class="op">=</span> <span class="st">"bars"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># the same IBD as segments along the 14 PvP01 chromosomes</span></span>
+<span><span class="va">tp</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/ibd_truth_pairs.html">ibd_truth_pairs</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
+<span><span class="va">pick</span> <span class="op">&lt;-</span> <span class="va">tp</span><span class="op">[</span><span class="va">cls</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"relapse vs its origin"</span>, <span class="st">"same-oocyst sibs"</span>, <span class="st">"distinct founders"</span><span class="op">)</span>,</span>
+<span>           <span class="va">.SD</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, by <span class="op">=</span> <span class="va">cls</span><span class="op">]</span></span>
+<span><span class="fu"><a href="reference/plot_ibd_pair.html">plot_ibd_pair</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">pick</span><span class="op">$</span><span class="va">a</span>, <span class="va">pick</span><span class="op">$</span><span class="va">b</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%s\nIBD %.2f"</span>, <span class="va">pick</span><span class="op">$</span><span class="va">cls</span>, <span class="va">pick</span><span class="op">$</span><span class="va">ibd</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="checking-and-exploring-a-run">Checking and exploring a run<a class="anchor" aria-label="anchor" href="#checking-and-exploring-a-run"></a>
+<h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/plot_diagnostics.html">plot_diagnostics</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>        <span class="co"># one-call health dashboard: prevalence, incidence + force of</span></span>
-<span>                            <span class="co"># blood-stage infection by origin, COI, reservoir, lineage richness</span></span>
-<span><span class="fu"><a href="reference/event_types.html">event_types</a></span><span class="op">(</span><span class="op">)</span>         <span class="co"># what every event_type in events.tsv means</span></span>
-<span><span class="fu"><a href="reference/force_of_infection.html">force_of_infection</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>     <span class="co"># rows by window and origin: imported + local = FOI, + relapses = molFOB</span></span>
-<span><span class="fu"><a href="reference/classify_chain.html">classify_chain</a></span><span class="op">(</span><span class="va">ev</span><span class="op">)</span>          <span class="co"># each case's WHO class from its true chain back to an import</span></span>
-<span><span class="fu"><a href="reference/classify_travel.html">classify_travel</a></span><span class="op">(</span><span class="va">ev</span><span class="op">)</span>         <span class="co"># what a travel-history rule concludes instead, to score against it</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="genetics-toolkit">Genetics toolkit<a class="anchor" aria-label="anchor" href="#genetics-toolkit"></a>
-</h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># a relapse and the batch of hypnozoites it came from, by pedigree id (the tree sequence's key)</span></span>
-<span><span class="va">rel</span> <span class="op">&lt;-</span> <span class="va">ev</span><span class="op">[</span><span class="va">event_type</span> <span class="op">==</span> <span class="st">"hypnozoite_activation"</span> <span class="op">&amp;</span> <span class="va">parent1_pedigree_id</span> <span class="op">!=</span> <span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
-<span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">rel</span><span class="op">$</span><span class="va">pedigree_id</span>; <span class="va">b</span> <span class="op">&lt;-</span> <span class="va">rel</span><span class="op">$</span><span class="va">parent1_pedigree_id</span></span>
-<span></span>
-<span><span class="co"># pairwise IBD, and the segments behind it</span></span>
-<span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>; <span class="va">m</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>           <span class="co"># the quick start's x as a matrix, one row per genome</span></span>
-<span><span class="fu"><a href="reference/ibd_segments.html">ibd_segments</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">a</span>, <span class="va">b</span><span class="op">)</span>                  <span class="co"># the shared stretches, split by chromosome</span></span>
-<span><span class="fu"><a href="reference/plot_ibd_pair.html">plot_ibd_pair</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">a</span>, <span class="va">b</span><span class="op">)</span>                 <span class="co"># IBD "karyotype" -- 14 chromosomes, shared blocks</span></span>
-<span><span class="fu"><a href="reference/plot_relatedness_ladder.html">plot_relatedness_ladder</a></span><span class="op">(</span><span class="fu"><a href="reference/ibd_truth_pairs.html">ibd_truth_pairs</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span><span class="op">)</span>   <span class="co"># IBD by known relationship vs the textbook rungs</span></span>
-<span></span>
-<span><span class="co"># marker genotypes painted on the genealogy, with the truth behind every call</span></span>
-<span><span class="va">loci</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>chrom <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">14</span>, pos <span class="op">=</span> <span class="fl">1e5</span>, plaf <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span>
-<span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/simulate_genotypes.html">simulate_genotypes</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">cs</span><span class="op">$</span><span class="va">pedigree_id</span>, <span class="va">loci</span>, error <span class="op">=</span> <span class="fl">0.01</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/write_vcf.html">write_vcf</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cases.vcf"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># the ARG itself, in time. The genealogy is a FOREST (see ?arg_summary), so tskit's branch</span></span>
-<span><span class="co"># statistics are no relatedness measure on it; arg_tmrca() is.</span></span>
-<span><span class="fu"><a href="reference/arg_summary.html">arg_summary</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span>                         <span class="co"># trees, edges, roots per tree, oldest root</span></span>
-<span><span class="fu"><a href="reference/arg_tmrca.html">arg_tmrca</a></span><span class="op">(</span><span class="va">run</span>, <span class="va">a</span>, <span class="va">b</span><span class="op">)</span>                     <span class="co"># genealogical DEPTH to the common ancestor, plus</span></span>
-<span>                                         <span class="co"># `coalesced`: how much of the genome has one at all</span></span>
-<span></span>
-<span><span class="co"># calibrating the uptake draws: LAMBDA_* is a PRE-truncation rate, not a mean count</span></span>
-<span><span class="fu"><a href="reference/uptake_moments.html">uptake_moments</a></span><span class="op">(</span><span class="fl">2</span>, k <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>                     <span class="co"># what a setting actually produces</span></span>
-<span><span class="fu"><a href="reference/uptake_calibrate.html">uptake_calibrate</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">2.5</span>, var <span class="op">=</span> <span class="fl">6</span><span class="op">)</span>        <span class="co"># target moments -&gt; lambda, K</span></span></code></pre></div>
+<p>The model runs as a <strong>subprocess</strong> (<code>processx</code>, shell-free) with parameters passed as <code>-d</code> overrides; it writes <code>events.tsv</code>, <code>state.tsv</code>, <code>plasmo.trees</code>, and a provenance snapshot into each run directory (<code><a href="reference/malariafwd-outputs.html">?events.tsv</a></code> and <code><a href="reference/malariafwd-outputs.html">?state.tsv</a></code> describe the columns). <code>reticulate</code> + <code>tskit</code> are used only to compute IBD from the recorded tree sequence. Multi-run sweeps parallelise via <code>future</code>. Set <code>VERBOSE = TRUE</code> to see the full per-event narration; the default is quiet.</p>
 </div>
 <div class="section level2">
 <h2 id="learn-more">Learn more<a class="anchor" aria-label="anchor" href="#learn-more"></a>
@@ -236,33 +188,33 @@
 </ul>
 </div>
 <div class="section level2">
-<h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
-</h2>
-<p>The model runs as a <strong>subprocess</strong> (<code>processx</code>, shell-free) with parameters passed as <code>-d</code> overrides; it writes <code>events.tsv</code>, <code>state.tsv</code>, <code>plasmo.trees</code>, and a provenance snapshot into each run directory (<code><a href="reference/malariafwd-outputs.html">?events.tsv</a></code> and <code><a href="reference/malariafwd-outputs.html">?state.tsv</a></code> describe the columns). <code>reticulate</code> + <code>tskit</code> are used only to compute IBD from the recorded tree sequence. Multi-run sweeps parallelise via <code>future</code>. Set <code>VERBOSE = TRUE</code> to see the full per-event narration; the default is quiet.</p>
-</div>
-<div class="section level2">
 <h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
 </h2>
-<p>Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind each, is in the <a href="https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html">model description</a>.</p>
+<p>Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind each, is in the <a href="https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html">model description</a>. Many of these features are part of ongoing or planned future work.</p>
 <ul>
 <li>
+<strong>No immunity.</strong> No age-prevalence gradient, no decline in density or detectability with exposure, no transmission-blocking immunity. This is a large simplifying assumption but deliberate because immunity would confound the genetic signal. Clones also do not compete, and detectability does not depend on parasitaemia. This is a key priority item being worked on actively.</li>
+<li>
+<strong>No liver-stage delay.</strong> A blood-stage infection begins the day it is inoculated, so recurrence intervals run about 9 days early, which matters most when the interval is what distinguishes a relapse from a reinfection. This is currently a high priority item being added.</li>
+<li>
+<strong>Homogeneous mixing</strong>, with no spatial structure or heterogeneous biting, and no post-treatment prophylaxis — so a treated host can be reinfected or relapse the next day. This would overstate recurrence wherever treatment coverage is appreciable. This is a planned item during improvement of the treatment features of the model.</li>
+<li>
+<strong>The genome is neutral</strong> (mutation rate 0): no selection, no drug resistance, no sequence divergence. IBD is exact because it is read from the genealogy rather than inferred. Mutations could be overlaid backwards in time using msprime.</li>
+<li>
+<strong>Genotypes are painted, not drawn from a real population.</strong> <code><a href="reference/simulate_genotypes.html">simulate_genotypes()</a></code> gives each founder template and import independent alleles from the frequencies you supply, so there is no background relatedness or linkage disequilibrium among them. This is under active development. Genetic outputs in the current model are focused on ground-truth COI and IBD.</li>
+<li>
 <strong>Imported parasites are unrelated to local ones.</strong> Imports are drawn as fresh founders, so they are maximally distinguishable — any import-detection result is an <strong>upper bound</strong>.</li>
-<li>
-<strong>Genotypes per bite is an assumption.</strong> No study has measured how many genotypes a natural bite delivers. At the defaults (<code>LAMBDA_OOCYSTS</code> and <code>LAMBDA_SPOROZOITES</code> of 2) a bite can co-transmit several; set both to 0 for one genotype per bite, and sweep them.</li>
-<li>
-<strong>No within-host parasite densities.</strong> Clones do not compete, detectability does not depend on parasitaemia, and infectiousness is a per-clone property.</li>
-<li>
-<strong>The genome is neutral</strong> (mutation rate 0): no selection, no drug resistance, no sequence divergence. IBD is exact because it is read from the genealogy rather than inferred.</li>
-<li>
-<strong>Genotypes are painted, not drawn from a real population.</strong> <code><a href="reference/simulate_genotypes.html">simulate_genotypes()</a></code> gives each founder template and import independent alleles from the frequencies you supply, so there is no background relatedness or linkage disequilibrium among them.</li>
-<li>
-<strong>Homogeneous mixing</strong>, with no spatial structure or heterogeneous biting, and no post-treatment prophylaxis — so a treated host can be reinfected immediately.</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="citing-and-getting-help">Citing and getting help<a class="anchor" aria-label="anchor" href="#citing-and-getting-help"></a>
 </h2>
-<p>Please open an <a href="https://github.com/shaziaruybal/malariafwd/issues" class="external-link">issue</a> for bugs and questions, and get in touch before building on the package — see the pre-release note above. The <a href="https://shaziaruybal.github.io/malariafwd/CONTRIBUTING.html">contributing guide</a> says what a bug report needs. The project is released with a <a href="https://shaziaruybal.github.io/malariafwd/CODE_OF_CONDUCT.html">Contributor Code of Conduct</a>; by contributing to it, you agree to abide by its terms. Cite malariafwd with <code>citation("malariafwd")</code>; it also lists the papers for SLiM and tskit, which run the model and record its genealogy. An archived DOI will be added at the first tagged release.</p>
+<p>Please open an <a href="https://github.com/shaziaruybal/malariafwd/issues" class="external-link">issue</a> for bugs and questions, and get in touch if you are interested in using the package, since it is under active development. Cite malariafwd with <code>citation("malariafwd")</code>; it also lists the papers for SLiM and tskit, which run the model and record its genealogy as tree sequences. An archived DOI will be added at the first tagged release.</p>
+</div>
+<div class="section level2">
+<h2 id="development-and-ai-use">Development and AI use<a class="anchor" aria-label="anchor" href="#development-and-ai-use"></a>
+</h2>
+<p>Model and package design, parameter choices and calibration were decided by the author, and each design decision is recorded in the <a href="https://shaziaruybal.github.io/malariafwd/DECISIONS.html">design decisions</a>. The first iterations of the SLiM model and basic package functions were written by the author without AI assistance. Anthropic’s Claude (via Claude Code) was then used as a coding assistant to add features, build the package infrastructure, and write tests and documentation. The author reviewed all changes and is responsible for this software.</p>
 </div>
 <div class="section level2">
 <h2 id="funding">Funding<a class="anchor" aria-label="anchor" href="#funding"></a>
@@ -288,13 +240,6 @@
 </ul>
 </div>
 
-<div class="community">
-<h2 data-toc-skip>Community</h2>
-<ul class="list-unstyled">
-<li><a href="CONTRIBUTING.html">Contributing guide</a></li>
-<li><a href="CODE_OF_CONDUCT.html">Code of conduct</a></li>
-</ul>
-</div>
 
 <div class="citation">
 <h2 data-toc-skip>Citation</h2>

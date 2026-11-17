@@ -1060,7 +1060,7 @@ Length, label and what is recorded.
 | parameter | default | unit | allowed | meaning |
 |----|----|----|----|----|
 | `SIM_DAYS` | 365 | days | whole number in \[2, 1e9\]; a run that reaches day 99999 must move the days that default to 99999 past its end | Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. |
-| `SIM_ID` | “default” | \- | text; UTF-8, without control characters | A label for the run, written into params.tsv. |
+| `SIM_ID` | “default” | \- | text; UTF-8, without control characters | A label for the run, written into params.tsv. Keep it to ASCII on Windows: a non-ASCII label does not survive the way the run’s arguments reach SLiM there, and the run fails. |
 | `VERBOSE` | FALSE | \- | TRUE or FALSE | Narrate every event in run.log. The outputs are the same either way. |
 | `RETAIN_FULL_HISTORY` | TRUE | \- | TRUE or FALSE | Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_pairs() warns that the ids it was asked about are absent; they look up as NA. |
 

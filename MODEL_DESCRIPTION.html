@@ -503,7 +503,7 @@ at each of the 13 chromosome junctions:  r = 0.5   (independent assortment)</cod
 <td>“default”</td>
 <td>-</td>
 <td>text; UTF-8, without control characters</td>
-<td>A label for the run, written into params.tsv.</td>
+<td>A label for the run, written into params.tsv. Keep it to ASCII on Windows: a non-ASCII label does not survive the way the run’s arguments reach SLiM there, and the run fails.</td>
 </tr><tr><td><code>VERBOSE</code></td>
 <td>FALSE</td>
 <td>-</td>

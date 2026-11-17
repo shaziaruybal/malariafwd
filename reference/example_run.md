@@ -39,7 +39,7 @@ directory is missing or has changed. Its settings are
 run <- example_run()
 run
 #> <vivax_run> seed 2 
-#>   outdir: /tmp/RtmpMJLewE/malariafwd-example-run-60b2e786 
+#>   outdir: /tmp/RtmpUQ7ECQ/malariafwd-example-run-60b2e786 
 #>   400 days, 60 hosts, 150 mosquitoes
 #>   non-default:
 #>     SIM_DAYS                 = 400

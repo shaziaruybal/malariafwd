@@ -177,7 +177,7 @@ and the cross-parameter advice they depend on, such as the scale dependence of t
 <dd><p>Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. Unit: days. Default 365; whole number in [2, 1e9]; a run that reaches day 99999 must move the days that default to 99999 past its end.</p></dd>
 
 <dt><code>SIM_ID</code></dt>
-<dd><p>A label for the run, written into params.tsv. Default "default"; text; UTF-8, without control characters.</p></dd>
+<dd><p>A label for the run, written into params.tsv. Keep it to ASCII on Windows: a non-ASCII label does not survive the way the run's arguments reach SLiM there, and the run fails. Default "default"; text; UTF-8, without control characters.</p></dd>
 
 <dt><code>VERBOSE</code></dt>
 <dd><p>Narrate every event in run.log. The outputs are the same either way. Default FALSE; TRUE or FALSE.</p></dd>

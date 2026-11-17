@@ -141,7 +141,7 @@ x <- ibd_pairs(run, ids = classify_cases(run)$pedigree_id[1:30])
 x
 #> <vivax_ibd> 30 genomes, 435 pairs, min_span 1000 bp
 #>   segments: not computed
-#>   from /tmp/RtmpMJLewE/malariafwd-example-run-60b2e786/plasmo.trees, ending on tick 400
+#>   from /tmp/RtmpUQ7ECQ/malariafwd-example-run-60b2e786/plasmo.trees, ending on tick 400
 as.matrix(x)[1:4, 1:4]
 #>     51 82 98 121
 #> 51   1  0  0   1
