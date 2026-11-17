@@ -235,13 +235,9 @@ is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DE
 ## Citing and getting help
 
 Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bugs and questions,
-and get in touch before building on the package — see the pre-release note above. The
-[contributing guide](https://shaziaruybal.github.io/malariafwd/CONTRIBUTING.html) says what a bug
-report needs. The project is released with a
-[Contributor Code of Conduct](https://shaziaruybal.github.io/malariafwd/CODE_OF_CONDUCT.html); by
-contributing to it, you agree to abide by its terms. Cite malariafwd with `citation("malariafwd")`;
-it also lists the papers for SLiM and tskit, which run the model and record its genealogy. An
-archived DOI will be added at the first tagged release.
+and get in touch before building on the package — see the pre-release note above. Cite malariafwd
+with `citation("malariafwd")`; it also lists the papers for SLiM and tskit, which run the model and
+record its genealogy. An archived DOI will be added at the first tagged release.
 
 ## Funding
 
