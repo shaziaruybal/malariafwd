@@ -172,8 +172,13 @@ jobs:
         shell: Rscript {0}
         run: |
           library(malariafwd)
-          print(check_setup())   # on the macOS leg this builds reticulate's environment
-          stopifnot(slim_available(), numeric_version(slim_version()) >= "5.2", tskit_available())
+          setup <- check_setup()   # on the macOS leg this builds reticulate's environment
+          print(setup)
+          stopifnot(slim_available(), tskit_available())
+          ## check_setup() is the documented route to SLiM's version; slim_version() is internal
+          slim <- setup[setup$component == "SLiM", ]
+          stopifnot(nrow(slim) == 1L, isTRUE(slim$ok),
+                    numeric_version(slim$version) >= "5.2")
 
       # Not --as-cran: run_sim() has processx supervise SLiM, so that SLiM stops if R dies, and
       # processx keeps the supervisor's two FIFOs open for the rest of the session, which --as-cran
