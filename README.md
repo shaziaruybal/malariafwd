@@ -7,46 +7,18 @@
 <!-- badges: end -->
 
 > **Pre-release (0.1.0).** The package is under active development and both the interface and
-> the model may change before 1.0.0. Work in progress includes hypnozoites genotyped
-> independently of the bite's primary infections, a structured source population for imported
-> infections (imports currently enter as unrelated founders, which makes them maximally
-> distinguishable), post-treatment prophylaxis, and more extensive calibration of the treatment
-> and recurrence machinery.
+> the model may change before 1.0.0. 
 >
-> If you are interested in using malariafwd or in contributing, please get in touch by opening
+> If you are interested in using *malariafwd* or in contributing, please get in touch by opening
 > an [issue](https://github.com/shaziaruybal/malariafwd/issues) or contacting
 > Dr Shazia Ruybal-Pesántez (shazia.ruybal@isglobal.org).
 
-Forward simulation of *Plasmodium vivax* transmission and genetics — an R interface to a
-[SLiM](https://messerlab.org/slim/) (Eidos) + [tskit](https://tskit.dev/) individual-based
-model. The model simulates blood-stage infection, the **hypnozoite reservoir and relapses**,
-meiotic recombination in the mosquito, and importation/interventions on a neutral copy of the
-14 chromosomes of the PvP01 reference genome, recording a tree sequence for **ground-truth
-identity-by-descent (IBD)**.
+*malariafwd* is an individual-based forward simulator of *Plasmodium vivax* transmission and genetics that leverages the
+[SLiM](https://messerlab.org/slim/) and [*tskit*](https://tskit.dev/) ecosystem. The model couples host and vector dynamics, co-transmission, meiotic recombination in the mosquito, and a hypnozoite reservoir, with whole-genome simulation, so every parasite genome, including latent hypnozoites, has a known origin and genealogy. Full parasite genealogies across the 14 chromosomes of the PvP01 reference genome are recorded as tree sequences for efficient storage. This also enables access to ancestral recombination graphs (ARG) and provides ground-truth identity-by-descent (IBD). 
 
-An epidemiological model and a genetic model run together: each infection carries a real
-genome, so a question about transmission can be answered with genetics against a known truth.
+*malariafwd* is built for questions whose answers are normally unobservable: for instance, is a recurrence a relapse, a reinfection or a recrudescence? How much of a case load comes from the hypnozoite reservoir? How robustly does an IBD or COI estimator recover the ground truth? How identifiable are IBD and other genetic metrics under given transmission and parasite diversity conditions? 
 
-Recurrence is **three-state** — relapse, reinfection and recrudescence — and every episode
-carries a ground-truth label, so a method that tries to tell them apart can be scored against
-the answer. `recurrences()` pairs each recurrence with the earlier episodes of its host, with
-their true origins and ground-truth IBD: the table such a method is scored against. Case
-management is modelled at the level of the **patient**: a course clears every patent clone the
-host carries, radical cure is nested inside it, and a clone that survives can be suppressed
-below patency and recrudesce later. All of it is off by default, so a bare run is an untreated
-closed system.
-
-**How the model fits together.** Host states and the mosquito cycle on the left; what happens to
-a parasite lineage inside a human and inside a mosquito on the right — the hypnozoite reservoir,
-the subpatent compartment a failed treatment course can push a clone into, and the recrudescence
-that follows from it:
-
-![Model structure: human and vector compartments on the left, and the parasite lineage life cycle within a human and within a mosquito on the right.](man/figures/model-structure.png)
-
-**Genetics.** The genealogy is recorded, so identity-by-descent is exact rather than inferred
-from markers. Shared segments for pairs of known relationship:
-
-![IBD karyotype across the 14 PvP01 chromosomes for pairs of known relationship: a relapse versus its origin, two products of one oocyst, and distinct founders.](man/figures/README-ibd-karyotype.png)
+Further details on the model can be found in the [model documentation](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
 
 ## Requirements
 
@@ -56,7 +28,7 @@ from markers. Shared segments for pairs of known relationship:
   SLiM manual, chapter 2). On Debian and Ubuntu, `apt install slim` installs an unrelated login
   manager, not this SLiM. Windows is untested. If R cannot find SLiM (RStudio on macOS does not
   see the shell's `PATH`), add `MALARIAFWD_SLIM=/full/path/to/slim` to `~/.Renviron` and restart R.
-- For the IBD and ancestral recombination graph (ARG) functions and `simulate_genotypes()`: **Python
+- For the IBD and ARG functions and `simulate_genotypes()`: **Python
   with `tskit` (≥ 1.0) and `numpy`**, through the `reticulate` package. Either route works.
   *Automatic*: with no Python chosen, reticulate sets up its own environment with these modules the
   first time an IBD function runs; this needs internet once and a few hundred MB in the user cache.
@@ -86,98 +58,56 @@ can build them:
 remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-which needs pandoc (RStudio includes it).
-
-## Check it works
-
-[`quickstart.R`](https://github.com/shaziaruybal/malariafwd/blob/main/quickstart.R) installs the
-package into your R library, runs one simulation and writes the diagnostic and model-output plots,
-in under a minute on a laptop:
-
-```sh
-Rscript quickstart.R                 # from a clone
-curl -O https://raw.githubusercontent.com/shaziaruybal/malariafwd/main/quickstart.R
-Rscript quickstart.R --github        # or the script alone, installing from GitHub
-```
-
 ## Quick start
 
 ```r
 library(malariafwd)
-check_setup()                                     # SLiM, the model, and Python with tskit
+check_setup()   # SLiM, the model, and Python with tskit
+                # the first call builds reticulate's Python environment: a few hundred MB, once
 
-# no SLiM yet? every function below also takes the run that ships with the package:
+# one run: 100 hosts and 250 mosquitoes for 18 months, a few seconds on a modern laptop.
+p   <- vivax_params(N_HOSTS = 100, N_MOSQ = 250, BITING_RATE = 0.1, SIM_DAYS = 548)
+run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
+# every parameter, its unit and the values it may take: ?vivax_params or param_info()
+# no SLiM yet? every call below also takes the run that ships with the package:
 # run <- example_run()
 
-# one run: 100 hosts and 250 mosquitoes for 18 months, a few seconds on a laptop. Transmission
-# rises with BITING_RATE * N_MOSQ / N_HOSTS, so more hosts alone means less of it.
-p   <- vivax_params(N_HOSTS = 100, N_MOSQ = 250, BITING_RATE = 0.1, SIM_DAYS = 548)
-# every parameter, its unit and the values it may take: ?vivax_params or param_info()
-run <- run_sim(p, seed = 1, outdir = file.path(tempdir(), "demo"))
-# the run's directory appears when the run has finished; a second run into it is refused
-# unless overwrite = TRUE (or skip_existing = TRUE, which returns the same run)
+# the headline numbers, over the run's second half: prevalence, complexity of infection (COI),
+# entomological inoculation rate (EIR), force of infection (FOI), molecular force of blood-stage
+# infection (molFOB), relapses
+summarise_run(run)
 
-# tidy outputs
-ev  <- load_events(run)                             # one row per event; ?events.tsv describes the columns
-st  <- load_state(run)                              # per-tick host state; ?state.tsv
-summarise_run(run)     # over the second half of the run: prevalence, complexity of infection (COI),
-                       # entomological inoculation rate (EIR), force of infection (FOI), molecular
-                       # force of blood-stage infection (molFOB), relapses
+# one call, several panels: did the run settle, saturate or go extinct?
+plot_diagnostics(run)
 
-# ground-truth IBD (tskit)
-cs  <- classify_cases(ev)
-x   <- ibd_pairs(run, ids = cs$pedigree_id)       # keyed by pedigree id; read with ibd_lookup()
-recurrences(ev, ibd = x)                          # each recurrence vs its host's earlier episodes
-new_infection_diversity(run)                       # relatedness of the transmitting population
+# one host: its blood-stage clones coloured by lineage, over the hypnozoites it carries
+ev   <- load_events(run)                 # one row per event; ?events.tsv describes the columns
+host <- ev[event_type == "hypnozoite_activation", .N, by = human_id][order(-N), human_id[1]]
+plot_host_trajectory(run, host)
 
-# parallel sweep (see ?run_grid; use future::plan() for a cluster). Calling it again resumes:
-# cells that already hold their run are not run again
-res <- run_grid(
-  list(low = vivax_params(BITING_RATE = 0.06),
-       hi  = vivax_params(BITING_RATE = 0.12)),
-  seeds = 1:10, outdir_base = file.path(tempdir(), "sweep"), workers = 2)
-load_grid(file.path(tempdir(), "sweep"))           # the grid's record, grid.tsv
+# the population: who is infected, and who carries only an invisible reservoir
+plot_host_state_prevalence(run)
+
+# clones arriving (molFOB) against infections arriving (FOI)
+plot_force_of_infection(run)
+
+# ground-truth IBD by known relationship, read from the recorded genealogy
+plot_relatedness_ladder(run, style = "bars")
+
+# the same IBD as segments along the 14 PvP01 chromosomes
+tp   <- ibd_truth_pairs(run)
+pick <- tp[cls %in% c("relapse vs its origin", "same-oocyst sibs", "distinct founders"),
+           .SD[1], by = cls]
+plot_ibd_pair(run, pick$a, pick$b, labels = sprintf("%s\nIBD %.2f", pick$cls, pick$ibd))
 ```
 
-## Checking and exploring a run
+## How it works
 
-```r
-plot_diagnostics(run)        # one-call health dashboard: prevalence, incidence + force of
-                            # blood-stage infection by origin, COI, reservoir, lineage richness
-event_types()         # what every event_type in events.tsv means
-force_of_infection(run)     # rows by window and origin: imported + local = FOI, + relapses = molFOB
-classify_chain(ev)          # each case's WHO class from its true chain back to an import
-classify_travel(ev)         # what a travel-history rule concludes instead, to score against it
-```
-
-## Genetics toolkit
-
-```r
-# a relapse and the batch of hypnozoites it came from, by pedigree id (the tree sequence's key)
-rel <- ev[event_type == "hypnozoite_activation" & parent1_pedigree_id != -1][1]
-a <- rel$pedigree_id; b <- rel$parent1_pedigree_id
-
-# pairwise IBD, and the segments behind it
-m <- as.matrix(x); m[1:4, 1:4]           # the quick start's x as a matrix, one row per genome
-ibd_segments(run, a, b)                  # the shared stretches, split by chromosome
-plot_ibd_pair(run, a, b)                 # IBD "karyotype" -- 14 chromosomes, shared blocks
-plot_relatedness_ladder(ibd_truth_pairs(run))   # IBD by known relationship vs the textbook rungs
-
-# marker genotypes painted on the genealogy, with the truth behind every call
-loci <- data.frame(chrom = 1:14, pos = 1e5, plaf = 0.3)
-g <- simulate_genotypes(run, cs$pedigree_id, loci, error = 0.01, seed = 1)
-write_vcf(g, "cases.vcf")
-
-# the ARG itself, in time. The genealogy is a FOREST (see ?arg_summary), so tskit's branch
-# statistics are no relatedness measure on it; arg_tmrca() is.
-arg_summary(run)                         # trees, edges, roots per tree, oldest root
-arg_tmrca(run, a, b)                     # genealogical DEPTH to the common ancestor, plus
-                                         # `coalesced`: how much of the genome has one at all
-
-# calibrating the uptake draws: LAMBDA_* is a PRE-truncation rate, not a mean count
-uptake_moments(2, k = 1)                     # what a setting actually produces
-uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
-```
+The model runs as a **subprocess** (`processx`, shell-free) with parameters passed as `-d`
+overrides; it writes `events.tsv`, `state.tsv`, `plasmo.trees`, and a provenance snapshot into
+each run directory (`?events.tsv` and `?state.tsv` describe the columns). `reticulate` + `tskit` are used only to compute IBD from the recorded tree
+sequence. Multi-run sweeps parallelise via `future`. Set `VERBOSE = TRUE` to see the
+full per-event narration; the default is quiet.
 
 ## Learn more
 
@@ -204,40 +134,41 @@ uptake_calibrate(mean = 2.5, var = 6)        # target moments -> lambda, K
   one with `source()`, for example
   `source(system.file("validation", "audit_events_and_ibd.R", package = "malariafwd"))`.
 
-## How it works
-
-The model runs as a **subprocess** (`processx`, shell-free) with parameters passed as `-d`
-overrides; it writes `events.tsv`, `state.tsv`, `plasmo.trees`, and a provenance snapshot into
-each run directory (`?events.tsv` and `?state.tsv` describe the columns). `reticulate` + `tskit` are used only to compute IBD from the recorded tree
-sequence. Multi-run sweeps parallelise via `future`. Set `VERBOSE = TRUE` to see the
-full per-event narration; the default is quiet.
-
 ## Limitations
 
 Worth knowing before drawing a conclusion from a run. The full list, with the reasoning behind each,
-is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html).
+is in the [model description](https://shaziaruybal.github.io/malariafwd/MODEL_DESCRIPTION.html). Many of these features are part of ongoing or planned future work. 
 
-* **Imported parasites are unrelated to local ones.** Imports are drawn as fresh founders, so
-  they are maximally distinguishable — any import-detection result is an **upper bound**.
-* **Genotypes per bite is an assumption.** No study has measured how many genotypes a natural
-  bite delivers. At the defaults (`LAMBDA_OOCYSTS` and `LAMBDA_SPOROZOITES` of 2) a bite can
-  co-transmit several; set both to 0 for one genotype per bite, and sweep them.
-* **No within-host parasite densities.** Clones do not compete, detectability does not depend
-  on parasitaemia, and infectiousness is a per-clone property.
+* **No immunity.** No age-prevalence gradient, no decline in density or detectability with exposure, no transmission-blocking immunity. This is a large simplifying assumption but deliberate because immunity would confound the genetic signal. Clones also do not compete, and detectability does not depend on parasitaemia. This is a key priority item being worked on actively.
+* **No liver-stage delay.** A blood-stage infection begins the day it is inoculated, so
+  recurrence intervals run about 9 days early, which matters most when the interval is
+  what distinguishes a relapse from a reinfection. This is currently a high priority item being added. 
+* **Homogeneous mixing**, with no spatial structure or heterogeneous biting, and no
+  post-treatment prophylaxis — so a treated host can be reinfected or relapse the next day. This would overstate recurrence wherever treatment coverage is appreciable. This is a planned item during improvement of the treatment features of the model.
 * **The genome is neutral** (mutation rate 0): no selection, no drug resistance, no sequence
-  divergence. IBD is exact because it is read from the genealogy rather than inferred.
+  divergence. IBD is exact because it is read from the genealogy rather than inferred. Mutations could be overlaid backwards in time using msprime. 
 * **Genotypes are painted, not drawn from a real population.** `simulate_genotypes()` gives each
   founder template and import independent alleles from the frequencies you supply, so there is
-  no background relatedness or linkage disequilibrium among them.
-* **Homogeneous mixing**, with no spatial structure or heterogeneous biting, and no
-  post-treatment prophylaxis — so a treated host can be reinfected immediately.
+  no background relatedness or linkage disequilibrium among them. This is under active development. Genetic outputs in the current model are focused on ground-truth COI and IBD. 
+* **Imported parasites are unrelated to local ones.** Imports are drawn as fresh founders, so
+  they are maximally distinguishable — any import-detection result is an **upper bound**.
 
 ## Citing and getting help
 
 Please open an [issue](https://github.com/shaziaruybal/malariafwd/issues) for bugs and questions,
-and get in touch before building on the package — see the pre-release note above. Cite malariafwd
+and get in touch if you are interested in using the package, since it is under active development. Cite malariafwd
 with `citation("malariafwd")`; it also lists the papers for SLiM and tskit, which run the model and
-record its genealogy. An archived DOI will be added at the first tagged release.
+record its genealogy as tree sequences. An archived DOI will be added at the first tagged release.
+
+## Development and AI use
+
+Model and package design, parameter choices and calibration were decided by the author, and
+each design decision is recorded in the [design
+decisions](https://shaziaruybal.github.io/malariafwd/DECISIONS.html). The first
+iterations of the SLiM model and basic package functions were written by the author without AI assistance. Anthropic's
+Claude (via Claude Code) was then used as a coding assistant to add features, build the
+package infrastructure, and write tests and documentation. The author reviewed all changes and is
+responsible for this software.
 
 ## Funding
 
