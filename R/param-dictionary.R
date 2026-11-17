@@ -231,7 +231,7 @@
   TREATMENT_DELAY = .param(7, "days",
     paste("Mean days from a case to its course: geometric, at least one day, so a course never lands on",
           "the day the case arises."),
-    min = 1, max = 1e6),
+    min = 1, max = 1e6, source = "White et al. (2014) use 7 days"),
   P_DETECT_PRIMARY = .param(1, "probability",
     "A primary infection or an import is detected, drawn once per bite (for all the genotypes it delivers) or per import.",
     min = 0, max = 1),

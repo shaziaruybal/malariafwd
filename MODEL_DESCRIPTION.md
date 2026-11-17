@@ -968,7 +968,7 @@ A case is detected, decided where it arises and treated later, on the host; radi
 | `RADCURE_COVERAGE` | 0 | probability | number in [0, 1] | A treated case also gets radical cure: a probability given treatment, not a coverage of its own, so it does nothing unless BLOODCURE_COVERAGE > 0. |
 | `P_RAD_SURVIVAL` | 0.29 | probability | number in [0, 1] | Radical cure fails: the patient's whole reservoir survives (RADCURE_MODE "person"), about 71% cure; or each hypnozoite survives ("hypnozoite"), where the same number would mean 95% efficacy. Source: near the 70% effectiveness White et al. (2018) assume for a 14-day primaquine course, given poor adherence. |
 | `RADCURE_MODE` | "person" | - | "person" or "hypnozoite" | The unit of radical-cure failure: "person", or "hypnozoite", which thins the reservoir hypnozoite by hypnozoite and is the only mode that can clear part of it. |
-| `TREATMENT_DELAY` | 7 | days | number in [1, 1e6] | Mean days from a case to its course: geometric, at least one day, so a course never lands on the day the case arises. |
+| `TREATMENT_DELAY` | 7 | days | number in [1, 1e6] | Mean days from a case to its course: geometric, at least one day, so a course never lands on the day the case arises. Source: White et al. (2014) use 7 days. |
 | `TREATMENT_START` | 0 | day | whole number | First day on which a detected case can be prescribed a course; case management has its own window, separate from vector control. |
 | `TREATMENT_END` | 99999 (never) | day | whole number | Cases detected on days TREATMENT_START to TREATMENT_END - 1 are treated. The window gates the decision, not the delivery: a course prescribed before the end still arrives. |
 
