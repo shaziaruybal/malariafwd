@@ -60,7 +60,7 @@ f <- write_vcf(g, tempfile(fileext = ".vcf"))
 readLines(f, n = 12)
 #>  [1] "##fileformat=VCFv4.2"                                                        
 #>  [2] "##source=malariafwd 0.1.0 simulate_genotypes()"                              
-#>  [3] "##malariafwd_run=/tmp/RtmpUQ7ECQ/malariafwd-example-run-60b2e786"            
+#>  [3] "##malariafwd_run=/tmp/RtmpjMBTAb/malariafwd-example-run-60b2e786"            
 #>  [4] "##malariafwd_samples=clone"                                                  
 #>  [5] "##malariafwd_calls=observed (error=0, missing=0)"                            
 #>  [6] "##malariafwd_seed=1"                                                         
