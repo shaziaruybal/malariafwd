@@ -334,8 +334,8 @@ initialize() {
 	// The checks below are mirrored in validate_params() and repeated here for runs started
 	// directly with -d. They are written as comparisons rather than isFinite(), which refuses
 	// the integer that -d X=7 produces, and so that NAN fails them. The caps allow a little more
-	// rounding than validate_params() does, since the values arrive rounded to 15 digits, so a set
-	// R accepts is never refused here.
+	// rounding than validate_params() does, since Eidos has no log1p or expm1 and reaches the mean
+	// oocyst count below by a different route, so a set R accepts is never refused here.
 	// drawZTCount() mixes Poissons over Gamma(lambda, K) rates. At a given mean, the tries an
 	// uptake takes grow about as 1 / K below K = 1e-3, and so does the exact draw that follows
 	// 10,000 failed tries (about lambda / K terms). Without this floor both grow without bound as K
