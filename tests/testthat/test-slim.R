@@ -9,10 +9,12 @@ test_that("a SLiM older than 5.2 is refused, and an unreadable version is let th
 test_that("the model refuses values its draws cannot take when SLiM is run directly", {
   skip_if_not(slim_available(), "SLiM not on PATH")
   ## validate_params() refuses these too, but the model can be run with -d, bypassing R
+  ## OUTDIR is quoted the way the package quotes it (.eidos_quote()), not by hand: Eidos reads it as
+  ## a string literal, where a Windows path's backslashes would be escape sequences.
   slim <- function(..., days = 5) {
     out <- tempfile("mfwd_direct_"); dir.create(out)
     processx::run(slim_path(), c("-s", "1", "-d", paste0("SIM_DAYS=", days), "-d", "N_HOSTS=20", "-d", "N_MOSQ=20",
-                                 "-d", paste0("OUTDIR='", out, "'"), ..., slim_model()),
+                                 "-d", paste0("OUTDIR=", malariafwd:::.eidos_quote(out)), ..., slim_model()),
                   error_on_status = FALSE)
   }
   bad <- c("TREATMENT_DELAY=0.0" = "TREATMENT_DELAY must be >= 1 and finite",
@@ -67,7 +69,8 @@ test_that("a direct run refuses what validate_params() refuses, and takes either
     a <- c(...); set[sub("=.*", "", a)] <- sub("^[^=]*=", "", a)
     out <- tempfile("mfwd_direct_"); dir.create(out)
     r <- processx::run(slim_path(), c("-s", "1", as.vector(rbind("-d", c(paste0(names(set), "=", set),
-                                      paste0("OUTDIR='", out, "'")))), slim_model()), error_on_status = FALSE)
+                                      paste0("OUTDIR=", malariafwd:::.eidos_quote(out))))), slim_model()),
+                       error_on_status = FALSE)
     r$outdir <- out; r
   }
   bad <- c("RADCURE_MODE='Person'" = "RADCURE_MODE must be 'person' or 'hypnozoite'",
@@ -140,7 +143,7 @@ test_that("params.tsv records floats to 15 significant digits", {
   ## a direct run records what it was given, to the same digits
   out <- tempfile("mfwd_digits_d_"); dir.create(out)
   processx::run(slim_path(), c("-s", "1", "-d", "SIM_DAYS=3", "-d", "N_HOSTS=20", "-d", "N_MOSQ=20",
-                               "-d", "ALPHA_ACTIVATE=0.0058823529411764705", "-d", paste0("OUTDIR='", out, "'"),
-                               slim_model()))
+                               "-d", "ALPHA_ACTIVATE=0.0058823529411764705",
+                               "-d", paste0("OUTDIR=", malariafwd:::.eidos_quote(out)), slim_model()))
   expect_true("ALPHA_ACTIVATE\t0.00588235294117647" %in% readLines(file.path(out, "params.tsv")))
 })
