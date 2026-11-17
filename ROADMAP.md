@@ -39,6 +39,8 @@ The extensions planned for later versions, each with the reason for it.
 | Burden-scaled inoculum | sporozoite inoculum tracks salivary-gland load (Kanatani et al. 2024); heavily-infected mosquitoes should seed proportionally more |
 | Per-oocyst productivity | S4 |
 | Origin-dependent detection | to separate active vs passive surveillance |
+| Richer VCF output: `AF`, within-sample frequencies and phase | `write_vcf()` reports only `PLAF`, the frequency the root genomes were painted with, and collapses a host sample to unphased `0/0` / `0/1` / `1/1`, which says only that both alleles are present. Each clone's allele is recorded, so a host sample's phase is known exactly and could be written as phased polyploid calls, one allele per clone, beside `AF` among the samples written and the true within-sample ALT frequency that mixed-infection deconvolution sets out to recover. Simulated read depth would let `AD` and `DP` make the files read like called data. |
+| Sample and genome naming | clone samples are named by their bare pedigree id (`51`), which VCF allows but which makes an awkward column name downstream, and clone, genome, lineage and genotype each mean something different across the outputs; the most informative convention needs thinking through |
 | Fate determination (`P_HYPNOZOITE`) | 0.58–0.63 of liver-stage parasites became hypnozoites in culture, depending on the patient isolate (Vantaux et al. 2022); **deferred** — would make ν emergent but trades one well-identified parameter for two poorly-identified ones |
 | Immunity | explicitly out of scope for now; would require a separate identifiability argument |
 | Spatial structure / heterogeneous biting | currently homogeneous mixing |
