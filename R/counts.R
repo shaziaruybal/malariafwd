@@ -32,7 +32,10 @@ uptake_moments <- function(lambda, k = 0) {
   x <- if (k <= 0) lambda else if (r < 1e-8) lambda * (1 - r / 2) else if (is.finite(r)) lambda * (log1p(r) / r)
        else k * (log(lambda) - log(k))
   q <- -expm1(-x)
-  m <- lambda / q
+  ## A zero-truncated count has a mean of at least 1, and lambda / q lands exactly on 1 for most of
+  ## the range of a tiny lambda, so a libm whose expm1() differs by one ulp returns just under it
+  ## (as Windows' does). Clamp to the floor, as the variance below is clamped to 0.
+  m <- max(1, lambda / q)
   c(mean = unname(m), var = unname(max(0, m * (1 + lambda + r) - m^2)))
 }
 
