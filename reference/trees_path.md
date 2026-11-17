@@ -30,7 +30,7 @@ the path to `plasmo.trees`.
 
 ``` r
 trees_path(example_run())
-#> [1] "/tmp/RtmpsLWJEz/malariafwd-example-run-60b2e786/plasmo.trees"
+#> [1] "/tmp/RtmpMJLewE/malariafwd-example-run-60b2e786/plasmo.trees"
 file.exists(trees_path(example_run()))
 #> [1] TRUE
 ```

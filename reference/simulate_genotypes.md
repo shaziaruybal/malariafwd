@@ -179,7 +179,7 @@ g <- simulate_genotypes(run, classify_cases(run)$pedigree_id[1:20], loci, error 
 g
 #> <vivax_genotypes> 20 clone samples x 70 loci on 14 chromosomes
 #>   painted on 33 root genomes (23 imported); error 0.01, missing 0.05, seed 1
-#>   run: /tmp/RtmpsLWJEz/malariafwd-example-run-60b2e786
+#>   run: /tmp/RtmpMJLewE/malariafwd-example-run-60b2e786
 g$calls[1:4, 1:5]   # what a method sees
 #>     1:1000 1:2000 1:3000 1:4000 1:5000
 #> 51       0      1      0      0      0
