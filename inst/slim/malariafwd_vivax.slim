@@ -42,64 +42,50 @@ initialize() {
 	defineDefault("SEED",                    55);
 	defineDefault("SIM_DAYS",                365); // 365 days or one year
 	defineDefault("N_HOSTS",                 40);
-	defineDefault("N_FOUNDER_HOSTS",         12); // hosts infected at the start (establishment: does the epidemic sustain?). Hold it fixed to vary diversity alone.
-	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS). The clean GENEALOGICAL diversity knob: fewer lineages -> more hosts carry clonal copies -> higher background relatedness, at fixed establishment.
+	defineDefault("N_FOUNDER_HOSTS",         12); // hosts infected at the start (establishment: does the epidemic sustain?)
+	defineDefault("N_FOUNDER_LINEAGES",      N_FOUNDER_HOSTS); // number of DISTINCT founding genomes among those hosts (<= N_FOUNDER_HOSTS); the rest carry clonal copies
 	defineDefault("N_MOSQ",                  100);
 	
 	// epi
-	defineDefault("BITING_RATE",             0.1); // per-MOSQUITO daily biting probability (drawn in reproduction() as P(this mosquito bites today)). The Ross-Macdonald per-human rate ma = BITING_RATE * N_MOSQ / N_HOSTS, NOT this value directly.
+	defineDefault("BITING_RATE",             0.1); // per-MOSQUITO daily biting probability (drawn in reproduction()); the per-human rate is BITING_RATE * N_MOSQ / N_HOSTS, NOT this value
 	defineDefault("P_TRANS_VH",              0.5); // b = probability an infectious mosquito bite infects a human
 	defineDefault("P_TRANS_HV",              0.5); // c = probability a mosquito becomes infected after biting an infected human
 	defineDefault("MOSQ_LIFESPAN",           10.0); // expected mosquito lifespan 10 days
 	defineDefault("EIP_DAYS",                10); // extrinsic incubation period mosquito
-	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI. Checked the same way for every new inoculation, a local bite (whatever the host's infectious state) or an import (D10): a host already carrying MAX_MOI blood-stage lineages, patent or subpatent, has the WHOLE inoculation skipped (blood-stage primary AND its hypnozoite batch, so the reservoir also stops being topped up). At least 1; 1 means no superinfection. RELAPSES BYPASS IT - hypnozoite activation has no MAX_MOI check - so realised MOI can exceed this value. At the default of 20 it is a runaway guard that essentially never binds (COI is typically 1-3); set it low and you are measuring the cap, not the biology.
-	defineDefault("MAX_LINEAGES_PER_MOSQ",   20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); carrying many costs it nothing, as its survival and infectiousness do not depend on them
+	defineDefault("MAX_MOI",                 20); // SUPERINFECTION GATE, not a hard ceiling on MOI: a host already carrying MAX_MOI blood-stage lineages, patent, subpatent or gained earlier today, has the WHOLE inoculation skipped - primary AND its hypnozoite batch, so the reservoir also stops being topped up (D10). RELAPSES BYPASS IT, so realised MOI can exceed this value. At least 1; 1 means no superinfection.
+	defineDefault("MAX_LINEAGES_PER_MOSQ",   20); // a mosquito carrying this many lineages takes up no more (one uptake can add up to four per oocyst, so the count can pass it); no fitness cost is modelled - survival and infectiousness do not depend on them
 	
 	// parasite
 	defineDefault("MEAN_BLOOD_STAGE_DURATION", 60.0);
-	// mosquito uptake / inoculation sampling (after Wong et al. 2018).
+	// mosquito uptake / inoculation sampling (in line with Wong et al. 2018).
 	// !! LAMBDA_* IS THE PRE-TRUNCATION RATE, NOT THE MEAN COUNT. Conditioning away the zeros
 	// pulls the realised mean UP, so lambda canNOT be read straight off a paper's reported
-	// mean oocyst count. Poisson: realised mean = lambda/(1-exp(-lambda)) -> lambda=1 gives
-	// 1.58, lambda=2 gives 2.31. The NB case (K_OOCYSTS > 0) shifts it further: lambda=2,K=1
-	// gives a realised mean of 3.0. Use the R helpers uptake_moments(lambda, k) to see what a
-	// setting produces, and uptake_calibrate(mean, var) to convert a TARGET realised mean (and
-	// variance) from the literature into the lambda / K to set here.
-	// Zero-truncation is correct because P_TRANS_HV / P_TRANS_VH already decide whether the
-	// event succeeds - allowing 0 would count a failure twice.
+	// mean oocyst count. Use uptake_moments(lambda, k) to see what a setting produces, and
+	// uptake_calibrate(mean, var) to convert a TARGET realised mean (and variance) into them.
 	// lambda = 0 -> exactly 1 (single oocyst per uptake, single genotype per bite).
-	// NOTE: vivax membrane-feeding oocyst counts are OVERDISPERSED
-	// (a zero-inflated negative binomial describes 96 P. vivax direct membrane-feeding assays of
-	// 22,236 mosquitoes: Miura et al. 2020), so treat LAMBDA_OOCYSTS as a sensitivity knob;
-	// K_OOCYSTS below makes the count negative binomial.
+	// Why truncation and not inflation, and the evidence that vivax oocyst counts are
+	// overdispersed: section 6 of the model description, and roadmap S3.
 	defineDefault("LAMBDA_OOCYSTS",          2.0); // oocysts formed per successful uptake (each oocyst = one independent gamete pair + meiosis)
 	defineDefault("LAMBDA_SPOROZOITES",      2.0); // oocyst products sampled (with replacement) per infectious bite; repeat draws of a lineage collapse to one inoculated genotype
 	// Oocyst-count OVERDISPERSION. K_OOCYSTS <= 0 (default) = Poisson; K_OOCYSTS > 0 = negative
 	// binomial with var = lambda + lambda^2/K (Gamma-Poisson mixture), so Poisson is the
-	// K -> infinity limit and this is a strict superset of the Poisson case. NOTE we deliberately
-	// do NOT add zero-INFLATION: P_TRANS_HV already decides whether uptake succeeds, so the
-	// zeros in a membrane-feeding dataset are already represented - inflating here would
-	// double-count them. Between-donor gametocytaemia variation is likewise already emergent.
-	// K_OOCYSTS therefore captures only the RESIDUAL within-feed overdispersion.
+	// K -> infinity limit. Do NOT add zero-INFLATION here: P_TRANS_HV already decides whether
+	// uptake succeeds, so inflating would double-count the zeros (section 6 of the model
+	// description). K_OOCYSTS captures only the RESIDUAL within-feed overdispersion.
 	defineDefault("K_OOCYSTS",               0.0); // NB dispersion for the oocyst count; 0 = Poisson
 	// GAMETOCYTE gating. A blood-stage infection becomes transmissible to
 	// mosquitoes only from gametocyte_ready_tick = bloodstage_start + GAMETOCYTE_DELAY,
 	// and only if it carries gametocytes (per-infection roll, prob P_GAMETOCYTE).
 	// DEFAULTS = identity (immediate, always-gametocytemic), so the gate does nothing unless
-	// set; these knobs exist for sensitivity analysis. P. vivax gametocytes appear
-	// early (at/near symptom onset, unlike ~10-12 d in P. falciparum), so a realistic
-	// preset is a SHORT delay + high carriage, e.g. GAMETOCYTE_DELAY=3, P_GAMETOCYTE=0.9.
-	// (Early vivax gametocytes: Bousema & Drakeley 2011; Koepfli et al. 2021.)
+	// set; ?vivax_params gives the values to set and why.
 	defineDefault("GAMETOCYTE_DELAY",        0);   // days blood-stage -> transmissible (0 = immediate; vivax realistic ~2-3)
 	defineDefault("P_GAMETOCYTE",            1.0); // P(an active infection is gametocytemic/transmissible); 1.0 = all
 
 	// genome (PvP01; see the GENOME block in initialize()). GENOME_MODE is a pure
 	// COORDINATE/extent switch: "full" (full PvP01 chromosome lengths, 24.2 Mb) or "core"
 	// (subtelomere-masked lengths). BOTH use the same uniform recombination rate 7.4e-7/bp,
-	// so the modes differ only in which sequence we keep. DEFAULT = "full": the model is
-	// fully NEUTRAL (mutation rate 0; all genetics from the ground-truth genealogy), so
-	// there is no genotyping/alignment reason to mask subtelomeres - the complete physical
-	// scaffold is the honest representation. "core" mimics a real subtelomere-masked panel.
+	// so the modes differ only in which sequence we keep. DEFAULT = "full"; the model is fully
+	// NEUTRAL (mutation rate 0), so there is no alignment reason to mask subtelomeres.
 	// CHROMOSOMES: which of the 14 to simulate, e.g. "1-14" (all), "1,3,5", "5-8".
 	// RECOMB_RATE > 0 overrides the per-bp within-chromosome crossover rate.
 	defineDefault("GENOME_MODE",   "full");
@@ -111,10 +97,10 @@ initialize() {
 	// (2) how many hypnozoites it establishes, as a single "batch" object (geometric, mean
 	// NU_HYPNOZOITE_BATCH per bite, split among the genotypes the bite delivers) - both,
 	// either, or neither can occur for the same transmitted genotype.
-	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection); the base model of White et al. (2014) treats this as certain given a successful inoculation
-	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric distribution, as in White et al. 2014); fitted to four calibration targets at moderate transmission (D21; inst/validation/calibrate_nu.R), to re-fit per setting
-	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day: an average carriage of about 170 days (Mehra et al. 2024b); White et al. (2014) estimate 1/332
-	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day, as in Mehra et al. (2024a), who credit White et al. (2014), whose table gives 1/425
+	defineDefault("P_PRIMARY",               1.0); // P(transmitted genotype causes an active primary infection)
+	defineDefault("NU_HYPNOZOITE_BATCH",     3.0); // mean hypnozoite batch size per infectious bite (geometric); fitted, and to re-fit per setting (D21; inst/validation/calibrate_nu.R)
+	defineDefault("ALPHA_ACTIVATE",          1/170.0); // hypnozoite activation rate per day (an average carriage of about 170 days)
+	defineDefault("MU_HYPNOZOITE",           1/442.0); // hypnozoite death rate per day
 	defineDefault("K_LATENCY",               0); // 0 = tropical, 2 = temperate
 	defineDefault("DELTA_LATENCY",           1/100.0); // latency progression rate (only used if K_LATENCY > 0)
 	
