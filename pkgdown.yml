@@ -1,0 +1,11 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  anatomy: anatomy.html
+  malariafwd: malariafwd.html
+  parameters: parameters.html
+last_built: 2026-11-17T18:40Z
+urls:
+  reference: https://shaziaruybal.github.io/malariafwd/reference
+  article: https://shaziaruybal.github.io/malariafwd/articles
