@@ -597,8 +597,6 @@ initialize() {
 			chr_idx = c(chr_idx, asInteger(tok));
 		}
 	}
-	if (any(chr_idx < 1) | any(chr_idx > 14))
-		stop("CHROMOSOMES out of range 1..14: " + CHROMOSOMES);
 	if (size(unique(chr_idx)) != size(chr_idx))
 		stop("CHROMOSOMES lists a chromosome twice: " + CHROMOSOMES);
 
@@ -876,20 +874,8 @@ reproduction()
 	// is reproduction()-only AND refuses a genome minted in the same tick, so the clone
 	// waits until the tick after the import landed, which is now.
 	// ----------------------------
-	if (size(PENDING_BATCH_PED) > 0)
-	{
-		// Purge entries whose primary died before we got here (host clearance, treatment).
-		// Without this the queue grows without bound.
-		alive_peds = sim.subpopulations.individuals.pedigreeID;
-		keep = (match(PENDING_BATCH_PED, alive_peds) >= 0);
-		if (!all(keep))
-		{
-			vcat("✈️ Dropping " + sum(!keep) + " queued import batch(es): primary already gone");
-			defineGlobal("PENDING_BATCH_PED",  PENDING_BATCH_PED[keep]);
-			defineGlobal("PENDING_BATCH_N",    PENDING_BATCH_N[keep]);
-			defineGlobal("PENDING_BATCH_INOC", PENDING_BATCH_INOC[keep]);
-		}
-	}
+	// No purge is needed: nothing kills a primary between the import's early() and here, and the
+	// loop below drains the queue every tick, so no entry outlives its primary.
 	for (h in humans)
 	{
 		if (size(PENDING_BATCH_PED) == 0)
