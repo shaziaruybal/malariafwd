@@ -27,15 +27,17 @@ hr  <- function() cat(strrep("-", 78), "\n")
 
 # -- 1. install ---------------------------------------------------------------------------
 say("1. Installing malariafwd")
-if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = "https://cloud.r-project.org")
+if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak", repos = "https://cloud.r-project.org")
+# dependencies = TRUE brings the suggested packages the plots and the IBD functions use; pak
+# installs only the hard dependencies without it. upgrade = FALSE leaves the rest of the library be.
 if (use_gh) {
-  remotes::install_github("shaziaruybal/malariafwd", upgrade = "never", dependencies = TRUE)
+  pak::pak("shaziaruybal/malariafwd", dependencies = TRUE, upgrade = FALSE, ask = FALSE)
 } else {
   here <- tryCatch(dirname(normalizePath(sub("^--file=", "",
             grep("^--file=", commandArgs(FALSE), value = TRUE)[1]))), error = function(e) ".")
   if (!file.exists(file.path(here, "DESCRIPTION")))
     stop("no DESCRIPTION next to this script - run it from a clone, or pass --github", call. = FALSE)
-  remotes::install_local(here, force = TRUE, upgrade = "never", dependencies = TRUE)
+  pak::local_install(here, dependencies = TRUE, upgrade = FALSE, ask = FALSE)
 }
 suppressPackageStartupMessages(library(malariafwd))
 cat("   installed version:", as.character(utils::packageVersion("malariafwd")), "\n")

@@ -71,14 +71,22 @@ from markers. Shared segments for pairs of known relationship:
 ## Install
 
 ```r
-# install.packages("remotes")
-remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE)
+# install.packages("pak")
+pak::pak("shaziaruybal/malariafwd", dependencies = TRUE)
 ```
 
 `dependencies = TRUE` also installs the suggested packages that the plots and the IBD functions
-use (ggplot2, patchwork and reticulate). The vignettes are on the
-[website](https://shaziaruybal.github.io/malariafwd/); to install them as well, add
-`build_vignettes = TRUE`, which needs pandoc (RStudio includes it).
+use (ggplot2, patchwork and reticulate); without it you get only what the package needs to load,
+and the first plot or IBD call fails. `remotes::install_github("shaziaruybal/malariafwd",
+dependencies = TRUE)` does the same thing. The vignettes are on the
+[website](https://shaziaruybal.github.io/malariafwd/); to install them as well, use remotes, which
+can build them:
+
+```r
+remotes::install_github("shaziaruybal/malariafwd", dependencies = TRUE, build_vignettes = TRUE)
+```
+
+which needs pandoc (RStudio includes it).
 
 ## Check it works
 
