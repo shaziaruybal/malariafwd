@@ -18,7 +18,9 @@
        values = values, rule = rule, shown = shown, source = source, setting = setting)
 
 .param_dict <- list(
-  SIM_ID = .param("default", "-", "A label for the run, written into params.tsv.",
+  SIM_ID = .param("default", "-",
+    paste("A label for the run, written into params.tsv. Keep it to ASCII on Windows: a non-ASCII",
+          "label does not survive the way the run's arguments reach SLiM there, and the run fails."),
     rule = "UTF-8, without control characters"),
   SIM_DAYS = .param(365L, "days",
     "Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner.",

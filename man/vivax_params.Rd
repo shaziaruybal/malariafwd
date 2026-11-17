@@ -123,7 +123,7 @@ Every parameter, by group. Section 10 of the \href{https://shaziaruybal.github.i
 \subsection{Run}{Length, label and what is recorded.
 \describe{
 \item{\code{SIM_DAYS}}{Length of the run; one tick is one day. A run that goes extinct, or never starts, ends sooner. Unit: days. Default 365; whole number in [2, 1e9]; a run that reaches day 99999 must move the days that default to 99999 past its end.}
-\item{\code{SIM_ID}}{A label for the run, written into params.tsv. Default "default"; text; UTF-8, without control characters.}
+\item{\code{SIM_ID}}{A label for the run, written into params.tsv. Keep it to ASCII on Windows: a non-ASCII label does not survive the way the run's arguments reach SLiM there, and the run fails. Default "default"; text; UTF-8, without control characters.}
 \item{\code{VERBOSE}}{Narrate every event in run.log. The outputs are the same either way. Default FALSE; TRUE or FALSE.}
 \item{\code{RETAIN_FULL_HISTORY}}{Keep every genome in the tree sequence, which IBD to infections that have already cleared needs. With FALSE most earlier genomes leave the tree, and ibd_pairs() warns that the ids it was asked about are absent; they look up as NA. Default TRUE; TRUE or FALSE.}
 }}
